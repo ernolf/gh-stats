@@ -2,15 +2,15 @@
 # SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
 # SPDX-License-Identifier: MIT
 #
-# nc-appslist - write an app list for 'nc-appsdiag -l' from the Nextcloud App
+# gh-nc-appslist - write an app list for 'gh-nc-appsdiag -l' from the Nextcloud App
 # Store catalogue: one line "owner/repo version" per source repository, with the
 # newest stable version the App Store ships for it. Which repositories qualify is
-# decided by gh-appstore-targets (GitHub releases, recent enough), so this list and
+# decided by gh-nc-appstore-targets (GitHub releases, recent enough), so this list and
 # the sampler's targets agree. The list is written to a file that is meant to be
 # trimmed by hand, so an existing one is only replaced when that is asked for.
 
 # == Config ==
-# The same site config gh-appstore-targets reads, with the same precedence:
+# The same site config gh-nc-appstore-targets reads, with the same precedence:
 # built-in default < gh-stats.env < environment.
 GH_STATS_ENV="${GH_STATS_ENV:-/etc/gh-stats/gh-stats.env}"
 # shellcheck disable=SC1090 # the site config is a run-time path
@@ -21,7 +21,7 @@ if [ -r "$GH_STATS_ENV" ]; then
 	unset _env_snapshot
 fi
 
-# The list lands where nc-appsdiag keeps its logs, unless -o says otherwise.
+# The list lands where gh-nc-appsdiag keeps its logs, unless -o says otherwise.
 APPSDIAG_DIR="${NC_APPSDIAG_DIR:-${HOME}/Projekte/appstorestats}"
 APPLIST_FILE="${APPLIST_FILE:-${APPSDIAG_DIR}/apps-all.txt}"
 
@@ -46,9 +46,9 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 
 usage() {
 	cat <<'EOF'
-Usage: nc-appslist [-f] [-s <year>] [-o <file>|-]
+Usage: gh-nc-appslist [-f] [-s <year>] [-o <file>|-]
 
-Writes the list of apps for 'nc-appsdiag -l' from the Nextcloud App Store
+Writes the list of apps for 'gh-nc-appsdiag -l' from the Nextcloud App Store
 catalogue, one line per repository an app is developed in:
 
   # App Store, ebtb source, releases since 2025, 2026-10-03: 564 repositories
@@ -56,18 +56,18 @@ catalogue, one line per repository an app is developed in:
   nextcloud/cookbook 0.11.10
   ...
 
-The repositories are the ones gh-appstore-targets picks: every app whose
+The repositories are the ones gh-nc-appstore-targets picks: every app whose
 releases are downloaded from GitHub and whose newest release is from <year> or
 later. Each one is listed once, with the newest stable version the App Store
 ships for it - nightlies and versions with a suffix such as -beta.1 or -rc.1 do
 not count. Where several apps come from one repository, the newest version among
 them stands for it. A repository without a single stable release is left out.
-The list is meant to be trimmed by hand before 'nc-appsdiag -l' runs it, so an
+The list is meant to be trimmed by hand before 'gh-nc-appsdiag -l' runs it, so an
 existing file is not replaced without -f.
 
 Some apps are developed in one repository and publish their releases from
 another. The release repository carries the same tags on the same commits, so
-nc-appsdiag could measure either; the list names the one the app is developed
+gh-nc-appsdiag could measure either; the list names the one the app is developed
 in, which is where its issues go and under which its earlier runs were logged.
 APPLIST_RELEASE_REPOS names the release repositories, each as a whole owner
 (every repository of that owner) or as owner/repo, separated by spaces or
@@ -77,7 +77,7 @@ its website if the issue tracker is not on GitHub; if neither names a GitHub
 repository, the release repository itself is listed. Setting the variable
 replaces the default, so a repository is added by repeating the default with it:
 
-  APPLIST_RELEASE_REPOS="nextcloud-releases christianlupus-nextcloud/cookbook-releases someone/app-releases" nc-appslist -f
+  APPLIST_RELEASE_REPOS="nextcloud-releases christianlupus-nextcloud/cookbook-releases someone/app-releases" gh-nc-appslist -f
 
   -o, --output <file>  write the list to <file>, - for stdout
                        (default: $NC_APPSDIAG_DIR/apps-all.txt)
@@ -92,9 +92,9 @@ Environment (or /etc/gh-stats/gh-stats.env):
   APPLIST_FILE           the list file, as -o
   NC_APPSDIAG_DIR        base directory (default: $HOME/Projekte/appstorestats)
   APPSTORE_SINCE_YEAR    as -s
-  APPSTORE_TARGETS       the gh-appstore-targets command
+  APPSTORE_TARGETS       the gh-nc-appstore-targets command
   APPSTORE_SOURCE        where the catalogue comes from: download, appdata or
-                         ebtb, as for gh-appstore-targets
+                         ebtb, as for gh-nc-appstore-targets
   APPSTORE_CACHE         the catalogue of the download source
   APPSTORE_APPDATA_FILE  the catalogue of the appdata source
   APPSTORE_EBTB_DB       the nc-apps database of the ebtb source
@@ -121,7 +121,7 @@ if [ "$APPLIST_FILE" != - ] && [ -e "$APPLIST_FILE" ] && [ "$force" -eq 0 ]; the
 fi
 
 # == Repositories ==
-# gh-appstore-targets writes its result to a file; point it at a scratch one. A
+# gh-nc-appstore-targets writes its result to a file; point it at a scratch one. A
 # lone comma as whole-owner list leaves no owner whole (an empty value would
 # fall back to the default), so every owner comes back as owner/repo pairs with
 # the recency cutoff applied. Its report names the scratch file, so it is only
@@ -133,7 +133,7 @@ APPSTORE_TARGETS_FILE="$work/targets.json" APPSTORE_WHOLE_OWNERS="," \
 	|| { cat "$work/targets.log" >&2; die "$APPSTORE_TARGETS failed"; }
 
 # == Catalogue ==
-# The copy gh-appstore-targets just evaluated. The download source has refreshed
+# The copy gh-nc-appstore-targets just evaluated. The download source has refreshed
 # the cache by now, so all three only need resolving.
 case "$APPSTORE_SOURCE" in
 	download) apps_json="$APPSTORE_CACHE" ;;
@@ -189,5 +189,5 @@ if [ "$APPLIST_FILE" = - ]; then
 else
 	mkdir -p "$(dirname "$APPLIST_FILE")"
 	mv "$work/list.txt" "$APPLIST_FILE"
-	echo "nc-appslist: wrote $n repositories to $APPLIST_FILE" >&2
+	echo "gh-nc-appslist: wrote $n repositories to $APPLIST_FILE" >&2
 fi

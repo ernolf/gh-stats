@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
 # SPDX-License-Identifier: MIT
 #
-# nc-appsdiag - try ncmake on a Nextcloud app that was never built with it. Takes
+# gh-nc-appsdiag - try ncmake on a Nextcloud app that was never built with it. Takes
 # a GitHub URL, clones the app, reports what the checkout is made of, and on
 # confirmation puts the ncmake bootstrap stub in place of the app's own build
 # entry (which is kept as Makefile.orig). Then it offers the ncmake targets one by
@@ -71,7 +71,7 @@ JSON_ONLY_TARGETS="${NC_APPSDIAG_JSON_ONLY:-build-verify}"
 # main branch of this repo, so its head at run time is recorded with the results.
 NCMAKE_REPO="${NC_APPSDIAG_NCMAKE_REPO:-https://github.com/ernolf/ncmake.git}"
 
-# The App Store catalogue, the same file and the same variables gh-appstore-targets
+# The App Store catalogue, the same file and the same variables gh-nc-appstore-targets
 # uses: it says which versions of an app are published and where each tarball lies.
 # An existing cache is read as it is; remove it to fetch a current one.
 APPSTORE_URL="${APPSTORE_URL:-https://apps.nextcloud.com/api/v1/apps.json}"
@@ -88,12 +88,12 @@ AUTO="${NC_APPSDIAG_AUTO:-0}"
 set -euo pipefail
 
 die()  { echo "ERROR: $*" >&2; exit 1; }
-warn() { echo "nc-appsdiag: $*" >&2; }
+warn() { echo "gh-nc-appsdiag: $*" >&2; }
 
 usage() {
 	cat <<'EOF'
-Usage: nc-appsdiag <github-url|owner/repo> [version]
-       nc-appsdiag -a [-l <file>] [<github-url|owner/repo> [version]] ...
+Usage: gh-nc-appsdiag <github-url|owner/repo> [version]
+       gh-nc-appsdiag -a [-l <file>] [<github-url|owner/repo> [version]] ...
 
 Clones the app, reports what it is built with, and on confirmation replaces its
 Makefile with the ncmake bootstrap stub - the app's own one is kept beside it as
@@ -487,7 +487,7 @@ json_only_run() {
 }
 
 # == Release ==
-# The catalogue is one file for every app, kept where gh-appstore-targets keeps it.
+# The catalogue is one file for every app, kept where gh-nc-appstore-targets keeps it.
 # Nothing else is bound to refresh that file, and a copy older than the newest
 # release leaves that release unmarked in the tag list, so every run asks the store
 # again. The file carries the store's Last-Modified as its mtime, which the store
@@ -739,7 +739,7 @@ write_summary_json() {
 		--arg tarball "$rel_tarball" --arg bytes "$rel_bytes" --argjson diff "$diff" '
 		def nul($s): if $s == "" then null else $s end;
 		def num($s): if $s == "" then null else ($s | tonumber) end;
-		{tool: "nc-appsdiag", schema: 1,
+		{tool: "gh-nc-appsdiag", schema: 1,
 		 owner: $owner, repo: $repo, app_id: nul($app_id), version: nul($version),
 		 requested_version: nul($want), stamp: $stamp, started: $started, finished: $finished,
 		 status: $status, exit: $code,
@@ -786,7 +786,7 @@ summary() {
 
 # == Run ==
 trap 'on_exit "$?"' EXIT
-log "== nc-appsdiag $owner/$repo"
+log "== gh-nc-appsdiag $owner/$repo"
 if [ -d "$APP_DIR" ]; then
 	ask_yes "   checkout exists - remove it and clone again?" && rm -rf "$APP_DIR"
 fi
