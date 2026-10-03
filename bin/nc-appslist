@@ -1,0 +1,193 @@
+#!/usr/bin/env -S LC_CTYPE=C.UTF-8 LC_MESSAGES=C bash
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# nc-appslist - write an app list for 'nc-appsdiag -l' from the Nextcloud App
+# Store catalogue: one line "owner/repo version" per source repository, with the
+# newest stable version the App Store ships for it. Which repositories qualify is
+# decided by gh-appstore-targets (GitHub releases, recent enough), so this list and
+# the sampler's targets agree. The list is written to a file that is meant to be
+# trimmed by hand, so an existing one is only replaced when that is asked for.
+
+# == Config ==
+# The same site config gh-appstore-targets reads, with the same precedence:
+# built-in default < gh-stats.env < environment.
+GH_STATS_ENV="${GH_STATS_ENV:-/etc/gh-stats/gh-stats.env}"
+# shellcheck disable=SC1090 # the site config is a run-time path
+if [ -r "$GH_STATS_ENV" ]; then
+	_env_snapshot="$(export -p)"
+	set -a; . "$GH_STATS_ENV"; set +a
+	eval "$_env_snapshot"
+	unset _env_snapshot
+fi
+
+# The list lands where nc-appsdiag keeps its logs, unless -o says otherwise.
+APPSDIAG_DIR="${NC_APPSDIAG_DIR:-${HOME}/Projekte/appstorestats}"
+APPLIST_FILE="${APPLIST_FILE:-${APPSDIAG_DIR}/apps-all.txt}"
+
+APPSTORE_TARGETS="${APPSTORE_TARGETS:-gh-appstore-targets}"
+APPSTORE_SOURCE="${APPSTORE_SOURCE:-download}"
+APPSTORE_CACHE="${APPSTORE_CACHE:-/var/lib/gh-stats/apps.json}"
+APPSTORE_APPDATA_FILE="${APPSTORE_APPDATA_FILE:-}"
+APPSTORE_EBTB_DB="${APPSTORE_EBTB_DB:-}"
+APPSTORE_SINCE_YEAR="${APPSTORE_SINCE_YEAR:-$(($(date -u +%Y) - 1))}"
+# Repositories that publish the releases of an app developed in another one, as
+# a whole owner or as owner/repo. Such an app is listed under the repository it
+# is developed in, taken from its issue tracker or website. Space- or
+# comma-separated.
+APPLIST_RELEASE_REPOS="${APPLIST_RELEASE_REPOS:-nextcloud-releases christianlupus-nextcloud/cookbook-releases}"
+
+SQLITE="${SQLITE_BIN:-/usr/bin/sqlite3}"
+JQ="${JQ_BIN:-jq}"
+
+set -euo pipefail
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+usage() {
+	cat <<'EOF'
+Usage: nc-appslist [-f] [-s <year>] [-o <file>|-]
+
+Writes the list of apps for 'nc-appsdiag -l' from the Nextcloud App Store
+catalogue, one line per repository an app is developed in:
+
+  # App Store, ebtb source, releases since 2025, 2026-10-03: 564 repositories
+  nextcloud/calendar 6.6.2
+  nextcloud/cookbook 0.11.10
+  ...
+
+The repositories are the ones gh-appstore-targets picks: every app whose
+releases are downloaded from GitHub and whose newest release is from <year> or
+later. Each one is listed once, with the newest stable version the App Store
+ships for it - nightlies and versions with a suffix such as -beta.1 or -rc.1 do
+not count. Where several apps come from one repository, the newest version among
+them stands for it. A repository without a single stable release is left out.
+The list is meant to be trimmed by hand before 'nc-appsdiag -l' runs it, so an
+existing file is not replaced without -f.
+
+Some apps are developed in one repository and publish their releases from
+another. The release repository carries the same tags on the same commits, so
+nc-appsdiag could measure either; the list names the one the app is developed
+in, which is where its issues go and under which its earlier runs were logged.
+APPLIST_RELEASE_REPOS names the release repositories, each as a whole owner
+(every repository of that owner) or as owner/repo, separated by spaces or
+commas. For an app whose release comes from one of them, the repository it is
+developed in is taken from the app's issue tracker URL in the catalogue, or from
+its website if the issue tracker is not on GitHub; if neither names a GitHub
+repository, the release repository itself is listed. Setting the variable
+replaces the default, so a repository is added by repeating the default with it:
+
+  APPLIST_RELEASE_REPOS="nextcloud-releases christianlupus-nextcloud/cookbook-releases someone/app-releases" nc-appslist -f
+
+  -o, --output <file>  write the list to <file>, - for stdout
+                       (default: $NC_APPSDIAG_DIR/apps-all.txt)
+  -f, --force          replace an existing list file
+  -s, --since <year>   keep repositories with a release from <year> or later
+                       (default: last year)
+  -h, --help           this text
+
+Environment (or /etc/gh-stats/gh-stats.env):
+  APPLIST_RELEASE_REPOS  release repositories, as above (default:
+                         nextcloud-releases christianlupus-nextcloud/cookbook-releases)
+  APPLIST_FILE           the list file, as -o
+  NC_APPSDIAG_DIR        base directory (default: $HOME/Projekte/appstorestats)
+  APPSTORE_SINCE_YEAR    as -s
+  APPSTORE_TARGETS       the gh-appstore-targets command
+  APPSTORE_SOURCE        where the catalogue comes from: download, appdata or
+                         ebtb, as for gh-appstore-targets
+  APPSTORE_CACHE         the catalogue of the download source
+  APPSTORE_APPDATA_FILE  the catalogue of the appdata source
+  APPSTORE_EBTB_DB       the nc-apps database of the ebtb source
+EOF
+}
+
+force=0
+while [ $# -gt 0 ]; do
+	case "$1" in
+		-h|--help) usage; exit 0 ;;
+		-f|--force) force=1 ;;
+		-o|--output) [ $# -ge 2 ] || die "$1 needs a file"; APPLIST_FILE="$2"; shift ;;
+		-s|--since)
+			[ $# -ge 2 ] || die "$1 needs a year"
+			[[ "$2" =~ ^[0-9]{4}$ ]] || die "not a year: $2"
+			APPSTORE_SINCE_YEAR="$2"; shift ;;
+		*) echo "unknown argument: $1" >&2; exit 1 ;;
+	esac
+	shift
+done
+
+if [ "$APPLIST_FILE" != - ] && [ -e "$APPLIST_FILE" ] && [ "$force" -eq 0 ]; then
+	die "$APPLIST_FILE exists; -f replaces it, -o writes another file"
+fi
+
+# == Repositories ==
+# gh-appstore-targets writes its result to a file; point it at a scratch one. A
+# lone comma as whole-owner list leaves no owner whole (an empty value would
+# fall back to the default), so every owner comes back as owner/repo pairs with
+# the recency cutoff applied. Its report names the scratch file, so it is only
+# shown when the call fails.
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+APPSTORE_TARGETS_FILE="$work/targets.json" APPSTORE_WHOLE_OWNERS="," \
+	APPSTORE_SINCE_YEAR="$APPSTORE_SINCE_YEAR" "$APPSTORE_TARGETS" 2>"$work/targets.log" \
+	|| { cat "$work/targets.log" >&2; die "$APPSTORE_TARGETS failed"; }
+
+# == Catalogue ==
+# The copy gh-appstore-targets just evaluated. The download source has refreshed
+# the cache by now, so all three only need resolving.
+case "$APPSTORE_SOURCE" in
+	download) apps_json="$APPSTORE_CACHE" ;;
+	appdata)
+		apps_json="$APPSTORE_APPDATA_FILE"
+		[ -n "$apps_json" ] || die "appdata source needs APPSTORE_APPDATA_FILE here" ;;
+	ebtb)
+		[ -r "$APPSTORE_EBTB_DB" ] || die "ebtb apps.db not readable: '$APPSTORE_EBTB_DB'"
+		apps_json="$("$SQLITE" "$APPSTORE_EBTB_DB" "SELECT json_data_file FROM apps WHERE platform='all'")" ;;
+	*) die "unknown APPSTORE_SOURCE: '$APPSTORE_SOURCE'" ;;
+esac
+[ -r "$apps_json" ] || die "catalogue not readable: '$apps_json'"
+
+# == List ==
+read -r -a _release <<< "${APPLIST_RELEASE_REPOS//,/ }"
+release_json="$(printf '%s\n' "${_release[@]}" | "$JQ" -R . | "$JQ" -sc 'map(select(length>0))')"
+
+# Only stable releases count: no nightly, no version with a pre-release suffix.
+# Several app ids can come from one repository; the newest version among them
+# stands for it.
+list="$("$JQ" -r --slurpfile t "$work/targets.json" --argjson release "$release_json" '
+	def gh: (. // "") | capture("^https?://github\\.com/(?<o>[^/#?]+)/(?<r>[^/#?]+)")
+		| "\(.o)/\(.r | sub("\\.git$"; ""))";
+	def vkey: split(".") | map(tonumber);
+	$t[0].targets as $targets
+	| (if type == "array" then . else .data end)
+	| [ .[] | . as $a | .releases[]?
+	    | select(.download != null and (.isNightly | not)
+	             and (.version | test("^[0-9]+(\\.[0-9]+)*$")))
+	    | (.download | split("/")) as $p
+	    | select($p[2] == "github.com" and $p[5] == "releases")
+	    | ($p[3] + "/" + $p[4]) as $dl
+	    | select($targets | index($dl))
+	    | { version,
+	        src: (if ($release | index($p[3])) or ($release | index($dl))
+	              then ([$a.issueTracker, $a.website | gh] | first // $dl)
+	              else $dl end) } ]
+	| group_by(.src | ascii_downcase)
+	| map(max_by(.version | vkey))
+	| sort_by(.src | ascii_downcase)
+	| .[] | "\(.src) \(.version)"
+' "$apps_json")"
+
+n="$(printf '%s\n' "$list" | grep -c .)" || true
+{
+	printf '# App Store, %s source, releases since %s, %s: %s repositories\n' \
+		"$APPSTORE_SOURCE" "$APPSTORE_SINCE_YEAR" "$(date -u +%Y-%m-%d)" "$n"
+	[ "$n" -eq 0 ] || printf '%s\n' "$list"
+} >"$work/list.txt"
+
+if [ "$APPLIST_FILE" = - ]; then
+	cat "$work/list.txt"
+else
+	mkdir -p "$(dirname "$APPLIST_FILE")"
+	mv "$work/list.txt" "$APPLIST_FILE"
+	echo "nc-appslist: wrote $n repositories to $APPLIST_FILE" >&2
+fi

@@ -1,0 +1,879 @@
+#!/usr/bin/env -S LC_CTYPE=C.UTF-8 LC_MESSAGES=C bash
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# nc-appsdiag - try ncmake on a Nextcloud app that was never built with it. Takes
+# a GitHub URL, clones the app, reports what the checkout is made of, and on
+# confirmation puts the ncmake bootstrap stub in place of the app's own build
+# entry (which is kept as Makefile.orig). Then it offers the ncmake targets one by
+# one and records exit code and duration of each; where an analyser has a --json
+# form, the machine-readable result is kept beside the log, from a second run or,
+# for build-verify, from the only one, and summary.json says what the run measured
+# with and what each target answered. Finally it
+# holds what make dist stages against the tarball the App Store hands out for this
+# version, which is the only comparison against bytes anyone actually installs.
+# Every checkout is a throwaway, so the log is written outside it: the checkout can
+# be removed when the app is done and what the app answered stays. One run writes
+# one directory, logs/<owner>/<repo>/<version>/<timestamp>/ with console.log in it,
+# so two versions of the same app never share a place and an older release can be
+# measured again later. Which version that is can be said on the command line.
+
+# == Config ==
+# Optional site config shared with gh-stats and gh-release-sampler. If
+# /etc/gh-stats/gh-stats.env exists it is sourced here, so its assignments feed
+# the ${VAR:-default} reads below. Precedence is: built-in default <
+# gh-stats.env < environment. A variable already present in the environment
+# still wins over the file - we snapshot the environment, source the file, then
+# restore the snapshot. Without the file, behaviour is unchanged. Point
+# GH_STATS_ENV at another path to use a different file.
+GH_STATS_ENV="${GH_STATS_ENV:-/etc/gh-stats/gh-stats.env}"
+# shellcheck disable=SC1090 # the site config is a run-time path
+if [ -r "$GH_STATS_ENV" ]; then
+	_env_snapshot="$(export -p)"
+	set -a; . "$GH_STATS_ENV"; set +a
+	eval "$_env_snapshot"
+	unset _env_snapshot
+fi
+
+# One anchor and its children: the checkouts are thrown away per app, the logs
+# are the result of the run and outlive them.
+APPSDIAG_DIR="${NC_APPSDIAG_DIR:-${HOME}/Projekte/appstorestats}"
+CHECKOUT_DIR="${NC_APPSDIAG_CHECKOUTS:-${APPSDIAG_DIR}/checkouts}"
+LOG_DIR="${NC_APPSDIAG_LOGS:-${APPSDIAG_DIR}/logs}"
+
+STUB_URL="${NC_APPSDIAG_STUB_URL:-https://raw.githubusercontent.com/ernolf/ncmake/main/bootstrap/Makefile}"
+STUB="Makefile"
+ORIG="Makefile.orig"
+
+# Offered in this order: metadata only, then the licence check, then the build,
+# then everything that reads the build output, then the tarball. An analyser that
+# prices what was built has nothing to price before make build, so the build comes
+# first. Release and deploy targets (version, changelog, tag, rsync, cp) are not
+# offered - they act outside the checkout.
+TARGETS="${NC_APPSDIAG_TARGETS:-help consistency-audit reuse build build-audit bundle-report build-verify dist}"
+# Offered after the release comparison, because both of them remove what it reads.
+CLEAN_TARGETS="${NC_APPSDIAG_CLEAN_TARGETS:-clean dist-clean}"
+# These have to be said yes to; everything else runs on the empty answer, because
+# that is what a run is for. make help only prints the target list and measures
+# nothing at all.
+TARGETS_ASK="${NC_APPSDIAG_TARGETS_ASK:-help}"
+
+# Targets whose --json result is worth keeping. It costs a second run of the same
+# target, which is seconds for these. reuse gets one too: its exit code says only
+# that something is missing, the JSON says how much.
+JSON_TARGETS="${NC_APPSDIAG_JSON:-consistency-audit build-audit bundle-report reuse}"
+# Targets too expensive for a second run: they run once, with --json, the JSON goes
+# to the results and its findings are printed in place of the human report.
+# build-verify builds the app twice in minutes, a second pass would double that.
+JSON_ONLY_TARGETS="${NC_APPSDIAG_JSON_ONLY:-build-verify}"
+
+# Which ncmake a run measured with: the stub and the developer modules follow the
+# main branch of this repo, so its head at run time is recorded with the results.
+NCMAKE_REPO="${NC_APPSDIAG_NCMAKE_REPO:-https://github.com/ernolf/ncmake.git}"
+
+# The App Store catalogue, the same file and the same variables gh-appstore-targets
+# uses: it says which versions of an app are published and where each tarball lies.
+# An existing cache is read as it is; remove it to fetch a current one.
+APPSTORE_URL="${APPSTORE_URL:-https://apps.nextcloud.com/api/v1/apps.json}"
+APPSTORE_CACHE="${APPSTORE_CACHE:-/var/lib/gh-stats/apps.json}"
+
+GIT="${GIT_BIN:-/usr/bin/git}"
+GH="${GH_BIN:-/usr/bin/gh}"
+JQ="${JQ_BIN:-/usr/bin/jq}"
+CURL="${CURL_BIN:-/usr/bin/curl}"
+
+# Set by -a for every app of a batch: no question is put, each takes its default.
+AUTO="${NC_APPSDIAG_AUTO:-0}"
+
+set -euo pipefail
+
+die()  { echo "ERROR: $*" >&2; exit 1; }
+warn() { echo "nc-appsdiag: $*" >&2; }
+
+usage() {
+	cat <<'EOF'
+Usage: nc-appsdiag <github-url|owner/repo> [version]
+       nc-appsdiag -a [-l <file>] [<github-url|owner/repo> [version]] ...
+
+Clones the app, reports what it is built with, and on confirmation replaces its
+Makefile with the ncmake bootstrap stub - the app's own one is kept beside it as
+Makefile.orig. Then every target is offered in turn: y runs it, n skips it, q
+stops asking. After the list any other target can be typed, ARGS= included. The
+full output of every run, the exit codes and the summary go to the log; the
+analyser results go beside it as JSON, and so does the diff of what make dist
+stages against the tarball the App Store ships for this version. The checkout can
+be removed at the end, the log stays.
+
+Without a version the repo's tags are listed, newest first and marked with
+whether the App Store has a tarball of them, and the one to measure is picked by
+its number; the newest tag the store ships is the offered answer, and 0 keeps the
+default branch. With a version on the command line nothing is asked: the tag of
+that version (v<version> or <version>) is checked out before anything is read, so
+an older release can be measured as it was shipped.
+
+Everything one run produces goes into one directory:
+
+  <logs>/<owner>/<repo>/<version>/<timestamp>/
+      console.log         the full output of the run
+      summary.json        app, version, head, ncmake head, host, every target
+                          with exit code and duration, the result files
+      <target>.json       the machine-readable analyser results
+      Makefile.orig       the app's own build entry
+      release/diff.txt    the staged tree against the shipped tarball, as diff
+                          wrote it
+      release/diff.tsv    the same, one path per line: kind, class, path
+      release/diff.json   the same with tarball, signature and counts
+
+A difference is of the kind shipped-only, staged-only or differ, and of the
+class signature (appinfo/signature.json, only the store signs), composer-autoload
+(vendor/autoload.php and vendor/composer/ regenerated by another composer run),
+sourcemap (*.map) or content (everything else, the part worth reading). The
+console lists the content class and counts the rest.
+
+With -a nothing is asked at all: every question takes the answer in brackets, so
+the newest tag the store ships is measured, every target but help runs, the
+release material and the checkout are removed. Any number of apps can be given,
+each one followed by its version if it is to be a particular one, and a list file
+adds more, one app per line with an optional version after it; # starts a comment.
+The apps run one after the other, each in a process of its own, so one that dies
+does not end the batch; Ctrl-C does. The batch summary goes to
+<logs>/batch-<timestamp>.txt, one line per app with the targets that failed, and
+to <logs>/batch-<timestamp>.json with the run directory of each app.
+
+  -a, --auto         answer every question with its default
+  -l, --list <file>  read the apps from <file> (implies -a)
+  -h, --help         this text
+
+Environment (or /etc/gh-stats/gh-stats.env):
+  NC_APPSDIAG_AUTO           1 answers every question with its default, as -a
+                             does for a single app
+  NC_APPSDIAG_DIR            base directory (default: $HOME/Projekte/appstorestats)
+  NC_APPSDIAG_CHECKOUTS      where the apps are cloned
+  NC_APPSDIAG_LOGS           where the logs and results are written
+  NC_APPSDIAG_TARGETS        the offered target list
+  NC_APPSDIAG_CLEAN_TARGETS  the targets offered after the release comparison
+  NC_APPSDIAG_TARGETS_ASK    the targets that have to be said yes to
+  NC_APPSDIAG_JSON           the targets whose --json result is kept
+  NC_APPSDIAG_JSON_ONLY      the targets that run once, with --json only
+  NC_APPSDIAG_STUB_URL       the ncmake bootstrap stub to install
+  NC_APPSDIAG_NCMAKE_REPO    the ncmake repo whose main head is recorded
+  TAG_MENU_MAX               how many tags the list offers (default: 12)
+  APPSTORE_URL               the App Store catalogue
+  APPSTORE_CACHE             where that catalogue is kept
+EOF
+}
+
+pos=()
+batch=0
+list=""
+while [ $# -gt 0 ]; do
+	case "$1" in
+		-h|--help) usage; exit 0 ;;
+		-a|--auto) batch=1 ;;
+		-l|--list) [ $# -ge 2 ] || die "$1 needs a file"; list="$2"; batch=1; shift ;;
+		-*) echo "unknown option: $1" >&2; exit 1 ;;
+		*)  pos+=("$1") ;;
+	esac
+	shift
+done
+
+# == Batch ==
+# Every app runs in a process of its own with NC_APPSDIAG_AUTO set, so the single
+# app path below is the only one that measures, and an app that dies ends its own
+# process rather than the batch. An app is whatever carries a slash; anything
+# else is the version of the app before it. Ctrl-C reaches the running app and
+# this loop alike, and the loop ends once the app has.
+if [ "$batch" -eq 1 ]; then
+	apps=()
+	for a in "${pos[@]}"; do
+		case "$a" in
+			*/*) apps+=("$a") ;;
+			*)
+				[ ${#apps[@]} -gt 0 ] || die "version $a before any app"
+				[[ "${apps[-1]}" != *" "* ]] || die "a second version for ${apps[-1]% *}: $a"
+				apps[-1]="${apps[-1]} $a"
+				;;
+		esac
+	done
+	if [ -n "$list" ]; then
+		[ -r "$list" ] || die "cannot read $list"
+		while read -r s v _; do
+			case "$s" in ''|'#'*) continue ;; esac
+			case "$v" in '#'*) v="" ;; esac
+			apps+=("$s${v:+ $v}")
+		done <"$list"
+	fi
+	[ ${#apps[@]} -gt 0 ] || { usage; exit 1; }
+	mkdir -p "$LOG_DIR"
+	batch_stamp="$(date -u +%Y%m%d-%H%M%S)"
+	batch_log="$LOG_DIR/batch-${batch_stamp}.txt"
+	batch_json="$LOG_DIR/batch-${batch_stamp}.json"
+	# The app's own exit code is 0 whenever the run got through, failed targets
+	# included, because a failed target is a result. What failed is read from the
+	# summary.json the app wrote, and the app names its run directory in this file.
+	run_file="$LOG_DIR/.batch-${batch_stamp}.run"
+	entries=()
+	stop=0
+	trap 'stop=1' INT
+	i=0
+	for e in "${apps[@]}"; do
+		i=$((i + 1))
+		printf '\n######## %d/%d  %s\n' "$i" "${#apps[@]}" "$e"
+		start=$SECONDS
+		rc=0
+		: >"$run_file"
+		# shellcheck disable=SC2086 # app and version are two words on purpose
+		NC_APPSDIAG_AUTO=1 NC_APPSDIAG_RESULT_FILE="$run_file" "$0" $e </dev/null || rc=$?
+		secs=$((SECONDS - start))
+		run_dir="$(head -1 "$run_file")"
+		failed="no summary.json"
+		if [ -n "$run_dir" ] && [ -s "$run_dir/summary.json" ] && [ -x "$JQ" ]; then
+			failed="$("$JQ" -r '[.targets[] | select(.exit != 0) | "\(.name)=\(.exit)"] | if length == 0 then "none failed" else "failed: " + join(" ") end' "$run_dir/summary.json")"
+		fi
+		printf '%-45s exit %3s %6ss  %s\n' "$e" "$rc" "$secs" "$failed" >>"$batch_log"
+		if [ -x "$JQ" ]; then
+			entries+=("$("$JQ" -nc --arg app "${e% *}" --arg v "$( [[ "$e" == *" "* ]] && printf '%s' "${e#* }")" \
+				--argjson rc "$rc" --argjson secs "$secs" --arg dir "$run_dir" \
+				'{app: $app, version: (if $v == "" then null else $v end), exit: $rc, seconds: $secs, run_dir: (if $dir == "" then null else $dir end)}')")
+			printf '%s\n' "${entries[@]}" | "$JQ" -s --arg stamp "$batch_stamp" '{batch: $stamp, apps: .}' >"$batch_json"
+		fi
+		if [ "$stop" -eq 1 ] || [ "$rc" -eq 130 ]; then
+			echo "interrupted during $e, $((${#apps[@]} - i)) apps not started" >>"$batch_log"
+			break
+		fi
+	done
+	rm -f "$run_file"
+	printf '\n== batch summary, in %s\n' "$batch_log"
+	cat "$batch_log"
+	[ "$stop" -eq 0 ] && [ "$rc" -ne 130 ] || exit 130
+	exit 0
+fi
+
+[ ${#pos[@]} -ge 1 ] && [ ${#pos[@]} -le 2 ] || { usage; exit 1; }
+
+# github.com/owner/repo, git@github.com:owner/repo.git and owner/repo all reduce
+# to the last two path elements.
+spec="${pos[0]%/}"; spec="${spec%.git}"
+owner="$(printf '%s\n' "$spec" | awk -F'[/:]' '{print $(NF-1)}')"
+repo="$(printf '%s\n' "$spec" | awk -F'[/:]' '{print $NF}')"
+[ -n "$owner" ] && [ -n "$repo" ] || die "cannot read owner/repo from '${pos[0]}'"
+# The second argument, if there is one, is the version to measure.
+want_version="${pos[1]:-}"
+
+mkdir -p "$CHECKOUT_DIR" "$LOG_DIR"
+APP_DIR="$CHECKOUT_DIR/$repo"
+STAMP="$(date -u +%Y%m%d-%H%M%S)"
+# The run directory is named after the version, and only info.xml knows that one,
+# so the log starts under a name saying it has no home yet and promote_run_dir
+# moves it in. A run that dies before that leaves the pending file behind.
+LOG="$LOG_DIR/.pending-${repo}-${STAMP}.log"
+RUN_DIR=""
+app_id=""
+app_version=""
+results=()
+# What summary.json reports besides the targets, filled in where it is learnt.
+STARTED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+head_tag=""
+ncmake_ref=""
+inv_files=()
+rel_tarball=""
+rel_bytes=""
+summary_written=0
+
+log() { printf '%s\n' "$*" | tee -a "$LOG"; }
+
+# Colour belongs on the screen and not in the log: one stream goes to both, the
+# escape sequences are removed only on the way to the file.
+tee_plain() {
+	awk -v f="$1" '{ print; fflush() } { gsub(/\033\[[0-9;]*[a-zA-Z]/, ""); print >> f } END { close(f) }'
+}
+
+# No on n/no/nein and nothing else. What is removed here is a checkout or a tarball
+# that can be fetched again, never a result: those are written outside the checkout
+# and nothing ever offers to delete them.
+ask_yes() {
+	local a=""
+	if [ "$AUTO" = 1 ]; then log "$1 [Y/n] Y (auto)"; return 0; fi
+	read -r -p "$1 [Y/n] " a || return 1
+	case "${a,,}" in n|no|nein) return 1 ;; *) return 0 ;; esac
+}
+
+# One target: 0 runs it, 1 skips it, 2 stops asking. The default comes from
+# TARGETS_ASK, so a target that measures something runs on the empty answer and one
+# that only prints has to be said yes to.
+ask_target() {
+	local t="$1" a=""
+	if [ "$AUTO" = 1 ]; then
+		case " $TARGETS_ASK " in
+			*" $t "*) log "   make $t? [y/N/q] N (auto)"; return 1 ;;
+		esac
+		log "   make $t? [Y/n/q] Y (auto)"
+		return 0
+	fi
+	case " $TARGETS_ASK " in
+		*" $t "*)
+			read -r -p "   make $t? [y/N/q] " a || true
+			case "${a,,}" in q|quit) return 2 ;; y|yes|j|ja) return 0 ;; *) return 1 ;; esac
+			;;
+	esac
+	read -r -p "   make $t? [Y/n/q] " a || true
+	case "${a,,}" in q|quit) return 2 ;; n|no|nein) return 1 ;; *) return 0 ;; esac
+}
+
+# == Result layout ==
+# One directory per run, keyed by owner, repo and version, so a version measured
+# twice gets two timestamps side by side and measuring 6.0.0 after 6.1.0 does not
+# touch what 6.1.0 wrote. Called once the inventory has read the version.
+promote_run_dir() {
+	local v="${app_version:-unversioned}" old="$RUN_DIR"
+	v="${v//\//-}"
+	RUN_DIR="$LOG_DIR/$owner/$repo/$v/$STAMP"
+	mkdir -p "$RUN_DIR" || die "cannot create $RUN_DIR"
+	if [ -f "$LOG" ] && [ "$LOG" != "$RUN_DIR/console.log" ]; then
+		mv "$LOG" "$RUN_DIR/console.log"
+	fi
+	LOG="$RUN_DIR/console.log"
+	# Called a second time, after a tag turned out to carry another version, the
+	# directory of the first one stays behind. Empty, it is not a result and goes.
+	if [ -n "$old" ] && [ "$old" != "$RUN_DIR" ]; then
+		rmdir "$old" "$(dirname "$old")" 2>/dev/null || true
+	fi
+	log "   results in $RUN_DIR"
+}
+
+# == Inventory ==
+# What the app states about itself before ncmake sees it: the files that decide
+# which toolchain it is, what info.xml claims, and whether the build output is
+# committed or ignored - the last one decides whether build-verify has anything to
+# compare at all.
+inventory() {
+	local f d x
+	log ""
+	log "== inventory: $owner/$repo"
+	inv_files=()
+	for f in Makefile krankerl.toml package.json package-lock.json yarn.lock \
+	         pnpm-lock.yaml composer.json composer.lock .nvmrc tsconfig.json \
+	         vite.config.js vite.config.ts vite.config.mjs webpack.config.js \
+	         webpack.config.ts webpack.config.mjs webpack.js webpack.common.js \
+	         webpack.prod.js rspack.config.js rspack.config.ts rspack.config.mjs \
+	         rollup.config.js REUSE.toml .nextcloudignore .gitmodules; do
+		[ -e "$APP_DIR/$f" ] || continue
+		log "   file  $f"
+		inv_files+=("$f")
+	done
+	for d in src js css dist build vendor node_modules; do
+		[ -d "$APP_DIR/$d" ] || continue
+		if "$GIT" -C "$APP_DIR" check-ignore -q "$d"; then
+			log "   dir   $d/ (gitignored)"
+		else
+			log "   dir   $d/ ($("$GIT" -C "$APP_DIR" ls-files "$d" | wc -l) tracked files)"
+		fi
+	done
+	x="$APP_DIR/appinfo/info.xml"
+	if [ -f "$x" ]; then
+		app_id="$(sed -n 's:.*<id>\(.*\)</id>.*:\1:p' "$x" | head -1)"
+		app_version="$(sed -n 's:.*<version>\(.*\)</version>.*:\1:p' "$x" | head -1)"
+		log "   app   id=$app_id version=$app_version" \
+		    "$(grep -o 'min-version="[^"]*"\|max-version="[^"]*"' "$x" | tr '\n' ' ')"
+	else
+		log "   app   no appinfo/info.xml"
+	fi
+	if [ -f "$APP_DIR/package.json" ] && [ -x "$JQ" ]; then
+		log "   npm   scripts: $("$JQ" -r '(.scripts // {}) | keys | join(" ")' "$APP_DIR/package.json")"
+		log "   npm   engines: $("$JQ" -rc '.engines // "not stated"' "$APP_DIR/package.json")"
+	fi
+}
+
+# == Stub ==
+# The app's own build entry is moved aside rather than deleted, so it can still be
+# read afterwards. The rename leaves a tracked file missing in the working tree,
+# which every target that reads the tracked file set reports as an uncommitted
+# change.
+install_stub() {
+	if [ -e "$APP_DIR/$STUB" ]; then
+		[ -e "$APP_DIR/$ORIG" ] && die "$ORIG already exists in $APP_DIR"
+		mv "$APP_DIR/$STUB" "$APP_DIR/$ORIG"
+		# The app's own build entry is worth reading later, and in the checkout it
+		# does not survive: the checkout is a throwaway, and an app that ignores
+		# *.orig loses it to dist-clean. Keep a copy beside the results.
+		mkdir -p "$RUN_DIR"
+		cp "$APP_DIR/$ORIG" "$RUN_DIR/$ORIG"
+		log "   own $STUB moved to $ORIG, copied to $RUN_DIR/$ORIG"
+	else
+		log "   no own $STUB in this app"
+	fi
+	"$CURL" -fsSL "$STUB_URL" -o "$APP_DIR/$STUB" || die "could not fetch the stub from $STUB_URL"
+	log "   stub installed ($(wc -l < "$APP_DIR/$STUB") lines)"
+	ncmake_ref="$("$GIT" ls-remote "$NCMAKE_REPO" refs/heads/main 2>/dev/null | cut -f1)" || ncmake_ref=""
+	log "   ncmake main is at ${ncmake_ref:-an unknown commit, $NCMAKE_REPO did not answer}"
+	# The analyser targets are not in the stub: they come from the developer
+	# modules, which live in the per-machine ncmake cache rather than in the app,
+	# so an empty cache leaves make with the core targets alone. Fetching them
+	# writes nothing into the checkout and costs one request where they are there.
+	if ( cd "$APP_DIR" && make dev-init ) 2>&1 | tee_plain "$LOG"; then
+		log "   developer modules fetched"
+	else
+		warn "make dev-init failed - the module targets will be missing"
+	fi
+}
+
+# == Targets ==
+# The target runs in the checkout, its output goes to the terminal and the log at
+# once, and a failing target is a result rather than the end of the run - so the
+# pipeline is asked for its status instead of aborting on it.
+run_target() {
+	local t="$1" start rc=0
+	start=$SECONDS
+	printf '\n===== make %s =====\n' "$t" >>"$LOG"
+	case " $JSON_ONLY_TARGETS " in
+		*" $t "*)
+			json_only_run "$t" || rc=$?
+			;;
+		*)
+			if ( cd "$APP_DIR" && make "$t" ) 2>&1 | tee_plain "$LOG"; then rc=0; else rc=$?; fi
+			;;
+	esac
+	results+=("$t	$rc	$((SECONDS - start))")
+	log "----- make $t: exit $rc after $((SECONDS - start))s"
+	# A failed target can still have written its result: reuse exits non-zero
+	# exactly when it has something to report, and that report is what is kept.
+	json_run "$t"
+	return 0
+}
+
+# Only the part from the first bracket on is the result; make announces targets
+# on stdout before the analyser writes a byte. With keep=1 whatever comes before
+# it goes to the log, because no other run printed it; an empty result means the
+# target has no --json form.
+split_json() {
+	local raw="$1" out="$2" keep="$3"
+	[ "$keep" = 1 ] && sed -n '/^[[{]/q;p' "$raw" | tee_plain "$LOG"
+	sed -n '/^[[{]/,$p' "$raw" >"$out"
+	rm -f "$raw"
+	if [ -s "$out" ]; then
+		log "   json  $out ($(wc -c <"$out") B)"
+		return 0
+	fi
+	rm -f "$out"
+	return 1
+}
+
+# The same target once more, this time for the file.
+json_run() {
+	local t="$1" out
+	case " $JSON_TARGETS " in *" $t "*) ;; *) return 0 ;; esac
+	case " $JSON_ONLY_TARGETS " in *" $t "*) return 0 ;; esac
+	mkdir -p "$RUN_DIR"
+	out="$RUN_DIR/${t}.json"
+	( cd "$APP_DIR" && make "$t" ARGS=--json ) 2>>"$LOG" >"$out.raw" || true
+	split_json "$out.raw" "$out" 0 || warn "make $t ARGS=--json produced nothing"
+}
+
+# One run with --json and nothing else. The analyser's progress and the output of
+# its failing steps are on stderr and reach the screen and the log as they come;
+# the report itself is the JSON, and its findings are printed from there, so the
+# log reads like a plain run.
+json_only_run() {
+	local t="$1" out rc=0
+	mkdir -p "$RUN_DIR"
+	out="$RUN_DIR/${t}.json"
+	# A pipe rather than a process substitution: the pipeline ends only after tee
+	# has written the log, and bash before 5.2 sets no $! to wait for the latter.
+	{ ( cd "$APP_DIR" && make "$t" ARGS=--json ) 2>&1 >"$out.raw" | tee_plain "$LOG" >&2; } || rc=$?
+	if split_json "$out.raw" "$out" 1 && [ -x "$JQ" ]; then
+		"$JQ" -r '.findings[]? | "[\(.level)] \(.id)", (.lines[]? | "    " + .)' "$out" 2>/dev/null | tee -a "$LOG" || true
+	fi
+	return "$rc"
+}
+
+# == Release ==
+# The catalogue is one file for every app, kept where gh-appstore-targets keeps it.
+# Nothing else is bound to refresh that file, and a copy older than the newest
+# release leaves that release unmarked in the tag list, so every run asks the store
+# again. The file carries the store's Last-Modified as its mtime, which the store
+# answers with 304 and no body; a failed fetch keeps the copy there is.
+appstore_cache() {
+	local c="$APPSTORE_CACHE" new
+	if [ ! -s "$c" ]; then
+		mkdir -p "$(dirname "$c")" 2>/dev/null && : >>"$c" 2>/dev/null || c="$APPSDIAG_DIR/apps.json"
+	fi
+	new="$c.new"
+	rm -f "$new"
+	if [ -s "$c" ]; then
+		"$CURL" -fsSL --compressed -R -z "$c" "$APPSTORE_URL" -o "$new" || warn "could not refresh the App Store catalogue, using $c"
+	else
+		"$CURL" -fsSL --compressed -R "$APPSTORE_URL" -o "$new" || return 1
+	fi
+	if [ -s "$new" ]; then mv -f "$new" "$c"; else rm -f "$new"; fi
+	[ -s "$c" ] || return 1
+	printf '%s\n' "$c"
+}
+
+# Where the App Store says the tarball of exactly this version lies, and which
+# versions it has at all. apps.json is an array, or an object carrying one under
+# .data; a catalogue that is neither answers nothing rather than ending the run.
+# The catalogue keeps a release wherever it was written, in no order at all, so the
+# newest six are sorted out of it rather than taken as they lie. sort -V puts
+# 1.2.0-rc.1 after 1.2.0; a tilde sorts before the end of the string, so the first
+# hyphen becomes one for the sort and every pre-release lands below its release.
+release_url() {
+	{ "$JQ" -r --arg id "$app_id" --arg v "$app_version" '(if type == "object" then .data else . end) | map(select(.id == $id))[0].releases[]? | select(.version == $v) | .download' "$1" 2>/dev/null || true; } | head -1
+}
+release_list() {
+	{ "$JQ" -r --arg id "$app_id" '(if type == "object" then .data else . end) | map(select(.id == $id))[0].releases[]?.version' "$1" 2>/dev/null || true; } \
+		| sed 's/-/~/' | sort -rV | sed 's/~/-/'
+}
+release_versions() {
+	release_list "$1" | head -6 | tr '\n' ' '
+}
+# A release was built from its tag, so nothing but that tag compares against it.
+# The tag is checked out before the stub goes in, while the working tree is clean.
+release_checkout() {
+	local want="${1:-$app_version}" tag
+	for tag in "v$want" "$want"; do
+		"$GIT" -C "$APP_DIR" rev-parse -q --verify "refs/tags/${tag}^{commit}" >/dev/null 2>&1 || continue
+		"$GIT" -C "$APP_DIR" -c advice.detachedHead=false checkout -q "$tag" \
+			|| { warn "cannot check out $tag"; return 1; }
+		log "   head  $("$GIT" -C "$APP_DIR" log -1 --format='%h %ad %s' --date=short) ($tag)"
+		head_tag="$tag"
+		return 0
+	done
+	warn "neither v$want nor $want is a tag in $owner/$repo"
+	return 1
+}
+
+# Nothing is typed out here: the repo's own tags are the list, newest first, and
+# each one says whether the App Store has a tarball of it, because only then is
+# there something to compare the build against. The offered answer is the newest
+# tag that has one, so the usual case is a single return. 0 keeps the branch, which
+# is the only choice that measures a version nobody was ever shipped. Git sorts
+# v1.2.0-rc.1 above v1.2.0 unless it is told which suffixes mark a pre-release.
+TAG_PRERELEASE=(-c versionsort.suffix=-alpha -c versionsort.suffix=-beta -c versionsort.suffix=-rc)
+TAG_MENU_MAX="${TAG_MENU_MAX:-12}"
+pick_tag() {
+	local cache="$1" tags versions tag v i=0 default=0 n chosen
+	tags="$("$GIT" -C "$APP_DIR" "${TAG_PRERELEASE[@]}" tag --sort=-v:refname | head -"$TAG_MENU_MAX")"
+	[ -n "$tags" ] || { log "   no tags in $owner/$repo, so the branch is all there is"; return 1; }
+	versions="$(release_list "$cache")"
+	log ""
+	log "== tags of $owner/$repo, newest first"
+	while IFS= read -r tag; do
+		i=$((i + 1))
+		v="${tag#v}"
+		if printf '%s\n' "$versions" | grep -qxF "$v"; then
+			log "   $i  $tag  (App Store ships it)"
+			[ "$default" -eq 0 ] && default="$i"
+		else
+			log "   $i  $tag"
+		fi
+	done <<<"$tags"
+	log "   0  measure the branch as it is, $app_version, with nothing to compare against"
+	[ "$default" -eq 0 ] && default=1
+	if [ "$AUTO" = 1 ]; then
+		n="$default"
+		log "   which one? [$default] $default (auto)"
+	else
+		read -r -p "   which one? [$default] " n || return 1
+	fi
+	[ -n "$n" ] || n="$default"
+	case "$n" in
+		0) return 1 ;;
+		*[!0-9]*) warn "not a number: $n"; return 1 ;;
+	esac
+	[ "$n" -ge 1 ] && [ "$n" -le "$i" ] || { warn "there is no $n in this list"; return 1; }
+	chosen="$(printf '%s\n' "$tags" | sed -n "${n}p")"
+	release_checkout "${chosen#v}"
+}
+
+# What the App Store ships, else what the app or the Nextcloud release mirror
+# attached to the tag of this version.
+fetch_tarball() {
+	local dest="$1" cache url r f
+	if cache="$(appstore_cache)"; then
+		url="$(release_url "$cache")"
+		if [ -n "$url" ] && [ "$url" != null ]; then
+			"$CURL" -fsSL "$url" -o "$dest/${url##*/}" && { printf '%s\n' "$dest/${url##*/}"; return 0; }
+		fi
+	fi
+	for r in "$owner/$repo" "nextcloud-releases/$repo"; do
+		"$GH" release download "v$app_version" --repo "$r" --pattern '*.tar.gz' --dir "$dest" >/dev/null 2>&1 || continue
+		f="$(find "$dest" -maxdepth 1 -name '*.tar.gz' | head -1)"
+		[ -n "$f" ] && { printf '%s\n' "$f"; return 0; }
+	done
+	return 1
+}
+
+# The shipped bytes against the staged ones. Both are directories here: a tarball
+# differs from another tarball in its own metadata, and none of that is a file the
+# app delivers.
+release_diff() {
+	local dir tgz staged shipped n
+	dir="$RUN_DIR/release"
+	mkdir -p "$dir/shipped"
+	log ""
+	log "== release: $app_id $app_version"
+	if ! tgz="$(fetch_tarball "$dir")"; then
+		log "   no tarball for this version on the App Store, in $owner/$repo or in nextcloud-releases/$repo"
+		return 0
+	fi
+	rel_tarball="$(basename "$tgz")"
+	rel_bytes="$(stat -c %s "$tgz")"
+	log "   shipped $rel_tarball, $rel_bytes B"
+	tar xzf "$tgz" -C "$dir/shipped" || { warn "cannot unpack $tgz"; return 0; }
+	shipped="$dir/shipped/$app_id"
+	[ -d "$shipped" ] || shipped="$(find "$dir/shipped" -mindepth 1 -maxdepth 1 -type d | head -1)"
+	staged="$APP_DIR/build/stage/$app_id"
+	[ -d "$staged" ] || run_target dist
+	if [ ! -d "$staged" ] || [ ! -d "$shipped" ]; then
+		log "   nothing staged or nothing unpacked, so nothing to compare"
+		return 0
+	fi
+	diff -qr "$shipped" "$staged" >"$dir/diff.txt" 2>&1 || true
+	n="$(wc -l <"$dir/diff.txt")"
+	log "   $n differences between the shipped tree and build/stage/$app_id, in $dir/diff.txt"
+	classify_diff "$shipped" "$staged" <"$dir/diff.txt" >"$dir/diff.tsv"
+	diff_report "$dir" "$shipped"
+}
+
+# One line of diff -qr per path, as kind, class and path relative to the app root.
+# The classes separate what every comparison shows from what this app shows: only
+# the store signs, so a signature in the tarball alone says nothing about the app,
+# and a composer run of its own writes another autoloader for the same packages.
+# A vendor/composer that is missing on one side is not that, so only a differing
+# file is put in that class.
+classify_diff() {
+	awk -v s="$1" -v t="$2" '
+	function rel(p, root) {
+		if (p == root) return ""
+		if (index(p, root "/") == 1) return substr(p, length(root) + 2)
+		return p
+	}
+	function cls(kind, p) {
+		if (kind == "shipped-only" && p == "appinfo/signature.json") return "signature"
+		if (kind == "differ" && (p == "vendor/autoload.php" || p ~ /^vendor\/composer\//)) return "composer-autoload"
+		if (p ~ /\.map$/) return "sourcemap"
+		return "content"
+	}
+	/^Only in / {
+		line = substr($0, 9); i = index(line, ": ")
+		d = substr(line, 1, i - 1); name = substr(line, i + 2)
+		if (d == s || index(d, s "/") == 1) { k = "shipped-only"; r = rel(d, s) }
+		else if (d == t || index(d, t "/") == 1) { k = "staged-only"; r = rel(d, t) }
+		else { print "other\tother\t" $0; next }
+		p = (r == "" ? name : r "/" name)
+		print k "\t" cls(k, p) "\t" p
+		next
+	}
+	/^Files .* differ$/ {
+		line = substr($0, 7, length($0) - 13); i = index(line, " and " t "/")
+		p = rel(substr(line, 1, i - 1), s)
+		print "differ\t" cls("differ", p) "\t" p
+		next
+	}
+	{ print "other\tother\t" $0 }
+	'
+}
+
+# The console gets the content class in full and a count of the rest; the JSON
+# carries every entry, so nothing is lost by what the console leaves out.
+diff_report() {
+	local dir="$1" shipped="$2" k signed=false
+	[ -f "$shipped/appinfo/signature.json" ] && signed=true
+	log "   the shipped tarball is $([ "$signed" = true ] || printf 'not ')signed"
+	for k in shipped-only staged-only differ other; do
+		awk -F'\t' -v k="$k" '$1 == k && ($2 == "content" || $2 == "other") { print "   " k "  " $3 }' "$dir/diff.tsv" | tee -a "$LOG"
+	done
+	log "   by class: $(cut -f2 "$dir/diff.tsv" | sort | uniq -c | awk '{ printf "%s%s %s", (NR > 1 ? ", " : ""), $2, $1 }')"
+	[ -x "$JQ" ] || return 0
+	"$JQ" -R -s --arg tarball "$rel_tarball" --argjson bytes "${rel_bytes:-null}" --argjson signed "$signed" '
+		[split("\n")[] | select(length > 0) | split("\t") | {kind: .[0], class: .[1], path: .[2]}] as $e
+		| {tarball: $tarball, bytes: $bytes, signed: $signed,
+		   counts: ($e | group_by(.kind) | map({key: .[0].kind, value: (group_by(.class) | map({key: .[0].class, value: length}) | from_entries)}) | from_entries),
+		   entries: $e}' "$dir/diff.tsv" >"$dir/diff.json" \
+		&& log "   json  $dir/diff.json" || warn "could not write $dir/diff.json"
+}
+
+# The diff is the result; the tarball and the tree unpacked from it are tens of
+# megabytes per app and can be fetched again at any time, so they are offered for
+# removal however the comparison ended - and it can end at several points. Whoever
+# wants to look at the shipped tree by hand says no and removes it later.
+release_compare() {
+	release_diff || true
+	[ -d "$RUN_DIR/release/shipped" ] || return 0
+	if ask_yes "   remove the unpacked release tree and the tarball ($(du -sh "$RUN_DIR/release" | cut -f1))?"; then
+		rm -rf "$RUN_DIR/release/shipped"
+		rm -f "$RUN_DIR"/release/*.tar.gz
+		log "   release material removed, the diff files in $RUN_DIR/release kept"
+	else
+		log "   kept: $RUN_DIR/release"
+	fi
+}
+
+# == Summary ==
+# summary.json is what the batch and anything built on the results read; the
+# console.log is for people. It is written once: by summary() at the end of a run,
+# or by the exit trap of a run that ended before, and its status says which.
+write_summary_json() {
+	local status="$1" code="$2" head="" host cpus mem cpu inv files diff
+	[ -n "$RUN_DIR" ] || return 0
+	summary_written=1
+	[ -z "${NC_APPSDIAG_RESULT_FILE:-}" ] || printf '%s\n' "$RUN_DIR" >"$NC_APPSDIAG_RESULT_FILE"
+	[ -x "$JQ" ] || { warn "no jq at $JQ, so no summary.json"; return 0; }
+	[ -d "$APP_DIR/.git" ] && head="$("$GIT" -C "$APP_DIR" log -1 --format='%H%x09%cI%x09%s' 2>/dev/null)" || true
+	host="$(uname -n)"
+	cpus="$(nproc 2>/dev/null)" || cpus=""
+	mem="$(awk '/^MemTotal:/ { print int($2 / 1024) }' /proc/meminfo 2>/dev/null)" || mem=""
+	cpu="$(awk -F': *' '/^model name/ { print $2; exit }' /proc/cpuinfo 2>/dev/null)" || cpu=""
+	inv="$(printf '%s\n' "${inv_files[@]}" | "$JQ" -R -s -c 'split("\n") | map(select(length > 0))')"
+	files="$(cd "$RUN_DIR" && find . -path ./release/shipped -prune -o -name '*.json' ! -name summary.json -print \
+		| sed 's:^\./::' | sort | "$JQ" -R -s -c 'split("\n") | map(select(length > 0))')"
+	diff=null
+	[ -s "$RUN_DIR/release/diff.json" ] && diff="$("$JQ" -c '{signed, counts}' "$RUN_DIR/release/diff.json")" || true
+	printf '%s\n' "${results[@]}" | "$JQ" -R -s \
+		--arg owner "$owner" --arg repo "$repo" --arg app_id "$app_id" --arg version "$app_version" \
+		--arg want "$want_version" --arg stamp "$STAMP" --arg started "$STARTED" \
+		--arg finished "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg status "$status" --argjson code "$code" \
+		--arg head "$head" --arg tag "$head_tag" --arg ncref "$ncmake_ref" --arg stub "$STUB_URL" \
+		--arg host "$host" --arg cpus "$cpus" --arg mem "$mem" --arg cpu "$cpu" \
+		--argjson inv "$inv" --argjson files "$files" \
+		--arg tarball "$rel_tarball" --arg bytes "$rel_bytes" --argjson diff "$diff" '
+		def nul($s): if $s == "" then null else $s end;
+		def num($s): if $s == "" then null else ($s | tonumber) end;
+		{tool: "nc-appsdiag", schema: 1,
+		 owner: $owner, repo: $repo, app_id: nul($app_id), version: nul($version),
+		 requested_version: nul($want), stamp: $stamp, started: $started, finished: $finished,
+		 status: $status, exit: $code,
+		 head: (if $head == "" then null else ($head | split("\t") | {sha: .[0], date: .[1], subject: (.[2:] | join("\t")), tag: nul($tag)}) end),
+		 ncmake: {ref: nul($ncref), stub_url: $stub},
+		 host: {name: $host, cpus: num($cpus), mem_mb: num($mem), cpu_model: nul($cpu)},
+		 inventory: {files: $inv},
+		 targets: [split("\n")[] | select(length > 0) | split("\t") | {name: .[0], exit: (.[1] | tonumber), seconds: (.[2] | tonumber)}],
+		 files: $files,
+		 release: (if $tarball == "" then null else
+			{tarball: $tarball, bytes: num($bytes), diff: (if $diff == null then null else "release/diff.json" end),
+			 signed: $diff.signed, counts: $diff.counts} end)}' >"$RUN_DIR/summary.json" \
+		|| { warn "could not write $RUN_DIR/summary.json"; return 0; }
+	log "   json  $RUN_DIR/summary.json"
+}
+
+# A run that ends before summary() still says what it got through. Ending before
+# the stub on a no is a stop; any other early end is an abort.
+on_exit() {
+	[ "$summary_written" = 0 ] || return 0
+	if [ "$1" = 0 ]; then write_summary_json stopped 0; else write_summary_json aborted "$1"; fi
+}
+
+summary() {
+	local r t rc s failed=""
+	log ""
+	log "== summary: $owner/$repo"
+	if [ ${#results[@]} -eq 0 ]; then
+		log "   no target was run"
+	else
+		printf '   %-20s %5s %8s\n' target exit seconds | tee -a "$LOG"
+		for r in "${results[@]}"; do
+			IFS=$'\t' read -r t rc s <<<"$r"
+			printf '   %-20s %5s %8s\n' "$t" "$rc" "$s" | tee -a "$LOG"
+			[ "$rc" = 0 ] || failed="$failed $t"
+		done
+		log "   failed:${failed:- none}"
+	fi
+	write_summary_json completed 0
+	log ""
+	if [ -n "$RUN_DIR" ]; then log "results: $RUN_DIR"; fi
+	log "console: $LOG"
+}
+
+# == Run ==
+trap 'on_exit "$?"' EXIT
+log "== nc-appsdiag $owner/$repo"
+if [ -d "$APP_DIR" ]; then
+	ask_yes "   checkout exists - remove it and clone again?" && rm -rf "$APP_DIR"
+fi
+if [ ! -d "$APP_DIR" ]; then
+	"$GIT" clone "https://github.com/$owner/$repo.git" "$APP_DIR" 2>&1 | tee_plain "$LOG"
+fi
+[ -d "$APP_DIR/.git" ] || die "no checkout at $APP_DIR"
+log "   head  $("$GIT" -C "$APP_DIR" log -1 --format='%h %ad %s' --date=short)"
+
+# A version on the command line is checked out before anything is read, so the
+# inventory, the App Store lookup and the tarball comparison all speak about the
+# same release. That release was built from its tag and from nothing else, so a
+# missing tag ends the run instead of quietly measuring the default branch.
+if [ -n "$want_version" ]; then
+	log ""
+	log "== requested version $want_version"
+	release_checkout "$want_version" || die "no tag for $want_version in $owner/$repo"
+fi
+
+inventory
+promote_run_dir
+if [ -n "$want_version" ] && [ -n "$app_version" ] && [ "$app_version" != "$want_version" ]; then
+	warn "the tag of $want_version carries version $app_version in appinfo/info.xml"
+fi
+
+if [ -n "$app_version" ]; then
+	log ""
+	log "== release tag"
+	if cache="$(appstore_cache)"; then
+		url="$(release_url "$cache")"
+		if [ -n "$url" ] && [ "$url" != null ]; then
+			log "   the App Store ships $app_id $app_version as ${url##*/}"
+		else
+			log "   the App Store does not ship $app_id $app_version; its newest are $(release_versions "$cache")"
+		fi
+		# Whatever the branch says, the choice is between the tags, so the list comes
+		# up either way. A tag read another version than the branch did, so the
+		# inventory runs again and the results move to where that version belongs.
+		if [ -z "$want_version" ] && pick_tag "$cache"; then
+			inventory
+			promote_run_dir
+		fi
+	else
+		warn "no App Store catalogue at $APPSTORE_CACHE and none could be fetched"
+	fi
+fi
+
+log ""
+ask_yes "install the ncmake stub and fetch the developer modules?" || { log "stopped before the stub."; exit 0; }
+install_stub
+
+log ""
+log "== targets: the offered answer is in brackets, q stops asking"
+for t in $TARGETS; do
+	rc=0
+	ask_target "$t" || rc=$?
+	case "$rc" in
+		0) run_target "$t" ;;
+		2) break ;;
+	esac
+done
+
+if [ -n "$app_id" ] && [ -n "$app_version" ]; then
+	ask_yes "compare what make dist stages against the shipped tarball?" && release_compare || true
+fi
+
+log ""
+log "== cleanup targets"
+for t in $CLEAN_TARGETS; do
+	rc=0
+	ask_target "$t" || rc=$?
+	case "$rc" in
+		0) run_target "$t" ;;
+		2) break ;;
+	esac
+done
+
+# Whatever else this app is worth trying, ARGS= and all, one target per line.
+# Nobody is there to type one in a batch.
+while [ "$AUTO" != 1 ]; do
+	extra=""
+	read -r -p "   another target (empty = done): make " extra || true
+	[ -n "$extra" ] || break
+	run_target "$extra"
+done
+
+summary
+
+# == Teardown ==
+ask_yes "remove the checkout $APP_DIR?" && { rm -rf "$APP_DIR"; log "checkout removed."; } || true

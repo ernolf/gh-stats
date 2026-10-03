@@ -1,0 +1,819 @@
+#!/usr/bin/env -S LC_CTYPE=C.UTF-8 LC_MESSAGES=C bash
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# gh-stats - query tool for the gh-release-sampler time series (v2).
+# Deltas are computed between two anchors A and B: the value "at X" is the last
+# sample with ts <= X (change-only aware). A release/asset that did not yet exist
+# at A counts from 0 (LEFT JOIN + COALESCE), so newly published releases are not
+# ignored. All times are Unix epoch (UTC).
+
+# == Config ==
+# Optional site config. If /etc/gh-stats/gh-stats.env exists it is sourced here,
+# so its assignments feed the ${VAR:-default} reads below. Precedence is:
+# built-in default < gh-stats.env < environment. A variable already present in
+# the environment (exported in the shell or prefixed to a single call) therefore
+# still wins over the file - we snapshot the environment, source the file, then
+# restore the snapshot. Without the file, behaviour is unchanged. Point
+# GH_STATS_ENV at another path to use a different file.
+GH_STATS_ENV="${GH_STATS_ENV:-/etc/gh-stats/gh-stats.env}"
+# shellcheck disable=SC1090 # the site config is a run-time path
+if [ -r "$GH_STATS_ENV" ]; then
+	_env_snapshot="$(export -p)"
+	set -a; . "$GH_STATS_ENV"; set +a
+	eval "$_env_snapshot"
+	unset _env_snapshot
+fi
+
+DB="${GH_STATS_DB:-/var/lib/gh-stats/downloads.sqlite}"
+SQLITE="${SQLITE_BIN:-/usr/bin/sqlite3}"
+
+set -euo pipefail
+
+usage() {
+	cat <<'EOF'
+Usage: gh-stats <when> [options]
+
+  <when>
+    now                      current cumulative counters
+    days                     daily course (cumulative, last sample per day)
+    repo-stats               current stars, forks and watchers per repo;
+                             filter with --owner/--repo/--exclude-repo, order with
+                             --sort-by=stars|forks|watchers|owner|repo (default stars:desc)
+    <N>m|h|d|w               moving interval now-N .. now         (30m, 1h, 2h, 1d, 7d, 4w)
+    YYYY-MM-DD               one calendar day (00:00 .. 23:59:59)
+    last_week                previous Mon 00:00 .. Sun 23:59:59
+    <start> +<N>u            start .. start+N        (e.g. 2026-07-13_12:00 +12h)
+    <start> -<N>u            start-N .. start        (e.g. 2026-07-13_12:00 -12h)
+    <A> <B>                  two absolute timestamps (a " - " separator is ignored)
+
+  options
+    --owner=<name>           filter by owner (exact, '*' wildcard, or comma-list; see matching below)
+    --repo=<name>            filter by repo  (same rules as --owner)
+    --exclude-repo=<name>    drop these repos (same rules as --owner, negated); a
+                             comma-list excludes several, e.g. --exclude-repo=all-in-one
+    --tag=<name>             filter by tag   (same rules as --owner)
+    --major=<n>              filter by major version
+    --stable | --prerelease  filter by release kind (GitHub's prerelease flag)
+    --stable=strict          --stable, but also drop tags that look like a pre-release
+                             (-dev/-rc/-beta/-alpha/-nightly/-pre/-snapshot) even when
+                             the maintainer left GitHub's prerelease flag unset
+    --published-since=<date> only releases published on/after <date> (e.g. 2026-01-01);
+                             combined with --latest this keeps only repos whose newest
+                             release is that recent - drops long-dead high-count entries
+    --min=<n>                drop rows with fewer than <n> downloads (--min=1 hides
+                             0-download rows, e.g. releases that were never published)
+    --max-patches=<n>        keep only the <n> newest patch releases per minor series
+                             (major.minor), thinning a long version tree. tag-level
+                             output only (default, --by=tag, --by=asset)
+    --max-minor=<n>          keep only the <n> newest minor series per major. Combine
+                             with --max-patches for a compact tree (same grouping rule)
+    --latest                 only the newest release per repo (by published)
+    --latest-per-major       only the newest release per (repo, major)
+    --assets=<list|all>      asset extensions to count, comma-separated
+                             (default: zip,tar.bz2,tar.gz,tar.xz,tgz ; "all" = every asset)
+    --by=owner|repo|tag|major|asset   aggregation level of the output
+    --sort-by=<col>[:asc|desc][,...]  sort rows by one or more columns, leftmost
+                             key primary (default: downloads:desc). Each col must
+                             exist in the current grouping:
+                             owner, repo, tag, published, major, asset, downloads.
+                             tag sorts by version, not lexically, so v10 > v9,
+                             ignoring any text prefix (helm-chart-13.2.1);
+                             owner/repo/asset sort case-insensitively.
+                             Unless downloads is a key it is added as a stable
+                             tie-breaker.
+    --table[=<G>]            time series in buckets of granularity G (default 1h),
+                             value = downloads per hour (rate), not raw sum.
+                             Always ONE aggregated curve over the whole selection;
+                             --by is ignored here. To separate repos/tags, run one
+                             query per repo/tag (--repo=... / --tag=...).
+    --plot[=<G>]             same series as --table, drawn as a column chart
+                             (x-axis = time, y-axis = downloads per hour).
+                             With --by=<dim> the buckets are split into one thin,
+                             coloured bar per group (tag/major/asset/...), drawn
+                             side by side with a legend. Colours need a terminal;
+                             width grows with the group count.
+    --log                    plot the y-axis on a log scale. Use with --plot when a
+                             tall bucket (e.g. a burst after a new release) flattens
+                             the quieter buckets to a single row of cells.
+    --no-cache               recompute instead of serving a cached result (see below)
+    --sanitize-tags          shorten the displayed tag by dropping a textual prefix
+                             before the version: any PREFIX-v1.2.3 -> v1.2.3, and
+                             PREFIX-1.2.3 -> 1.2.3 when PREFIX is the owner, the repo,
+                             or a known special word (Release). Display only - sorting,
+                             grouping and --tag= keep using the raw tag, so omit the
+                             flag when you need to match the long form. Tags without
+                             such a prefix (helm-chart-13.3.1, v1.2.3) are unchanged.
+
+  time-series caching (--table / --plot only)
+    These modes run against a consistent snapshot of the database in /tmp, so the
+    long read never collides with the writing sampler. The rendered result is then
+    cached there for GH_STATS_CACHE_TTL seconds (default 900); an identical call
+    within that window returns instantly. --no-cache forces a fresh computation.
+
+  matching (--owner / --repo / --tag)
+    Exact match by default. A '*' anywhere in the value switches THAT filter to a
+    glob wildcard (SQLite GLOB, case-sensitive, '*' = any run of characters).
+    Each filter matches its own column only: --owner the owner, --repo the repo
+    name, --tag the tag - they are never mixed. A comma-separated value is a set:
+    each item is matched on its own (exact, or GLOB if it contains '*') and the
+    items are OR'd, so one query can span several owners/repos/tags.
+      --owner=nextcloud     exactly the owner "nextcloud"    (NOT nextcloud-releases)
+      --owner=nextcloud*    "nextcloud" and "nextcloud-releases"
+      --owner=*cloud*       every owner containing "cloud"
+                            (nextcloud, nextcloud-releases, christianlupus-nextcloud)
+      --owner=nextcloud-releases,ernolf   either of the two owners
+      --repo=*sync*         every repo whose NAME contains "sync"
+      --repo=spreed,talk*   "spreed" plus every repo starting with "talk"
+      --tag=v34*            every tag starting with "v34"
+EOF
+}
+
+[ -f "$DB" ] || { echo "ERROR: $DB not found - has the sampler run yet?" >&2; exit 1; }
+q() { "$SQLITE" "$@"; }
+
+# ---- argument parsing ----
+owner_f="" repo_f="" tag_f="" major_f="" pre_f="" stable_strict="" pubsince_f="" latest_mode=""
+exclrepo_f=""
+assets="zip,tar.bz2,tar.gz,tar.xz,tgz" by="" table_g="" sort_by="" min_f=""
+maxpatches_f="" maxminor_f=""
+plot_mode="" plot_g="" log_scale="" no_cache="" sanitize=""
+pos=(); opts_end=0
+orig_args=("$@")                 # verbatim argv, used as the result-cache key
+while [ $# -gt 0 ]; do
+	# after "--" everything is positional (lets a leading-dash value through)
+	if [ "$opts_end" = 1 ]; then pos+=("$1"); shift; continue; fi
+	# a negative offset ("-6h", "-12h") is a <when> argument, not an option
+	if [[ "$1" =~ ^-[0-9]+[mhdw]$ ]]; then pos+=("$1"); shift; continue; fi
+	case "$1" in
+		--) opts_end=1 ;;            # end of options; rest is positional
+		--owner=*) owner_f="${1#*=}" ;;
+		--repo=*)  repo_f="${1#*=}" ;;
+		--exclude-repo=*) exclrepo_f="${1#*=}" ;;
+		--tag=*)   tag_f="${1#*=}" ;;
+		--major=*) major_f="${1#*=}" ;;
+		--assets=*) assets="${1#*=}" ;;
+		--by=*)    by="${1#*=}" ;;
+		--sort-by=*) sort_by="${1#*=}" ;;
+		--min=*)   min_f="${1#*=}" ;;
+		--max-patches=*) maxpatches_f="${1#*=}" ;;
+		--max-minor=*)   maxminor_f="${1#*=}" ;;
+		--stable)  pre_f="0" ;;
+		--stable=*) pre_f="0"; case "${1#*=}" in
+			strict) stable_strict=1 ;;
+			*) echo "unknown --stable mode: ${1#*=} (only 'strict')" >&2; exit 1 ;;
+		esac ;;
+		--prerelease) pre_f="1" ;;
+		--published-since=*) pubsince_f="${1#*=}" ;;
+		--latest)  latest_mode="repo" ;;
+		--latest-per-major) latest_mode="major" ;;
+		--table)   table_g="1h" ;;
+		--table=*) table_g="${1#*=}" ;;
+		--plot)    plot_mode=1 ;;
+		--plot=*)  plot_mode=1; plot_g="${1#*=}" ;;
+		--log)     log_scale=1 ;;
+		--no-cache) no_cache=1 ;;
+		--sanitize-tags) sanitize=1 ;;
+		-h|--help) usage; exit 0 ;;
+		-)  ;;                       # bare "-" range separator, ignore
+		-*) echo "unknown option: $1" >&2; exit 1 ;;
+		*)  pos+=("$1") ;;
+	esac
+	shift
+done
+[ ${#pos[@]} -gt 0 ] || { usage; exit 0; }
+
+# ---- time helpers ----
+# to_epoch: accept ISO-ish, "YYYY-MM-DD_HH:MM" (underscore->space), plain dates
+to_epoch() { date -u -d "${1//_/ }" +%s; }
+# gran_secs: "15m","1h","2d","1w" -> seconds
+gran_secs() {
+	[[ "$1" =~ ^([0-9]+)([mhdw])$ ]] || { echo "bad granularity: $1" >&2; exit 1; }
+	local n="${BASH_REMATCH[1]}"
+	case "${BASH_REMATCH[2]}" in
+		m) echo $((n*60)) ;; h) echo $((n*3600)) ;;
+		d) echo $((n*86400)) ;; w) echo $((n*604800)) ;;
+	esac
+}
+
+now=$(date -u +%s)
+cmd="${pos[0]}"
+
+# ---- resolve mode + range (A,B) ----
+mode="delta"; A=0; B=0
+case "$cmd" in
+	now)  mode="now" ;;
+	days) mode="days" ;;
+	repo-stats) mode="repostats" ;;
+	last_week)
+		# Monday 00:00 of previous ISO week .. next Monday - 1s
+		mon_this=$(date -u -d "$(date -u +%Y-%m-%d) -$(( ($(date -u +%u)-1) )) days 00:00:00" +%s)
+		A=$((mon_this - 604800)); B=$((mon_this - 1)) ;;
+	[0-9]*[mhdw]) # moving interval
+		[[ "$cmd" =~ ^([0-9]+)([mhdw])$ ]]
+		B=$now; A=$((now - $(gran_secs "$cmd"))) ;;
+	[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) # one day (or start of a range)
+		if [ ${#pos[@]} -ge 2 ] && [[ "${pos[1]}" =~ ^([+-])([0-9]+[mhdw])$ ]]; then
+			local_off=$(gran_secs "${BASH_REMATCH[2]}")
+			s=$(to_epoch "$cmd")
+			if [ "${BASH_REMATCH[1]}" = "+" ]; then A=$s; B=$((s+local_off)); else A=$((s-local_off)); B=$s; fi
+		elif [ ${#pos[@]} -ge 2 ] && [[ "${pos[1]}" == 20* ]]; then
+			A=$(to_epoch "$cmd"); B=$(to_epoch "${pos[1]}")
+		else
+			A=$(to_epoch "${cmd}_00:00:00"); B=$(to_epoch "${cmd}_23:59:59")
+		fi ;;
+	20*_*|20*T*) # explicit start timestamp, expect offset or absolute end
+		if [ ${#pos[@]} -ge 2 ] && [[ "${pos[1]}" =~ ^([+-])([0-9]+[mhdw])$ ]]; then
+			local_off=$(gran_secs "${BASH_REMATCH[2]}")
+			s=$(to_epoch "$cmd")
+			if [ "${BASH_REMATCH[1]}" = "+" ]; then A=$s; B=$((s+local_off)); else A=$((s-local_off)); B=$s; fi
+		elif [ ${#pos[@]} -ge 2 ]; then
+			A=$(to_epoch "$cmd"); B=$(to_epoch "${pos[1]}")
+		else
+			echo "range start needs an offset (+/-Nu) or an end timestamp" >&2; exit 1
+		fi ;;
+	*) echo "cannot parse <when>: $cmd" >&2; usage; exit 1 ;;
+esac
+
+# ---- SQL fragments from filters ----
+# owner/repo/tag: exact match by default; a '*' in a value switches THAT value to a
+# GLOB wildcard (e.g. --owner=nextcloud* matches nextcloud and nextcloud-releases).
+# A comma-separated value is a set: items matched individually and OR'd together.
+# A third arg "not" negates the set (AND NOT (...)), used by the --exclude-* filters.
+mkmatch() { # $1=column  $2=comma-separated value(s)  [$3="not" to exclude]
+	local col="$1" item v out="" first=1
+	local -a items
+	IFS=',' read -ra items <<<"$2"
+	for item in "${items[@]}"; do
+		[ -n "$item" ] || continue
+		v="${item//\'/\'\'}"
+		[ $first -eq 1 ] && first=0 || out+=" OR "
+		if [[ "$item" == *'*'* ]]; then out+="$col GLOB '$v'"
+		else out+="$col = '$v'"; fi
+	done
+	[ -n "$out" ] || return
+	if [ "${3:-}" = "not" ]; then printf " AND NOT (%s)" "$out"
+	else printf " AND (%s)" "$out"; fi
+}
+flt=""
+[ -n "$owner_f" ] && flt+=$(mkmatch owner "$owner_f")
+[ -n "$repo_f" ]  && flt+=$(mkmatch repo "$repo_f")
+[ -n "$exclrepo_f" ] && flt+=$(mkmatch repo "$exclrepo_f" not)
+[ -n "$tag_f" ]   && flt+=$(mkmatch tag "$tag_f")
+[ -n "$major_f" ] && flt+=" AND r.major = ${major_f//[^0-9]/}"
+[ -n "$pre_f" ]   && flt+=" AND r.prerelease = ${pre_f}"
+# --stable=strict: also drop releases whose tag name denotes a pre-release even
+# though the maintainer left GitHub's prerelease flag unset (e.g. v1.2.3-beta.1).
+pre_tag="lower(tag) GLOB '*-dev*' OR lower(tag) GLOB '*-rc*' OR lower(tag) GLOB '*-beta*' OR lower(tag) GLOB '*-alpha*' OR lower(tag) GLOB '*-nightly*' OR lower(tag) GLOB '*-pre*' OR lower(tag) GLOB '*-snapshot*'"
+[ -n "$stable_strict" ] && flt+=" AND NOT ($pre_tag)"
+[ -n "$pubsince_f" ] && flt+=" AND r.published >= $(to_epoch "$pubsince_f")"
+# grp_flt narrows series_cte to a single --by group (set per series by --plot --by)
+grp_flt=""
+
+# asset filter -> GLOB set on the asset extension
+asset_flt=""
+if [ "$assets" != "all" ]; then
+	asset_flt=" AND ("
+	first=1; IFS=',' read -ra exts <<<"$assets"
+	for e in "${exts[@]}"; do
+		[ $first -eq 1 ] && first=0 || asset_flt+=" OR "
+		asset_flt+="asset GLOB '*.${e//\'/\'\'}'"
+	done
+	asset_flt+=" )"
+fi
+
+# latest filter -> restrict to newest release per repo / per (repo,major)
+latest_flt=""
+if [ "$latest_mode" = "repo" ]; then
+	latest_flt=" AND (r.owner,r.repo,r.tag) IN (SELECT owner,repo,tag FROM releases x WHERE x.published=(SELECT max(published) FROM releases y WHERE y.owner=x.owner AND y.repo=x.repo))"
+elif [ "$latest_mode" = "major" ]; then
+	latest_flt=" AND (r.owner,r.repo,r.tag) IN (SELECT owner,repo,tag FROM releases x WHERE x.published=(SELECT max(published) FROM releases y WHERE y.owner=x.owner AND y.repo=x.repo AND y.major IS x.major))"
+fi
+
+# --min=<n>: keep only groups whose summed downloads reach n. Applied as a HAVING
+# on the aggregated 'downloads' column in the now and delta summaries, e.g.
+# --min=1 drops rows with 0 downloads (releases that were never published).
+min_dl=""
+[ -n "$min_f" ] && min_dl="${min_f//[^0-9]/}"
+
+# group column. When the grouping is tag-exact, show the release date (from
+# releases.published) right after the tag; for coarser groupings a single
+# published value would be ambiguous, so it is omitted there.
+#   sel      = SELECT list of the inner aggregation (expressions with aliases)
+#   outcols  = the same columns by their output name, for the outer result select
+#   aggmajor = extra ", r.major AS major" so the outer ORDER BY / point-release caps
+#              can reach the major even where it is not displayed (tag-level only)
+pub="date(r.published,'unixepoch') AS published"
+case "$by" in
+	owner) grp="owner"; sel="owner"; outcols="owner"; aggmajor=""; sortable="owner downloads" ;;
+	repo)  grp="owner,repo"; sel="owner,repo"; outcols="owner,repo"; aggmajor=""; sortable="owner repo downloads" ;;
+	tag)   grp="owner,repo,tag"; sel="owner,repo,tag, $pub"; outcols="owner,repo,tag,published"; aggmajor=", r.major AS major"; sortable="owner repo tag published major downloads" ;;
+	major) grp="owner,repo,r.major"; sel="owner,repo,r.major AS major"; outcols="owner,repo,major"; aggmajor=""; sortable="owner repo major downloads" ;;
+	asset) grp="owner,repo,tag,asset"; sel="owner,repo,tag, $pub, asset"; outcols="owner,repo,tag,published,asset"; aggmajor=", r.major AS major"; sortable="owner repo tag published asset major downloads" ;;
+	"")    grp="owner,repo,tag"; sel="owner,repo,tag, $pub"; outcols="owner,repo,tag,published"; aggmajor=", r.major AS major"; sortable="owner repo tag published major downloads" ;;
+	*) echo "bad --by: $by" >&2; exit 1 ;;
+esac
+
+# Default sort key and tie-breaker column for the ORDER BY built below. Release
+# stats sort by downloads; the repo-stats snapshot reads a different table with its
+# own columns, so it sorts by stars and ignores the release-oriented --by grouping.
+dflt_sort="downloads DESC"; tie_col="downloads"
+if [ "$mode" = "repostats" ]; then
+	sortable="owner repo stars forks watchers"
+	dflt_sort="stars DESC"; tie_col="stars"
+fi
+
+# glabel: SQL expression for a group's display label, per --by dimension.
+# grpmatch: the matching WHERE fragment that narrows series_cte to one group.
+case "$by" in
+	owner) glabel="owner" ;;
+	repo)  glabel="repo" ;;
+	tag)   glabel="tag" ;;
+	major) glabel="'v'||r.major" ;;
+	asset) glabel="asset" ;;
+	*)     glabel="tag" ;;
+esac
+grpmatch() { # $1 = label value -> WHERE fragment for grp_flt
+	local v="${1//\'/\'\'}"
+	case "$by" in
+		major) printf "r.major = %s" "${1//[^0-9]/}" ;;
+		*)     printf "%s = '%s'" "$glabel" "$v" ;;
+	esac
+}
+
+# Normalised numeric version of a tag. Tags look like v10.1.2, but may carry a textual
+# prefix before the number (helm-chart-13.2.1, nextcloud-9.0.5, mcp-v1.2.3, v.1.2.3);
+# none of those prefixes contain a digit, so the version always starts at the first
+# digit. _fd is that digit's position (999 if the tag has none), so substr(tag,_fd)
+# drops any prefix; then a -prerelease/-build suffix is cut off. The result is what the
+# sort key and minor number below are built from.
+_fd="min("
+for _d in 0 1 2 3 4 5 6 7 8 9; do _fd+="CASE WHEN instr(tag,'$_d')=0 THEN 999 ELSE instr(tag,'$_d') END,"; done
+_fd="${_fd%,})"
+_vstr="substr(tag,$_fd)"
+nver_expr="(CASE WHEN instr($_vstr,'-')>0 THEN substr($_vstr,1,instr($_vstr,'-')-1) ELSE $_vstr END)"
+# Materialise the normalised version once, as the agg column 'nver', for tag-level
+# groupings (same condition as aggmajor). The sort key and minor number reference that
+# short column instead of re-deriving it from the tag, which would otherwise inline the
+# whole _fd expression dozens of times and blow past sqlite3's argument-length limit.
+aggver=""; [ -n "$aggmajor" ] && aggver=", $nver_expr AS nver"
+
+# Version-aware sort key: take the first four dotted components of nver, CAST each to an
+# integer and zero-pad it to six digits, so a plain string comparison orders v9 before
+# v10 numerically.
+_nb="(nver || '.')"
+_nr1="substr($_nb, instr($_nb,'.')+1)"
+_nr2="substr($_nr1, instr($_nr1,'.')+1)"
+_nr3="substr($_nr2, instr($_nr2,'.')+1)"
+_vpad() { printf "substr('000000' || CAST(substr(%s,1,instr(%s,'.')-1) AS INTEGER), -6)" "$1" "$1"; }
+tagsort="$(_vpad "$_nb")||$(_vpad "$_nr1")||$(_vpad "$_nr2")||$(_vpad "$_nr3")"
+# minor-version number (second dotted component), used to partition point releases into
+# minor series for --max-patches / --max-minor.
+vmin="CAST(substr($_nr1,1,instr($_nr1,'.')-1) AS INTEGER)"
+
+# Optional display-only tag shortening (--sanitize-tags). A tag may carry a textual
+# prefix before the version (atrium-secureshare-v0.0.2, nextcloud-9.2.5, Release-4.4.0);
+# when the flag is set the prefix is dropped for the displayed tag only - grouping,
+# sorting and the --tag= filter all keep operating on the raw tag. First-digit position
+# is $_fd (see above), so the prefix is everything before it. Three cases:
+#   1. PREFIX-v<ver> -> v<ver>   any prefix; the leading v is kept
+#   2. PREFIX-<ver>  -> <ver>    only if PREFIX equals the owner or repo (case-insensitive)
+#   3. PREFIX-<ver>  -> <ver>    if PREFIX is in the small special list below
+# Everything else (helm-chart-13.3.1, plain v1.2.3, 1.2.3) stays untouched.
+sanitize_special=(release)   # lowercase; extend as new offenders turn up
+if [ -n "$sanitize" ]; then
+	_sp=""; for _w in "${sanitize_special[@]}"; do _sp+="'${_w,,}',"; done; _sp="${_sp%,}"
+	_pfx="lower(substr(tag,1,$_fd-2))"
+	santag="CASE
+	  WHEN $_fd >= 3 AND substr(tag,$_fd-1,1) IN ('v','V') AND substr(tag,$_fd-2,1)='-'
+	    THEN 'v' || substr(tag,$_fd)
+	  WHEN $_fd >= 2 AND substr(tag,$_fd-1,1)='-'
+	       AND ($_pfx = lower(owner) OR $_pfx = lower(repo) OR $_pfx IN ($_sp))
+	    THEN substr(tag,$_fd)
+	  ELSE tag END"
+	# Swap the transform in for the displayed tag column; a no-op when the current
+	# grouping has none (owner/repo/major). Output column name stays 'tag'.
+	outcols="${outcols/tag/$santag AS tag}"
+fi
+
+# ORDER BY clause. Default: most downloads first. --sort-by=<col>[:asc|desc] picks
+# other columns (only those present in the current grouping); a comma-separated
+# list gives a multi-level sort, leftmost key primary. Default direction is DESC
+# for downloads/published, ASC otherwise. The tag column sorts by version, not
+# lexically. Unless downloads is itself a key, it is appended as a stable tie-breaker.
+orderby="$dflt_sort"
+if [ -n "$sort_by" ]; then
+	IFS=',' read -ra sterms <<<"$sort_by"
+	clauses=""; has_tie=0
+	for term in "${sterms[@]}"; do
+		[ -n "$term" ] || continue
+		scol="${term%%:*}"; sdir=""
+		[[ "$term" == *:* ]] && sdir="${term#*:}"
+		case " $sortable " in *" $scol "*) ;; *)
+			echo "cannot sort by '$scol' with this grouping; available: $sortable" >&2; exit 1 ;;
+		esac
+		if [ -z "$sdir" ]; then
+			case "$scol" in downloads|published|stars|forks|watchers) sdir="desc" ;; *) sdir="asc" ;; esac
+		fi
+		case "$sdir" in asc|ASC) sdir="ASC" ;; desc|DESC) sdir="DESC" ;; *)
+			echo "sort direction must be asc or desc: $sdir" >&2; exit 1 ;;
+		esac
+		[ "$scol" = "$tie_col" ] && has_tie=1
+		# tag sorts by the version key; text columns sort case-insensitively so
+		# uppercase owners are not grouped ahead of lowercase ones.
+		case "$scol" in
+			tag)              clauses+="${clauses:+, }$tagsort $sdir" ;;
+			owner|repo|asset) clauses+="${clauses:+, }$scol COLLATE NOCASE $sdir" ;;
+			*)                clauses+="${clauses:+, }$scol $sdir" ;;
+		esac
+	done
+	if [ -n "$clauses" ]; then
+		[ "$has_tie" = 1 ] && orderby="$clauses" || orderby="$clauses, $dflt_sort"
+	fi
+fi
+
+# --max-patches / --max-minor: thin the version tree of the now and delta summaries.
+# The aggregation is wrapped in a CTE 'agg'; a second CTE ranks its rows per series
+# with window functions, and the outer select keeps only the leading ones:
+#   _pr = point-release rank, newest patch first, per (owner, repo, major, minor)
+#   _mr = minor-series rank,  newest minor first, per (owner, repo, major)
+# Both need per-tag major/minor, so they only apply to tag-level output.
+maxpatch=""; maxminor=""
+[ -n "$maxpatches_f" ] && maxpatch="${maxpatches_f//[^0-9]/}"
+[ -n "$maxminor_f" ]   && maxminor="${maxminor_f//[^0-9]/}"
+[ "${maxpatch:-0}" -ge 1 ] 2>/dev/null || maxpatch=""
+[ "${maxminor:-0}" -ge 1 ] 2>/dev/null || maxminor=""
+cap_cte=""; cap_src="agg"; cap_where=""
+if [ -n "$maxpatch" ] || [ -n "$maxminor" ]; then
+	case "$by" in
+		""|tag|asset) ;;
+		*) echo "--max-patches/--max-minor only apply to tag-level output (default, --by=tag, --by=asset)" >&2; exit 1 ;;
+	esac
+	cap_cte=", capped AS (SELECT agg.*,
+    ROW_NUMBER() OVER (PARTITION BY owner,repo,major,$vmin ORDER BY $tagsort DESC) AS _pr,
+    DENSE_RANK() OVER (PARTITION BY owner,repo,major ORDER BY $vmin DESC) AS _mr
+  FROM agg)"
+	cap_src="capped"
+	cap_where="WHERE 1=1 ${maxpatch:+AND _pr <= $maxpatch} ${maxminor:+AND _mr <= $maxminor}"
+fi
+
+# snapshot CTE: value of every asset at a given epoch (last sample <= epoch)
+snap() { # $1 = epoch alias name, $2 = epoch value
+	cat <<SQL
+$1 AS (SELECT owner,repo,tag,asset,downloads FROM
+  (SELECT owner,repo,tag,asset,downloads,
+          ROW_NUMBER() OVER (PARTITION BY owner,repo,tag,asset ORDER BY ts DESC) rn
+   FROM samples WHERE ts <= $2) WHERE rn=1)
+SQL
+}
+
+# series CTE: per-bucket download delta over [A,B] in buckets of $G, one row per
+# grid edge. Shared by --table and --plot; the caller appends its own SELECT and
+# reads the columns (t, delta) from the `series` relation.
+#
+# Instead of rebuilding the cumulative total from scratch at every grid edge (a
+# window scan of the whole samples table per bucket), we walk the *selected*
+# samples once: each change-only sample carries an increment over its predecessor
+# for the same asset (LAG), attributed to the bucket its timestamp falls into;
+# summed per bucket that is exactly the total's rise there.
+#
+# A delta needs two observations, so an asset's very first sample has no
+# predecessor and yields NO delta (LAG is NULL, dropped by SUM) - it is only the
+# baseline the following deltas build on. This matters when sampling of an owner
+# started inside the range: that first sample holds the whole cumulative count up
+# to that point and must not be drawn, or it dwarfs every real bucket. The LAG
+# window sees samples with ts <= A too, so the first in-range sample is measured
+# against its real predecessor. Uses the (owner,repo,tag,asset,ts) index.
+series_cte() {
+	cat <<SQL
+WITH RECURSIVE grid(t) AS (
+  SELECT $A UNION ALL SELECT t+$G FROM grid WHERE t+$G <= $B
+),
+incr AS (
+  SELECT s.ts AS ts,
+         s.downloads - LAG(s.downloads) OVER (
+           PARTITION BY s.owner,s.repo,s.tag,s.asset ORDER BY s.ts) AS d
+  FROM samples s JOIN releases r USING(owner,repo,tag)
+  WHERE s.ts <= $B $flt $asset_flt $latest_flt $grp_flt
+),
+binned AS (
+  SELECT $A + ((ts - $A + $G - 1) / $G) * $G AS edge, SUM(d) AS delta
+  FROM incr WHERE ts > $A
+  GROUP BY edge
+),
+series(t,delta) AS (
+  SELECT g.t, CASE WHEN g.t = $A THEN NULL ELSE COALESCE(b.delta, 0) END
+  FROM grid g LEFT JOIN binned b ON b.edge = g.t
+)
+SQL
+}
+
+# plot_label: one-line description of the current selection, for the chart header
+plot_label() {
+	local p=""
+	[ -n "$owner_f" ] && p+="$owner_f"
+	[ -n "$repo_f" ]  && p+="${p:+/}$repo_f"
+	[ -n "$tag_f" ]   && p+=" $tag_f"
+	[ -n "$major_f" ] && p+=" v$major_f"
+	[ -n "$pubsince_f" ] && p+=" since $pubsince_f"
+	if [ "$pre_f" = "0" ]; then
+		[ -n "$stable_strict" ] && p+=" (stable, strict)" || p+=" (stable)"
+	fi
+	[ "$pre_f" = "1" ] && p+=" (prerelease)"
+	[ "$latest_mode" = "repo" ]  && p+=" latest"
+	[ "$latest_mode" = "major" ] && p+=" latest/major"
+	printf '%s' "${p:-all repos}"
+}
+
+# ---- snapshot + result cache (heavy time-series modes only) ----
+# --table / --plot walk the whole grid and can run for a while. To keep that long
+# read off the live (WAL) database the sampler writes to, every such query runs
+# against a fresh throwaway snapshot in /tmp; a plain cp is unsafe under a
+# concurrent writer, so we use sqlite's online .backup for a consistent copy.
+# On top of that, an identical invocation is served from a short-lived result
+# cache (default 15 min) so a repeated call renders instantly.
+if [ -n "$table_g" ] || [ -n "$plot_mode" ]; then
+	cache_dir="${TMPDIR:-/tmp}/gh-stats-cache-$(id -u)"
+	mkdir -p "$cache_dir" && chmod 700 "$cache_dir" 2>/dev/null || true
+	ttl="${GH_STATS_CACHE_TTL:-900}"
+	# best-effort GC: expired cache entries, plus any leftover snapshots
+	find "$cache_dir" -maxdepth 1 -type f \( -name 'snap.*.sqlite' -o -name '*.part' \) -mmin +60 -delete 2>/dev/null || true
+	find "$cache_dir" -maxdepth 1 -type f ! -name 'snap.*.sqlite' ! -name '*.part' -mmin +$(( (ttl + 59) / 60 )) -delete 2>/dev/null || true
+
+	cache_file=""
+	if [ -z "$no_cache" ]; then
+		key=$(printf '%s\0' "${orig_args[@]}" "H=${GH_STATS_PLOT_HEIGHT:-}" "DB=$DB" | sha256sum | cut -d' ' -f1)
+		cache_file="$cache_dir/$key"
+		if [ -f "$cache_file" ] && [ "$(( $(date +%s) - $(stat -c %Y "$cache_file") ))" -lt "$ttl" ]; then
+			cat "$cache_file"; exit 0
+		fi
+	fi
+
+	# consistent hot snapshot; the heavy query below runs against the copy
+	snap_db="$cache_dir/snap.$$.sqlite"
+	"$SQLITE" "$DB" ".backup '$snap_db'"
+	DB="$snap_db"
+
+	if [ -n "$cache_file" ]; then
+		exec 3>&1                       # keep the real stdout on fd 3
+		part="$cache_file.$$.part"
+		exec >"$part"                   # heavy output -> temp file
+		# on exit: show the output, and cache it only if the query succeeded
+		# shellcheck disable=SC2154 # rc is assigned by the trap itself
+		trap 'rc=$?; cat "$part" >&3 2>/dev/null; if [ $rc -eq 0 ]; then mv -f "$part" "$cache_file"; else rm -f "$part"; fi; rm -f "$snap_db"' EXIT
+	else
+		trap 'rm -f "$snap_db"' EXIT
+	fi
+fi
+
+# ---- dispatch ----
+if [ "$mode" = "now" ]; then
+	q -header -column "$DB" "
+WITH $(snap b "$now"),
+agg AS (
+  SELECT $sel, SUM(b.downloads) AS downloads$aggmajor$aggver
+  FROM b JOIN releases r USING(owner,repo,tag)
+  WHERE 1=1 $flt $asset_flt $latest_flt
+  GROUP BY $grp ${min_dl:+HAVING downloads >= $min_dl}
+)$cap_cte
+SELECT $outcols, downloads FROM $cap_src $cap_where ORDER BY $orderby;"
+	exit 0
+fi
+
+if [ "$mode" = "days" ]; then
+	q -header -column "$DB" "
+SELECT date(ts,'unixepoch') AS day, owner, repo, SUM(downloads) AS cumulative
+FROM samples s JOIN releases r USING(owner,repo,tag)
+WHERE ts IN (SELECT max(ts) FROM samples GROUP BY date(ts,'unixepoch')) $flt $asset_flt
+GROUP BY day, owner, repo ORDER BY day, owner, repo;"
+	exit 0
+fi
+
+# ---- repo popularity snapshot (stars / forks / watchers per repo) ----
+# Reads the repo_stats table (change-only), taking each repo's most recent snapshot
+# at or before now. Only owner/repo/exclude-repo apply here; repo_stats carries no
+# tag, major or release-kind columns, so the other filters are not offered.
+if [ "$mode" = "repostats" ]; then
+	rs_flt=""
+	[ -n "$owner_f" ]    && rs_flt+=$(mkmatch owner "$owner_f")
+	[ -n "$repo_f" ]     && rs_flt+=$(mkmatch repo "$repo_f")
+	[ -n "$exclrepo_f" ] && rs_flt+=$(mkmatch repo "$exclrepo_f" not)
+	q -header -column "$DB" "
+WITH latest AS (
+  SELECT owner,repo,stars,forks,watchers FROM
+    (SELECT owner,repo,stars,forks,watchers,
+            ROW_NUMBER() OVER (PARTITION BY owner,repo ORDER BY ts DESC) rn
+     FROM repo_stats WHERE ts <= $now) WHERE rn=1)
+SELECT owner,repo,stars,forks,watchers FROM latest
+WHERE 1=1 $rs_flt ORDER BY $orderby;"
+	exit 0
+fi
+
+# ---- grouped plot: one coloured bar per --by group, side by side per bucket ----
+if [ -n "$plot_mode" ] && [ -n "$by" ]; then
+	case "$mode" in
+		now|days) echo "--plot needs a time range (e.g. 3d, 12h, or a start with +/-Nu), not '$cmd'" >&2; exit 1 ;;
+	esac
+	G=$(gran_secs "${plot_g:-${table_g:-1h}}")
+	log_v=0; [ -n "$log_scale" ] && log_v=1
+	# groups with activity in [A,B], most-active first
+	mapfile -t groups < <(q -noheader -list "$DB" "
+WITH
+$(snap a "$A"),
+$(snap b "$B"),
+delta AS (SELECT bb.owner,bb.repo,bb.tag,bb.asset,
+                 bb.downloads - COALESCE(aa.downloads,0) AS d
+          FROM b bb LEFT JOIN a aa USING(owner,repo,tag,asset))
+SELECT $glabel FROM delta JOIN releases r USING(owner,repo,tag)
+WHERE d > 0 $flt $asset_flt $latest_flt
+GROUP BY $glabel HAVING SUM(d) > 0 ORDER BY SUM(d) DESC;")
+	[ ${#groups[@]} -gt 0 ] || { echo "(no data in range)"; exit 0; }
+	{
+		k=0
+		for lbl in "${groups[@]}"; do
+			printf 'L|%s|%s\n' "$k" "$lbl"
+			grp_flt=" AND $(grpmatch "$lbl")"
+			q -noheader -list -separator '|' "$DB" "$(series_cte)
+SELECT datetime(t,'unixepoch'),
+       ROUND(delta*3600.0/$G, 2)
+FROM series ORDER BY t;" | awk -F'|' -v k="$k" 'NF>=2 && $2!="" {print "D|"k"|"$1"|"$2}'
+			k=$((k+1))
+		done
+	} | gawk -v H="${GH_STATS_PLOT_HEIGHT:-16}" -v LOG="$log_v" \
+		-v LABEL="$(plot_label)" -v UNIT="dl/h" '
+	BEGIN {
+		FS = "|"; split("▁▂▃▄▅▆▇█", BLK, "")
+		npal = split("196 46 33 208 201 51 226 129 118 214 27 199", PAL, " ")
+		K = 0; ncol = 0; maxv = 0
+	}
+	$1 == "L" { kk = $2 + 0; label[kk] = $3; if (kk + 1 > K) K = kk + 1; next }
+	$1 == "D" {
+		kk = $2 + 0; tm = $3; val = $4 + 0
+		if (!(tm in colidx)) { colidx[tm] = ncol; coltime[ncol] = tm; ncol++ }
+		M[colidx[tm], kk] = val
+		if (val > maxv) maxv = val
+		next
+	}
+	END {
+		if (ncol == 0 || K == 0) { print "(no data in range)"; exit }
+		if (maxv <= 0) maxv = 1
+		lm = log(1 + maxv)
+		lrow[H]=1; lrow[int(3*H/4+0.5)]=1; lrow[int(H/2+0.5)]=1; lrow[int(H/4+0.5)]=1; lrow[1]=1
+		gw = 0
+		for (r=1;r<=H;r++) {
+			if (!(r in lrow)) continue
+			yv = (LOG+0 == 1) ? exp((r/H)*lm) - 1 : maxv * r / H
+			lab[r] = fmtnum(yv)
+			if (length(lab[r]) > gw) gw = length(lab[r])
+		}
+		hdr = LABEL "   [" UNIT "]   " substr(coltime[0],1,16) " .. " substr(coltime[ncol-1],1,16)
+		if (LOG+0 == 1) hdr = hdr "   log"
+		print ""
+		printf "%*s  %s\n", gw, "", hdr
+		for (r=H; r>=1; r--) {
+			line = (r in lrow) ? sprintf("%*s |", gw, lab[r]) : sprintf("%*s |", gw, "")
+			for (c=0;c<ncol;c++) {
+				for (kk=0;kk<K;kk++) {
+					val = M[c, kk] + 0
+					f = (LOG+0 == 1) ? ((val > 0) ? log(1+val)/lm : 0) : val/maxv
+					e = int(f * H * 8 + 0.5) - (r-1)*8
+					if (e <= 0) line = line " "
+					else {
+						ch = (e >= 8) ? BLK[8] : BLK[e]
+						line = line sprintf("\033[38;5;%dm%s\033[0m", PAL[(kk % npal)+1], ch)
+					}
+				}
+				line = line " "                  # gap between buckets
+			}
+			print line
+		}
+		w = ncol * (K + 1)
+		base = sprintf("%*s +", gw, ""); for (i=0;i<w;i++) base = base "-"; print base
+		axl = ""; for (i=0;i<w;i++) axl = axl " "
+		prevmd = ""
+		for (c=0;c<ncol;c++) {
+			md = substr(coltime[c], 6, 5)
+			if (md != prevmd) {
+				prevmd = md; dd = substr(coltime[c], 9, 2); pos = c * (K + 1)
+				for (j=1;j<=length(dd) && (pos+j)<=w;j++)
+					axl = substr(axl,1,pos+j-1) substr(dd,j,1) substr(axl,pos+j+1)
+			}
+		}
+		printf "%*s  %s\n", gw, "", axl
+		printf "%*s  (day of month, UTC)\n", gw, ""
+		print ""
+		for (kk=0;kk<K;kk++)
+			printf "%*s  \033[38;5;%dm██\033[0m %s\n", gw, "", PAL[(kk % npal)+1], label[kk]
+	}
+	function fmtnum(x) { return (x >= 10) ? sprintf("%d", x + 0.5) : sprintf("%.1f", x) }
+	'
+	exit 0
+fi
+
+# ---- plot (per-hour rate as a single aggregated column chart) ----
+if [ -n "$plot_mode" ]; then
+	case "$mode" in
+		now|days) echo "--plot needs a time range (e.g. 3d, 12h, or a start with +/-Nu), not '$cmd'" >&2; exit 1 ;;
+	esac
+	G=$(gran_secs "${plot_g:-${table_g:-1h}}")
+	log_v=0; [ -n "$log_scale" ] && log_v=1
+	q -noheader -list -separator '|' "$DB" "$(series_cte)
+SELECT datetime(t,'unixepoch') AS time_utc,
+       ROUND(delta*3600.0/$G, 2) AS per_hour
+FROM series ORDER BY t;" | gawk \
+		-v H="${GH_STATS_PLOT_HEIGHT:-16}" -v LOG="$log_v" \
+		-v LABEL="$(plot_label)" -v UNIT="dl/h" '
+	BEGIN { split("▁▂▃▄▅▆▇█", BLK, "") }   # BLK[1..8] = 1/8 .. 8/8 block
+	{
+		p = index($0, "|"); if (p == 0) next
+		tm = substr($0, 1, p-1); vs = substr($0, p+1)
+		if (tm == "" || vs == "") next        # first bucket has no delta (LAG NULL)
+		n++; T[n] = tm; V[n] = vs + 0
+	}
+	END {
+		if (n == 0) { print "(no data in range)"; exit }
+		maxv = 0; for (i=1;i<=n;i++) if (V[i] > maxv) maxv = V[i]
+		if (maxv <= 0) maxv = 1
+		lm = log(1 + maxv)
+		# fill height per column in eighths (0 .. H*8)
+		for (i=1;i<=n;i++) {
+			f = (LOG+0 == 1) ? log(1 + V[i]) / lm : V[i] / maxv
+			E[i] = int(f * H * 8 + 0.5)
+		}
+		# y-axis labels on a handful of rows (value at the row top boundary)
+		lrow[H]=1; lrow[int(3*H/4+0.5)]=1; lrow[int(H/2+0.5)]=1; lrow[int(H/4+0.5)]=1; lrow[1]=1
+		gw = 0
+		for (r=1;r<=H;r++) {
+			if (!(r in lrow)) continue
+			yv = (LOG+0 == 1) ? exp((r/H)*lm) - 1 : maxv * r / H
+			lab[r] = fmtnum(yv)
+			if (length(lab[r]) > gw) gw = length(lab[r])
+		}
+		# header
+		hdr = LABEL "   [" UNIT "]   " substr(T[1],1,16) " .. " substr(T[n],1,16)
+		if (LOG+0 == 1) hdr = hdr "   log"
+		print ""
+		printf "%*s  %s\n", gw, "", hdr
+		# chart body, top row -> bottom row
+		for (r=H; r>=1; r--) {
+			line = (r in lrow) ? sprintf("%*s |", gw, lab[r]) : sprintf("%*s |", gw, "")
+			for (i=1;i<=n;i++) {
+				e = E[i] - (r-1)*8
+				if (e <= 0)      line = line " "
+				else if (e >= 8) line = line BLK[8]
+				else             line = line BLK[e]
+			}
+			print line
+		}
+		# baseline
+		base = sprintf("%*s +", gw, ""); for (i=1;i<=n;i++) base = base "-"; print base
+		# x-axis day ticks (day of month), spaced so 2-char ticks do not overlap
+		axl = ""; for (i=1;i<=n;i++) axl = axl " "
+		prevmd = ""; lastcol = -99
+		for (i=1;i<=n;i++) {
+			md = substr(T[i], 6, 5)               # MM-DD, new tick on each calendar day
+			if (md != prevmd) {
+				prevmd = md
+				if (i - lastcol >= 3) {
+					dd = substr(T[i], 9, 2)       # DD
+					for (k=1;k<=length(dd) && i+k-1<=n;k++)
+						axl = substr(axl,1,i+k-2) substr(dd,k,1) substr(axl,i+k)
+					lastcol = i
+				}
+			}
+		}
+		printf "%*s  %s\n", gw, "", axl
+		printf "%*s  (day of month, UTC)\n", gw, ""
+	}
+	function fmtnum(x) { return (x >= 10) ? sprintf("%d", x + 0.5) : sprintf("%.1f", x) }
+	'
+	exit 0
+fi
+
+# ---- table (rate per hour over buckets) ----
+if [ -n "$table_g" ]; then
+	G=$(gran_secs "$table_g")
+	q -header -column "$DB" "$(series_cte)
+SELECT datetime(t,'unixepoch') AS time_utc,
+       delta,
+       ROUND(delta*3600.0/$G, 2) AS per_hour
+FROM series ORDER BY t;"
+	exit 0
+fi
+
+# ---- delta over [A,B], aggregated by --by ----
+q -header -column "$DB" "
+WITH
+$(snap a "$A"),
+$(snap b "$B"),
+delta AS (
+  SELECT bb.owner,bb.repo,bb.tag,bb.asset,
+         bb.downloads - COALESCE(aa.downloads,0) AS d
+  FROM b bb LEFT JOIN a aa USING(owner,repo,tag,asset)),
+agg AS (
+  SELECT $sel, SUM(d) AS downloads$aggmajor$aggver
+  FROM delta JOIN releases r USING(owner,repo,tag)
+  WHERE d > 0 $flt $asset_flt $latest_flt
+  GROUP BY $grp HAVING SUM(d) > 0 ${min_dl:+AND downloads >= $min_dl}
+)$cap_cte
+SELECT $outcols, downloads FROM $cap_src $cap_where ORDER BY $orderby;"

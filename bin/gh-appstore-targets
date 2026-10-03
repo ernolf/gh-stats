@@ -1,0 +1,177 @@
+#!/usr/bin/env -S LC_CTYPE=C.UTF-8 LC_MESSAGES=C bash
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# gh-appstore-targets - build a gh-release-sampler targets drop-in from the
+# Nextcloud App Store catalogue. It reads the App Store's apps.json, keeps every
+# app that publishes its releases on GitHub and was updated recently enough, and
+# writes them as an "owner/repo" target list to a drop-in that the sampler merges
+# with its hand-curated targets.json. Re-running keeps the list current: new apps
+# (and new owners) appear, apps gone stale drop out.
+#
+# The *evaluation* is identical for everyone; only how apps.json is obtained
+# differs, selected by APPSTORE_SOURCE:
+#   download - fetch https://apps.nextcloud.com/api/v1/apps.json (ETag-cached).
+#   appdata  - read a Nextcloud instance's own copy under
+#              datadir/appdata_<instanceid>/appstore/apps.json.
+#   ebtb     - read the copy maintained by the ebtb "nc-apps" tool, resolved
+#              through its apps.db (SELECT json_data_file WHERE platform='all').
+# Only the "download" source touches the network.
+
+# == Config ==
+# Optional site config shared with gh-stats and gh-release-sampler. If
+# /etc/gh-stats/gh-stats.env exists it is sourced here, so its assignments feed
+# the ${VAR:-default} reads below. Precedence is: built-in default <
+# gh-stats.env < environment. A variable already present in the environment
+# still wins over the file - we snapshot the environment, source the file, then
+# restore the snapshot. Without the file, behaviour is unchanged. Point
+# GH_STATS_ENV at another path to use a different file.
+GH_STATS_ENV="${GH_STATS_ENV:-/etc/gh-stats/gh-stats.env}"
+# shellcheck disable=SC1090 # the site config is a run-time path
+if [ -r "$GH_STATS_ENV" ]; then
+	_env_snapshot="$(export -p)"
+	set -a; . "$GH_STATS_ENV"; set +a
+	eval "$_env_snapshot"
+	unset _env_snapshot
+fi
+
+# Where apps.json comes from and what the evaluation produces.
+APPSTORE_SOURCE="${APPSTORE_SOURCE:-download}"
+APPSTORE_TARGETS_FILE="${APPSTORE_TARGETS_FILE:-/etc/gh-stats/targets.d/appstore.json}"
+# Owners kept whole (bare) instead of being expanded to owner/repo pairs.
+# nextcloud-releases publishes so many apps that listing it as a single owner is
+# both shorter and what you want anyway. Space- or comma-separated.
+APPSTORE_WHOLE_OWNERS="${APPSTORE_WHOLE_OWNERS:-nextcloud-releases}"
+# Recency cutoff: keep an owner/repo only if its newest release is from this
+# calendar year or later. Default: last year, so the window rolls forward.
+APPSTORE_SINCE_YEAR="${APPSTORE_SINCE_YEAR:-$(($(date -u +%Y) - 1))}"
+
+# -- download source --
+APPSTORE_URL="${APPSTORE_URL:-https://apps.nextcloud.com/api/v1/apps.json}"
+APPSTORE_CACHE="${APPSTORE_CACHE:-/var/lib/gh-stats/apps.json}"
+APPSTORE_INCLUDE_ENTERPRISE="${APPSTORE_INCLUDE_ENTERPRISE:-true}"
+
+# -- appdata source -- explicit file, or derive it from a working occ command.
+APPSTORE_APPDATA_FILE="${APPSTORE_APPDATA_FILE:-}"
+APPSTORE_OCC="${APPSTORE_OCC:-}"
+
+# -- ebtb source -- path to the nc-apps apps.db.
+APPSTORE_EBTB_DB="${APPSTORE_EBTB_DB:-}"
+
+SQLITE="${SQLITE_BIN:-/usr/bin/sqlite3}"
+
+set -euo pipefail
+
+die()  { echo "ERROR: $*" >&2; exit 1; }
+warn() { echo "gh-appstore-targets: $*" >&2; }
+
+# == Acquire apps.json ==
+# Each acquirer prints the path of a readable apps.json to stdout (an array, or
+# a {"data":[...]} object; the evaluation normalises both).
+
+# Fetch the catalogue with ETag caching. On 304, rate-limit or any error keep
+# the cached copy and carry on; only a total absence of a cache is fatal.
+acquire_download() {
+	local cache="$APPSTORE_CACHE" etagf="${APPSTORE_CACHE}.etag" url="$APPSTORE_URL"
+	[ "$APPSTORE_INCLUDE_ENTERPRISE" = true ] && url="${url}?include_enterprise=true"
+	mkdir -p "$(dirname "$cache")"
+
+	local body headers args code
+	body="$(mktemp)"; headers="$(mktemp)"
+	args=(-sS -A "gh-appstore-targets" -D "$headers" -o "$body")
+	[ -r "$etagf" ] && args+=(-H "If-None-Match: $(cat "$etagf")")
+
+	if ! code="$(curl "${args[@]}" -w '%{http_code}' "$url")"; then
+		rm -f "$body" "$headers"
+		[ -r "$cache" ] || die "download failed and no cache at $cache"
+		warn "download failed, using cached $cache"
+		printf '%s\n' "$cache"; return 0
+	fi
+
+	case "$code" in
+		200)
+			local et
+			et="$(sed -n 's/^[Ee][Tt][Aa][Gg]: *//p' "$headers" | tr -d '\r' | tail -n1)"
+			[ -n "$et" ] && printf '%s\n' "$et" > "$etagf"
+			mv "$body" "$cache"; rm -f "$headers"
+			printf '%s\n' "$cache" ;;
+		304)
+			rm -f "$body" "$headers"
+			[ -r "$cache" ] || die "server replied 304 but no cache at $cache"
+			printf '%s\n' "$cache" ;;
+		*)
+			rm -f "$body" "$headers"
+			[ -r "$cache" ] || die "HTTP $code and no cache at $cache (rate-limited? retry later)"
+			warn "HTTP $code, using cached $cache"
+			printf '%s\n' "$cache" ;;
+	esac
+}
+
+# Read a Nextcloud instance's own copy. Either take the explicit file, or derive
+# datadir and instanceid from a working occ command.
+acquire_appdata() {
+	local f="$APPSTORE_APPDATA_FILE"
+	if [ -z "$f" ]; then
+		[ -n "$APPSTORE_OCC" ] || die "appdata source needs APPSTORE_APPDATA_FILE or APPSTORE_OCC"
+		local datadir iid
+		datadir="$($APPSTORE_OCC config:system:get datadir)"
+		iid="$($APPSTORE_OCC config:system:get instanceid)"
+		f="${datadir}/appdata_${iid}/appstore/apps.json"
+	fi
+	[ -r "$f" ] || die "appdata apps.json not readable: $f"
+	printf '%s\n' "$f"
+}
+
+# Resolve the current apps.json through the ebtb nc-apps database, which is the
+# authoritative pointer (the underlying filename rotates on each refresh).
+acquire_ebtb() {
+	local db="$APPSTORE_EBTB_DB" f
+	[ -n "$db" ]  || die "ebtb source needs APPSTORE_EBTB_DB"
+	[ -r "$db" ]  || die "ebtb apps.db not readable: $db"
+	f="$("$SQLITE" "$db" "SELECT json_data_file FROM apps WHERE platform='all'")"
+	[ -n "$f" ] && [ -r "$f" ] || die "ebtb json_data_file missing or unreadable: '$f'"
+	printf '%s\n' "$f"
+}
+
+case "$APPSTORE_SOURCE" in
+	download) apps_json="$(acquire_download)" ;;
+	appdata)  apps_json="$(acquire_appdata)" ;;
+	ebtb)     apps_json="$(acquire_ebtb)" ;;
+	*) die "unknown APPSTORE_SOURCE: '$APPSTORE_SOURCE' (use download|appdata|ebtb)" ;;
+esac
+
+# == Evaluate ==
+# whole owners -> a JSON array; commas or spaces both separate.
+read -r -a _whole <<< "${APPSTORE_WHOLE_OWNERS//,/ }"
+whole_json="$(printf '%s\n' "${_whole[@]}" | jq -R . | jq -sc 'map(select(length>0))')"
+
+mkdir -p "$(dirname "$APPSTORE_TARGETS_FILE")"
+tmp_out="$(mktemp "${APPSTORE_TARGETS_FILE}.XXXXXX")"
+trap 'rm -f "$tmp_out"' EXIT
+
+# For every GitHub release-download URL derive owner/repo and its newest release
+# date. Whole owners are emitted bare and excluded from the pair list; every
+# other owner/repo is kept only if its latest release is recent enough, then the
+# pairs are sorted so an owner's repos stay together and the list reads
+# alphabetically.
+jq --argjson whole "$whole_json" --arg since "$APPSTORE_SINCE_YEAR" '
+	(if type == "array" then . else .data end) as $apps
+	| [ $apps[] | .releases[]? | select(.download != null)
+	    | . as $r | (.download | split("/")) as $p
+	    | select($p[2] == "github.com" and $p[5] == "releases")
+	    | {owner: $p[3], repo: $p[4], created: $r.created} ]
+	| ( [ .[] | select(.owner as $o | ($whole | index($o)) | not) ]
+	    | group_by(.owner + "/" + .repo)
+	    | map({ slug: (.[0].owner + "/" + .[0].repo),
+	            last: (max_by(.created).created) })
+	    | map(select(.last[0:4] >= $since))
+	    | sort_by(.slug | ascii_downcase)
+	    | map(.slug) ) as $pairs
+	| {targets: ($whole + $pairs)}
+' "$apps_json" > "$tmp_out"
+
+mv "$tmp_out" "$APPSTORE_TARGETS_FILE"
+trap - EXIT
+
+n="$(jq -r '.targets | length' "$APPSTORE_TARGETS_FILE")"
+warn "wrote $n targets to $APPSTORE_TARGETS_FILE (source: $APPSTORE_SOURCE)"

@@ -1,0 +1,203 @@
+#!/usr/bin/env -S LC_CTYPE=C.UTF-8 LC_MESSAGES=C bash
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# gh-release-sampler - change-only time series of GitHub release asset download
+# counters, across the owners/orgs/repos listed in the config. Per run it records
+# every asset's cumulative download_count, but writes a new row only when a value
+# changed (change-only). Release meta (published, prerelease, major) is stored
+# once per release. Every run timestamp is recorded, so a missing sample means
+# "unchanged", not "no run". All times are Unix epoch (UTC).
+
+# == Config ==
+# Optional site config shared with gh-stats. If /etc/gh-stats/gh-stats.env
+# exists it is sourced here, so its assignments feed the ${VAR:-default} reads
+# below. Precedence is built-in default < gh-stats.env < environment (a value
+# set in the cron drop-in or exported for the run still wins over the file).
+# Without the file, behaviour is unchanged. Point GH_STATS_ENV at another path
+# to use a different file.
+GH_STATS_ENV="${GH_STATS_ENV:-/etc/gh-stats/gh-stats.env}"
+# shellcheck disable=SC1090 # the site config is a run-time path
+if [ -r "$GH_STATS_ENV" ]; then
+	_env_snapshot="$(export -p)"
+	set -a; . "$GH_STATS_ENV"; set +a
+	eval "$_env_snapshot"
+	unset _env_snapshot
+fi
+
+CONFIG="${GH_STATS_CONFIG:-/etc/gh-stats/targets.json}"
+# Optional drop-in directory. Every targets.d/*.json is merged with the main
+# config (its .targets[] appended, then de-duplicated), so a generated list
+# (e.g. from gh-appstore-targets) can live beside the hand-curated targets.json.
+TARGETS_DIR="${GH_STATS_TARGETS_DIR:-/etc/gh-stats/targets.d}"
+STATE_DIR="${GH_STATS_DIR:-/var/lib/gh-stats}"
+DB="${GH_STATS_DB:-${STATE_DIR}/downloads.sqlite}"
+GH="${GH_BIN:-/usr/bin/gh}"
+SQLITE="${SQLITE_BIN:-/usr/bin/sqlite3}"
+
+set -euo pipefail
+
+ts="$(date -u +%s)"
+mkdir -p "$STATE_DIR"
+
+# == Schema (idempotent) ==
+"$SQLITE" "$DB" <<'SQL'
+PRAGMA journal_mode=WAL;
+CREATE TABLE IF NOT EXISTS samples (
+  ts        INTEGER NOT NULL,
+  owner     TEXT    NOT NULL,
+  repo      TEXT    NOT NULL,
+  tag       TEXT    NOT NULL,
+  asset     TEXT    NOT NULL,
+  downloads INTEGER NOT NULL,
+  PRIMARY KEY (ts, owner, repo, tag, asset)
+) WITHOUT ROWID;
+CREATE INDEX IF NOT EXISTS idx_samples_last ON samples(owner, repo, tag, asset, ts);
+CREATE TABLE IF NOT EXISTS releases (
+  owner      TEXT    NOT NULL,
+  repo       TEXT    NOT NULL,
+  tag        TEXT    NOT NULL,
+  published  INTEGER NOT NULL,
+  prerelease INTEGER NOT NULL,
+  major      INTEGER,
+  PRIMARY KEY (owner, repo, tag)
+) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS runs (ts INTEGER PRIMARY KEY);
+-- Repo-level popularity time series, independent of releases. Change-only like
+-- samples: a new row is written only when at least one value changed, and each
+-- row is a full snapshot. watchers is GitHub's subscribers_count (the real
+-- watch count); the API's watchers_count is a legacy alias of stars and unused.
+CREATE TABLE IF NOT EXISTS repo_stats (
+  ts       INTEGER NOT NULL,
+  owner    TEXT    NOT NULL,
+  repo     TEXT    NOT NULL,
+  stars    INTEGER NOT NULL,
+  forks    INTEGER NOT NULL,
+  watchers INTEGER NOT NULL,
+  PRIMARY KEY (ts, owner, repo)
+) WITHOUT ROWID;
+CREATE INDEX IF NOT EXISTS idx_repo_stats_last ON repo_stats(owner, repo, ts);
+SQL
+
+# == Collect current values into a TSV ==
+# tsv:  owner, repo, tag, asset, downloads, published(ISO), prerelease(0/1), major
+# rtsv: owner, repo, stars, forks, watchers  (one line per repo, repo_stats)
+tsv="$(mktemp)"
+rtsv="$(mktemp)"
+trap 'rm -f "$tsv" "$rtsv"' EXIT
+
+# Merge the main config with any targets.d/*.json drop-ins, de-duplicated,
+# blank lines dropped, first occurrence wins. Both sources are optional; the
+# caller checks that at least one target came out.
+collect_targets() {
+	{
+		if [ -f "$CONFIG" ]; then jq -r '.targets[]?' "$CONFIG"; fi
+		if [ -d "$TARGETS_DIR" ]; then
+			for f in "$TARGETS_DIR"/*.json; do
+				[ -e "$f" ] || continue
+				jq -r '.targets[]?' "$f"
+			done
+		fi
+	} | awk 'NF && !seen[$0]++'
+}
+
+# Expand a target into "owner/repo" lines: a plain owner lists all its
+# non-archived repos, an "owner/repo" passes through unchanged.
+list_repos() {
+	local t="$1"
+	if [[ "$t" == */* ]]; then
+		printf '%s\n' "$t"
+	else
+		"$GH" repo list "$t" --no-archived --limit 1000 --json nameWithOwner --jq '.[].nameWithOwner'
+	fi
+}
+
+# Expand every target to owner/repo slugs, then de-duplicate across the whole
+# set. This is where a bare owner and an explicit owner/repo pair overlap:
+# listing an owner whole (e.g. "ernolf") expands to all its repos, and any of
+# those also present as an explicit pair - for instance one carried by the
+# generated App Store drop-in - collapses to a single entry, so each repo is
+# sampled exactly once. First occurrence wins; order does not matter.
+collect_slugs() {
+	while read -r target; do
+		[ -n "$target" ] || continue
+		list_repos "$target"
+	done <<< "$(collect_targets)" | awk 'NF && !seen[$0]++'
+}
+
+slugs="$(collect_slugs)"
+[ -n "$slugs" ] || { echo "ERROR: no targets found in $CONFIG or $TARGETS_DIR/*.json" >&2; exit 1; }
+
+while read -r slug; do
+	[ -n "$slug" ] || continue
+	owner="${slug%%/*}"; repo="${slug#*/}"
+	# One request stream per repo (paginated); jq derives major from the tag.
+	"$GH" api "repos/${slug}/releases?per_page=100" --paginate 2>/dev/null \
+		| jq -r --arg o "$owner" --arg r "$repo" '
+			(if type == "array" then .[] else empty end)
+			| .tag_name as $rawtag
+			# A release published without a git tag gets GitHub auto tag
+			# untagged-<sha>; the real version the maintainer typed sits in the
+			# release title (.name at release level), so prefer that when present.
+			| (if ($rawtag | startswith("untagged-")) and ((.name // "") != "")
+			   then .name else $rawtag end) as $tag
+			| .published_at as $pub
+			| (if .prerelease then 1 else 0 end) as $pre
+			| (($tag | capture("^[vV]?(?<m>[0-9]+)") | .m) // "") as $maj
+			| .assets[]
+			| [$o, $r, $tag, .name, .download_count, $pub, $pre, $maj]
+			| @tsv' >> "$tsv" || true
+	# One extra call per repo for the popularity snapshot. watchers is
+	# subscribers_count (the real watch count); the select guards against an
+	# error object (no stargazers_count) so a failed call adds no row.
+	"$GH" api "repos/${slug}" 2>/dev/null \
+		| jq -r --arg o "$owner" --arg r "$repo" '
+			select(.stargazers_count != null)
+			| [$o, $r, .stargazers_count, .forks_count, .subscribers_count]
+			| @tsv' >> "$rtsv" || true
+done <<< "$slugs"
+
+# == Apply: release meta (upsert-ignore) + change-only samples + run marker ==
+"$SQLITE" "$DB" <<SQL
+CREATE TEMP TABLE incoming (
+  owner TEXT, repo TEXT, tag TEXT, asset TEXT,
+  downloads INTEGER, published TEXT, prerelease INTEGER, major INTEGER
+);
+CREATE TEMP TABLE incoming_repo (
+  owner TEXT, repo TEXT, stars INTEGER, forks INTEGER, watchers INTEGER
+);
+.mode tabs
+.import "$tsv" incoming
+.import "$rtsv" incoming_repo
+
+BEGIN;
+
+INSERT OR IGNORE INTO releases (owner, repo, tag, published, prerelease, major)
+SELECT DISTINCT owner, repo, tag,
+       CAST(strftime('%s', published) AS INTEGER), prerelease, major
+FROM incoming;
+
+INSERT INTO samples (ts, owner, repo, tag, asset, downloads)
+SELECT $ts, i.owner, i.repo, i.tag, i.asset, i.downloads
+FROM incoming i
+WHERE i.downloads <> COALESCE(
+        (SELECT s.downloads FROM samples s
+         WHERE s.owner=i.owner AND s.repo=i.repo AND s.tag=i.tag AND s.asset=i.asset
+         ORDER BY s.ts DESC LIMIT 1), -1);
+
+-- Change-only repo popularity: write a snapshot only when the incoming triple
+-- differs from this repo's latest stored one (or none exists yet).
+INSERT INTO repo_stats (ts, owner, repo, stars, forks, watchers)
+SELECT $ts, i.owner, i.repo, i.stars, i.forks, i.watchers
+FROM incoming_repo i
+WHERE NOT EXISTS (
+        SELECT 1 FROM repo_stats s
+         WHERE s.owner=i.owner AND s.repo=i.repo
+           AND s.ts=(SELECT max(z.ts) FROM repo_stats z
+                     WHERE z.owner=i.owner AND z.repo=i.repo)
+           AND s.stars=i.stars AND s.forks=i.forks AND s.watchers=i.watchers);
+
+INSERT OR IGNORE INTO runs (ts) VALUES ($ts);
+
+COMMIT;
+SQL
