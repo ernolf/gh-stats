@@ -623,6 +623,11 @@ release_diff() {
 	shipped="$dir/shipped/$app_id"
 	[ -d "$shipped" ] || shipped="$(find "$dir/shipped" -mindepth 1 -maxdepth 1 -type d | head -1)"
 	staged="$APP_DIR/build/stage/$app_id"
+	# A dist that ran and staged nothing fails the same way a second time.
+	if [ ! -d "$staged" ] && [ ${#results[@]} -gt 0 ] && printf '%s\n' "${results[@]}" | grep -q '^dist	'; then
+		log "   make dist ran and staged nothing, so nothing to compare"
+		return 0
+	fi
 	[ -d "$staged" ] || run_target dist
 	if [ ! -d "$staged" ] || [ ! -d "$shipped" ]; then
 		log "   nothing staged or nothing unpacked, so nothing to compare"
