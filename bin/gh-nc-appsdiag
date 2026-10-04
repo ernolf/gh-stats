@@ -67,9 +67,12 @@ JSON_TARGETS="${NC_APPSDIAG_JSON:-consistency-audit build-audit bundle-report re
 # build-verify builds the app twice in minutes, a second pass would double that.
 JSON_ONLY_TARGETS="${NC_APPSDIAG_JSON_ONLY:-build-verify}"
 
-# Which ncmake a run measured with: the stub and the developer modules follow the
-# main branch of this repo, so its head at run time is recorded with the results.
+# Which ncmake a run measured with: the stub, the core and the developer modules
+# come from the main branch of this repo, the core and the modules by way of the
+# per-machine ncmake cache. The head of main is recorded as the ncmake ref only
+# where those files match its tree; otherwise the paths that differ are recorded.
 NCMAKE_REPO="${NC_APPSDIAG_NCMAKE_REPO:-https://github.com/ernolf/ncmake.git}"
+NCMAKE_DIR="${NCMAKE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/ncmake}"
 
 # The App Store catalogue, the same file and the same variables gh-nc-appstore-targets
 # uses: it says which versions of an app are published and where each tarball lies.
@@ -115,7 +118,7 @@ Everything one run produces goes into one directory:
 
   <logs>/<owner>/<repo>/<version>/<timestamp>/
       console.log         the full output of the run
-      summary.json        app, version, head, ncmake head, host, every target
+      summary.json        app, version, head, ncmake ref, host, every target
                           with exit code and duration, the result files
       <target>.json       the machine-readable analyser results
       Makefile.orig       the app's own build entry
@@ -156,7 +159,7 @@ Environment (or /etc/gh-stats/gh-stats.env):
   NC_APPSDIAG_JSON           the targets whose --json result is kept
   NC_APPSDIAG_JSON_ONLY      the targets that run once, with --json only
   NC_APPSDIAG_STUB_URL       the ncmake bootstrap stub to install
-  NC_APPSDIAG_NCMAKE_REPO    the ncmake repo whose main head is recorded
+  NC_APPSDIAG_NCMAKE_REPO    the ncmake repo whose main the run is compared with
   TAG_MENU_MAX               how many tags the list offers (default: 12)
   APPSTORE_URL               the App Store catalogue
   APPSTORE_CACHE             where that catalogue is kept
@@ -274,7 +277,10 @@ results=()
 # What summary.json reports besides the targets, filled in where it is learnt.
 STARTED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 head_tag=""
-ncmake_ref=""
+ncmake_main=""
+ncmake_tree=""
+ncmake_differs=""
+ncmake_checked=0
 inv_files=()
 rel_tarball=""
 rel_bytes=""
@@ -404,8 +410,7 @@ install_stub() {
 	fi
 	"$CURL" -fsSL "$STUB_URL" -o "$APP_DIR/$STUB" || die "could not fetch the stub from $STUB_URL"
 	log "   stub installed ($(wc -l < "$APP_DIR/$STUB") lines)"
-	ncmake_ref="$("$GIT" ls-remote "$NCMAKE_REPO" refs/heads/main 2>/dev/null | cut -f1)" || ncmake_ref=""
-	log "   ncmake main is at ${ncmake_ref:-an unknown commit, $NCMAKE_REPO did not answer}"
+	ncmake_fetch_main
 	# The analyser targets are not in the stub: they come from the developer
 	# modules, which live in the per-machine ncmake cache rather than in the app,
 	# so an empty cache leaves make with the core targets alone. Fetching them
@@ -415,6 +420,56 @@ install_stub() {
 	else
 		warn "make dev-init failed - the module targets will be missing"
 	fi
+	ncmake_check
+	if [ -z "$ncmake_tree" ]; then
+		log "   ncmake main is unknown, $NCMAKE_REPO did not answer"
+	elif [ "$ncmake_checked" = 0 ]; then
+		log "   ncmake main is at $ncmake_main, no ncmake files in $NCMAKE_DIR to compare it with"
+	elif [ -z "$ncmake_differs" ]; then
+		log "   ncmake files match main at $ncmake_main"
+	fi
+}
+
+# The head of ncmake's main branch and the blob of every file in its tree, as
+# "<blob> <path>" lines. A shallow fetch carries the tree, ls-remote only the head.
+ncmake_fetch_main() {
+	local tmp
+	tmp="$(mktemp -d)" || return 0
+	if "$GIT" init -q --bare "$tmp" \
+		&& "$GIT" -C "$tmp" fetch -q --depth 1 "$NCMAKE_REPO" refs/heads/main 2>/dev/null; then
+		ncmake_main="$("$GIT" -C "$tmp" rev-parse FETCH_HEAD)"
+		ncmake_tree="$("$GIT" -C "$tmp" ls-tree -r FETCH_HEAD | awk -F'\t' '{ split($1, m, " "); print m[3], $2 }')"
+	fi
+	rm -rf "$tmp"
+}
+
+# Prints the repo path of every ncmake file this run reads that is not on main as
+# it is. The cache names follow core/Makefile: Makefile-main is core/Makefile,
+# <module>.mk-main is mk/<module>.mk, lib-main/<file> is lib/<file>.
+ncmake_differing() {
+	local f p
+	for f in "$APP_DIR/$STUB" "$NCMAKE_DIR/Makefile-main" "$NCMAKE_DIR"/*.mk-main "$NCMAKE_DIR"/lib-main/*; do
+		[ -f "$f" ] || continue
+		case "$f" in
+			*.etag|*.new) continue ;;
+			"$APP_DIR/$STUB") p=bootstrap/Makefile ;;
+			*/Makefile-main) p=core/Makefile ;;
+			*.mk-main) p="mk/$(basename "${f%-main}")" ;;
+			*) p="lib/$(basename "$f")" ;;
+		esac
+		grep -qxF "$("$GIT" hash-object "$f") $p" <<<"$ncmake_tree" || printf '%s\n' "$p"
+	done
+}
+
+# The files can change while the run goes on, so they are compared after dev-init
+# and again when the summary is written, and every path that differed once is kept.
+ncmake_check() {
+	local now
+	[ -n "$ncmake_tree" ] && [ -f "$NCMAKE_DIR/Makefile-main" ] || return 0
+	now="$(printf '%s\n%s\n' "$ncmake_differs" "$(ncmake_differing)" | sed '/^$/d' | sort -u)"
+	[ "$now" = "$ncmake_differs" ] || log "   ncmake files differ from main at $ncmake_main: ${now//$'\n'/ }"
+	ncmake_differs="$now"
+	ncmake_checked=1
 }
 
 # == Targets ==
@@ -722,6 +777,7 @@ write_summary_json() {
 	local status="$1" code="$2" head="" host cpus mem cpu inv files diff
 	[ -n "$RUN_DIR" ] || return 0
 	summary_written=1
+	ncmake_check
 	[ -z "${NC_APPSDIAG_RESULT_FILE:-}" ] || printf '%s\n' "$RUN_DIR" >"$NC_APPSDIAG_RESULT_FILE"
 	[ -x "$JQ" ] || { warn "no jq at $JQ, so no summary.json"; return 0; }
 	[ -d "$APP_DIR/.git" ] && head="$("$GIT" -C "$APP_DIR" log -1 --format='%H%x09%cI%x09%s' 2>/dev/null)" || true
@@ -738,7 +794,8 @@ write_summary_json() {
 		--arg owner "$owner" --arg repo "$repo" --arg app_id "$app_id" --arg version "$app_version" \
 		--arg want "$want_version" --arg stamp "$STAMP" --arg started "$STARTED" \
 		--arg finished "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg status "$status" --argjson code "$code" \
-		--arg head "$head" --arg tag "$head_tag" --arg ncref "$ncmake_ref" --arg stub "$STUB_URL" \
+		--arg head "$head" --arg tag "$head_tag" --arg stub "$STUB_URL" \
+		--arg ncmain "$ncmake_main" --arg ncdiffers "$ncmake_differs" --argjson ncchecked "$ncmake_checked" \
 		--arg host "$host" --arg cpus "$cpus" --arg mem "$mem" --arg cpu "$cpu" \
 		--argjson inv "$inv" --argjson files "$files" \
 		--arg tarball "$rel_tarball" --arg bytes "$rel_bytes" --argjson diff "$diff" '
@@ -749,7 +806,10 @@ write_summary_json() {
 		 requested_version: nul($want), stamp: $stamp, started: $started, finished: $finished,
 		 status: $status, exit: $code,
 		 head: (if $head == "" then null else ($head | split("\t") | {sha: .[0], date: .[1], subject: (.[2:] | join("\t")), tag: nul($tag)}) end),
-		 ncmake: {ref: nul($ncref), stub_url: $stub},
+		 ncmake: {ref: (if $ncchecked == 1 and $ncdiffers == "" then nul($ncmain) else null end),
+		          main: nul($ncmain),
+		          differs: (if $ncchecked == 1 then ($ncdiffers | split("\n") | map(select(length > 0))) else null end),
+		          stub_url: $stub},
 		 host: {name: $host, cpus: num($cpus), mem_mb: num($mem), cpu_model: nul($cpu)},
 		 inventory: {files: $inv},
 		 targets: [split("\n")[] | select(length > 0) | split("\t") | {name: .[0], exit: (.[1] | tonumber), seconds: (.[2] | tonumber)}],
