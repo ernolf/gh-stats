@@ -90,7 +90,14 @@ AUTO="${NC_APPSDIAG_AUTO:-0}"
 
 set -euo pipefail
 
-die()  { echo "ERROR: $*" >&2; exit 1; }
+# Once the run has a log, the reason it ended goes there and into summary.json too:
+# in a batch nothing else keeps it.
+die()  {
+	echo "ERROR: $*" >&2
+	end_reason="$*"
+	[ -z "${LOG:-}" ] || printf 'ERROR: %s\n' "$*" >>"$LOG" 2>/dev/null || true
+	exit 1
+}
 warn() { echo "gh-nc-appsdiag: $*" >&2; }
 
 usage() {
@@ -212,8 +219,9 @@ if [ "$batch" -eq 1 ]; then
 	batch_log="$LOG_DIR/batch-${batch_stamp}.txt"
 	batch_json="$LOG_DIR/batch-${batch_stamp}.json"
 	# The app's own exit code is 0 whenever the run got through, failed targets
-	# included, because a failed target is a result. What failed is read from the
-	# summary.json the app wrote, and the app names its run directory in this file.
+	# included, because a failed target is a result. What failed, or why the run
+	# ended early, is read from the summary.json the app wrote, and the app names its
+	# run directory in this file.
 	run_file="$LOG_DIR/.batch-${batch_stamp}.run"
 	entries=()
 	stop=0
@@ -231,7 +239,9 @@ if [ "$batch" -eq 1 ]; then
 		run_dir="$(head -1 "$run_file")"
 		failed="no summary.json"
 		if [ -n "$run_dir" ] && [ -s "$run_dir/summary.json" ] && [ -x "$JQ" ]; then
-			failed="$("$JQ" -r '[.targets[] | select(.exit != 0) | "\(.name)=\(.exit)"] | if length == 0 then "none failed" else "failed: " + join(" ") end' "$run_dir/summary.json")"
+			failed="$("$JQ" -r '([.targets[] | select(.exit != 0) | "\(.name)=\(.exit)"] | if length == 0 then "none failed" else "failed: " + join(" ") end) as $f
+				| if .status == "completed" then $f
+				  else "\(.status): \(.reason // "exit \(.exit)")" + (if (.targets | length) == 0 then "" else "; \($f)" end) end' "$run_dir/summary.json")"
 		fi
 		printf '%-45s exit %3s %6ss  %s\n' "$e" "$rc" "$secs" "$failed" >>"$batch_log"
 		if [ -x "$JQ" ]; then
@@ -268,7 +278,7 @@ APP_DIR="$CHECKOUT_DIR/$repo"
 STAMP="$(date -u +%Y%m%d-%H%M%S)"
 # The run directory is named after the version, and only info.xml knows that one,
 # so the log starts under a name saying it has no home yet and promote_run_dir
-# moves it in. A run that dies before that leaves the pending file behind.
+# moves it in. A run that ends before that is moved in by the exit trap.
 LOG="$LOG_DIR/.pending-${repo}-${STAMP}.log"
 RUN_DIR=""
 app_id=""
@@ -285,6 +295,7 @@ inv_files=()
 rel_tarball=""
 rel_bytes=""
 summary_written=0
+end_reason=""
 
 log() { printf '%s\n' "$*" | tee -a "$LOG"; }
 
@@ -329,9 +340,10 @@ ask_target() {
 # == Result layout ==
 # One directory per run, keyed by owner, repo and version, so a version measured
 # twice gets two timestamps side by side and measuring 6.0.0 after 6.1.0 does not
-# touch what 6.1.0 wrote. Called once the inventory has read the version.
+# touch what 6.1.0 wrote. Called once the inventory has read the version, or by
+# the exit trap with the requested one when the run ended before the inventory.
 promote_run_dir() {
-	local v="${app_version:-unversioned}" old="$RUN_DIR"
+	local v="${1:-${app_version:-unversioned}}" old="$RUN_DIR"
 	v="${v//\//-}"
 	RUN_DIR="$LOG_DIR/$owner/$repo/$v/$STAMP"
 	mkdir -p "$RUN_DIR" || die "cannot create $RUN_DIR"
@@ -793,7 +805,7 @@ write_summary_json() {
 	printf '%s\n' "${results[@]}" | "$JQ" -R -s \
 		--arg owner "$owner" --arg repo "$repo" --arg app_id "$app_id" --arg version "$app_version" \
 		--arg want "$want_version" --arg stamp "$STAMP" --arg started "$STARTED" \
-		--arg finished "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg status "$status" --argjson code "$code" \
+		--arg finished "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg status "$status" --argjson code "$code" --arg reason "$end_reason" \
 		--arg head "$head" --arg tag "$head_tag" --arg stub "$STUB_URL" \
 		--arg ncmain "$ncmake_main" --arg ncdiffers "$ncmake_differs" --argjson ncchecked "$ncmake_checked" \
 		--arg host "$host" --arg cpus "$cpus" --arg mem "$mem" --arg cpu "$cpu" \
@@ -804,7 +816,7 @@ write_summary_json() {
 		{tool: "gh-nc-appsdiag", schema: 1,
 		 owner: $owner, repo: $repo, app_id: nul($app_id), version: nul($version),
 		 requested_version: nul($want), stamp: $stamp, started: $started, finished: $finished,
-		 status: $status, exit: $code,
+		 status: $status, exit: $code, reason: nul($reason),
 		 head: (if $head == "" then null else ($head | split("\t") | {sha: .[0], date: .[1], subject: (.[2:] | join("\t")), tag: nul($tag)}) end),
 		 ncmake: {ref: (if $ncchecked == 1 and $ncdiffers == "" then nul($ncmain) else null end),
 		          main: nul($ncmain),
@@ -822,10 +834,16 @@ write_summary_json() {
 }
 
 # A run that ends before summary() still says what it got through. Ending before
-# the stub on a no is a stop; any other early end is an abort.
+# the stub on a no is a stop; any other early end is an abort. A run that ended
+# before the inventory gets its run directory here, and an aborted one does not
+# leave its checkout behind any more than a finished one does.
 on_exit() {
 	[ "$summary_written" = 0 ] || return 0
+	[ -n "$RUN_DIR" ] || promote_run_dir "$want_version"
 	if [ "$1" = 0 ]; then write_summary_json stopped 0; else write_summary_json aborted "$1"; fi
+	if [ "$1" != 0 ] && [ -d "$APP_DIR" ]; then
+		ask_yes "remove the checkout $APP_DIR?" && { rm -rf "$APP_DIR"; log "checkout removed."; } || true
+	fi
 }
 
 summary() {
@@ -856,7 +874,8 @@ if [ -d "$APP_DIR" ]; then
 	ask_yes "   checkout exists - remove it and clone again?" && rm -rf "$APP_DIR"
 fi
 if [ ! -d "$APP_DIR" ]; then
-	"$GIT" clone "https://github.com/$owner/$repo.git" "$APP_DIR" 2>&1 | tee_plain "$LOG"
+	"$GIT" clone "https://github.com/$owner/$repo.git" "$APP_DIR" 2>&1 | tee_plain "$LOG" \
+		|| die "cannot clone https://github.com/$owner/$repo"
 fi
 [ -d "$APP_DIR/.git" ] || die "no checkout at $APP_DIR"
 log "   head  $("$GIT" -C "$APP_DIR" log -1 --format='%h %ad %s' --date=short)"
