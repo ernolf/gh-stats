@@ -102,15 +102,18 @@ AUTO="${NC_APPSDIAG_AUTO:-0}"
 
 set -euo pipefail
 
-# Once the run has a log, the reason it ended goes there and into summary.json too:
-# in a batch nothing else keeps it.
+# Once the run has a log, the reason it ended goes there and into summary.json too,
+# and a warning goes there as well: in a batch nothing else keeps them.
 die()  {
 	echo "ERROR: $*" >&2
 	end_reason="$*"
 	[ -z "${LOG:-}" ] || printf 'ERROR: %s\n' "$*" >>"$LOG" 2>/dev/null || true
 	exit 1
 }
-warn() { echo "gh-nc-appsdiag: $*" >&2; }
+warn() {
+	echo "gh-nc-appsdiag: $*" >&2
+	[ -z "${LOG:-}" ] || printf 'gh-nc-appsdiag: %s\n' "$*" >>"$LOG" 2>/dev/null || true
+}
 
 usage() {
 	cat <<'EOF'
