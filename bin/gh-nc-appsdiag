@@ -87,6 +87,16 @@ GH="${GH_BIN:-/usr/bin/gh}"
 JQ="${JQ_BIN:-/usr/bin/jq}"
 CURL="${CURL_BIN:-/usr/bin/curl}"
 
+# The container CLI whose images a batch cleans up after itself, picked the way
+# ncmake picks its runtime: RUNTIME when it is set, else podman, else docker.
+# RUNTIME=bare pulls nothing.
+case "${RUNTIME:-}" in
+	podman) IMAGE_CLI=podman ;;
+	docker|docker-rootless) IMAGE_CLI=docker ;;
+	bare|none) IMAGE_CLI="" ;;
+	*) IMAGE_CLI="$(command -v podman 2>/dev/null || command -v docker 2>/dev/null || true)" ;;
+esac
+
 # Set by -a for every app of a batch: no question is put, each takes its default.
 AUTO="${NC_APPSDIAG_AUTO:-0}"
 
@@ -152,7 +162,9 @@ release material and the checkout are removed. Any number of apps can be given,
 each one followed by its version if it is to be a particular one, and a list file
 adds more, one app per line with an optional version after it; # starts a comment.
 The apps run one after the other, each in a process of its own, so one that dies
-does not end the batch; Ctrl-C does. The batch summary goes to
+does not end the batch; Ctrl-C does. At the end, also after Ctrl-C, the
+container images the batch pulled are removed; those on the host before it stay.
+The batch summary goes to
 <logs>/batch-<timestamp>.txt, one line per app with the targets that failed and,
 in brackets, the build file make read before the stub (foreign, ncmake-stub or
 ncmake-copy), and
@@ -178,6 +190,8 @@ Environment (or /etc/gh-stats/gh-stats.env):
   TAG_MENU_MAX               how many tags the list offers (default: 12)
   APPSTORE_URL               the App Store catalogue
   APPSTORE_CACHE             where that catalogue is kept
+  RUNTIME                    the container runtime ncmake uses, and whose images
+                             a batch removes (default: podman, else docker)
 EOF
 }
 
@@ -231,6 +245,10 @@ if [ "$batch" -eq 1 ]; then
 	# ended early, is read from the summary.json the app wrote, and the app names its
 	# run directory in this file.
 	run_file="$LOG_DIR/.batch-${batch_stamp}.run"
+	# The images on the host before the first app stay; whatever the apps pulled is
+	# removed after the last one, also when the batch is ended with Ctrl-C.
+	images_before=""
+	[ -z "$IMAGE_CLI" ] || images_before="$("$IMAGE_CLI" images -q --no-trunc 2>/dev/null | sort -u)" || true
 	entries=()
 	stop=0
 	trap 'stop=1' INT
@@ -265,6 +283,14 @@ if [ "$batch" -eq 1 ]; then
 		fi
 	done
 	rm -f "$run_file"
+	if [ -n "$IMAGE_CLI" ]; then
+		pulled="$(comm -13 <(printf '%s\n' "$images_before") <("$IMAGE_CLI" images -q --no-trunc 2>/dev/null | sort -u) | sed '/^$/d')" || true
+		if [ -n "$pulled" ]; then
+			# shellcheck disable=SC2086 # one image ID per word
+			"$IMAGE_CLI" rmi -f $pulled >/dev/null 2>&1 || true
+			echo "removed $(printf '%s\n' "$pulled" | wc -l) container images the batch pulled" >>"$batch_log"
+		fi
+	fi
 	printf '\n== batch summary, in %s\n' "$batch_log"
 	cat "$batch_log"
 	[ "$stop" -eq 0 ] && [ "$rc" -ne 130 ] || exit 130
