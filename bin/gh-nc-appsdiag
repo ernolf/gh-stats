@@ -41,7 +41,7 @@ APPSDIAG_DIR="${NC_APPSDIAG_DIR:-${HOME}/Projekte/appstorestats}"
 CHECKOUT_DIR="${NC_APPSDIAG_CHECKOUTS:-${APPSDIAG_DIR}/checkouts}"
 LOG_DIR="${NC_APPSDIAG_LOGS:-${APPSDIAG_DIR}/logs}"
 
-STUB_URL="${NC_APPSDIAG_STUB_URL:-https://raw.githubusercontent.com/ernolf/ncmake/main/bootstrap/Makefile}"
+STUB_URL="${NC_APPSDIAG_STUB_URL:-https://raw.githubusercontent.com/ernolf/ncmake/main/bootstrap/GNUmakefile}"
 # GNU make reads the first of GNUmakefile, makefile and Makefile it finds, so the
 # stub goes in under the first name and the app's own build files stay as they are.
 STUB="GNUmakefile"
@@ -141,7 +141,8 @@ Everything one run produces goes into one directory:
                           make read before the stub and its kind, every target
                           with exit code and duration, the result files
       <target>.json       the machine-readable analyser results
-      <name>.orig         the app's own GNUmakefile, makefile and Makefile
+      <name>.orig         the app's own GNUmakefile, makefile and Makefile,
+                          except one that is the ncmake stub byte for byte
       release/diff.txt    the staged tree against the shipped tarball, as diff
                           wrote it
       release/diff.tsv    the same, one path per line: kind, class, path
@@ -474,25 +475,42 @@ build_file() {
 # change. Only an own GNUmakefile has to make room. It is moved aside rather than
 # deleted, and the rename leaves a tracked file missing in the working tree, which
 # every target that reads the tracked file set reports as an uncommitted change.
+# An app that commits the stub as GNUmakefile already has what the run needs: that
+# file stays in place, so the working tree stays clean, and it is not copied
+# beside the results, since it is the stub and says nothing about the app.
 install_stub() {
-	local f own=0
+	local f tmp own=0
+	tmp="$(mktemp)" || die "could not create a temporary file"
+	"$CURL" -fsSL "$STUB_URL" -o "$tmp" || { rm -f "$tmp"; die "could not fetch the stub from $STUB_URL"; }
 	# The app's own build files are worth reading later, and in the checkout they do
 	# not survive: the checkout is a throwaway. Keep a copy beside the results.
 	mkdir -p "$RUN_DIR"
 	for f in $BUILD_FILES; do
 		[ -e "$APP_DIR/$f" ] || continue
+		own=1
+		if cmp -s "$tmp" "$APP_DIR/$f"; then
+			log "   own $f is the ncmake stub, not copied"
+			continue
+		fi
 		cp "$APP_DIR/$f" "$RUN_DIR/$f.orig"
 		log "   own $f copied to $RUN_DIR/$f.orig"
-		own=1
 	done
 	[ "$own" = 1 ] || log "   no own build file in this app"
-	if [ -e "$APP_DIR/$STUB" ]; then
-		[ -e "$APP_DIR/$STUB.orig" ] && die "$STUB.orig already exists in $APP_DIR"
-		mv "$APP_DIR/$STUB" "$APP_DIR/$STUB.orig"
-		log "   own $STUB moved to $STUB.orig"
+	if cmp -s "$tmp" "$APP_DIR/$STUB"; then
+		rm -f "$tmp"
+		log "   stub already in place as $STUB"
+	else
+		if [ -e "$APP_DIR/$STUB" ]; then
+			[ -e "$APP_DIR/$STUB.orig" ] && { rm -f "$tmp"; die "$STUB.orig already exists in $APP_DIR"; }
+			mv "$APP_DIR/$STUB" "$APP_DIR/$STUB.orig"
+			log "   own $STUB moved to $STUB.orig"
+		fi
+		# Copied rather than moved: mktemp creates the file with mode 600, a copy
+		# gets the mode the umask gives every other file in the checkout.
+		cp "$tmp" "$APP_DIR/$STUB"
+		rm -f "$tmp"
+		log "   stub installed ($(wc -l < "$APP_DIR/$STUB") lines)"
 	fi
-	"$CURL" -fsSL "$STUB_URL" -o "$APP_DIR/$STUB" || die "could not fetch the stub from $STUB_URL"
-	log "   stub installed ($(wc -l < "$APP_DIR/$STUB") lines)"
 	ncmake_fetch_main
 	# The analyser targets are not in the stub: they come from the developer
 	# modules, which live in the per-machine ncmake cache rather than in the app,
@@ -535,7 +553,7 @@ ncmake_differing() {
 		[ -f "$f" ] || continue
 		case "$f" in
 			*.etag|*.new) continue ;;
-			"$APP_DIR/$STUB") p=bootstrap/Makefile ;;
+			"$APP_DIR/$STUB") p=bootstrap/GNUmakefile ;;
 			*/Makefile-main) p=core/Makefile ;;
 			*.mk-main) p="mk/$(basename "${f%-main}")" ;;
 			*) p="lib/$(basename "$f")" ;;
