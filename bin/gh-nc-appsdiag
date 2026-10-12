@@ -4,8 +4,8 @@
 #
 # gh-nc-appsdiag - try ncmake on a Nextcloud app that was never built with it. Takes
 # a GitHub URL, clones the app, reports what the checkout is made of, and on
-# confirmation puts the ncmake bootstrap stub in place of the app's own build
-# entry (which is kept as Makefile.orig). Then it offers the ncmake targets one by
+# confirmation adds the ncmake bootstrap stub as GNUmakefile, which make reads
+# before the app's own makefile or Makefile. Then it offers the ncmake targets one by
 # one and records exit code and duration of each; where an analyser has a --json
 # form, the machine-readable result is kept beside the log, from a second run or,
 # for build-verify, from the only one, and summary.json says what the run measured
@@ -42,8 +42,10 @@ CHECKOUT_DIR="${NC_APPSDIAG_CHECKOUTS:-${APPSDIAG_DIR}/checkouts}"
 LOG_DIR="${NC_APPSDIAG_LOGS:-${APPSDIAG_DIR}/logs}"
 
 STUB_URL="${NC_APPSDIAG_STUB_URL:-https://raw.githubusercontent.com/ernolf/ncmake/main/bootstrap/Makefile}"
-STUB="Makefile"
-ORIG="Makefile.orig"
+# GNU make reads the first of GNUmakefile, makefile and Makefile it finds, so the
+# stub goes in under the first name and the app's own build files stay as they are.
+STUB="GNUmakefile"
+BUILD_FILES="GNUmakefile makefile Makefile"
 
 # Offered in this order: metadata only, then the licence check, then the build,
 # then everything that reads the build output, then the tarball. An analyser that
@@ -105,9 +107,10 @@ usage() {
 Usage: gh-nc-appsdiag <github-url|owner/repo> [version]
        gh-nc-appsdiag -a [-l <file>] [<github-url|owner/repo> [version]] ...
 
-Clones the app, reports what it is built with, and on confirmation replaces its
-Makefile with the ncmake bootstrap stub - the app's own one is kept beside it as
-Makefile.orig. Then every target is offered in turn: y runs it, n skips it, q
+Clones the app, reports what it is built with, and on confirmation adds the
+ncmake bootstrap stub as GNUmakefile, which make reads before a makefile or a
+Makefile of the app. Those stay in the checkout untouched; an own GNUmakefile is
+moved aside. Then every target is offered in turn: y runs it, n skips it, q
 stops asking. After the list any other target can be typed, ARGS= included. The
 full output of every run, the exit codes and the summary go to the log; the
 analyser results go beside it as JSON, and so does the diff of what make dist
@@ -128,7 +131,7 @@ Everything one run produces goes into one directory:
       summary.json        app, version, head, ncmake ref, host, every target
                           with exit code and duration, the result files
       <target>.json       the machine-readable analyser results
-      Makefile.orig       the app's own build entry
+      <name>.orig         the app's own GNUmakefile, makefile and Makefile
       release/diff.txt    the staged tree against the shipped tarball, as diff
                           wrote it
       release/diff.tsv    the same, one path per line: kind, class, path
@@ -403,22 +406,27 @@ inventory() {
 }
 
 # == Stub ==
-# The app's own build entry is moved aside rather than deleted, so it can still be
-# read afterwards. The rename leaves a tracked file missing in the working tree,
-# which every target that reads the tracked file set reports as an uncommitted
-# change.
+# The stub is added, not swapped in: a makefile or Makefile of the app stays where
+# it is, so no tracked file goes missing and nothing shows up as an uncommitted
+# change. Only an own GNUmakefile has to make room. It is moved aside rather than
+# deleted, and the rename leaves a tracked file missing in the working tree, which
+# every target that reads the tracked file set reports as an uncommitted change.
 install_stub() {
+	local f own=0
+	# The app's own build files are worth reading later, and in the checkout they do
+	# not survive: the checkout is a throwaway. Keep a copy beside the results.
+	mkdir -p "$RUN_DIR"
+	for f in $BUILD_FILES; do
+		[ -e "$APP_DIR/$f" ] || continue
+		cp "$APP_DIR/$f" "$RUN_DIR/$f.orig"
+		log "   own $f copied to $RUN_DIR/$f.orig"
+		own=1
+	done
+	[ "$own" = 1 ] || log "   no own build file in this app"
 	if [ -e "$APP_DIR/$STUB" ]; then
-		[ -e "$APP_DIR/$ORIG" ] && die "$ORIG already exists in $APP_DIR"
-		mv "$APP_DIR/$STUB" "$APP_DIR/$ORIG"
-		# The app's own build entry is worth reading later, and in the checkout it
-		# does not survive: the checkout is a throwaway, and an app that ignores
-		# *.orig loses it to dist-clean. Keep a copy beside the results.
-		mkdir -p "$RUN_DIR"
-		cp "$APP_DIR/$ORIG" "$RUN_DIR/$ORIG"
-		log "   own $STUB moved to $ORIG, copied to $RUN_DIR/$ORIG"
-	else
-		log "   no own $STUB in this app"
+		[ -e "$APP_DIR/$STUB.orig" ] && die "$STUB.orig already exists in $APP_DIR"
+		mv "$APP_DIR/$STUB" "$APP_DIR/$STUB.orig"
+		log "   own $STUB moved to $STUB.orig"
 	fi
 	"$CURL" -fsSL "$STUB_URL" -o "$APP_DIR/$STUB" || die "could not fetch the stub from $STUB_URL"
 	log "   stub installed ($(wc -l < "$APP_DIR/$STUB") lines)"
