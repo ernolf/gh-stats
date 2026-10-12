@@ -122,7 +122,9 @@ whether the App Store has a tarball of them, and the one to measure is picked by
 its number; the newest tag the store ships is the offered answer, and 0 keeps the
 default branch. With a version on the command line nothing is asked: the tag of
 that version (v<version> or <version>) is checked out before anything is read, so
-an older release can be measured as it was shipped.
+an older release can be measured as it was shipped. A repository with neither
+takes the one tag that ends in either after a -, / or _, as in
+<component>-v<version>.
 
 Everything one run produces goes into one directory:
 
@@ -652,9 +654,23 @@ release_versions() {
 }
 # A release was built from its tag, so nothing but that tag compares against it.
 # The tag is checked out before the stub goes in, while the working tree is clean.
+# v<version> and <version> come first. Without either, a tag that ends in one of
+# them after a separator is taken, such as release-please writes it
+# (<component>-v<version>), provided it is the only one: in a repository with
+# several components the prefix would have to be guessed.
 release_checkout() {
-	local want="${1:-$app_version}" tag
-	for tag in "v$want" "$want"; do
+	local want="${1:-$app_version}" tag tags n
+	tags="$(printf '%s\n' "v$want" "$want")"
+	if ! "$GIT" -C "$APP_DIR" rev-parse -q --verify "refs/tags/v${want}^{commit}" >/dev/null 2>&1 \
+		&& ! "$GIT" -C "$APP_DIR" rev-parse -q --verify "refs/tags/${want}^{commit}" >/dev/null 2>&1; then
+		tags="$("$GIT" -C "$APP_DIR" tag -l "*[-/_]v$want" "*[-/_]$want" | sort -u)"
+		n="$(printf '%s' "$tags" | grep -c .)" || true
+		if [ "$n" -gt 1 ]; then
+			warn "several tags end in v$want or $want in $owner/$repo: ${tags//$'\n'/ }"
+			return 1
+		fi
+	fi
+	for tag in $tags; do
 		"$GIT" -C "$APP_DIR" rev-parse -q --verify "refs/tags/${tag}^{commit}" >/dev/null 2>&1 || continue
 		"$GIT" -C "$APP_DIR" -c advice.detachedHead=false checkout -q "$tag" \
 			|| { warn "cannot check out $tag"; return 1; }
@@ -663,7 +679,7 @@ release_checkout() {
 		init_submodules
 		return 0
 	done
-	warn "neither v$want nor $want is a tag in $owner/$repo"
+	warn "neither v$want nor $want is a tag in $owner/$repo, nor the end of one"
 	return 1
 }
 
