@@ -81,6 +81,9 @@ NCMAKE_DIR="${NCMAKE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/ncmake}"
 # An existing cache is read as it is; remove it to fetch a current one.
 APPSTORE_URL="${APPSTORE_URL:-https://apps.nextcloud.com/api/v1/apps.json}"
 APPSTORE_CACHE="${APPSTORE_CACHE:-/var/lib/gh-stats/apps.json}"
+# The repositories that publish the releases of an app developed in another one,
+# the same variable gh-nc-appslist maps such an app with.
+APPLIST_RELEASE_REPOS="${APPLIST_RELEASE_REPOS:-nextcloud-releases christianlupus-nextcloud/cookbook-releases}"
 
 GIT="${GIT_BIN:-/usr/bin/git}"
 GH="${GH_BIN:-/usr/bin/gh}"
@@ -134,10 +137,11 @@ Without a version the repo's tags are listed, newest first and marked with
 whether the App Store has a tarball of them, and the one to measure is picked by
 its number; the newest tag the store ships is the offered answer, and 0 keeps the
 default branch. With a version on the command line nothing is asked: the tag of
-that version (v<version> or <version>) is checked out before anything is read, so
-an older release can be measured as it was shipped. A repository with neither
-takes the one tag that ends in either after a -, / or _, as in
-<component>-v<version>.
+that version is checked out before anything is read, so an older release can be
+measured as it was shipped. The tag is the one the App Store download of that
+version names. For a version the store does not ship it is v<version> or
+<version>, else the one tag whose version from its first digit on is this one,
+as in v.<version> or <component>-v<version>.
 
 Everything one run produces goes into one directory:
 
@@ -193,6 +197,7 @@ Environment (or /etc/gh-stats/gh-stats.env):
   TAG_MENU_MAX               how many tags the list offers (default: 12)
   APPSTORE_URL               the App Store catalogue
   APPSTORE_CACHE             where that catalogue is kept
+  APPLIST_RELEASE_REPOS      the release repositories, as in gh-nc-appslist
   RUNTIME                    the container runtime ncmake uses, and whose images
                              a batch removes (default: podman, else docker)
 EOF
@@ -681,34 +686,82 @@ release_list() {
 release_versions() {
 	release_list "$1" | head -6 | tr '\n' ' '
 }
+# The App Store download of a version is a GitHub release asset, and its URL names
+# the tag the shipped tarball was built from. A release counts when it lies in this
+# repository, or when it comes from one of APPLIST_RELEASE_REPOS and the app's issue
+# tracker, else its website, names this repository: the mapping gh-nc-appslist
+# lists such an app under. Several app ids of one repository can ship the same
+# version from the same tag, so each tag is named once.
+store_tags() {
+	local cache
+	cache="$(appstore_cache)" || return 0
+	{ "$JQ" -r --arg repo "${owner,,}/${repo,,}" --arg v "$1" --arg rel "$APPLIST_RELEASE_REPOS" '
+		def gh: (. // "") | capture("^https?://github\\.com/(?<o>[^/#?]+)/(?<r>[^/#?]+)")
+			| "\(.o)/\(.r | sub("\\.git$"; ""))";
+		($rel | gsub(","; " ") | split(" ") | map(select(length > 0))) as $release
+		| [ (if type == "object" then .data else . end)[] | . as $a | .releases[]?
+		    | select(.version == $v and .download != null)
+		    | (.download | split("/")) as $p
+		    | select($p[2] == "github.com" and $p[5] == "releases" and $p[6] == "download" and ($p[7] // "") != "")
+		    | ($p[3] + "/" + $p[4]) as $dl
+		    | (if ($release | index($p[3])) or ($release | index($dl))
+		       then ([$a.issueTracker, $a.website | gh] | first // $dl)
+		       else $dl end) as $src
+		    | select(($src | ascii_downcase) == $repo)
+		    | $p[7] ]
+		| unique | .[]' "$cache" 2>/dev/null || true; } | while IFS= read -r t; do printf '%b\n' "${t//%/\\x}"; done
+}
+
+checkout_tag() {
+	local tag="$1"
+	"$GIT" -C "$APP_DIR" -c advice.detachedHead=false checkout -q "$tag" \
+		|| { warn "cannot check out $tag"; return 1; }
+	log "   head  $("$GIT" -C "$APP_DIR" log -1 --format='%h %ad %s' --date=short) ($tag)"
+	head_tag="$tag"
+	init_submodules
+}
+
+has_tag() {
+	"$GIT" -C "$APP_DIR" rev-parse -q --verify "refs/tags/${1}^{commit}" >/dev/null 2>&1
+}
+
 # A release was built from its tag, so nothing but that tag compares against it.
 # The tag is checked out before the stub goes in, while the working tree is clean.
-# v<version> and <version> come first. Without either, a tag that ends in one of
-# them after a separator is taken, such as release-please writes it
-# (<component>-v<version>), provided it is the only one: in a repository with
+# The App Store download names it; a tag named there that the repository no longer
+# has ends the run rather than measure another commit. Only a version the store
+# does not ship is guessed at: v<version> and <version> come first, then the one tag
+# whose version, read from its first digit on as gh-stats reads it, is this one.
+# That covers v.<version> and every prefix such as release-please's
+# <component>-v<version>, as long as it is the only one: in a repository with
 # several components the prefix would have to be guessed.
 release_checkout() {
 	local want="${1:-$app_version}" tag tags n
-	tags="$(printf '%s\n' "v$want" "$want")"
-	if ! "$GIT" -C "$APP_DIR" rev-parse -q --verify "refs/tags/v${want}^{commit}" >/dev/null 2>&1 \
-		&& ! "$GIT" -C "$APP_DIR" rev-parse -q --verify "refs/tags/${want}^{commit}" >/dev/null 2>&1; then
-		tags="$("$GIT" -C "$APP_DIR" tag -l "*[-/_]v$want" "*[-/_]$want" | sort -u)"
-		n="$(printf '%s' "$tags" | grep -c .)" || true
-		if [ "$n" -gt 1 ]; then
-			warn "several tags end in v$want or $want in $owner/$repo: ${tags//$'\n'/ }"
-			return 1
-		fi
+	tags="$(store_tags "$want")"
+	n="$(printf '%s' "$tags" | grep -c .)" || true
+	if [ "$n" -gt 1 ]; then
+		warn "the App Store ships $want of $owner/$repo from several tags: ${tags//$'\n'/ }"
+		return 1
+	elif [ "$n" -eq 1 ]; then
+		has_tag "$tags" || { warn "the App Store download of $want names the tag $tags, which $owner/$repo does not have"; return 1; }
+		log "   tag   $tags, from the App Store download"
+		checkout_tag "$tags"
+		return
 	fi
-	for tag in $tags; do
-		"$GIT" -C "$APP_DIR" rev-parse -q --verify "refs/tags/${tag}^{commit}" >/dev/null 2>&1 || continue
-		"$GIT" -C "$APP_DIR" -c advice.detachedHead=false checkout -q "$tag" \
-			|| { warn "cannot check out $tag"; return 1; }
-		log "   head  $("$GIT" -C "$APP_DIR" log -1 --format='%h %ad %s' --date=short) ($tag)"
-		head_tag="$tag"
-		init_submodules
-		return 0
+	for tag in "v$want" "$want"; do
+		has_tag "$tag" && { checkout_tag "$tag"; return; }
 	done
-	warn "neither v$want nor $want is a tag in $owner/$repo, nor the end of one"
+	tags="$("$GIT" -C "$APP_DIR" tag -l | while IFS= read -r tag; do
+		[ "${tag#"${tag%%[0-9]*}"}" = "$want" ] && printf '%s\n' "$tag"
+	done)" || true
+	n="$(printf '%s' "$tags" | grep -c .)" || true
+	if [ "$n" -gt 1 ]; then
+		warn "several tags of $owner/$repo carry $want from their first digit on: ${tags//$'\n'/ }"
+		return 1
+	elif [ "$n" -eq 1 ]; then
+		checkout_tag "$tags"
+		return
+	fi
+	warn "neither an App Store download nor a tag of $owner/$repo names $want"
 	return 1
 }
 
@@ -729,7 +782,7 @@ pick_tag() {
 	log "== tags of $owner/$repo, newest first"
 	while IFS= read -r tag; do
 		i=$((i + 1))
-		v="${tag#v}"
+		v="${tag#"${tag%%[0-9]*}"}"
 		if printf '%s\n' "$versions" | grep -qxF "$v"; then
 			log "   $i  $tag  (App Store ships it)"
 			[ "$default" -eq 0 ] && default="$i"
@@ -752,7 +805,7 @@ pick_tag() {
 	esac
 	[ "$n" -ge 1 ] && [ "$n" -le "$i" ] || { warn "there is no $n in this list"; return 1; }
 	chosen="$(printf '%s\n' "$tags" | sed -n "${n}p")"
-	release_checkout "${chosen#v}"
+	checkout_tag "$chosen"
 }
 
 # What the App Store ships, else what the app or the Nextcloud release mirror
