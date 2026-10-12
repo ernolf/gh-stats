@@ -596,6 +596,20 @@ json_only_run() {
 	return "$rc"
 }
 
+# == Submodules ==
+# Code kept in a submodule is part of the release like any other file, and the
+# commit it has to be at is the one the checked-out tree records, so the submodules
+# are brought there after every checkout.
+init_submodules() {
+	[ -f "$APP_DIR/.gitmodules" ] || return 0
+	if "$GIT" -C "$APP_DIR" submodule update --init --recursive 2>&1 | tee_plain "$LOG"; then
+		log "   submodules: $("$GIT" -C "$APP_DIR" submodule status --recursive | wc -l) initialised"
+	else
+		warn "cannot initialise the submodules of $owner/$repo"
+		log "   submodules: not initialised"
+	fi
+}
+
 # == Release ==
 # The catalogue is one file for every app, kept where gh-nc-appstore-targets keeps it.
 # Nothing else is bound to refresh that file, and a copy older than the newest
@@ -646,6 +660,7 @@ release_checkout() {
 			|| { warn "cannot check out $tag"; return 1; }
 		log "   head  $("$GIT" -C "$APP_DIR" log -1 --format='%h %ad %s' --date=short) ($tag)"
 		head_tag="$tag"
+		init_submodules
 		return 0
 	done
 	warn "neither v$want nor $want is a tag in $owner/$repo"
@@ -923,6 +938,7 @@ if [ ! -d "$APP_DIR" ]; then
 fi
 [ -d "$APP_DIR/.git" ] || die "no checkout at $APP_DIR"
 log "   head  $("$GIT" -C "$APP_DIR" log -1 --format='%h %ad %s' --date=short)"
+init_submodules
 
 # A version on the command line is checked out before anything is read, so the
 # inventory, the App Store lookup and the tarball comparison all speak about the
