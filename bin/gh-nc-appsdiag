@@ -128,7 +128,8 @@ Everything one run produces goes into one directory:
 
   <logs>/<owner>/<repo>/<version>/<timestamp>/
       console.log         the full output of the run
-      summary.json        app, version, head, ncmake ref, host, every target
+      summary.json        app, version, head, ncmake ref, host, the build file
+                          make read before the stub and its kind, every target
                           with exit code and duration, the result files
       <target>.json       the machine-readable analyser results
       <name>.orig         the app's own GNUmakefile, makefile and Makefile
@@ -150,7 +151,9 @@ each one followed by its version if it is to be a particular one, and a list fil
 adds more, one app per line with an optional version after it; # starts a comment.
 The apps run one after the other, each in a process of its own, so one that dies
 does not end the batch; Ctrl-C does. The batch summary goes to
-<logs>/batch-<timestamp>.txt, one line per app with the targets that failed, and
+<logs>/batch-<timestamp>.txt, one line per app with the targets that failed and,
+in brackets, the build file make read before the stub (foreign, ncmake-stub or
+ncmake-copy), and
 to <logs>/batch-<timestamp>.json with the run directory of each app.
 
   -a, --auto         answer every question with its default
@@ -243,8 +246,9 @@ if [ "$batch" -eq 1 ]; then
 		failed="no summary.json"
 		if [ -n "$run_dir" ] && [ -s "$run_dir/summary.json" ] && [ -x "$JQ" ]; then
 			failed="$("$JQ" -r '([.targets[] | select(.exit != 0) | "\(.name)=\(.exit)"] | if length == 0 then "none failed" else "failed: " + join(" ") end) as $f
-				| if .status == "completed" then $f
-				  else "\(.status): \(.reason // "exit \(.exit)")" + (if (.targets | length) == 0 then "" else "; \($f)" end) end' "$run_dir/summary.json")"
+				| (.inventory.build_file // null | if . == null then "" else "  [\(.name): \(.kind)]" end) as $b
+				| (if .status == "completed" then $f
+				  else "\(.status): \(.reason // "exit \(.exit)")" + (if (.targets | length) == 0 then "" else "; \($f)" end) end) + $b' "$run_dir/summary.json")"
 		fi
 		printf '%-45s exit %3s %6ss  %s\n' "$e" "$rc" "$secs" "$failed" >>"$batch_log"
 		if [ -x "$JQ" ]; then
@@ -295,6 +299,8 @@ ncmake_tree=""
 ncmake_differs=""
 ncmake_checked=0
 inv_files=()
+build_name=""
+build_kind=""
 rel_tarball=""
 rel_bytes=""
 summary_written=0
@@ -372,7 +378,7 @@ inventory() {
 	log ""
 	log "== inventory: $owner/$repo"
 	inv_files=()
-	for f in Makefile krankerl.toml package.json package-lock.json yarn.lock \
+	for f in $BUILD_FILES krankerl.toml package.json package-lock.json yarn.lock \
 	         pnpm-lock.yaml composer.json composer.lock .nvmrc tsconfig.json \
 	         vite.config.js vite.config.ts vite.config.mjs webpack.config.js \
 	         webpack.config.ts webpack.config.mjs webpack.js webpack.common.js \
@@ -390,6 +396,12 @@ inventory() {
 			log "   dir   $d/ ($("$GIT" -C "$APP_DIR" ls-files "$d" | wc -l) tracked files)"
 		fi
 	done
+	build_file
+	if [ -n "$build_name" ]; then
+		log "   make  reads $build_name ($build_kind)"
+	else
+		log "   make  finds no build file"
+	fi
 	x="$APP_DIR/appinfo/info.xml"
 	if [ -f "$x" ]; then
 		app_id="$(sed -n 's:.*<id>\(.*\)</id>.*:\1:p' "$x" | head -1)"
@@ -403,6 +415,29 @@ inventory() {
 		log "   npm   scripts: $("$JQ" -r '(.scripts // {}) | keys | join(" ")' "$APP_DIR/package.json")"
 		log "   npm   engines: $("$JQ" -rc '.engines // "not stated"' "$APP_DIR/package.json")"
 	fi
+}
+
+# The build file make reads in the app as it comes, before the stub: the first of
+# BUILD_FILES there is, and of which kind. The test is the one consistency-audit
+# applies: a file that names ncmake is the stub when it is short and a copy of the
+# core when it is long; any other is the app's own. Read before the stub goes in,
+# because afterwards the stub is the file make reads.
+build_file() {
+	local f
+	build_name=""
+	build_kind=""
+	for f in $BUILD_FILES; do
+		[ -f "$APP_DIR/$f" ] || continue
+		build_name="$f"
+		if ! grep -qi ncmake "$APP_DIR/$f"; then
+			build_kind=foreign
+		elif [ "$(wc -l <"$APP_DIR/$f")" -gt 200 ]; then
+			build_kind=ncmake-copy
+		else
+			build_kind=ncmake-stub
+		fi
+		return 0
+	done
 }
 
 # == Stub ==
@@ -817,7 +852,7 @@ write_summary_json() {
 		--arg head "$head" --arg tag "$head_tag" --arg stub "$STUB_URL" \
 		--arg ncmain "$ncmake_main" --arg ncdiffers "$ncmake_differs" --argjson ncchecked "$ncmake_checked" \
 		--arg host "$host" --arg cpus "$cpus" --arg mem "$mem" --arg cpu "$cpu" \
-		--argjson inv "$inv" --argjson files "$files" \
+		--argjson inv "$inv" --arg bname "$build_name" --arg bkind "$build_kind" --argjson files "$files" \
 		--arg tarball "$rel_tarball" --arg bytes "$rel_bytes" --argjson diff "$diff" '
 		def nul($s): if $s == "" then null else $s end;
 		def num($s): if $s == "" then null else ($s | tonumber) end;
@@ -831,7 +866,8 @@ write_summary_json() {
 		          differs: (if $ncchecked == 1 then ($ncdiffers | split("\n") | map(select(length > 0))) else null end),
 		          stub_url: $stub},
 		 host: {name: $host, cpus: num($cpus), mem_mb: num($mem), cpu_model: nul($cpu)},
-		 inventory: {files: $inv},
+		 inventory: {files: $inv,
+		            build_file: (if $bname == "" then null else {name: $bname, kind: $bkind} end)},
 		 targets: [split("\n")[] | select(length > 0) | split("\t") | {name: .[0], exit: (.[1] | tonumber), seconds: (.[2] | tonumber)}],
 		 files: $files,
 		 release: (if $tarball == "" then null else
