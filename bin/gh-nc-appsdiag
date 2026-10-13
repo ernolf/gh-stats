@@ -47,12 +47,12 @@ STUB_URL="${NC_APPSDIAG_STUB_URL:-https://raw.githubusercontent.com/ernolf/ncmak
 STUB="GNUmakefile"
 BUILD_FILES="GNUmakefile makefile Makefile"
 
-# Offered in this order: metadata only, then the licence check, then the build,
-# then everything that reads the build output, then the tarball. An analyser that
-# prices what was built has nothing to price before make build, so the build comes
-# first. Release and deploy targets (version, changelog, tag, rsync, cp) are not
-# offered - they act outside the checkout.
-TARGETS="${NC_APPSDIAG_TARGETS:-help consistency-audit reuse build build-audit bundle-report build-verify dist}"
+# Offered in this order: metadata only, then the licence check and the changelog,
+# then the build, then everything that reads the build output, then the tarball. An
+# analyser that prices what was built has nothing to price before make build, so the
+# build comes first. Release and deploy targets (version, changelog, tag, rsync,
+# cp) are not offered - they act outside the checkout.
+TARGETS="${NC_APPSDIAG_TARGETS:-help consistency-audit reuse changelog-lint build build-audit bundle-report build-verify dist}"
 # Offered after the release comparison, because both of them remove what it reads.
 CLEAN_TARGETS="${NC_APPSDIAG_CLEAN_TARGETS:-clean dist-clean}"
 # These have to be said yes to; everything else runs on the empty answer, because
@@ -61,9 +61,9 @@ CLEAN_TARGETS="${NC_APPSDIAG_CLEAN_TARGETS:-clean dist-clean}"
 TARGETS_ASK="${NC_APPSDIAG_TARGETS_ASK:-help}"
 
 # Targets whose --json result is worth keeping. It costs a second run of the same
-# target, which is seconds for these. reuse gets one too: its exit code says only
-# that something is missing, the JSON says how much.
-JSON_TARGETS="${NC_APPSDIAG_JSON:-consistency-audit build-audit bundle-report reuse}"
+# target, which is seconds for these. reuse and changelog-lint get one too: their
+# exit code says only that something is missing, the JSON says what.
+JSON_TARGETS="${NC_APPSDIAG_JSON:-consistency-audit build-audit bundle-report reuse changelog-lint}"
 # Targets too expensive for a second run: they run once, with --json, the JSON goes
 # to the results and its findings are printed in place of the human report.
 # build-verify builds the app twice in minutes, a second pass would double that.
@@ -140,7 +140,9 @@ Everything one run produces goes into one directory:
       summary.json        app, version, head, ncmake ref, host, the build file
                           make read before the stub and its kind, every target
                           with exit code and duration, the result files
-      <target>.json       the machine-readable analyser results
+      <target>.json       the machine-readable analyser results, by default of
+                          consistency-audit, reuse, changelog-lint,
+                          build-audit, bundle-report and build-verify
       <name>.orig         the app's own GNUmakefile, makefile and Makefile,
                           except one that is the ncmake stub byte for byte
       release/diff.txt    the staged tree against the shipped tarball, as diff
