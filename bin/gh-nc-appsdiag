@@ -76,11 +76,14 @@ JSON_ONLY_TARGETS="${NC_APPSDIAG_JSON_ONLY:-build-verify}"
 NCMAKE_REPO="${NC_APPSDIAG_NCMAKE_REPO:-https://github.com/ernolf/ncmake.git}"
 NCMAKE_DIR="${NCMAKE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/ncmake}"
 
-# The App Store catalogue, the same file and the same variables gh-nc-appstore-targets
-# uses: it says which versions of an app are published and where each tarball lies.
-# An existing cache is read as it is; remove it to fetch a current one.
-APPSTORE_URL="${APPSTORE_URL:-https://apps.nextcloud.com/api/v1/apps.json}"
+# The App Store catalogue, from the same sources and variables as gh-nc-appslist: it
+# says which versions of an app are published and where each tarball lies. The App
+# Store rate-limits its catalogue strictly, so a run never asks it: download reads
+# the copy gh-nc-appstore-targets keeps, ebtb the one nc-apps keeps current.
+APPSTORE_SOURCE="${APPSTORE_SOURCE:-download}"
 APPSTORE_CACHE="${APPSTORE_CACHE:-/var/lib/gh-stats/apps.json}"
+APPSTORE_APPDATA_FILE="${APPSTORE_APPDATA_FILE:-}"
+APPSTORE_EBTB_DB="${APPSTORE_EBTB_DB:-}"
 # The repositories that publish the releases of an app developed in another one,
 # the same variable gh-nc-appslist maps such an app with.
 APPLIST_RELEASE_REPOS="${APPLIST_RELEASE_REPOS:-nextcloud-releases christianlupus-nextcloud/cookbook-releases}"
@@ -89,6 +92,7 @@ GIT="${GIT_BIN:-/usr/bin/git}"
 GH="${GH_BIN:-/usr/bin/gh}"
 JQ="${JQ_BIN:-/usr/bin/jq}"
 CURL="${CURL_BIN:-/usr/bin/curl}"
+SQLITE="${SQLITE_BIN:-/usr/bin/sqlite3}"
 
 # Set by -a for every app of a batch: no question is put, each takes its default.
 AUTO="${NC_APPSDIAG_AUTO:-0}"
@@ -189,8 +193,11 @@ Environment (or /etc/gh-stats/gh-stats.env):
   NC_APPSDIAG_STUB_URL       the ncmake bootstrap stub to install
   NC_APPSDIAG_NCMAKE_REPO    the ncmake repo whose main the run is compared with
   TAG_MENU_MAX               how many tags the list offers (default: 12)
-  APPSTORE_URL               the App Store catalogue
-  APPSTORE_CACHE             where that catalogue is kept
+  APPSTORE_SOURCE            where the App Store catalogue comes from: download,
+                             appdata or ebtb, as for gh-nc-appslist
+  APPSTORE_CACHE             the catalogue of the download source
+  APPSTORE_APPDATA_FILE      the catalogue of the appdata source
+  APPSTORE_EBTB_DB           the nc-apps database of the ebtb source
   APPLIST_RELEASE_REPOS      the release repositories, as in gh-nc-appslist
   RUNTIME                    the container runtime ncmake uses (default: podman,
                              else docker)
@@ -659,26 +666,18 @@ init_submodules() {
 }
 
 # == Release ==
-# The catalogue is one file for every app, kept where gh-nc-appstore-targets keeps it.
-# Nothing else is bound to refresh that file, and a copy older than the newest
-# release leaves that release unmarked in the tag list, so every run asks the store
-# again. The file carries the store's Last-Modified as its mtime, which the store
-# answers with 304 and no body; a failed fetch keeps the copy there is.
-appstore_cache() {
-	local c="$APPSTORE_CACHE" new
-	if [ ! -s "$c" ]; then
-		mkdir -p "$(dirname "$c")" 2>/dev/null && : >>"$c" 2>/dev/null || c="$APPSDIAG_DIR/apps.json"
-	fi
-	new="$c.new"
-	rm -f "$new"
-	if [ -s "$c" ]; then
-		"$CURL" -fsSL --compressed -R -z "$c" "$APPSTORE_URL" -o "$new" || warn "could not refresh the App Store catalogue, using $c"
-	else
-		"$CURL" -fsSL --compressed -R "$APPSTORE_URL" -o "$new" || return 1
-	fi
-	if [ -s "$new" ]; then mv -f "$new" "$c"; else rm -f "$new"; fi
-	[ -s "$c" ] || return 1
-	printf '%s\n' "$c"
+# The catalogue is resolved on every read: nc-apps writes each refresh to a new
+# file, so a batch that runs for a day sees the releases a refresh brings meanwhile.
+appstore_catalogue() {
+	local f
+	case "$APPSTORE_SOURCE" in
+		download) f="$APPSTORE_CACHE" ;;
+		appdata)  f="$APPSTORE_APPDATA_FILE" ;;
+		ebtb)     [ -r "$APPSTORE_EBTB_DB" ] && f="$("$SQLITE" "$APPSTORE_EBTB_DB" "SELECT json_data_file FROM apps WHERE platform='all'" 2>/dev/null)" ;;
+		*)        warn "unknown APPSTORE_SOURCE: '$APPSTORE_SOURCE'"; return 1 ;;
+	esac
+	[ -n "${f:-}" ] && [ -s "$f" ] || return 1
+	printf '%s\n' "$f"
 }
 
 # Where the App Store says the tarball of exactly this version lies, and which
@@ -706,7 +705,7 @@ release_versions() {
 # version from the same tag, so each tag is named once.
 store_tags() {
 	local cache
-	cache="$(appstore_cache)" || return 0
+	cache="$(appstore_catalogue)" || return 0
 	{ "$JQ" -r --arg repo "${owner,,}/${repo,,}" --arg v "$1" --arg rel "$APPLIST_RELEASE_REPOS" '
 		def gh: (. // "") | capture("^https?://github\\.com/(?<o>[^/#?]+)/(?<r>[^/#?]+)")
 			| "\(.o)/\(.r | sub("\\.git$"; ""))";
@@ -824,7 +823,7 @@ pick_tag() {
 # attached to the tag of this version.
 fetch_tarball() {
 	local dest="$1" cache url r f
-	if cache="$(appstore_cache)"; then
+	if cache="$(appstore_catalogue)"; then
 		url="$(release_url "$cache")"
 		if [ -n "$url" ] && [ "$url" != null ]; then
 			"$CURL" -fsSL "$url" -o "$dest/${url##*/}" && { printf '%s\n' "$dest/${url##*/}"; return 0; }
@@ -1069,7 +1068,7 @@ fi
 if [ -n "$app_version" ]; then
 	log ""
 	log "== release tag"
-	if cache="$(appstore_cache)"; then
+	if cache="$(appstore_catalogue)"; then
 		url="$(release_url "$cache")"
 		if [ -n "$url" ] && [ "$url" != null ]; then
 			log "   the App Store ships $app_id $app_version as ${url##*/}"
@@ -1084,7 +1083,7 @@ if [ -n "$app_version" ]; then
 			promote_run_dir
 		fi
 	else
-		warn "no App Store catalogue at $APPSTORE_CACHE and none could be fetched"
+		warn "no App Store catalogue readable from the $APPSTORE_SOURCE source"
 	fi
 fi
 
