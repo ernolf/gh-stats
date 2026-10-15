@@ -693,8 +693,13 @@ appstore_catalogue() {
 # newest six are sorted out of it rather than taken as they lie. sort -V puts
 # 1.2.0-rc.1 after 1.2.0; a tilde sorts before the end of the string, so the first
 # hyphen becomes one for the sort and every pre-release lands below its release.
+# The store keeps one nightly per app, and it can carry the version of a stable
+# release; the release is what was shipped, so the nightly counts only for a
+# version the store has as nightly alone.
 release_url() {
-	{ "$JQ" -r --arg id "$app_id" --arg v "$app_version" '(if type == "object" then .data else . end) | map(select(.id == $id))[0].releases[]? | select(.version == $v) | .download' "$1" 2>/dev/null || true; } | head -1
+	{ "$JQ" -r --arg id "$app_id" --arg v "$app_version" '(if type == "object" then .data else . end) | map(select(.id == $id))[0]
+		| [.releases[]? | select(.version == $v)] as $all | ($all | map(select(.isNightly != true))) as $stable
+		| (if ($stable | length) > 0 then $stable else $all end)[].download' "$1" 2>/dev/null || true; } | head -1
 }
 release_list() {
 	{ "$JQ" -r --arg id "$app_id" '(if type == "object" then .data else . end) | map(select(.id == $id))[0].releases[]?.version' "$1" 2>/dev/null || true; } \
@@ -708,7 +713,8 @@ release_versions() {
 # repository, or when it comes from one of APPLIST_RELEASE_REPOS and the app's issue
 # tracker, else its website, names this repository: the mapping gh-nc-appslist
 # lists such an app under. Several app ids of one repository can ship the same
-# version from the same tag, so each tag is named once.
+# version from the same tag, so each tag is named once. A nightly of the same
+# version as a stable release is left out, as in release_url.
 store_tags() {
 	local cache
 	cache="$(appstore_catalogue)" || return 0
@@ -716,8 +722,10 @@ store_tags() {
 		def gh: (. // "") | capture("^https?://github\\.com/(?<o>[^/#?]+)/(?<r>[^/#?]+)")
 			| "\(.o)/\(.r | sub("\\.git$"; ""))";
 		($rel | gsub(","; " ") | split(" ") | map(select(length > 0))) as $release
-		| [ (if type == "object" then .data else . end)[] | . as $a | .releases[]?
-		    | select(.version == $v and .download != null)
+		| [ (if type == "object" then .data else . end)[] | . as $a
+		    | [.releases[]? | select(.version == $v and .download != null)] as $all
+		    | ($all | map(select(.isNightly != true))) as $stable
+		    | (if ($stable | length) > 0 then $stable else $all end)[]
 		    | (.download | split("/")) as $p
 		    | select($p[2] == "github.com" and $p[5] == "releases" and $p[6] == "download" and ($p[7] // "") != "")
 		    | ($p[3] + "/" + $p[4]) as $dl
