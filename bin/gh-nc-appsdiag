@@ -639,12 +639,18 @@ json_run() {
 # the report itself is the JSON, and its findings are printed from there, so the
 # log reads like a plain run.
 json_only_run() {
-	local t="$1" out rc=0
+	local t="$1" out rc=0 args=--json
+	# From the files alone build-verify cannot tell a stale ignored output from one
+	# that was just built. A make build that exited 0 earlier in this run built it
+	# from this very checkout, and --fresh says so.
+	if [ "$t" = build-verify ] && [ ${#results[@]} -gt 0 ] && printf '%s\n' "${results[@]}" | grep -q '^build	0	'; then
+		args="--json --fresh"
+	fi
 	mkdir -p "$RUN_DIR"
 	out="$RUN_DIR/${t}.json"
 	# A pipe rather than a process substitution: the pipeline ends only after tee
 	# has written the log, and bash before 5.2 sets no $! to wait for the latter.
-	{ ( cd "$APP_DIR" && make "$t" ARGS=--json ) 2>&1 >"$out.raw" | tee_plain "$LOG" >&2; } || rc=$?
+	{ ( cd "$APP_DIR" && make "$t" ARGS="$args" ) 2>&1 >"$out.raw" | tee_plain "$LOG" >&2; } || rc=$?
 	if split_json "$out.raw" "$out" 1 && [ -x "$JQ" ]; then
 		"$JQ" -r '.findings[]? | "[\(.level)] \(.id)", (.lines[]? | "    " + .)' "$out" 2>/dev/null | tee -a "$LOG" || true
 	fi
