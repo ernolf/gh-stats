@@ -152,17 +152,21 @@ read -r -a _release <<< "${APPLIST_RELEASE_REPOS//,/ }"
 release_json="$(printf '%s\n' "${_release[@]}" | "$JQ" -R . | "$JQ" -sc 'map(select(length>0))')"
 
 # Only stable releases count: no nightly, no version with a pre-release suffix.
-# Several app ids can come from one repository; the newest version among them
-# stands for it.
+# Of each app id only the newest of them counts: an app that moved to another
+# repository keeps its old releases in the catalogue, and the repository it left
+# would stay listed with a version nobody installs any more. Several app ids can
+# come from one repository; the newest version among them stands for it.
 list="$("$JQ" -r --slurpfile t "$work/targets.json" --argjson release "$release_json" '
 	def gh: (. // "") | capture("^https?://github\\.com/(?<o>[^/#?]+)/(?<r>[^/#?]+)")
 		| "\(.o)/\(.r | sub("\\.git$"; ""))";
 	def vkey: split(".") | map(tonumber);
 	$t[0].targets as $targets
 	| (if type == "array" then . else .data end)
-	| [ .[] | . as $a | .releases[]?
-	    | select(.download != null and (.isNightly | not)
-	             and (.version | test("^[0-9]+(\\.[0-9]+)*$")))
+	| [ .[] | . as $a
+	    | [ .releases[]?
+	        | select(.download != null and (.isNightly | not)
+	                 and (.version | test("^[0-9]+(\\.[0-9]+)*$"))) ]
+	    | select(length > 0) | max_by(.version | vkey)
 	    | (.download | split("/")) as $p
 	    | select($p[2] == "github.com" and $p[5] == "releases")
 	    | ($p[3] + "/" + $p[4]) as $dl
