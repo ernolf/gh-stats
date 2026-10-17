@@ -169,10 +169,12 @@ list_repos() {
 # those also present as an explicit pair - for instance one carried by the
 # generated App Store drop-in - collapses to a single entry, so each repo is
 # sampled exactly once. First occurrence wins; order does not matter.
+# A target that cannot be expanded ends the run before anything is recorded:
+# its repositories would otherwise be missing from it and read as unchanged.
 collect_slugs() {
 	while read -r target; do
 		[ -n "$target" ] || continue
-		list_repos "$target"
+		list_repos "$target" || { echo "ERROR: cannot list the repositories of $target" >&2; exit 1; }
 	done <<< "$(collect_targets)" | awk 'NF && !seen[$0]++'
 }
 
