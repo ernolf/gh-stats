@@ -17,6 +17,8 @@
 # one directory, logs/<owner>/<repo>/<version>/<timestamp>/ with console.log in it,
 # so two versions of the same app never share a place and an older release can be
 # measured again later. Which version that is can be said on the command line.
+# A repository whose app is not at its root, or that holds several apps, is measured
+# once per app, each in a run of its own in the app's directory.
 
 # == Config ==
 # Optional site config shared with gh-stats and gh-release-sampler. If
@@ -115,8 +117,8 @@ warn() {
 
 usage() {
 	cat <<'EOF'
-Usage: gh-nc-appsdiag <github-url|owner/repo> [version]
-       gh-nc-appsdiag -a [-l <file>] [<github-url|owner/repo> [version]] ...
+Usage: gh-nc-appsdiag <github-url|owner/repo>[:<dir>] [version]
+       gh-nc-appsdiag -a [-l <file>] [<github-url|owner/repo>[:<dir>] [version]] ...
 
 Clones the app, reports what it is built with, and on confirmation adds the
 ncmake bootstrap stub as GNUmakefile, which make reads before a makefile or a
@@ -138,13 +140,24 @@ version names. For a version the store does not ship it is v<version> or
 <version>, else the one tag whose version from its first digit on is this one,
 as in v.<version> or <component>-v<version>.
 
-Everything one run produces goes into one directory:
+A repository without appinfo/info.xml at its root is searched for the apps below
+it, at any depth: every tracked appinfo/info.xml that declares a <nextcloud>
+dependency is one, so an ownCloud variant beside it is not. Each app is measured
+in a run of its own, as <owner>/<repo>:<dir> with the version given for the
+repository, from a local clone of the checkout; :<dir> on the command line
+measures one of them directly. The tag is the repository's, the version, the App
+Store release and the results are the app's.
+
+Everything one run produces goes into one directory, for an app below the root
+with its app id after the repo (or its directory, while the id is unknown):
 
   <logs>/<owner>/<repo>/<version>/<timestamp>/
+  <logs>/<owner>/<repo>/<app-id>/<version>/<timestamp>/
       console.log         the full output of the run
-      summary.json        app, version, head, ncmake ref, host, the build file
-                          make read before the stub and its kind, every target
-                          with exit code and duration, the result files
+      summary.json        app, its directory, version, head, ncmake ref, host,
+                          the build file make read before the stub and its
+                          kind, every target with exit code and duration, the
+                          result files
       <target>.json       the machine-readable analyser results, by default of
                           consistency-audit, reuse, changelog-lint,
                           build-audit, bundle-report, build-verify and
@@ -172,7 +185,8 @@ does not end the batch; Ctrl-C does. Every app runs make with KEEP=1, so the
 container images stay from one app to the next; at the end, also after Ctrl-C,
 make image-clean OWN=1 removes the ones ncmake pulled itself.
 The batch summary goes to
-<logs>/batch-<timestamp>.txt, one line per app with the targets that failed and,
+<logs>/batch-<timestamp>.txt, one line per app, each app below the root of a
+repository included, with the targets that failed and,
 in brackets, the build file make read before the stub (foreign, ncmake-stub or
 ncmake-copy), and
 to <logs>/batch-<timestamp>.json with the run directory of each app.
@@ -257,6 +271,23 @@ if [ "$batch" -eq 1 ]; then
 	# run directory in this file.
 	run_file="$LOG_DIR/.batch-${batch_stamp}.run"
 	entries=()
+	# One line per run directory: name, exit code, duration and the run directory.
+	batch_entry() {
+		local label="$1" rc="$2" secs="$3" run_dir="$4" failed="no summary.json"
+		if [ -n "$run_dir" ] && [ -s "$run_dir/summary.json" ] && [ -x "$JQ" ]; then
+			failed="$("$JQ" -r '([.targets[] | select(.exit != 0) | "\(.name)=\(.exit)"] | if length == 0 then "none failed" else "failed: " + join(" ") end) as $f
+				| (.inventory.build_file // null | if . == null then "" else "  [\(.name): \(.kind)]" end) as $b
+				| (if .status == "completed" then $f
+				  else "\(.status): \(.reason // "exit \(.exit)")" + (if (.targets | length) == 0 then "" else "; \($f)" end) end) + $b' "$run_dir/summary.json")"
+		fi
+		printf '%-45s exit %3s %6ss  %s\n' "$label" "$rc" "$secs" "$failed" >>"$batch_log"
+		if [ -x "$JQ" ]; then
+			entries+=("$("$JQ" -nc --arg app "${label% *}" --arg v "$( [[ "$label" == *" "* ]] && printf '%s' "${label#* }")" \
+				--argjson rc "$rc" --argjson secs "$secs" --arg dir "$run_dir" \
+				'{app: $app, version: (if $v == "" then null else $v end), exit: $rc, seconds: $secs, run_dir: (if $dir == "" then null else $dir end)}')")
+			printf '%s\n' "${entries[@]}" | "$JQ" -s --arg stamp "$batch_stamp" '{batch: $stamp, apps: .}' >"$batch_json"
+		fi
+	}
 	stop=0
 	trap 'stop=1' INT
 	i=0
@@ -272,20 +303,21 @@ if [ "$batch" -eq 1 ]; then
 		# shellcheck disable=SC2086 # app and version are two words on purpose
 		KEEP=1 NC_APPSDIAG_AUTO=1 NC_APPSDIAG_RESULT_FILE="$run_file" "$0" $e </dev/null || rc=$?
 		secs=$((SECONDS - start))
-		run_dir="$(head -1 "$run_file")"
-		failed="no summary.json"
-		if [ -n "$run_dir" ] && [ -s "$run_dir/summary.json" ] && [ -x "$JQ" ]; then
-			failed="$("$JQ" -r '([.targets[] | select(.exit != 0) | "\(.name)=\(.exit)"] | if length == 0 then "none failed" else "failed: " + join(" ") end) as $f
-				| (.inventory.build_file // null | if . == null then "" else "  [\(.name): \(.kind)]" end) as $b
-				| (if .status == "completed" then $f
-				  else "\(.status): \(.reason // "exit \(.exit)")" + (if (.targets | length) == 0 then "" else "; \($f)" end) end) + $b' "$run_dir/summary.json")"
-		fi
-		printf '%-45s exit %3s %6ss  %s\n' "$e" "$rc" "$secs" "$failed" >>"$batch_log"
-		if [ -x "$JQ" ]; then
-			entries+=("$("$JQ" -nc --arg app "${e% *}" --arg v "$( [[ "$e" == *" "* ]] && printf '%s' "${e#* }")" \
-				--argjson rc "$rc" --argjson secs "$secs" --arg dir "$run_dir" \
-				'{app: $app, version: (if $v == "" then null else $v end), exit: $rc, seconds: $secs, run_dir: (if $dir == "" then null else $dir end)}')")
-			printf '%s\n' "${entries[@]}" | "$JQ" -s --arg stamp "$batch_stamp" '{batch: $stamp, apps: .}' >"$batch_json"
+		mapfile -t run_dirs <"$run_file"
+		# A repository whose apps lie below its root writes one run per app. Each of
+		# them gets a line of its own, named, timed and with the exit code as its
+		# summary.json records them, even when there is only one.
+		if [ ${#run_dirs[@]} -eq 0 ] || [ ! -x "$JQ" ] \
+			|| { [ ${#run_dirs[@]} -eq 1 ] && ! "$JQ" -e .subdir "${run_dirs[0]}/summary.json" >/dev/null 2>&1; }; then
+			batch_entry "$e" "$rc" "$secs" "${run_dirs[0]:-}"
+		else
+			for d in "${run_dirs[@]}"; do
+				IFS=$'\t' read -r label app_rc app_secs < <("$JQ" -r '[.owner + "/" + .repo + (if .subdir then ":" + .subdir else "" end)
+					+ (if .requested_version then " " + .requested_version else "" end),
+					.exit, ((.finished | fromdate) - (.started | fromdate))] | @tsv' "$d/summary.json" 2>/dev/null) \
+					|| { label="$e"; app_rc="$rc"; app_secs="$secs"; }
+				batch_entry "$label" "$app_rc" "$app_secs" "$d"
+			done
 		fi
 		if [ "$stop" -eq 1 ] || [ "$rc" -eq 130 ]; then
 			echo "interrupted during $e, $((${#apps[@]} - i)) apps not started" >>"$batch_log"
@@ -312,8 +344,16 @@ fi
 [ ${#pos[@]} -ge 1 ] && [ ${#pos[@]} -le 2 ] || { usage; exit 1; }
 
 # github.com/owner/repo, git@github.com:owner/repo.git and owner/repo all reduce
-# to the last two path elements.
-spec="${pos[0]%/}"; spec="${spec%.git}"
+# to the last two path elements. A directory comes after a last colon that follows
+# the repository; the colon of git@github.com:owner/repo has no slash before it.
+spec="${pos[0]%/}"
+subdir=""
+if [[ "$spec" == *:* ]] && [[ "${spec%:*}" == */* ]]; then
+	subdir="${spec##*:}"; subdir="${subdir#/}"; subdir="${subdir%/}"
+	spec="${spec%:*}"
+	[ -n "$subdir" ] || die "an empty directory after the colon in '${pos[0]}'"
+fi
+spec="${spec%.git}"
 owner="$(printf '%s\n' "$spec" | awk -F'[/:]' '{print $(NF-1)}')"
 repo="$(printf '%s\n' "$spec" | awk -F'[/:]' '{print $NF}')"
 [ -n "$owner" ] && [ -n "$repo" ] || die "cannot read owner/repo from '${pos[0]}'"
@@ -321,12 +361,15 @@ repo="$(printf '%s\n' "$spec" | awk -F'[/:]' '{print $NF}')"
 want_version="${pos[1]:-}"
 
 mkdir -p "$CHECKOUT_DIR" "$LOG_DIR"
-APP_DIR="$CHECKOUT_DIR/$repo"
+# git works on the checkout, everything else on the app in it. An app below the
+# root gets a checkout of its own, so one app's build never meets another's.
+CHECKOUT="$CHECKOUT_DIR/$repo${subdir:+@${subdir//\//-}}"
+APP_DIR="$CHECKOUT${subdir:+/$subdir}"
 STAMP="$(date -u +%Y%m%d-%H%M%S)"
 # The run directory is named after the version, and only info.xml knows that one,
 # so the log starts under a name saying it has no home yet and promote_run_dir
 # moves it in. A run that ends before that is moved in by the exit trap.
-LOG="$LOG_DIR/.pending-${repo}-${STAMP}.log"
+LOG="$LOG_DIR/.pending-${repo}${subdir:+@${subdir//\//-}}-${STAMP}.log"
 RUN_DIR=""
 app_id=""
 app_version=""
@@ -345,6 +388,9 @@ rel_tarball=""
 rel_bytes=""
 summary_written=0
 end_reason=""
+# Set once the apps below the root run in runs of their own: this run then measures
+# nothing and writes no results.
+fanned=0
 
 log() { printf '%s\n' "$*" | tee -a "$LOG"; }
 
@@ -389,21 +435,26 @@ ask_target() {
 # == Result layout ==
 # One directory per run, keyed by owner, repo and version, so a version measured
 # twice gets two timestamps side by side and measuring 6.0.0 after 6.1.0 does not
-# touch what 6.1.0 wrote. Called once the inventory has read the version, or by
-# the exit trap with the requested one when the run ended before the inventory.
+# touch what 6.1.0 wrote. An app below the root has its app id between repo and
+# version, its directory until the inventory has read the id, so the apps of one
+# repository never share a version directory. Called once the inventory has read
+# the version, or by the exit trap with the requested one when the run ended
+# before the inventory.
 promote_run_dir() {
-	local v="${1:-${app_version:-unversioned}}" old="$RUN_DIR"
+	local v="${1:-${app_version:-unversioned}}" old="$RUN_DIR" key=""
 	v="${v//\//-}"
-	RUN_DIR="$LOG_DIR/$owner/$repo/$v/$STAMP"
+	[ -z "$subdir" ] || key="/${app_id:-${subdir//\//-}}"
+	RUN_DIR="$LOG_DIR/$owner/$repo$key/$v/$STAMP"
 	mkdir -p "$RUN_DIR" || die "cannot create $RUN_DIR"
 	if [ -f "$LOG" ] && [ "$LOG" != "$RUN_DIR/console.log" ]; then
 		mv "$LOG" "$RUN_DIR/console.log"
 	fi
 	LOG="$RUN_DIR/console.log"
-	# Called a second time, after a tag turned out to carry another version, the
-	# directory of the first one stays behind. Empty, it is not a result and goes.
+	# Called a second time, after a tag turned out to carry another version or app
+	# id, the directory of the first one stays behind. Empty, it is not a result and
+	# goes.
 	if [ -n "$old" ] && [ "$old" != "$RUN_DIR" ]; then
-		rmdir "$old" "$(dirname "$old")" 2>/dev/null || true
+		rmdir "$old" "$(dirname "$old")" "$(dirname "$(dirname "$old")")" 2>/dev/null || true
 	fi
 	log "   results in $RUN_DIR"
 }
@@ -416,7 +467,7 @@ promote_run_dir() {
 inventory() {
 	local f d x
 	log ""
-	log "== inventory: $owner/$repo"
+	log "== inventory: $owner/$repo${subdir:+:$subdir}"
 	inv_files=()
 	for f in $BUILD_FILES krankerl.toml package.json package-lock.json yarn.lock \
 	         pnpm-lock.yaml composer.json composer.lock .nvmrc tsconfig.json \
@@ -664,13 +715,40 @@ json_only_run() {
 # commit it has to be at is the one the checked-out tree records, so the submodules
 # are brought there after every checkout.
 init_submodules() {
-	[ -f "$APP_DIR/.gitmodules" ] || return 0
-	if "$GIT" -C "$APP_DIR" submodule update --init --recursive 2>&1 | tee_plain "$LOG"; then
-		log "   submodules: $("$GIT" -C "$APP_DIR" submodule status --recursive | wc -l) initialised"
+	[ -f "$CHECKOUT/.gitmodules" ] || return 0
+	if "$GIT" -C "$CHECKOUT" submodule update --init --recursive 2>&1 | tee_plain "$LOG"; then
+		log "   submodules: $("$GIT" -C "$CHECKOUT" submodule status --recursive | wc -l) initialised"
 	else
 		warn "cannot initialise the submodules of $owner/$repo"
 		log "   submodules: not initialised"
 	fi
+}
+
+# The apps below the root: each tracked appinfo/info.xml that depends on Nextcloud.
+# An ownCloud variant of an app carries the same id, but no <nextcloud> element.
+app_dirs() {
+	local f
+	while IFS= read -r -d '' f; do
+		grep -q '<nextcloud[[:space:]/>]' "$CHECKOUT/$f" 2>/dev/null && printf '%s\n' "${f%/appinfo/info.xml}"
+	done < <("$GIT" -C "$CHECKOUT" ls-files -z -- ':(glob)**/appinfo/info.xml')
+}
+
+# Each app below the root runs in a process of its own that clones this checkout,
+# one after the other, and this run measures nothing itself. An app interrupted
+# with Ctrl-C ends the others too; otherwise the exit code is that of the last app
+# that failed.
+fan_out() {
+	local d rc last=0
+	fanned=1
+	summary_written=1
+	log "   no appinfo/info.xml at the root; $# apps below it: $*"
+	for d in "$@"; do
+		rc=0
+		NC_APPSDIAG_CLONE_FROM="$CHECKOUT" "$0" "$owner/$repo:$d" ${want_version:+"$want_version"} || rc=$?
+		[ "$rc" -ne 130 ] || exit 130
+		[ "$rc" -eq 0 ] || last="$rc"
+	done
+	exit "$last"
 }
 
 # == Release ==
@@ -741,15 +819,15 @@ store_tags() {
 
 checkout_tag() {
 	local tag="$1"
-	"$GIT" -C "$APP_DIR" -c advice.detachedHead=false checkout -q "$tag" \
+	"$GIT" -C "$CHECKOUT" -c advice.detachedHead=false checkout -q "$tag" \
 		|| { warn "cannot check out $tag"; return 1; }
-	log "   head  $("$GIT" -C "$APP_DIR" log -1 --format='%h %ad %s' --date=short) ($tag)"
+	log "   head  $("$GIT" -C "$CHECKOUT" log -1 --format='%h %ad %s' --date=short) ($tag)"
 	head_tag="$tag"
 	init_submodules
 }
 
 has_tag() {
-	"$GIT" -C "$APP_DIR" rev-parse -q --verify "refs/tags/${1}^{commit}" >/dev/null 2>&1
+	"$GIT" -C "$CHECKOUT" rev-parse -q --verify "refs/tags/${1}^{commit}" >/dev/null 2>&1
 }
 
 # A release was built from its tag, so nothing but that tag compares against it.
@@ -777,7 +855,7 @@ release_checkout() {
 	for tag in "v$want" "$want"; do
 		has_tag "$tag" && { checkout_tag "$tag"; return; }
 	done
-	tags="$("$GIT" -C "$APP_DIR" tag -l | while IFS= read -r tag; do
+	tags="$("$GIT" -C "$CHECKOUT" tag -l | while IFS= read -r tag; do
 		[ "${tag#"${tag%%[0-9]*}"}" = "$want" ] && printf '%s\n' "$tag"
 	done)" || true
 	n="$(printf '%s' "$tags" | grep -c .)" || true
@@ -802,7 +880,7 @@ TAG_PRERELEASE=(-c versionsort.suffix=-alpha -c versionsort.suffix=-beta -c vers
 TAG_MENU_MAX="${TAG_MENU_MAX:-12}"
 pick_tag() {
 	local cache="$1" tags versions tag v i=0 default=0 n chosen
-	tags="$("$GIT" -C "$APP_DIR" "${TAG_PRERELEASE[@]}" tag --sort=-v:refname | head -"$TAG_MENU_MAX")"
+	tags="$("$GIT" -C "$CHECKOUT" "${TAG_PRERELEASE[@]}" tag --sort=-v:refname | head -"$TAG_MENU_MAX")"
 	[ -n "$tags" ] || { log "   no tags in $owner/$repo, so the branch is all there is"; return 1; }
 	versions="$(release_list "$cache")"
 	log ""
@@ -838,7 +916,9 @@ pick_tag() {
 # What the App Store ships, else what the app or the Nextcloud release mirror
 # attached to the tag of this version.
 fetch_tarball() {
-	local dest="$1" cache url r f
+	local dest="$1" cache url r f pattern='*.tar.gz'
+	# The release of a repository with several apps carries a tarball for each.
+	[ -z "$subdir" ] || pattern="*${app_id}*.tar.gz"
 	if cache="$(appstore_catalogue)"; then
 		url="$(release_url "$cache")"
 		if [ -n "$url" ] && [ "$url" != null ]; then
@@ -846,8 +926,8 @@ fetch_tarball() {
 		fi
 	fi
 	for r in "$owner/$repo" "nextcloud-releases/$repo"; do
-		"$GH" release download "v$app_version" --repo "$r" --pattern '*.tar.gz' --dir "$dest" >/dev/null 2>&1 || continue
-		f="$(find "$dest" -maxdepth 1 -name '*.tar.gz' | head -1)"
+		"$GH" release download "v$app_version" --repo "$r" --pattern "$pattern" --dir "$dest" >/dev/null 2>&1 || continue
+		f="$(find "$dest" -maxdepth 1 -name "$pattern" | head -1)"
 		[ -n "$f" ] && { printf '%s\n' "$f"; return 0; }
 	done
 	return 1
@@ -973,9 +1053,9 @@ write_summary_json() {
 	[ -n "$RUN_DIR" ] || return 0
 	summary_written=1
 	ncmake_check
-	[ -z "${NC_APPSDIAG_RESULT_FILE:-}" ] || printf '%s\n' "$RUN_DIR" >"$NC_APPSDIAG_RESULT_FILE"
+	[ -z "${NC_APPSDIAG_RESULT_FILE:-}" ] || printf '%s\n' "$RUN_DIR" >>"$NC_APPSDIAG_RESULT_FILE"
 	[ -x "$JQ" ] || { warn "no jq at $JQ, so no summary.json"; return 0; }
-	[ -d "$APP_DIR/.git" ] && head="$("$GIT" -C "$APP_DIR" log -1 --format='%H%x09%cI%x09%s' 2>/dev/null)" || true
+	[ -d "$CHECKOUT/.git" ] && head="$("$GIT" -C "$CHECKOUT" log -1 --format='%H%x09%cI%x09%s' 2>/dev/null)" || true
 	host="$(uname -n)"
 	cpus="$(nproc 2>/dev/null)" || cpus=""
 	mem="$(awk '/^MemTotal:/ { print int($2 / 1024) }' /proc/meminfo 2>/dev/null)" || mem=""
@@ -986,7 +1066,7 @@ write_summary_json() {
 	diff=null
 	[ -s "$RUN_DIR/release/diff.json" ] && diff="$("$JQ" -c '{signed, counts}' "$RUN_DIR/release/diff.json")" || true
 	printf '%s\n' "${results[@]}" | "$JQ" -R -s \
-		--arg owner "$owner" --arg repo "$repo" --arg app_id "$app_id" --arg version "$app_version" \
+		--arg owner "$owner" --arg repo "$repo" --arg subdir "$subdir" --arg app_id "$app_id" --arg version "$app_version" \
 		--arg want "$want_version" --arg stamp "$STAMP" --arg started "$STARTED" \
 		--arg finished "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg status "$status" --argjson code "$code" --arg reason "$end_reason" \
 		--arg head "$head" --arg tag "$head_tag" --arg stub "$STUB_URL" \
@@ -997,7 +1077,7 @@ write_summary_json() {
 		def nul($s): if $s == "" then null else $s end;
 		def num($s): if $s == "" then null else ($s | tonumber) end;
 		{tool: "gh-nc-appsdiag", schema: 1,
-		 owner: $owner, repo: $repo, app_id: nul($app_id), version: nul($version),
+		 owner: $owner, repo: $repo, subdir: nul($subdir), app_id: nul($app_id), version: nul($version),
 		 requested_version: nul($want), stamp: $stamp, started: $started, finished: $finished,
 		 status: $status, exit: $code, reason: nul($reason),
 		 head: (if $head == "" then null else ($head | split("\t") | {sha: .[0], date: .[1], subject: (.[2:] | join("\t")), tag: nul($tag)}) end),
@@ -1022,11 +1102,16 @@ write_summary_json() {
 # before the inventory gets its run directory here, and an aborted one does not
 # leave its checkout behind any more than a finished one does.
 on_exit() {
+	if [ "$fanned" = 1 ]; then
+		rm -rf "$CHECKOUT"
+		rm -f "$LOG"
+		return 0
+	fi
 	[ "$summary_written" = 0 ] || return 0
 	[ -n "$RUN_DIR" ] || promote_run_dir "$want_version"
 	if [ "$1" = 0 ]; then write_summary_json stopped 0; else write_summary_json aborted "$1"; fi
-	if [ "$1" != 0 ] && [ -d "$APP_DIR" ]; then
-		ask_yes "remove the checkout $APP_DIR?" && { rm -rf "$APP_DIR"; log "checkout removed."; } || true
+	if [ "$1" != 0 ] && [ -d "$CHECKOUT" ]; then
+		ask_yes "remove the checkout $CHECKOUT?" && { rm -rf "$CHECKOUT"; log "checkout removed."; } || true
 	fi
 }
 
@@ -1053,16 +1138,22 @@ summary() {
 
 # == Run ==
 trap 'on_exit "$?"' EXIT
-log "== gh-nc-appsdiag $owner/$repo"
-if [ -d "$APP_DIR" ]; then
-	ask_yes "   checkout exists - remove it and clone again?" && rm -rf "$APP_DIR"
+log "== gh-nc-appsdiag $owner/$repo${subdir:+:$subdir}"
+if [ -d "$CHECKOUT" ]; then
+	ask_yes "   checkout exists - remove it and clone again?" && rm -rf "$CHECKOUT"
 fi
-if [ ! -d "$APP_DIR" ]; then
-	"$GIT" clone "https://github.com/$owner/$repo.git" "$APP_DIR" 2>&1 | tee_plain "$LOG" \
+if [ ! -d "$CHECKOUT" ] && [ -n "${NC_APPSDIAG_CLONE_FROM:-}" ]; then
+	# The run that found this app has the repository already. origin points back
+	# to GitHub, so relative submodule URLs resolve against it.
+	"$GIT" clone "$NC_APPSDIAG_CLONE_FROM" "$CHECKOUT" 2>&1 | tee_plain "$LOG" \
+		|| die "cannot clone $NC_APPSDIAG_CLONE_FROM"
+	"$GIT" -C "$CHECKOUT" remote set-url origin "https://github.com/$owner/$repo.git"
+elif [ ! -d "$CHECKOUT" ]; then
+	"$GIT" clone "https://github.com/$owner/$repo.git" "$CHECKOUT" 2>&1 | tee_plain "$LOG" \
 		|| die "cannot clone https://github.com/$owner/$repo"
 fi
-[ -d "$APP_DIR/.git" ] || die "no checkout at $APP_DIR"
-log "   head  $("$GIT" -C "$APP_DIR" log -1 --format='%h %ad %s' --date=short)"
+[ -d "$CHECKOUT/.git" ] || die "no checkout at $CHECKOUT"
+log "   head  $("$GIT" -C "$CHECKOUT" log -1 --format='%h %ad %s' --date=short)"
 init_submodules
 
 # A version on the command line is checked out before anything is read, so the
@@ -1073,6 +1164,13 @@ if [ -n "$want_version" ]; then
 	log ""
 	log "== requested version $want_version"
 	release_checkout "$want_version" || die "no tag for $want_version in $owner/$repo"
+fi
+
+if [ -n "$subdir" ]; then
+	[ -f "$APP_DIR/appinfo/info.xml" ] || die "no appinfo/info.xml in $subdir of $owner/$repo"
+elif [ ! -f "$CHECKOUT/appinfo/info.xml" ]; then
+	mapfile -t below < <(app_dirs)
+	[ ${#below[@]} -eq 0 ] || fan_out "${below[@]}"
 fi
 
 inventory
@@ -1145,4 +1243,4 @@ done
 summary
 
 # == Teardown ==
-ask_yes "remove the checkout $APP_DIR?" && { rm -rf "$APP_DIR"; log "checkout removed."; } || true
+ask_yes "remove the checkout $CHECKOUT?" && { rm -rf "$CHECKOUT"; log "checkout removed."; } || true
