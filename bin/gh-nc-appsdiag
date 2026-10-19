@@ -296,12 +296,21 @@ if [ "$batch" -eq 1 ]; then
 			printf '%s\n' "${entries[@]}" | "$JQ" -s --arg stamp "$batch_stamp" '{batch: $stamp, apps: .}' >"$batch_json"
 		fi
 	}
+	# Each app starts with a bar, so the change from one app to the next stands out
+	# when scrolling back. It is coloured on a terminal unless NO_COLOR is set.
+	rule="$(printf '%*s' $((78 - ${#MARK})) '' | tr ' ' '=')"
+	bar_on="" bar_off=""
+	if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+		bar_on=$'\033[1;97;44m' bar_off=$'\033[0m'
+	fi
 	stop=0
 	trap 'stop=1' INT
 	i=0
 	for e in "${apps[@]}"; do
 		i=$((i + 1))
-		printf '\n%s######## %d/%d  %s\n' "$MARK" "$i" "${#apps[@]}" "$e"
+		printf '\n\n%s%s%s%s\n' "$MARK" "$bar_on" "$rule" "$bar_off"
+		printf '%s%s%-*s%s\n' "$MARK" "$bar_on" "${#rule}" " $i/${#apps[@]}  $e" "$bar_off"
+		printf '%s%s%s%s\n' "$MARK" "$bar_on" "$rule" "$bar_off"
 		start=$SECONDS
 		rc=0
 		: >"$run_file"
