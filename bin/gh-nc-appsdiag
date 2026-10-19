@@ -163,8 +163,9 @@ with its app id after the repo (or its directory, while the id is unknown):
       console.log         the full output of the run
       summary.json        app, its directory, version, head, ncmake ref, host,
                           the build file make read before the stub and its
-                          kind, every target with exit code and duration, the
-                          result files
+                          kind, every target with exit code and duration
+                          (and, for a reuse that never linted, why it has no
+                          JSON), the result files
       <target>.json       the machine-readable analyser results, by default of
                           consistency-audit, reuse, changelog-lint,
                           build-audit, bundle-report, build-verify and
@@ -647,9 +648,10 @@ ncmake_check() {
 # once, and a failing target is a result rather than the end of the run - so the
 # pipeline is asked for its status instead of aborting on it.
 run_target() {
-	local t="$1" start rc=0 out args=()
+	local t="$1" start rc=0 out from args=()
 	start=$SECONDS
 	printf '\n%s===== make %s =====\n' "$MARK" "$t" >>"$LOG"
+	from=$(($(wc -l <"$LOG") + 1))
 	if json_file "$t"; then
 		mkdir -p "$RUN_DIR"
 		out="$RUN_DIR/${t}.json"
@@ -676,7 +678,7 @@ run_target() {
 	fi
 	# A failed target can still have written its result: reuse exits non-zero
 	# exactly when it has something to report, and that report is what is kept.
-	json_run "$t"
+	json_run "$t" "$from"
 	return 0
 }
 
@@ -702,12 +704,30 @@ split_json() {
 	return 1
 }
 
+# The exit code of reuse cannot tell a finding from a run that never linted; its
+# report can, since every lint ends in a "# SUMMARY" section. The reason is the
+# line ncmake, the app check or the REUSE tool stopped with.
+json_skip_reason() {
+	local t="$1" from="$2" output
+	[ "$t" = reuse ] || return 1
+	output="$(tail -n "+$from" "$LOG")"
+	! grep -q '^# SUMMARY' <<<"$output" || return 1
+	grep -m1 -E '^(Not set up for REUSE|ERROR: |Error: )' <<<"$output" || echo "the REUSE tool printed no summary"
+}
+
 # The same target once more, this time for the file, for a target that cannot
-# write it in the run that prints its report.
+# write it in the run that prints its report. A run that never got to the tool has
+# nothing to print the second time either; why it has no file goes into the log
+# and, as json_skipped of the target, into summary.json.
 json_run() {
-	local t="$1" out
+	local t="$1" from="$2" out reason
 	case " $JSON_TARGETS " in *" $t "*) ;; *) return 0 ;; esac
 	case " $JSON_RERUN_TARGETS " in *" $t "*) ;; *) return 0 ;; esac
+	if reason="$(json_skip_reason "$t" "$from")"; then
+		results[${#results[@]} - 1]+=$'\t'"$reason"
+		log "   json  none, the tool did not run: $reason"
+		return 0
+	fi
 	mkdir -p "$RUN_DIR"
 	out="$RUN_DIR/${t}.json"
 	( cd "$APP_DIR" && make "$t" ARGS=--json ) 2>>"$LOG" >"$out.raw" || true
@@ -1092,7 +1112,7 @@ write_summary_json() {
 		 host: {name: $host, cpus: num($cpus), mem_mb: num($mem), cpu_model: nul($cpu)},
 		 inventory: {files: $inv,
 		            build_file: (if $bname == "" then null else {name: $bname, kind: $bkind} end)},
-		 targets: [split("\n")[] | select(length > 0) | split("\t") | {name: .[0], exit: (.[1] | tonumber), seconds: (.[2] | tonumber)}],
+		 targets: [split("\n")[] | select(length > 0) | split("\t") | {name: .[0], exit: (.[1] | tonumber), seconds: (.[2] | tonumber), json_skipped: nul(.[3] // "")}],
 		 files: $files,
 		 release: (if $tarball == "" then null else
 			{tarball: $tarball, bytes: num($bytes), diff: (if $diff == null then null else "release/diff.json" end),
@@ -1128,7 +1148,7 @@ summary() {
 	else
 		log "$(printf '   %-20s %5s %8s' target exit seconds)"
 		for r in "${results[@]}"; do
-			IFS=$'\t' read -r t rc s <<<"$r"
+			IFS=$'\t' read -r t rc s _ <<<"$r"
 			log "$(printf '   %-20s %5s %8s' "$t" "$rc" "$s")"
 			[ "$rc" = 0 ] || failed="$failed $t"
 		done
