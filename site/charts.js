@@ -95,8 +95,9 @@ function lastSample(at) {
 		ORDER BY x.ts DESC LIMIT 1)`
 }
 
-function seriesOf(item, g) {
-	return { key: `${item.key}\n${g}`, label: g ? `${item.label} · ${g}` : item.label }
+// A single item is named in its chip, so its series need only their group.
+function seriesOf(item, g, alone = false) {
+	return { key: `${item.key}\n${g}`, label: g ? (alone ? g : `${item.label} · ${g}`) : item.label }
 }
 
 // Downloads in total and in the last `days` days per series. A repository that
@@ -117,7 +118,7 @@ function shares(items, split, days) {
 			sums.set(g, s)
 		}
 		for (const [g, s] of sums) {
-			out.push({ ...seriesOf(item, g), ...s })
+			out.push({ ...seriesOf(item, g, items.length === 1), ...s })
 		}
 	}
 	return out.sort((a, b) => b.total - a.total)
@@ -384,7 +385,18 @@ function drawHistory(edges, series, step) {
 	}, data, ui.history)
 }
 
+function unpickAll() {
+	for (const row of picked.values()) {
+		row.pick.checked = false
+	}
+	picked.clear()
+	drawCharts()
+}
+
 function drawChips() {
+	ui.all.indeterminate = picked.size > 0
+	ui.all.checked = false
+	ui.all.disabled = !picked.size
 	ui.chips.replaceChildren(...[...picked.values()].map((row) => {
 		const remove = el('button', { type: 'button', 'aria-label': `Remove ${row.name} line ${lineLabel(row.line)}` }, '×')
 		remove.addEventListener('click', () => {
@@ -441,18 +453,13 @@ function initCharts() {
 		hint: id('charts-hint'), body: id('charts-body'), chips: id('picked'), note: id('history-note'),
 		scope: id('scope'), split: id('split'), figure: id('share-figure'), shares: id('shares'),
 		measure: id('measure'), bucket: id('bucket'), range: id('range'), style: id('style'), log: id('log'),
-		history: id('history'),
+		history: id('history'), all: id('pick-all'),
 	}
 	for (const c of [ui.scope, ui.split, ui.figure, ui.measure, ui.bucket, ui.range, ui.style, ui.log]) {
 		c.addEventListener('change', drawCharts)
 	}
-	id('unpick').addEventListener('click', () => {
-		for (const row of picked.values()) {
-			row.pick.checked = false
-		}
-		picked.clear()
-		drawCharts()
-	})
+	id('unpick').addEventListener('click', unpickAll)
+	ui.all.addEventListener('change', unpickAll)
 	new ResizeObserver(() => plot?.setSize({ width: ui.history.clientWidth, height: PLOT_HEIGHT })).observe(ui.history)
 	// The colours of a chart are read from the page when it is drawn.
 	matchMedia('(prefers-color-scheme: dark)').addEventListener('change', drawCharts)
