@@ -1,0 +1,234 @@
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# Measures app versions with gh-nc-appsdiag, one matrix job per version, and
+# keeps the results in the data branch under apps/, laid out as the logs of
+# gh-nc-appsdiag: apps/<owner>/<repo>[/<app-id>]/<version>/<timestamp>/.
+#
+# What is measured:
+#
+#   repository_dispatch measure  client_payload.versions, the {id, version} pairs
+#                                catalogue.yml sends for the versions new to the
+#                                catalogue, or client_payload.apps, the
+#                                "<owner>/<repo> <version>" lines a run before
+#                                passed on
+#   workflow_dispatch            the "<app-id> <version>" pairs of the input
+#                                versions, or without one the newest stable
+#                                version of every app, as gh-nc-appslist lists them
+#
+# The catalogue is read from the asset apps.json of the release catalogue,
+# never from the App Store. A matrix holds at most 256 jobs, so a run measures
+# the first 256 entries and dispatches the rest as a new run once its own are
+# collected; the runs of a full measurement follow one another.
+#
+# The jobs that build the apps run third-party code and hold a read-only token.
+# Each uploads its run directory as an artifact, and one job after them commits
+# the results in one commit, so the matrix never pushes. The data branch gets
+# summary.json, the analyser results and the release diff, a file above 1 MiB
+# compressed as <name>.gz; console.log and the app's own build files stay in
+# the artifact.
+
+name: Measure app versions
+
+on:
+  repository_dispatch:
+    types: [measure]
+  workflow_dispatch:
+    inputs:
+      versions:
+        description: '"<app-id> <version>" pairs, separated by commas; empty measures the newest stable version of every app'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+# No concurrency group: a pending run that a newer one replaced would be lost
+# with its versions. Writers of the data branch rebase onto each other instead.
+
+env:
+  GH_REPO: ${{ github.repository }}
+  CATALOGUE_TAG: catalogue
+  DATA_BRANCH: data
+  EVENT_TYPE: measure
+  MATRIX_MAX: 256
+  # Below the 360 minutes of a job, so a run that does not finish still writes
+  # its summary.json and uploads it.
+  MEASURE_LIMIT: 330m
+
+jobs:
+  plan:
+    name: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      apps: ${{ steps.plan.outputs.apps }}
+      rest: ${{ steps.plan.outputs.rest }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Fetch the catalogue
+        run: gh release download "$CATALOGUE_TAG" -p apps.json -D "$RUNNER_TEMP"
+
+      - name: List the app versions
+        id: plan
+        env:
+          PAYLOAD_VERSIONS: ${{ toJSON(github.event.client_payload.versions) }}
+          PAYLOAD_APPS: ${{ toJSON(github.event.client_payload.apps) }}
+          INPUT_VERSIONS: ${{ inputs.versions }}
+          APPSTORE_SOURCE: appdata
+          APPSTORE_TARGETS: bin/gh-nc-appstore-targets
+        run: |
+          list="$RUNNER_TEMP/apps.txt"
+          wanted="$RUNNER_TEMP/versions.txt"
+          if [ "$PAYLOAD_APPS" != null ]; then
+            jq -r '.[]' <<<"$PAYLOAD_APPS" > "$list"
+          else
+            if [ "$PAYLOAD_VERSIONS" != null ]; then
+              jq -r '.[] | "\(.id) \(.version)"' <<<"$PAYLOAD_VERSIONS" > "$wanted"
+              set -- -v "$wanted"
+            elif [ -n "$INPUT_VERSIONS" ]; then
+              tr ',' '\n' <<<"$INPUT_VERSIONS" > "$wanted"
+              set -- -v "$wanted"
+            fi
+            APPSTORE_APPDATA_FILE="$RUNNER_TEMP/apps.json" bin/gh-nc-appslist "$@" -o - \
+              | sed '/^#/d' > "$list"
+          fi
+          as_json() { jq -R -s -c 'split("\n") | map(select(length > 0))'; }
+          {
+            echo "apps=$(head -n "$MATRIX_MAX" "$list" | as_json)"
+            echo "rest=$(tail -n "+$((MATRIX_MAX + 1))" "$list" | as_json)"
+          } >> "$GITHUB_OUTPUT"
+          echo "::notice::$(wc -l < "$list") app versions, at most $MATRIX_MAX in this run"
+
+  measure:
+    name: ${{ matrix.app }}
+    needs: plan
+    if: needs.plan.outputs.apps != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      # GitHub Free runs 20 jobs of the account at once; the rest stay free for
+      # the sampler, a second measurement and the other workflows.
+      max-parallel: 8
+      matrix:
+        app: ${{ fromJSON(needs.plan.outputs.apps) }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Fetch the catalogue
+        run: gh release download "$CATALOGUE_TAG" -p apps.json -D "$RUNNER_TEMP"
+
+      # A failed target or an app that does not build is a result, so the step
+      # only warns about the exit code.
+      - name: Measure
+        env:
+          APP: ${{ matrix.app }}
+          NC_APPSDIAG_DIR: ${{ runner.temp }}/appsdiag
+          NC_APPSDIAG_AUTO: 1
+          APPSTORE_SOURCE: appdata
+          APPSTORE_APPDATA_FILE: ${{ runner.temp }}/apps.json
+        run: |
+          rc=0
+          # shellcheck disable=SC2086 # app and version are two words on purpose
+          timeout -k 5m "$MEASURE_LIMIT" bin/gh-nc-appsdiag $APP </dev/null || rc=$?
+          [ "$rc" -eq 0 ] || echo "::warning::$APP ended with exit $rc"
+
+      - name: Keep the run directory
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: run-${{ strategy.job-index }}
+          path: ${{ runner.temp }}/appsdiag/logs/
+          if-no-files-found: warn
+
+  collect:
+    name: collect
+    needs: [plan, measure]
+    if: ${{ !cancelled() && needs.plan.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      # Pushes to the data branch and dispatches the rest.
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Fetch the run directories
+        if: needs.plan.outputs.apps != '[]'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: run-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/logs
+
+      - name: Check out the data branch
+        run: |
+          data="$RUNNER_TEMP/data"
+          echo "DATA=$data" >> "$GITHUB_ENV"
+          url="https://github.com/$GH_REPO.git"
+          if git ls-remote --exit-code --heads "$url" "$DATA_BRANCH" >/dev/null; then
+            git clone -q --depth 1 --branch "$DATA_BRANCH" "$url" "$data"
+          else
+            # The first writer starts the branch without the history of main.
+            git init -q -b "$DATA_BRANCH" "$data"
+            git -C "$data" remote add origin "$url"
+          fi
+          git -C "$data" config user.name 'github-actions[bot]'
+          git -C "$data" config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # The repository is public, so only the push needs the token, sent
+          # the way actions/checkout sends it.
+          git -C "$data" config http.https://github.com/.extraheader \
+            "AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+
+      # A run directory is written once; one already in the branch stays as it is.
+      - name: Commit the results
+        run: |
+          logs="$RUNNER_TEMP/logs"
+          n=0
+          while IFS= read -r -d '' summary; do
+            run="${summary%/summary.json}"
+            dest="$DATA/apps/${run#"$logs"/}"
+            [ ! -e "$dest" ] || continue
+            mkdir -p "$dest"
+            (cd "$run" && find . -path ./release/shipped -prune -o -type f \
+                \( -name '*.json' -o -path './release/diff.*' \) -print0 \
+              | xargs -0 -r cp --parents -t "$dest")
+            find "$dest" -type f -size +1048576c -exec gzip -n -9 {} +
+            n=$((n + 1))
+          done < <(find "$logs" -name summary.json -print0 2>/dev/null)
+          if [ "$n" -eq 0 ]; then
+            echo "No new results"
+            exit 0
+          fi
+          git -C "$DATA" add apps
+          git -C "$DATA" commit -q -m "measure: $n runs"
+          # The catalogue extract writes the branch at any time; its paths are
+          # apart from apps/, so a rebase onto its push never conflicts.
+          for try in 1 2 3 4 5; do
+            git -C "$DATA" push -q origin "HEAD:$DATA_BRANCH" && exit 0
+            sleep $((try * 10))
+            git -C "$DATA" pull -q --rebase origin "$DATA_BRANCH"
+          done
+          exit 1
+
+      # Only after the commit, so the next run starts once this one is kept.
+      - name: Pass the rest on
+        if: needs.plan.outputs.rest != '[]'
+        env:
+          REST: ${{ needs.plan.outputs.rest }}
+        run: |
+          jq -c --arg type "$EVENT_TYPE" '{event_type: $type, client_payload: {apps: .}}' <<<"$REST" \
+            | gh api --method POST "repos/$GH_REPO/dispatches" --input -
+          echo "::notice::Passed $(jq length <<<"$REST") app versions on to the next run"
