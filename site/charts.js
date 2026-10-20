@@ -382,6 +382,9 @@ function drawHistory(edges, series, step) {
 		],
 		cursor: { points: { size: 8 }, focus: { prox: 24 } },
 		focus: { alpha: 0.3 },
+		// The legend paints its markers with the series fill, before the plot has
+		// a size to place a gradient in.
+		legend: { markers: { fill: (u, i) => alpha(series[i - 1].color, bars ? 0.85 : 0.3) } },
 	}, data, ui.history)
 }
 
