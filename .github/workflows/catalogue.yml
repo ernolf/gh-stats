@@ -1,0 +1,129 @@
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# Keeps an extract of the App Store catalogue in the data branch and sends the
+# versions that are new in it to the measurement. The sampler workflow fetches
+# the catalogue and dispatches this one whenever the asset apps.json of the
+# release catalogue has changed, so the App Store is asked no more often than
+# the sampler asks it already.
+#
+# The extract, catalogue/releases.jsonl, holds one line per release: app id,
+# version, whether it is a nightly, release date and download URL, sorted, so
+# that the history of the store is a readable diff. It mirrors the current
+# catalogue; a removed app or version leaves it and stays in the history.
+#
+# A stable release whose app id and version were not in the previous extract is
+# new. The new ones go out as repository_dispatch events of the type measure,
+# at most 256 per event, the most jobs one matrix holds. A nightly is not sent:
+# it is replaced under the same version. The first extract sends nothing, since
+# every version would count as new; the existing versions are measured by
+# dispatching the measurement workflow by hand.
+
+name: Extract the catalogue
+
+on:
+  workflow_dispatch:
+
+permissions:
+  # Pushes to the data branch and creates the repository_dispatch events.
+  contents: write
+
+# Every writer of the data branch shares this group, so no two push against
+# each other. A pending run that a newer one replaces loses nothing: each run
+# compares the latest catalogue with the extract committed last.
+concurrency:
+  group: data
+  cancel-in-progress: false
+
+env:
+  GH_REPO: ${{ github.repository }}
+  CATALOGUE_TAG: catalogue
+  DATA_BRANCH: data
+  EXTRACT: catalogue/releases.jsonl
+  EVENT_TYPE: measure
+  EVENT_VERSIONS: 256
+
+jobs:
+  extract:
+    name: extract
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Fetch the catalogue
+        run: |
+          state="$RUNNER_TEMP/catalogue"
+          mkdir -p "$state"
+          echo "STATE=$state" >> "$GITHUB_ENV"
+          gh release download "$CATALOGUE_TAG" -p apps.json -D "$state"
+
+      - name: Check out the data branch
+        run: |
+          data="$RUNNER_TEMP/data"
+          echo "DATA=$data" >> "$GITHUB_ENV"
+          url="https://github.com/$GH_REPO.git"
+          if git ls-remote --exit-code --heads "$url" "$DATA_BRANCH" >/dev/null; then
+            git clone -q --depth 1 --branch "$DATA_BRANCH" "$url" "$data"
+          else
+            # The first writer starts the branch without the history of main.
+            git init -q -b "$DATA_BRANCH" "$data"
+            git -C "$data" remote add origin "$url"
+          fi
+          git -C "$data" config user.name 'github-actions[bot]'
+          git -C "$data" config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # The repository is public, so only the push needs the token, sent
+          # the way actions/checkout sends it.
+          git -C "$data" config http.https://github.com/.extraheader \
+            "AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+
+      - name: Write the extract
+        run: |
+          out="$DATA/$EXTRACT"
+          if [ -r "$out" ]; then
+            cp "$out" "$STATE/releases.before"
+          fi
+          mkdir -p "${out%/*}"
+          jq -c '.[] | .id as $id | .releases[]
+                 | {id: $id, version, nightly: .isNightly, created, download}' "$STATE/apps.json" \
+            | LC_ALL=C sort > "$out"
+
+      - name: Find the new versions
+        run: |
+          keys() { jq -r 'select(.nightly | not) | "\(.id) \(.version)"' "$1" | LC_ALL=C sort -u; }
+          if [ ! -r "$STATE/releases.before" ]; then
+            echo "::notice::First extract, no versions are sent"
+            : > "$STATE/new"
+            message='catalogue: first extract'
+          else
+            LC_ALL=C comm -13 <(keys "$STATE/releases.before") <(keys "$DATA/$EXTRACT") > "$STATE/new"
+            message="catalogue: $(wc -l < "$STATE/new") new versions"
+          fi
+          {
+            echo "NEW=$(wc -l < "$STATE/new")"
+            echo "MESSAGE=$message"
+          } >> "$GITHUB_ENV"
+
+      - name: Commit the extract
+        run: |
+          git -C "$DATA" add "$EXTRACT"
+          if git -C "$DATA" diff --cached --quiet; then
+            echo "The extract is unchanged"
+            exit 0
+          fi
+          git -C "$DATA" commit -q -m "$MESSAGE"
+          git -C "$DATA" push -q origin "HEAD:$DATA_BRANCH"
+
+      # Only after the push: a version sent before its extract is committed
+      # would be sent again by the next run if the push failed.
+      - name: Send the new versions to the measurement
+        if: env.NEW != '0'
+        run: |
+          jq -R -n -c --arg type "$EVENT_TYPE" --argjson n "$EVENT_VERSIONS" '
+            [inputs | split(" ") | {id: .[0], version: .[1]}]
+            | range(0; length; $n) as $i
+            | {event_type: $type, client_payload: {versions: .[$i:$i + $n]}}' "$STATE/new" \
+            | while IFS= read -r event; do
+                gh api --method POST "repos/$GH_REPO/dispatches" --input - <<<"$event"
+              done
+          echo "::notice::Sent $NEW new versions"
