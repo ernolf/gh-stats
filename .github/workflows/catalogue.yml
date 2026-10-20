@@ -28,11 +28,11 @@ permissions:
   # Pushes to the data branch and creates the repository_dispatch events.
   contents: write
 
-# Every writer of the data branch shares this group, so no two push against
-# each other. A pending run that a newer one replaces loses nothing: each run
-# compares the latest catalogue with the extract committed last.
+# No two extracts run at once. A pending run that a newer one replaces loses
+# nothing: each run compares the latest catalogue with the extract committed
+# last.
 concurrency:
-  group: data
+  group: catalogue
   cancel-in-progress: false
 
 env:
@@ -112,7 +112,14 @@ jobs:
             exit 0
           fi
           git -C "$DATA" commit -q -m "$MESSAGE"
-          git -C "$DATA" push -q origin "HEAD:$DATA_BRANCH"
+          # The measurement writes the branch outside this group; its paths are
+          # apart from the extract, so a rebase onto its push never conflicts.
+          for try in 1 2 3 4 5; do
+            git -C "$DATA" push -q origin "HEAD:$DATA_BRANCH" && exit 0
+            sleep $((try * 10))
+            git -C "$DATA" pull -q --rebase origin "$DATA_BRANCH"
+          done
+          exit 1
 
       # Only after the push: a version sent before its extract is committed
       # would be sent again by the next run if the push failed.
