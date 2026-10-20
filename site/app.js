@@ -306,7 +306,7 @@ function releaseLink(owner, repo, tag) {
 
 function releaseCells(fig) {
 	return [
-		el('td', {}, releaseLink(fig.owner, fig.repo, fig.tag)),
+		el('td', { class: 'tag' }, releaseLink(fig.owner, fig.repo, fig.tag)),
 		el('td', {}, ncRange(fig.nc)),
 		el('td', {}, date(fig.published)),
 		...['total', ...PERIODS.map((d) => 'd' + d)].map((k) => fig[k] === null
