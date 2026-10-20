@@ -1,0 +1,107 @@
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# Builds the site and deploys it to GitHub Pages. The site has no server side:
+# the browser loads the site database whole and queries it with sql.js, so the
+# deployment carries the pages under site/, the database gh-stats-site-db builds
+# from the latest sampler database and catalogue, and sql.js itself. Nothing of
+# it is committed.
+#
+# The sampler workflow dispatches this one after every upload of its database.
+#
+# Every build puts the database under a directory of its own, named by the run,
+# and config.json points to it: Pages lets browsers cache a file for 10 minutes,
+# and a fixed name could then mix a cached config with another database.
+
+name: Build the site
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only the newest build matters; a queued one is replaced by a newer one, but a
+# deployment that has started is never cancelled.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  GH_REPO: ${{ github.repository }}
+  CATALOGUE_TAG: catalogue
+  DB_TAG: sampler-db
+  DB_ASSET: downloads.sqlite.zst
+  # sql.js, shipped with the site so visitors load nothing from a third-party
+  # host. The integrity is the one the npm registry lists for the tarball.
+  SQLJS_VERSION: 1.14.2
+  SQLJS_INTEGRITY: sha512-3ZGPovObMFrdw79zrUHbfdE/DLIsy8jdNdssmMSQuRAymedU6q84asPt0kgiqrdMYlPegDItiIMfmIXzZnYFcw==
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Fetch the sampler database and the catalogue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          state="$RUNNER_TEMP/gh-stats"
+          mkdir -p "$state"
+          echo "STATE=$state" >> "$GITHUB_ENV"
+          gh release download "$DB_TAG" -p "$DB_ASSET" -D "$state"
+          zstd -d -q "$state/$DB_ASSET" -o "$state/downloads.sqlite"
+          gh release download "$CATALOGUE_TAG" -p apps.json -D "$state"
+
+      - name: Build the site database
+        run: |
+          out="$RUNNER_TEMP/_site"
+          cp -r site "$out"
+          db="db/$GITHUB_RUN_ID/gh-stats.sqlite"
+          mkdir -p "$out/${db%/*}"
+          GH_STATS_DB="$STATE/downloads.sqlite" APPSTORE_CACHE="$STATE/apps.json" \
+            bin/gh-stats-site-db -o "$out/$db"
+          jq -n --arg db "$db" --argjson bytes "$(stat -c %s "$out/$db")" \
+            '{db: $db, bytes: $bytes}' > "$out/config.json"
+          echo "SITE=$out" >> "$GITHUB_ENV"
+
+      - name: Add sql.js
+        run: |
+          tgz="$RUNNER_TEMP/sql.js.tgz"
+          curl -fsSL -o "$tgz" "https://registry.npmjs.org/sql.js/-/sql.js-$SQLJS_VERSION.tgz"
+          got="sha512-$(openssl dgst -sha512 -binary "$tgz" | base64 -w0)"
+          if [ "$got" != "$SQLJS_INTEGRITY" ]; then
+            echo "::error::sql.js $SQLJS_VERSION does not match its integrity: $got"
+            exit 1
+          fi
+          mkdir -p "$SITE/lib/sql.js"
+          tar -xzf "$tgz" -C "$SITE/lib/sql.js" --strip-components=1 \
+            package/LICENSE package/dist/sql-wasm.js package/dist/sql-wasm.wasm
+          mv "$SITE/lib/sql.js/dist/"* "$SITE/lib/sql.js/"
+          rmdir "$SITE/lib/sql.js/dist"
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: ${{ env.SITE }}
+
+  deploy:
+    name: deploy
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
