@@ -1,9 +1,9 @@
 # SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
 # SPDX-License-Identifier: MIT
 #
-# Hourly sample of the release download counters, run on GitHub's runners
-# instead of a host. The runner keeps nothing between runs, so both inputs that
-# have to survive live as assets of two releases of this repository:
+# Sample of the release download counters every 30 minutes, run on GitHub's
+# runners instead of a host. The runner keeps nothing between runs, so both
+# inputs that have to survive live as assets of two releases of this repository:
 #
 #   catalogue   apps.json and apps.json.etag, the App Store catalogue with the
 #               ETag of its last answer, so an unchanged catalogue costs one
@@ -17,15 +17,19 @@
 # The sampler runs with SAMPLER_TOKEN, a personal access token without scopes:
 # GITHUB_TOKEN is limited to 1,000 requests per hour and repository, which does
 # not cover the App Store targets. That token shares its 5,000 per hour with
-# every other sampler of the account, which is why the schedule is hourly. The
+# every other sampler of the account; a run asks only conditionally and starts
+# only when the remaining budget covers it, so two runs per hour fit. The
 # release assets themselves are written with GITHUB_TOKEN.
+#
+# The workflow has no schedule: its schedule trigger never started a run. An
+# external cron dispatches it instead, for example with a /etc/cron.d entry
+# whose retry repeats a failed dispatch:
+#
+#   17,47 * * * * root retry gh workflow run sampler.yml -R ernolf/gh-stats >/dev/null 2>&1
 
 name: Sample download counters
 
 on:
-  schedule:
-    # Off the full hour, where scheduled runs pile up and get delayed.
-    - cron: '17 * * * *'
   workflow_dispatch:
 
 permissions:
