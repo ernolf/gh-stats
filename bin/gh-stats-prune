@@ -1,0 +1,179 @@
+#!/usr/bin/env -S LC_CTYPE=C.UTF-8 LC_MESSAGES=C bash
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# gh-stats-prune - thin the gh-release-sampler database to one value per series
+# and time bucket. Every row of a sampler run carries the timestamp of that run,
+# and a missing row means "unchanged", so the value of a series at the end of a
+# bucket is its last row in that bucket or before. Keeping exactly that row per
+# bucket keeps the value at every bucket end. The first row of each series stays
+# as well, it marks when the series was first seen.
+# Buckets are UTC, as in gh-stats: hours for recent rows, days before that and
+# optionally weeks (Monday to Sunday) for the oldest. The tier limits fall on a
+# day start and a week start, so no bucket spans two tiers.
+# releases and etags are left alone: an ETag only answers 304 for the data it
+# was stored with. The tool takes no lock; run in place, it belongs under the
+# lock of the sampler.
+
+# == Config ==
+# Optional site config shared with gh-stats and gh-release-sampler. If
+# /etc/gh-stats/gh-stats.env exists it is sourced here, so its assignments feed
+# the ${VAR:-default} reads below. Precedence is built-in default <
+# gh-stats.env < environment. Point GH_STATS_ENV at another path to use a
+# different file.
+GH_STATS_ENV="${GH_STATS_ENV:-/etc/gh-stats/gh-stats.env}"
+# shellcheck disable=SC1090 # the site config is a run-time path
+if [ -r "$GH_STATS_ENV" ]; then
+	_env_snapshot="$(export -p)"
+	set -a; . "$GH_STATS_ENV"; set +a
+	eval "$_env_snapshot"
+	unset _env_snapshot
+fi
+
+STATE_DIR="${GH_STATS_DIR:-/var/lib/gh-stats}"
+DB="${GH_STATS_DB:-${STATE_DIR}/downloads.sqlite}"
+SQLITE="${SQLITE_BIN:-/usr/bin/sqlite3}"
+# Rows younger than this many days keep one value per hour, older ones one per
+# day.
+HOURLY_DAYS="${GH_STATS_PRUNE_HOURLY_DAYS:-35}"
+# Rows older than this many days keep one value per week; 0 keeps one per day
+# without end.
+DAILY_DAYS="${GH_STATS_PRUNE_DAILY_DAYS:-0}"
+
+set -euo pipefail
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+usage() {
+	cat <<'EOF'
+Usage: gh-stats-prune [-o <file> | --in-place]
+
+Thins the gh-release-sampler database to the last value of each series per UTC
+hour for the last GH_STATS_PRUNE_HOURLY_DAYS days, per UTC day before that and,
+when GH_STATS_PRUNE_DAILY_DAYS is set, per week (Monday to Sunday) for rows older
+than that. The first value of each series stays too. This applies to samples,
+repo_stats and runs; releases and etags are not touched. The value at the end of
+every kept hour, day or week is the same before and after.
+
+Without an option nothing is written: the tool counts the rows of each table and
+how many it would keep.
+
+  -o, --output <file>  write a pruned copy of the database to <file>, which must
+                       not exist yet
+      --in-place       prune the database itself; run it under the lock of
+                       gh-release-sampler
+  -h, --help           this text
+
+Environment (or /etc/gh-stats/gh-stats.env):
+  GH_STATS_DB                 the database (default: $GH_STATS_DIR/downloads.sqlite)
+  GH_STATS_DIR                state directory (default: /var/lib/gh-stats)
+  GH_STATS_PRUNE_HOURLY_DAYS  days with one value per hour (default: 35)
+  GH_STATS_PRUNE_DAILY_DAYS   age in days beyond which one value per week stays;
+                              0 keeps one per day without end (default: 0)
+  SQLITE_BIN                  sqlite3 (default: /usr/bin/sqlite3)
+EOF
+}
+
+out='' inplace=0
+while [ $# -gt 0 ]; do
+	case "$1" in
+		-h|--help) usage; exit 0 ;;
+		-o|--output) [ $# -ge 2 ] || die "$1 needs a file"; out="$2"; shift ;;
+		--in-place) inplace=1 ;;
+		*) echo "unknown argument: $1" >&2; exit 1 ;;
+	esac
+	shift
+done
+
+[ -z "$out" ] || [ "$inplace" -eq 0 ] || die "-o and --in-place exclude each other"
+[[ "$HOURLY_DAYS" =~ ^[0-9]+$ ]] || die "GH_STATS_PRUNE_HOURLY_DAYS is not a number of days: $HOURLY_DAYS"
+[[ "$DAILY_DAYS" =~ ^[0-9]+$ ]] || die "GH_STATS_PRUNE_DAILY_DAYS is not a number of days: $DAILY_DAYS"
+[ "$DAILY_DAYS" -eq 0 ] || [ "$DAILY_DAYS" -gt "$HOURLY_DAYS" ] \
+	|| die "GH_STATS_PRUNE_DAILY_DAYS ($DAILY_DAYS) must be 0 or more than GH_STATS_PRUNE_HOURLY_DAYS ($HOURLY_DAYS)"
+[ -f "$DB" ] || die "no database at $DB"
+[ -z "$out" ] || [ ! -e "$out" ] || die "$out exists"
+
+# == Tier limits ==
+# The hourly tier starts at a UTC midnight. Weeks are counted from Monday
+# 1970-01-05, four days after the epoch, so a week bucket is (ts + 3 days) /
+# 7 days and the weekly limit is the start of such a week.
+now="$(date -u +%s)"
+hourly_from=$(( (now / 86400 - HOURLY_DAYS) * 86400 ))
+daily_from=0
+if [ "$DAILY_DAYS" -gt 0 ]; then
+	daily_from=$(( (now - DAILY_DAYS * 86400 + 259200) / 604800 * 604800 - 259200 ))
+fi
+bucket="CASE WHEN ts >= $hourly_from THEN 2 WHEN ts >= $daily_from THEN 1 ELSE 0 END,
+	CASE WHEN ts >= $hourly_from THEN ts / 3600 WHEN ts >= $daily_from THEN ts / 86400
+	     ELSE (ts + 259200) / 604800 END"
+
+echo "hourly from $(date -u -d "@$hourly_from" '+%F %H:%M') UTC"
+if [ "$daily_from" -gt 0 ]; then
+	echo "daily from $(date -u -d "@$daily_from" '+%F %H:%M') UTC, weekly before"
+else
+	echo "daily before"
+fi
+
+target="$DB"
+apply=''
+if [ -n "$out" ]; then
+	sq="'"
+	"$SQLITE" -bail "$DB" "VACUUM INTO '${out//$sq/$sq$sq}'"
+	target="$out"
+fi
+if [ -n "$out" ] || [ "$inplace" -eq 1 ]; then
+	apply="BEGIN;
+DELETE FROM samples WHERE NOT EXISTS (
+  SELECT 1 FROM keep_samples k
+   WHERE k.owner = samples.owner AND k.repo = samples.repo AND k.tag = samples.tag
+     AND k.asset = samples.asset AND k.ts = samples.ts);
+DELETE FROM repo_stats WHERE NOT EXISTS (
+  SELECT 1 FROM keep_repo_stats k
+   WHERE k.owner = repo_stats.owner AND k.repo = repo_stats.repo AND k.ts = repo_stats.ts);
+DELETE FROM runs WHERE ts NOT IN (SELECT ts FROM keep_runs);
+COMMIT;
+VACUUM;"
+fi
+
+# == Prune ==
+# -bail stops at the first error, so a failed statement never reaches COMMIT.
+printf '%-10s %10s %10s\n' table rows kept
+"$SQLITE" -bail -separator $'\t' "$target" <<SQL | while IFS=$'\t' read -r t n k; do printf '%-10s %10s %10s\n' "$t" "$n" "$k"; done
+CREATE TEMP TABLE keep_samples (
+  owner, repo, tag, asset, ts,
+  PRIMARY KEY (owner, repo, tag, asset, ts)
+) WITHOUT ROWID;
+INSERT OR IGNORE INTO keep_samples
+SELECT owner, repo, tag, asset, max(ts) FROM samples GROUP BY owner, repo, tag, asset, $bucket;
+INSERT OR IGNORE INTO keep_samples
+SELECT owner, repo, tag, asset, min(ts) FROM samples GROUP BY owner, repo, tag, asset;
+
+CREATE TEMP TABLE keep_repo_stats (
+  owner, repo, ts,
+  PRIMARY KEY (owner, repo, ts)
+) WITHOUT ROWID;
+INSERT OR IGNORE INTO keep_repo_stats
+SELECT owner, repo, max(ts) FROM repo_stats GROUP BY owner, repo, $bucket;
+INSERT OR IGNORE INTO keep_repo_stats
+SELECT owner, repo, min(ts) FROM repo_stats GROUP BY owner, repo;
+
+CREATE TEMP TABLE keep_runs (ts INTEGER PRIMARY KEY);
+INSERT OR IGNORE INTO keep_runs SELECT max(ts) FROM runs GROUP BY $bucket;
+INSERT OR IGNORE INTO keep_runs SELECT ts FROM runs ORDER BY ts LIMIT 1;
+
+SELECT 'samples', (SELECT count(*) FROM samples), (SELECT count(*) FROM keep_samples)
+UNION ALL
+SELECT 'repo_stats', (SELECT count(*) FROM repo_stats), (SELECT count(*) FROM keep_repo_stats)
+UNION ALL
+SELECT 'runs', (SELECT count(*) FROM runs), (SELECT count(*) FROM keep_runs);
+
+$apply
+SQL
+
+if [ -n "$out" ]; then
+	echo "pruned copy written to $out"
+elif [ "$inplace" -eq 1 ]; then
+	echo "pruned $DB"
+else
+	echo "nothing written; -o <file> writes a pruned copy, --in-place prunes $DB"
+fi
