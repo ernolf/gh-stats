@@ -192,6 +192,38 @@ function lineLabel(line) {
 	return `${Number(line.slice(0, 6))}.${Number(line.slice(6, 12))}`
 }
 
+// A date, 2026-01-15 or 15.01.2026, or a period back from the time of the
+// data: 30 days, 2 weeks, 6 months, 1 year, or short 30d, 2w, 6m, 1y. Empty
+// text gives 0, text that is neither gives null.
+function sinceTime(text) {
+	const s = text.trim().toLowerCase()
+	if (!s) {
+		return 0
+	}
+	const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s)
+	const dotted = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(s)
+	if (iso || dotted) {
+		const [y, m, d] = (iso ? iso.slice(1) : dotted.slice(1).reverse()).map(Number)
+		const t = new Date(Date.UTC(y, m - 1, d))
+		// Date.UTC rolls 31.02. over into March.
+		return t.getUTCMonth() === m - 1 && t.getUTCDate() === d ? t.getTime() / 1000 : null
+	}
+	const period = /^(\d+)\s*(d|days?|w|weeks?|m|months?|y|years?)$/.exec(s)
+	if (!period) {
+		return null
+	}
+	const n = Number(period[1])
+	const t = new Date(now * 1000)
+	if (period[2][0] === 'y') {
+		t.setUTCFullYear(t.getUTCFullYear() - n)
+	} else if (period[2][0] === 'm') {
+		t.setUTCMonth(t.getUTCMonth() - n)
+	} else {
+		t.setUTCDate(t.getUTCDate() - n * (period[2][0] === 'w' ? 7 : 1))
+	}
+	return t.getTime() / 1000
+}
+
 // The catalogue writes the range as ">=32 <=34".
 function ncRange(spec) {
 	if (!spec) {
@@ -295,7 +327,7 @@ function initOverview() {
 	const projects = [...Map.groupBy(summaryRows(), (r) => r.project)].map(([project, lines]) => {
 		const [main, ...older] = lines
 		const slugs = repos.get(project).map((r) => `${r.owner}/${r.repo}`)
-		const p = { project, name: names.get(project) ?? main.repo, ...main }
+		const p = { project, name: names.get(project) ?? main.repo, ...main, lines: older }
 		for (const r of lines) {
 			r.name = p.name
 		}
@@ -306,25 +338,30 @@ function initOverview() {
 		p.main = el('tbody', {}, ...lineRows(main, head))
 		p.older = el('tbody', { class: 'older', hidden: '' },
 			...older.flatMap((r) => lineRows(r, el('td', { class: 'line-label' }, `line ${lineLabel(r.line)}`))))
-		if (older.length) {
-			const toggle = el('button', { type: 'button', class: 'toggle', 'aria-expanded': 'false' },
-				`${older.length} older line${older.length > 1 ? 's' : ''}`)
-			toggle.addEventListener('click', () => {
-				p.older.hidden = !p.older.hidden
-				toggle.setAttribute('aria-expanded', String(!p.older.hidden))
-			})
-			head.append(toggle)
-		}
+		p.toggle = el('button', { type: 'button', class: 'toggle', 'aria-expanded': 'false' })
+		p.toggle.addEventListener('click', () => {
+			p.older.hidden = !p.older.hidden
+			p.toggle.setAttribute('aria-expanded', String(!p.older.hidden))
+		})
+		head.append(p.toggle)
 		return p
 	})
 
 	const table = document.querySelector('#overview table')
 	const filter = document.getElementById('filter')
+	const since = document.getElementById('since')
+	const sinceDate = document.getElementById('since-date')
 	let sortKey = 'total'
 	let sortDesc = true
 
 	const render = () => {
 		const f = filter.value.trim().toLowerCase()
+		const t = sinceTime(since.value)
+		since.setAttribute('aria-invalid', String(t === null))
+		sinceDate.value = t ? `from ${date(t)}` : ''
+		// A line counts by the release it shows; a project stays while any of
+		// its lines does, with the row of its newest line.
+		const from = t ?? 0
 		// Empty periods sort last in either direction.
 		projects.sort((a, b) => {
 			const x = a[sortKey]
@@ -340,9 +377,14 @@ function initOverview() {
 		}
 		const frag = document.createDocumentFragment()
 		for (const p of projects) {
-			if (!f || p.search.includes(f)) {
-				frag.append(p.main, p.older)
+			const older = p.lines.filter((r) => r.published >= from)
+			if ((f && !p.search.includes(f)) || (p.published < from && !older.length)) {
+				continue
 			}
+			p.older.replaceChildren(...older.flatMap((r) => [r.tr, r.compare]))
+			p.toggle.hidden = !older.length
+			p.toggle.textContent = `${older.length} older line${older.length > 1 ? 's' : ''}`
+			frag.append(p.main, p.older)
 		}
 		table.append(frag)
 		for (const th of document.querySelectorAll('th[data-sort]')) {
@@ -368,6 +410,7 @@ function initOverview() {
 		})
 	}
 	filter.addEventListener('input', render)
+	since.addEventListener('input', render)
 	render()
 }
 
