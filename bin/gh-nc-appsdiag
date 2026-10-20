@@ -949,13 +949,15 @@ pick_tag() {
 # What the App Store ships, else what the app or the Nextcloud release mirror
 # attached to the tag of this version.
 fetch_tarball() {
-	local dest="$1" cache url r f pattern='*.tar.gz'
+	local dest="$1" cache url name r f pattern='*.tar.gz'
 	# The release of a repository with several apps carries a tarball for each.
 	[ -z "$subdir" ] || pattern="*${app_id}*.tar.gz"
 	if cache="$(appstore_catalogue)"; then
 		url="$(release_url "$cache")"
 		if [ -n "$url" ] && [ "$url" != null ]; then
-			"$CURL" -fsSL "$url" -o "$dest/${url##*/}" && { printf '%s\n' "$dest/${url##*/}"; return 0; }
+			# A cache-busting query string is no part of the file name.
+			name="${url%%[?#]*}"; name="${name##*/}"
+			"$CURL" -fsSL "$url" -o "$dest/$name" && { printf '%s\n' "$dest/$name"; return 0; }
 		fi
 	fi
 	for r in "$owner/$repo" "nextcloud-releases/$repo"; do
@@ -1221,6 +1223,7 @@ if [ -n "$app_version" ]; then
 	if cache="$(appstore_catalogue)"; then
 		url="$(release_url "$cache")"
 		if [ -n "$url" ] && [ "$url" != null ]; then
+			url="${url%%[?#]*}"
 			log "   the App Store ships $app_id $app_version as ${url##*/}"
 		else
 			log "   the App Store does not ship $app_id $app_version; its newest are $(release_versions "$cache")"
