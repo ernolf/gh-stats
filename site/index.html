@@ -8,8 +8,11 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>gh-stats</title>
+	<link rel="stylesheet" href="lib/uplot/uPlot.min.css">
 	<link rel="stylesheet" href="style.css">
 	<script src="lib/sql.js/sql-wasm.js" defer></script>
+	<script src="lib/uplot/uPlot.iife.min.js" defer></script>
+	<script src="charts.js" defer></script>
 	<script src="app.js" defer></script>
 </head>
 <body>
@@ -27,11 +30,81 @@
 		</section>
 
 		<section id="overview" hidden>
+			<section id="charts" aria-labelledby="charts-title">
+				<div class="charts-head">
+					<h2 id="charts-title">Charts</h2>
+					<div id="picked" class="chips"></div>
+				</div>
+				<p id="charts-hint" class="hint">Tick rows in the table to compare their downloads here.</p>
+				<div id="charts-body" hidden>
+					<div class="controls">
+						<label>Each ticked row counts
+							<select id="scope">
+								<option value="line" selected>its release line</option>
+								<option value="release">the release shown</option>
+								<option value="project">its whole project</option>
+							</select>
+						</label>
+						<label>Split by
+							<select id="split">
+								<option value="" selected>nothing</option>
+								<option value="release">release</option>
+								<option value="asset">asset type</option>
+							</select>
+						</label>
+						<button type="button" id="unpick" class="quiet">Clear</button>
+					</div>
+					<div class="cards">
+						<figure class="card">
+							<figcaption>
+								<span class="card-title">Shares</span>
+								<select id="share-figure" aria-label="Downloads">
+									<option value="0" selected>in total</option>
+									<option value="1">in the last day</option>
+									<option value="7">in the last 7 days</option>
+									<option value="30">in the last 30 days</option>
+								</select>
+							</figcaption>
+							<div id="shares" class="shares"></div>
+						</figure>
+						<figure class="card">
+							<figcaption>
+								<span class="card-title">Over time</span>
+								<select id="measure" aria-label="Measure">
+									<option value="rate" selected>downloads per</option>
+									<option value="total">downloads in total, by</option>
+								</select>
+								<select id="bucket" aria-label="Bucket">
+									<option value="3600">hour</option>
+									<option value="86400" selected>day</option>
+									<option value="604800">week</option>
+								</select>
+								<select id="range" aria-label="Range">
+									<option value="7">last 7 days</option>
+									<option value="30">last 30 days</option>
+									<option value="90" selected>last 90 days</option>
+									<option value="365">last year</option>
+									<option value="">since the sampling began</option>
+								</select>
+								<select id="style" aria-label="Style">
+									<option value="lines" selected>lines</option>
+									<option value="bars">bars</option>
+								</select>
+								<label class="check"><input id="log" type="checkbox"> log scale</label>
+							</figcaption>
+							<div id="history" class="history"></div>
+							<p id="history-note" class="hint"></p>
+						</figure>
+					</div>
+				</div>
+			</section>
+
 			<label for="filter">Filter</label>
 			<input id="filter" type="search" placeholder="app, owner or repository">
 			<table>
 				<thead>
 					<tr>
+						<th class="pick"><span class="sr-only">Chart</span></th>
 						<th data-sort="name">App</th>
 						<th data-sort="tag">Release</th>
 						<th>Nextcloud</th>

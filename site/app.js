@@ -271,27 +271,34 @@ function compareSelect(row) {
 		row.compare.replaceChildren()
 		row.compare.hidden = !select.value
 		if (select.value) {
-			row.compare.append(el('td', { class: 'compare-label' }, 'compared with'),
+			row.compare.append(el('td'), el('td', { class: 'compare-label' }, 'compared with'),
 				...releaseCells(releaseFigures(row.project, select.value)), el('td'))
 		}
 	})
 	return select
 }
 
+// The tick puts the row into the charts.
 function lineRows(row, first) {
-	row.tr = el('tr', {}, first, ...releaseCells(row), el('td'))
+	row.pick = el('input', { type: 'checkbox', 'aria-label': `Chart ${row.name} line ${lineLabel(row.line)}` })
+	row.pick.addEventListener('change', () => pickRow(row, row.pick.checked))
+	row.tr = el('tr', {}, el('td', { class: 'pick' }, row.pick), first, ...releaseCells(row), el('td'))
 	row.compare = el('tr', { class: 'compare', hidden: '' })
 	row.tr.lastChild.append(compareSelect(row))
 	return [row.tr, row.compare]
 }
 
 function initOverview() {
+	initCharts()
 	const repos = Map.groupBy(projectRepos(), (r) => r.project)
 	const names = new Map(projectNames().map((r) => [r.project, r.name]))
 	const projects = [...Map.groupBy(summaryRows(), (r) => r.project)].map(([project, lines]) => {
 		const [main, ...older] = lines
 		const slugs = repos.get(project).map((r) => `${r.owner}/${r.repo}`)
 		const p = { project, name: names.get(project) ?? main.repo, ...main }
+		for (const r of lines) {
+			r.name = p.name
+		}
 		p.search = `${p.name} ${slugs.join(' ')}`.toLowerCase()
 
 		const head = el('td', {}, el('span', { class: 'name' }, p.name),
