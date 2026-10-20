@@ -13,6 +13,8 @@ const assetFilter = ASSETS.map((e) => `asset GLOB '*.${e}'`).join(' OR ')
 
 let db
 let now
+let results
+let measured
 
 // == Loading ==
 
@@ -71,6 +73,7 @@ async function load() {
 			throw new Error(`config.json: HTTP ${res.status}`)
 		}
 		const config = await res.json()
+		results = config.results
 		showVersions(config.lib ?? {})
 		progress.max = config.bytes
 		const [SQL, bytes] = await Promise.all([
@@ -132,6 +135,22 @@ function projectNames() {
 		    JOIN projects j ON a.owner = j.owner AND a.repo = j.repo
 		   ORDER BY j.project, a.name)
 		 GROUP BY project`)
+}
+
+// The measurements of each release, keyed by project and tag; a repository that
+// holds several apps has one per app. The measurements.owner and .repo columns
+// compare without case and stand on the left.
+function measurementsByRelease() {
+	const rows = query(`
+		SELECT j.project, m.dir, m.app_id, m.version, m.tag, m.tarball, m.signed, m.diff,
+		       (SELECT count(*) FROM findings f WHERE f.dir = m.dir AND f.level = 'warn') AS warn
+		  FROM measurements m JOIN projects j ON m.owner = j.owner AND m.repo = j.repo
+		 WHERE m.tag IS NOT NULL ORDER BY m.subdir, m.app_id`)
+	return Map.groupBy(rows, (r) => `${r.project}\n${r.tag}`)
+}
+
+function findingsOf(dir) {
+	return query('SELECT tool, level, id, text FROM findings WHERE dir = $dir ORDER BY tool, n', { $dir: dir })
 }
 
 // A release of a project is a tag of any of its repositories.
@@ -320,24 +339,89 @@ function compareSelect(row) {
 		row.compare.hidden = !select.value
 		if (select.value) {
 			row.compare.append(el('td'), el('td', { class: 'compare-label' }, 'compared with'),
-				...releaseCells(releaseFigures(row.project, select.value)), el('td'))
+				...releaseCells(releaseFigures(row.project, select.value)), el('td'), el('td'))
 		}
 	})
 	return select
+}
+
+// == Checks ==
+
+function finding(f) {
+	return el('div', { class: `finding ${f.level ?? ''}` },
+		el('span', { class: 'level' }, f.level ?? ''), ' ', el('code', {}, f.id ?? ''), el('pre', {}, f.text))
+}
+
+// The release diff compares the tarball the App Store ships with the tree the
+// build stages, by kind of difference and class of file.
+function diffText(m) {
+	if (m.diff === null) {
+		return m.tarball ? `Release tarball ${m.tarball} not compared.` : 'No release tarball.'
+	}
+	const kinds = Object.entries(JSON.parse(m.diff)).map(([kind, classes]) => {
+		const n = Object.values(classes).reduce((a, b) => a + b, 0)
+		return `${kind} ${n} (${Object.entries(classes).map(([c, k]) => `${c} ${k}`).join(', ')})`
+	})
+	return `Release tarball ${m.tarball}${m.signed ? ', signed' : ''}: ${kinds.join(', ') || 'no entries'}.`
+}
+
+// Warnings in full, grouped by the tool that found them, the tools with
+// warnings first; ok and info only as counts that open on demand.
+function checksBlock(m) {
+	const hasWarn = (fs) => fs.some((f) => f.level === 'warn')
+	const tools = [...Map.groupBy(findingsOf(m.dir), (f) => f.tool)].sort(([, a], [, b]) => hasWarn(b) - hasWarn(a))
+	return el('section', { class: 'run' },
+		el('h4', {}, `${m.app_id ?? m.dir} ${m.version ?? ''} `, el('a', { href: `${results}/${m.dir}` }, 'run directory')),
+		el('p', {}, diffText(m)),
+		...tools.map(([tool, fs]) => {
+			const rest = fs.filter((f) => f.level !== 'warn')
+			const counts = ['ok', 'info'].map((l) => [l, rest.filter((f) => f.level === l).length]).filter(([, n]) => n)
+			return el('div', { class: 'tool' }, el('h5', {}, tool),
+				...fs.filter((f) => f.level === 'warn').map(finding),
+				...(rest.length
+					? [el('details', {}, el('summary', {}, counts.map(([l, n]) => `${n} ${l}`).join(', ')), ...rest.map(finding))]
+					: []))
+		}))
+}
+
+// The cell counts the warnings of every measurement of the release; a click
+// opens them in a row below, built on first use.
+function checksCell(row) {
+	row.checks = el('tr', { class: 'checks', hidden: '' })
+	const runs = measured.get(`${row.project}\n${row.tag}`)
+	if (!runs) {
+		return el('td', { title: 'not measured' })
+	}
+	const warn = runs.reduce((n, m) => n + m.warn, 0)
+	const button = el('button', {
+		type: 'button',
+		class: warn ? 'check-count warn' : 'check-count',
+		'aria-expanded': 'false',
+		title: `${warn} warning${warn === 1 ? '' : 's'} in ${runs.length} measurement${runs.length === 1 ? '' : 's'}`,
+	}, warn ? `⚠ ${warn}` : '✓')
+	button.addEventListener('click', () => {
+		if (!row.checks.hasChildNodes()) {
+			row.checks.append(el('td'), el('td', { colspan: '10' }, ...runs.map(checksBlock)))
+		}
+		row.checks.hidden = !row.checks.hidden
+		button.setAttribute('aria-expanded', String(!row.checks.hidden))
+	})
+	return el('td', {}, button)
 }
 
 // The tick puts the row into the charts.
 function lineRows(row, first) {
 	row.pick = el('input', { type: 'checkbox', 'aria-label': `Chart ${row.name} line ${lineLabel(row.line)}` })
 	row.pick.addEventListener('change', () => pickRow(row, row.pick.checked))
-	row.tr = el('tr', {}, el('td', { class: 'pick' }, row.pick), first, ...releaseCells(row), el('td'))
+	row.tr = el('tr', {}, el('td', { class: 'pick' }, row.pick), first, ...releaseCells(row), checksCell(row), el('td'))
 	row.compare = el('tr', { class: 'compare', hidden: '' })
 	row.tr.lastChild.append(compareSelect(row))
-	return [row.tr, row.compare]
+	return [row.tr, row.checks, row.compare]
 }
 
 function initOverview() {
 	initCharts()
+	measured = measurementsByRelease()
 	const repos = Map.groupBy(projectRepos(), (r) => r.project)
 	const names = new Map(projectNames().map((r) => [r.project, r.name]))
 	const projects = [...Map.groupBy(summaryRows(), (r) => r.project)].map(([project, lines]) => {
@@ -397,7 +481,7 @@ function initOverview() {
 			if ((f && !p.search.includes(f)) || (p.published < from && !older.length)) {
 				continue
 			}
-			p.older.replaceChildren(...older.flatMap((r) => [r.tr, r.compare]))
+			p.older.replaceChildren(...older.flatMap((r) => [r.tr, r.checks, r.compare]))
 			p.toggle.hidden = !older.length
 			p.toggle.textContent = `${older.length} older line${older.length > 1 ? 's' : ''}`
 			frag.append(p.main, p.older)

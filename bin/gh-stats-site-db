@@ -9,8 +9,9 @@
 # needs is dropped; what the browser cannot derive cheaply is added: the apps of
 # the App Store catalogue and the Nextcloud versions of its releases, the
 # version key and strict pre-release flag of gh-stats on every release, the
-# projects the repositories form, and one summary row per project and release
-# line for the start page. The source database is only read.
+# projects the repositories form, one summary row per project and release line
+# for the start page, and the measurement results of the data branch. The
+# source database is only read.
 
 # == Config ==
 # Optional site config shared with gh-stats and gh-release-sampler. If
@@ -40,7 +41,7 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 
 usage() {
 	cat <<'EOF'
-Usage: gh-stats-site-db -o <file>
+Usage: gh-stats-site-db -o <file> [-r <dir>]
 
 Writes the database the site serves to <file>, which must not exist yet: a copy
 of the gh-release-sampler database without a journal and without the table
@@ -62,6 +63,14 @@ spellings that differ only in case, plus
              for its newest release, the highest vkey that is neither flagged
              nor named a pre-release: downloads in total and in the last day,
              7 days and 30 days, summed over the repositories of the project
+  measurements  the newest run of every app version measured by
+             gh-nc-appsdiag, from the summary.json of the run directories
+             below <dir>: its directory, app, version, tag, status, the shipped
+             tarball and the counts of the release diff
+  targets    the make targets of each run, with exit code, whether they left a
+             JSON result and why one was skipped
+  findings   the findings of the analysers of each run, and one finding per
+             aborted run, failed target, skipped JSON result and REUSE lint
 
 Downloads are the summed counters of the assets gh-stats counts by default
 (zip, tar.bz2, tar.gz, tar.xz, tgz). A line whose releases have none of them is
@@ -71,6 +80,8 @@ at its start.
 
 Options:
   -o, --output <file>  the database to write
+  -r, --results <dir>  the directory apps/ of a checkout of the data branch;
+                       without it the three measurement tables stay empty
   -h, --help           this text
 
 Environment (or /etc/gh-stats/gh-stats.env):
@@ -82,10 +93,12 @@ EOF
 }
 
 out=''
+results=''
 while [ $# -gt 0 ]; do
 	case "$1" in
 		-h|--help) usage; exit 0 ;;
 		-o|--output) [ $# -ge 2 ] || die "$1 needs a file"; out="$2"; shift ;;
+		-r|--results) [ $# -ge 2 ] || die "$1 needs a directory"; results="${2%/}"; shift ;;
 		*) echo "unknown argument: $1" >&2; exit 1 ;;
 	esac
 	shift
@@ -95,6 +108,7 @@ done
 [ -f "$DB" ] || die "no database at $DB"
 [ -r "$APPSTORE_CACHE" ] || die "no catalogue at $APPSTORE_CACHE"
 [ ! -e "$out" ] || die "$out exists"
+[ -z "$results" ] || [ -d "$results" ] || die "no results directory at $results"
 
 # == Version key ==
 # The same key gh-stats sorts tags by: the version starts at the first digit of
@@ -144,6 +158,38 @@ platforms_sql="$(jq -r '
 	| select(.[2] == "github.com" and .[5] == "releases" and .[6] == "download")
 	| "INSERT OR IGNORE INTO platforms VALUES (\(.[3] | q), \(.[4] | q), \(.[7] | urldecode | q), \($spec | q));"
 ' "$APPSTORE_CACHE")"
+
+# == Measurements ==
+# One INSERT per run, target and finding of the run directories below
+# $results. The directory relative to $results keys all three tables, so the
+# site can link each run. Analyser results above 1 MiB are stored gzipped and
+# read one by one; reuse.json carries no findings and release/ holds the diff,
+# whose counts summary.json already has.
+sql_defs='
+	def q: "'\''" + gsub("'\''"; "'\'''\''") + "'\''";
+	def v: if . == null then "NULL" elif type == "string" then q
+		elif type == "boolean" then (if . then "1" else "0" end) else tostring end;'
+results_sql=''
+if [ -n "$results" ]; then
+	results_sql="$(find "$results" -name summary.json -print0 | xargs -0 -r jq -r --arg root "$results/" "$sql_defs"'
+		(input_filename | ltrimstr($root) | rtrimstr("/summary.json")) as $dir
+		| (.files // []) as $files
+		| "INSERT INTO measurements VALUES (\($dir | q), \(.owner | v), \(.repo | v), \(.subdir | v), \(.app_id | v), \(.version | v), \(.head.tag | v), \(.stamp | v), \(.status | v), \(.reason | v), \(.release.tarball | v), \(.release.signed | v), \(.release.counts | if . == null then null else tojson end | v));",
+		  (.targets[]? | .name as $n
+		  | "INSERT INTO targets VALUES (\($dir | q), \($n | v), \(.exit | v), \(.json_skipped | v), \($files | any(. == $n + ".json") | v));")
+	')"
+	findings_jq="$sql_defs"'
+		(if $name == "" then input_filename else $name end | ltrimstr($root) | rtrimstr(".gz") | rtrimstr(".json")) as $p
+		| (.findings? // []) | to_entries[]
+		| "INSERT INTO findings VALUES (\($p | sub("/[^/]*$"; "") | q), \($p | sub("^.*/"; "") | q), \(.key + 1), \(.value.level | v), \(.value.id | v), \(.value.lines // [] | join("\n") | q));"'
+	results_sql+="
+$(find "$results" -name '*.json' ! -name summary.json ! -name reuse.json ! -path '*/release/*' -print0 \
+		| xargs -0 -r jq -r --arg root "$results/" --arg name '' "$findings_jq")"
+	while IFS= read -r -d '' f; do
+		results_sql+="
+$(gzip -dc "$f" | jq -r --arg root "$results/" --arg name "$f" "$findings_jq")"
+	done < <(find "$results" -name '*.json.gz' ! -name reuse.json.gz ! -path '*/release/*' -print0)
+fi
 
 # -bail stops at the first error; the half-written copy is removed then.
 trap 'rm -f "$out"' ERR
@@ -327,12 +373,74 @@ SELECT p.project, p.line, h.owner, h.repo, p.tag, p.published,
   LEFT JOIN pivot v ON v.project = p.project AND v.line = p.line
   CROSS JOIN now;
 
+-- A version measured again keeps only its newest run. Each target that left no
+-- result of its own becomes a finding, so a release with a failed build or an
+-- aborted run never looks clean. A REUSE lint carries no findings; its exit
+-- code tells whether the checkout is compliant.
+CREATE TABLE measurements (
+  dir     TEXT NOT NULL PRIMARY KEY,
+  owner   TEXT NOT NULL COLLATE NOCASE,
+  repo    TEXT NOT NULL COLLATE NOCASE,
+  subdir  TEXT,
+  app_id  TEXT,
+  version TEXT,
+  tag     TEXT,
+  stamp   TEXT NOT NULL,
+  status  TEXT,
+  reason  TEXT,
+  tarball TEXT,
+  signed  INTEGER,
+  diff    TEXT
+) WITHOUT ROWID;
+CREATE TABLE targets (
+  dir     TEXT    NOT NULL,
+  name    TEXT    NOT NULL,
+  exit    INTEGER,
+  skipped TEXT,
+  json    INTEGER NOT NULL,
+  PRIMARY KEY (dir, name)
+) WITHOUT ROWID;
+CREATE TABLE findings (
+  dir   TEXT    NOT NULL,
+  tool  TEXT    NOT NULL,
+  n     INTEGER NOT NULL,
+  level TEXT,
+  id    TEXT,
+  text  TEXT    NOT NULL,
+  PRIMARY KEY (dir, tool, n)
+) WITHOUT ROWID;
+BEGIN;
+$results_sql
+COMMIT;
+DELETE FROM measurements WHERE EXISTS (
+  SELECT 1 FROM measurements m
+   WHERE m.owner = measurements.owner AND m.repo = measurements.repo AND m.subdir IS measurements.subdir
+     AND m.version IS measurements.version AND m.stamp > measurements.stamp);
+DELETE FROM targets WHERE dir NOT IN (SELECT dir FROM measurements);
+DELETE FROM findings WHERE dir NOT IN (SELECT dir FROM measurements);
+INSERT INTO findings
+SELECT dir, 'gh-nc-appsdiag', 0, 'warn', 'aborted',
+       'The run ended with status ' || coalesce(status, 'unknown') || coalesce(': ' || reason, '.')
+  FROM measurements WHERE status IS NOT 'completed';
+INSERT INTO findings
+SELECT dir, name, 0, 'info', 'skipped', skipped FROM targets WHERE skipped IS NOT NULL;
+INSERT INTO findings
+SELECT dir, name, 0, 'warn', 'failed', 'make ' || name || ' ended with exit ' || exit || ' and left no result.'
+  FROM targets WHERE exit <> 0 AND skipped IS NULL AND NOT json;
+INSERT INTO findings
+SELECT dir, name, 0, CASE exit WHEN 0 THEN 'ok' ELSE 'warn' END, 'compliance',
+       CASE exit WHEN 0 THEN 'The checkout is REUSE compliant.'
+            ELSE 'The checkout is not REUSE compliant; reuse.json in the run directory lists the files.' END
+  FROM targets WHERE name = 'reuse' AND json AND skipped IS NULL;
+
 VACUUM;
 SELECT 'apps', count(*) FROM apps
 UNION ALL SELECT 'platforms', count(*) FROM platforms
 UNION ALL SELECT 'releases', count(*) FROM releases
 UNION ALL SELECT 'projects', count(DISTINCT project) FROM projects
-UNION ALL SELECT 'summary', count(*) FROM summary;
+UNION ALL SELECT 'summary', count(*) FROM summary
+UNION ALL SELECT 'measurements', count(*) FROM measurements
+UNION ALL SELECT 'findings', count(*) FROM findings;
 SQL
 trap - ERR
 echo "site database written to $out ($(stat -c %s "$out") bytes)"
