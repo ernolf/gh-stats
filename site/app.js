@@ -272,6 +272,19 @@ function sinceTime(text) {
 	return t.getTime() / 1000
 }
 
+// The steps of the slider beside Released since; one past the last is no limit.
+const SINCE_STEPS = ['1d', '1w', '2w', '1m', '3m', '6m', '1y', '2y', '3y']
+
+// The steps grow about geometrically, so the nearest one to a time is the one
+// whose period differs from its age by the smallest factor.
+function sinceStep(t) {
+	if (!t) {
+		return SINCE_STEPS.length
+	}
+	const off = (s) => Math.abs(Math.log(Math.max(now - t, 1) / (now - sinceTime(s))))
+	return SINCE_STEPS.reduce((best, s, i) => (off(s) < off(SINCE_STEPS[best]) ? i : best), 0)
+}
+
 // The catalogue writes the range as ">=32 <=34".
 function ncRange(spec) {
 	if (!spec) {
@@ -471,6 +484,9 @@ function initOverview() {
 	const filter = document.getElementById('filter')
 	const since = document.getElementById('since')
 	const sinceDate = document.getElementById('since-date')
+	const sinceRange = document.getElementById('since-range')
+	const sinceHelp = document.getElementById('since-help')
+	const sinceHelpToggle = document.getElementById('since-help-toggle')
 	let sortKey = 'total'
 	let sortDesc = true
 
@@ -479,6 +495,7 @@ function initOverview() {
 		const t = sinceTime(since.value)
 		since.setAttribute('aria-invalid', String(t === null))
 		sinceDate.value = t ? `from ${date(t)}` : ''
+		sinceRange.setAttribute('aria-valuetext', SINCE_STEPS[Number(sinceRange.value)] ?? 'no limit')
 		// A line counts by the release it shows; a project stays while any of
 		// its lines does, with the row of its newest line.
 		const from = t ?? 0
@@ -529,8 +546,30 @@ function initOverview() {
 			}
 		})
 	}
+	// The field and the slider set each other. Text that is neither a date nor
+	// a period leaves the slider where it is; the browser may have restored the
+	// field before the page was built.
+	const syncRange = () => {
+		const t = sinceTime(since.value)
+		if (t !== null) {
+			sinceRange.value = sinceStep(t)
+		}
+	}
+	sinceRange.max = SINCE_STEPS.length
+	syncRange()
 	filter.addEventListener('input', render)
-	since.addEventListener('input', render)
+	since.addEventListener('input', () => {
+		syncRange()
+		render()
+	})
+	sinceRange.addEventListener('input', () => {
+		since.value = SINCE_STEPS[Number(sinceRange.value)] ?? ''
+		render()
+	})
+	sinceHelpToggle.addEventListener('click', () => {
+		sinceHelp.hidden = !sinceHelp.hidden
+		sinceHelpToggle.setAttribute('aria-expanded', String(!sinceHelp.hidden))
+	})
 	render()
 	addEventListener('hashchange', route)
 	route()
