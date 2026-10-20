@@ -23,7 +23,15 @@ export default [
 		files: ['site/app.js'],
 		languageOptions: {
 			...script,
-			globals: { ...script.globals, initSqlJs: 'readonly', initCharts: 'readonly', pickRow: 'readonly' },
+			globals: {
+				...script.globals,
+				initSqlJs: 'readonly',
+				marked: 'readonly',
+				DOMPurify: 'readonly',
+				initCharts: 'readonly',
+				pickRow: 'readonly',
+				swapPicks: 'readonly',
+			},
 		},
 	},
 	{
