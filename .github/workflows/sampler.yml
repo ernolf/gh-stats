@@ -21,6 +21,9 @@
 # only when the remaining budget covers it, so two runs per hour fit. The
 # release assets themselves are written with GITHUB_TOKEN.
 #
+# A changed catalogue dispatches catalogue.yml, which extracts it into the data
+# branch and sends its new versions to the measurement.
+#
 # The workflow has no schedule: its schedule trigger never started a run. An
 # external cron dispatches it instead, for example with a /etc/cron.d entry
 # whose retry repeats a failed dispatch:
@@ -34,7 +37,7 @@ on:
 
 permissions:
   contents: write
-  # Dispatches the site build after the upload.
+  # Dispatches the catalogue extract and the site build after their uploads.
   actions: write
 
 # A run that is still going must finish and upload before the next one restores
@@ -99,6 +102,7 @@ jobs:
             bin/gh-nc-appstore-targets
 
       - name: Keep a changed catalogue
+        id: catalogue
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -106,6 +110,13 @@ jobs:
           test -r "$etag" || exit 0
           cmp -s "$etag" "$STATE/apps.json.etag.before" && exit 0
           gh release upload "$CATALOGUE_TAG" "$STATE/catalogue/apps.json" "$etag" --clobber
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Extract the changed catalogue
+        if: steps.catalogue.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run catalogue.yml --ref "$GITHUB_REF_NAME"
 
       - name: Restore the database
         id: restore
