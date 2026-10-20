@@ -163,7 +163,7 @@ function chartStep(start) {
 // bucket. The sampler writes a row only on change, so the value of an asset
 // at a time is its last sample at or before it. The first sample of a
 // repository is where its counting begins, not downloads within the bucket.
-function history(items, split, start, step, keys) {
+function seriesHistory(items, split, start, step, keys) {
 	const end = alignDown(now, step)
 	const edges = []
 	for (let t = alignDown(start, step); t <= end; t += step) {
@@ -441,7 +441,7 @@ function draw() {
 
 	const start = chartStart(items, split)
 	const step = chartStep(start)
-	const { edges, series } = history(items, split, start, step, new Set(colors.keys()))
+	const { edges, series } = seriesHistory(items, split, start, step, new Set(colors.keys()))
 	drawHistory(edges, all.filter((s) => series.has(s.key))
 		.map((s) => ({ label: s.label, color: colors.get(s.key), ...series.get(s.key) })), step)
 	ui.note.textContent = all.length > MAX_SERIES
