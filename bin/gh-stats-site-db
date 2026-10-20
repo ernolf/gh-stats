@@ -1,0 +1,209 @@
+#!/usr/bin/env -S LC_CTYPE=C.UTF-8 LC_MESSAGES=C bash
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# gh-stats-site-db - turn a copy of the gh-release-sampler database into the
+# database the site queries in the browser. The browser reads the file from a
+# static host and fetches only the pages a query needs, so the copy is written
+# without a journal and vacuumed into contiguous pages. What the sampler alone
+# needs is dropped; what the browser cannot derive cheaply is added: the apps of
+# the App Store catalogue, the version key and strict pre-release flag of
+# gh-stats on every release, and one summary row per repository for the start
+# page. The source database is only read.
+
+# == Config ==
+# Optional site config shared with gh-stats and gh-release-sampler. If
+# /etc/gh-stats/gh-stats.env exists it is sourced here, so its assignments feed
+# the ${VAR:-default} reads below. Precedence is built-in default <
+# gh-stats.env < environment. Point GH_STATS_ENV at another path to use a
+# different file.
+GH_STATS_ENV="${GH_STATS_ENV:-/etc/gh-stats/gh-stats.env}"
+# shellcheck disable=SC1090 # the site config is a run-time path
+if [ -r "$GH_STATS_ENV" ]; then
+	_env_snapshot="$(export -p)"
+	set -a; . "$GH_STATS_ENV"; set +a
+	eval "$_env_snapshot"
+	unset _env_snapshot
+fi
+
+STATE_DIR="${GH_STATS_DIR:-/var/lib/gh-stats}"
+DB="${GH_STATS_DB:-${STATE_DIR}/downloads.sqlite}"
+APPSTORE_CACHE="${APPSTORE_CACHE:-${STATE_DIR}/apps.json}"
+SQLITE="${SQLITE_BIN:-/usr/bin/sqlite3}"
+# The asset extensions gh-stats counts by default; the summary counts the same.
+ASSETS="zip tar.bz2 tar.gz tar.xz tgz"
+
+set -euo pipefail
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+usage() {
+	cat <<'EOF'
+Usage: gh-stats-site-db -o <file>
+
+Writes the database the site serves to <file>, which must not exist yet: a copy
+of the gh-release-sampler database without a journal and without the table
+etags, plus
+
+  apps      app id, name, owner and repo of every App Store app whose releases
+            are downloaded from GitHub, from the catalogue
+  releases  two more columns: vkey, the version sort key of gh-stats, and
+            pre_tag, 1 when the tag denotes a pre-release (gh-stats --stable=strict)
+  summary   one row per repository for its newest release, the highest vkey that
+            is neither flagged nor named a pre-release: downloads in total and
+            in the last day, 7 days and 30 days
+
+Downloads are the summed counters of the assets gh-stats counts by default
+(zip, tar.bz2, tar.gz, tar.xz, tgz). A period stays empty when the release is
+younger than it or the repository was not sampled yet at its start.
+
+Options:
+  -o, --output <file>  the database to write
+  -h, --help           this text
+
+Environment (or /etc/gh-stats/gh-stats.env):
+  GH_STATS_DB     the source database (default: $GH_STATS_DIR/downloads.sqlite)
+  GH_STATS_DIR    state directory (default: /var/lib/gh-stats)
+  APPSTORE_CACHE  the App Store catalogue apps.json (default: $GH_STATS_DIR/apps.json)
+  SQLITE_BIN      sqlite3 (default: /usr/bin/sqlite3)
+EOF
+}
+
+out=''
+while [ $# -gt 0 ]; do
+	case "$1" in
+		-h|--help) usage; exit 0 ;;
+		-o|--output) [ $# -ge 2 ] || die "$1 needs a file"; out="$2"; shift ;;
+		*) echo "unknown argument: $1" >&2; exit 1 ;;
+	esac
+	shift
+done
+
+[ -n "$out" ] || die "-o <file> is required"
+[ -f "$DB" ] || die "no database at $DB"
+[ -r "$APPSTORE_CACHE" ] || die "no catalogue at $APPSTORE_CACHE"
+[ ! -e "$out" ] || die "$out exists"
+
+# == Version key ==
+# The same key gh-stats sorts tags by: the version starts at the first digit of
+# the tag, a -prerelease/-build suffix is cut off, and the first four dotted
+# components are zero-padded to six digits each, so a string comparison orders
+# v9 before v10.
+fd="min("
+for d in 0 1 2 3 4 5 6 7 8 9; do fd+="CASE WHEN instr(tag,'$d')=0 THEN 999 ELSE instr(tag,'$d') END,"; done
+fd="${fd%,})"
+vstr="substr(tag,$fd)"
+nver="(CASE WHEN instr($vstr,'-')>0 THEN substr($vstr,1,instr($vstr,'-')-1) ELSE $vstr END)"
+nb="(nver || '.')"
+nr1="substr($nb, instr($nb,'.')+1)"
+nr2="substr($nr1, instr($nr1,'.')+1)"
+nr3="substr($nr2, instr($nr2,'.')+1)"
+vpad() { printf "substr('000000' || CAST(substr(%s,1,instr(%s,'.')-1) AS INTEGER), -6)" "$1" "$1"; }
+vkey="$(vpad "$nb")||$(vpad "$nr1")||$(vpad "$nr2")||$(vpad "$nr3")"
+pre_tag="lower(tag) GLOB '*-dev*' OR lower(tag) GLOB '*-rc*' OR lower(tag) GLOB '*-beta*' OR lower(tag) GLOB '*-alpha*' OR lower(tag) GLOB '*-nightly*' OR lower(tag) GLOB '*-pre*' OR lower(tag) GLOB '*-snapshot*'"
+
+asset_flt=""
+for e in $ASSETS; do asset_flt+="${asset_flt:+ OR }asset GLOB '*.$e'"; done
+
+# == Apps ==
+# One INSERT per app and GitHub repository its releases are downloaded from, as
+# SQL literals: an app name may hold a quote, which .import would take for CSV
+# quoting.
+apps_sql="$(jq -r '
+	def q: "'\''" + gsub("'\''"; "'\'''\''") + "'\''";
+	(if type == "array" then . else .data end)[]
+	| .id as $id | (.translations.en.name // $id) as $name
+	| [ .releases[]? | .download // empty | split("/")
+	    | select(.[2] == "github.com" and .[5] == "releases") | [.[3], .[4]] ]
+	| unique[]
+	| "INSERT OR IGNORE INTO apps VALUES (\($id | q), \($name | q), \(.[0] | q), \(.[1] | q));"
+' "$APPSTORE_CACHE")"
+
+# -bail stops at the first error; the half-written copy is removed then.
+trap 'rm -f "$out"' ERR
+sq="'"
+"$SQLITE" -bail "$DB" "VACUUM INTO '${out//$sq/$sq$sq}'"
+"$SQLITE" -bail "$out" "PRAGMA journal_mode = DELETE" >/dev/null
+"$SQLITE" -bail "$out" <<SQL
+DROP TABLE etags;
+
+ALTER TABLE releases ADD COLUMN vkey TEXT;
+ALTER TABLE releases ADD COLUMN pre_tag INTEGER;
+CREATE TEMP TABLE v AS SELECT owner, repo, tag, $nver AS nver FROM releases;
+UPDATE releases SET vkey = x.vkey, pre_tag = x.pre_tag
+  FROM (SELECT owner, repo, tag, $vkey AS vkey, ($pre_tag) AS pre_tag FROM v) x
+ WHERE x.owner = releases.owner AND x.repo = releases.repo AND x.tag = releases.tag;
+
+CREATE TABLE apps (
+  id    TEXT NOT NULL,
+  name  TEXT NOT NULL,
+  owner TEXT NOT NULL COLLATE NOCASE,
+  repo  TEXT NOT NULL COLLATE NOCASE,
+  PRIMARY KEY (id, owner, repo)
+) WITHOUT ROWID;
+BEGIN;
+$apps_sql
+COMMIT;
+
+-- The value of an asset at a time is its last sample at or before it, since the
+-- sampler writes a row only on change. An asset without such a sample did not
+-- exist yet and counts 0, unless the repository itself was not sampled yet:
+-- then the period stays NULL instead of counting the whole total as new.
+CREATE TABLE summary (
+  owner     TEXT    NOT NULL,
+  repo      TEXT    NOT NULL,
+  tag       TEXT    NOT NULL,
+  published INTEGER NOT NULL,
+  total     INTEGER NOT NULL,
+  d1        INTEGER,
+  d7        INTEGER,
+  d30       INTEGER,
+  PRIMARY KEY (owner, repo)
+) WITHOUT ROWID;
+INSERT INTO summary
+WITH now(t) AS (SELECT max(ts) FROM runs),
+newest AS (
+  SELECT owner, repo, tag, published FROM (
+    SELECT owner, repo, tag, published,
+           row_number() OVER (PARTITION BY owner, repo ORDER BY vkey DESC, published DESC) AS n
+      FROM releases WHERE prerelease = 0 AND pre_tag = 0)
+   WHERE n = 1
+),
+assets AS (
+  SELECT DISTINCT s.owner, s.repo, s.tag, s.asset
+    FROM samples s JOIN newest USING (owner, repo, tag)
+   WHERE $asset_flt
+),
+since AS (
+  SELECT owner, repo, min(ts) AS first FROM samples GROUP BY owner, repo
+),
+at AS (
+  SELECT a.owner, a.repo, a.tag, k.d,
+         (SELECT s.downloads FROM samples s
+           WHERE s.owner = a.owner AND s.repo = a.repo AND s.tag = a.tag AND s.asset = a.asset
+             AND s.ts <= (SELECT t FROM now) - k.d * 86400
+           ORDER BY s.ts DESC LIMIT 1) AS downloads
+    FROM assets a, (SELECT 0 AS d UNION ALL SELECT 1 UNION ALL SELECT 7 UNION ALL SELECT 30) k
+),
+pivot AS (
+  SELECT owner, repo, tag,
+         sum(CASE WHEN d = 0 THEN v END) AS v0, sum(CASE WHEN d = 1 THEN v END) AS v1,
+         sum(CASE WHEN d = 7 THEN v END) AS v7, sum(CASE WHEN d = 30 THEN v END) AS v30
+    FROM (SELECT owner, repo, tag, d, coalesce(downloads, 0) AS v FROM at)
+   GROUP BY owner, repo, tag
+)
+SELECT n.owner, n.repo, n.tag, n.published, coalesce(p.v0, 0),
+       CASE WHEN max(n.published, since.first) <= now.t - 86400 THEN coalesce(p.v0 - p.v1, 0) END,
+       CASE WHEN max(n.published, since.first) <= now.t - 7 * 86400 THEN coalesce(p.v0 - p.v7, 0) END,
+       CASE WHEN max(n.published, since.first) <= now.t - 30 * 86400 THEN coalesce(p.v0 - p.v30, 0) END
+  FROM newest n
+  JOIN since USING (owner, repo)
+  LEFT JOIN pivot p USING (owner, repo, tag), now;
+
+VACUUM;
+SELECT 'apps', count(*) FROM apps
+UNION ALL SELECT 'releases', count(*) FROM releases
+UNION ALL SELECT 'summary', count(*) FROM summary;
+SQL
+trap - ERR
+echo "site database written to $out ($(stat -c %s "$out") bytes)"
