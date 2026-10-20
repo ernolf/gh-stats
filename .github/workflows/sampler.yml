@@ -34,6 +34,8 @@ on:
 
 permissions:
   contents: write
+  # Dispatches the site build after the upload.
+  actions: write
 
 # A run that is still going must finish and upload before the next one restores
 # the database, otherwise the next one would work on the older copy.
@@ -130,6 +132,7 @@ jobs:
       # Also after a sampler run that reported failed requests: what it did
       # sample is committed to the database and would otherwise be lost.
       - name: Thin and upload the database
+        id: upload
         if: ${{ !cancelled() && steps.restore.outcome == 'success' }}
         env:
           GH_TOKEN: ${{ github.token }}
@@ -146,3 +149,10 @@ jobs:
           test -n "$new"
           test -z "$old" || gh api -X DELETE "repos/$GH_REPO/releases/assets/$old"
           gh api -X PATCH "repos/$GH_REPO/releases/assets/$new" -f name="$DB_ASSET" --silent
+
+      # Of the events GITHUB_TOKEN causes, only a dispatch starts another workflow.
+      - name: Rebuild the site
+        if: ${{ !cancelled() && steps.upload.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run site.yml --ref "$GITHUB_REF_NAME"
