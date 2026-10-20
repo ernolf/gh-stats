@@ -12,6 +12,8 @@
 # Every build puts the database under a directory of its own, named by the run,
 # and config.json points to it: Pages lets browsers cache a file for 10 minutes,
 # and a fixed name could then mix a cached config with another database.
+# config.json also names the versions of sql.js and uPlot, which the page lists
+# under "Built with".
 
 name: Build the site
 
@@ -73,7 +75,8 @@ jobs:
           GH_STATS_DB="$STATE/downloads.sqlite" APPSTORE_CACHE="$STATE/apps.json" \
             bin/gh-stats-site-db -o "$out/$db"
           jq -n --arg db "$db" --argjson bytes "$(stat -c %s "$out/$db")" \
-            '{db: $db, bytes: $bytes}' > "$out/config.json"
+            --arg sqljs "$SQLJS_VERSION" --arg uplot "$UPLOT_VERSION" \
+            '{db: $db, bytes: $bytes, lib: {"sql.js": $sqljs, uPlot: $uplot}}' > "$out/config.json"
           echo "SITE=$out" >> "$GITHUB_ENV"
 
       - name: Add sql.js

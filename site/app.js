@@ -50,6 +50,17 @@ function megabytes(n) {
 	return (n / 1048576).toFixed(1) + ' MB'
 }
 
+// Fills the versions of the "Built with" list. A library missing from versions
+// keeps its entry without one.
+function showVersions(versions) {
+	for (const el of document.querySelectorAll('[data-lib]')) {
+		const v = versions[el.dataset.lib]
+		if (v) {
+			el.textContent = v
+		}
+	}
+}
+
 async function load() {
 	const progress = document.getElementById('progress')
 	const text = document.getElementById('progress-text')
@@ -60,6 +71,7 @@ async function load() {
 			throw new Error(`config.json: HTTP ${res.status}`)
 		}
 		const config = await res.json()
+		showVersions(config.lib ?? {})
 		progress.max = config.bytes
 		const [SQL, bytes] = await Promise.all([
 			initSqlJs({ locateFile: (file) => `lib/sql.js/${file}` }),
@@ -73,8 +85,12 @@ async function load() {
 		text.textContent = `The database could not be loaded (${e.message}). Reload the page to try again.`
 		return
 	}
+	// The SQLite that sql.js compiled in, as the engine itself reports it.
+	showVersions({ SQLite: query('SELECT sqlite_version() AS v')[0].v })
 	now = query('SELECT max(ts) AS t FROM runs')[0].t
-	document.getElementById('asof').textContent = `Data as of ${date(now, true)} UTC`
+	const asof = document.getElementById('asof')
+	asof.textContent = `Data as of ${date(now, true)} UTC`
+	asof.hidden = false
 	document.getElementById('loading').hidden = true
 	document.getElementById('overview').hidden = false
 	initOverview()
