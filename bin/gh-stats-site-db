@@ -10,8 +10,9 @@
 # the App Store catalogue and the Nextcloud versions of its releases, the
 # version key and strict pre-release flag of gh-stats on every release, the
 # projects the repositories form, one summary row per project and release line
-# for the start page, and the measurement results of the data branch. The
-# source database is only read.
+# for the start page, the measurement results of the data branch, and what the
+# App Store shows of every catalogue app for its page. The source database is
+# only read.
 
 # == Config ==
 # Optional site config shared with gh-stats and gh-release-sampler. If
@@ -71,6 +72,13 @@ spellings that differ only in case, plus
              JSON result and why one was skipped
   findings   the findings of the analysers of each run, and one finding per
              aborted run, failed target, skipped JSON result and REUSE lint
+  app_details  what the App Store shows of every catalogue app: categories,
+             authors, links, dates, ratings and the original URLs of its
+             screenshots
+  app_texts  name, summary and description of every app in every language of
+             the catalogue
+  app_releases  every catalogue release with its date, nightly flag,
+             licences, Nextcloud and PHP versions, databases and PHP extensions
 
 Downloads are the summed counters of the assets gh-stats counts by default
 (zip, tar.bz2, tar.gz, tar.xz, tgz). A line whose releases have none of them is
@@ -190,6 +198,30 @@ $(find "$results" -name '*.json' ! -name summary.json ! -name reuse.json ! -path
 $(gzip -dc "$f" | jq -r --arg root "$results/" --arg name "$f" "$findings_jq")"
 	done < <(find "$results" -name '*.json.gz' ! -name reuse.json.gz ! -path '*/release/*' -print0)
 fi
+
+# == App pages ==
+# The App Store serves screenshots through its image proxy, whose path is the
+# urlsafe base64 of the author's URL, unpadded and sometimes with whitespace
+# around the URL. The site links the original, so a visitor never contacts the
+# App Store to see them. The authors' mail addresses stay out: the page shows
+# a name and a homepage, and a static page would hand the addresses to every
+# harvester.
+catalogue_sql="$(jq -r "$sql_defs"'
+	def t: if . == "" then null else . end | v;
+	def proxy: "https://usercontent.apps.nextcloud.com/";
+	def unproxy: if startswith(proxy)
+		then ltrimstr(proxy) | gsub("-"; "+") | gsub("_"; "/")
+			| length as $n | . + ("===" | .[0:(4 - $n % 4) % 4]) | @base64d | sub("^\\s+"; "") | sub("\\s+$"; "")
+		else . end;
+	def specs: map({id, spec: .rawVersionSpec}) | tojson | q;
+	(if type == "array" then . else .data end)[]
+	| .id as $id
+	| "INSERT INTO app_details VALUES (\($id | q), \(.categories // [] | tojson | q), \(.authors // [] | map({name, homepage}) | tojson | q), \(.website | t), \(.issueTracker | t), \(.discussion | t), \(.userDocs | t), \(.adminDocs | t), \(.developerDocs | t), \(.created | t), \(.lastModified | t), \(.ratingOverall | v), \(.ratingRecent | v), \(.ratingNumOverall | v), \(.ratingNumRecent | v), \([.screenshots[]?.url | unproxy | select(test("^https?://"))] | tojson | q));",
+	  (.translations // {} | to_entries[]
+	  | "INSERT INTO app_texts VALUES (\($id | q), \(.key | q), \(.value.name | t), \(.value.summary | t), \(.value.description | t));"),
+	  (.releases[]?
+	  | "INSERT OR IGNORE INTO app_releases VALUES (\($id | q), \(.version | q), \(.created | t), \(.isNightly | v), \(.licenses // [] | tojson | q), \(.rawPlatformVersionSpec | t), \(.rawPhpVersionSpec | t), \(.databases // [] | specs), \(.phpExtensions // [] | specs));")
+' "$APPSTORE_CACHE")"
 
 # -bail stops at the first error; the half-written copy is removed then.
 trap 'rm -f "$out"' ERR
@@ -433,6 +465,51 @@ SELECT dir, name, 0, CASE exit WHEN 0 THEN 'ok' ELSE 'warn' END, 'compliance',
             ELSE 'The checkout is not REUSE compliant; reuse.json in the run directory lists the files.' END
   FROM targets WHERE name = 'reuse' AND json AND skipped IS NULL;
 
+-- Every catalogue app, also one that is downloaded from elsewhere than GitHub:
+-- its page then shows only what the App Store shows. The JSON columns keep
+-- the lists of the catalogue as they are.
+CREATE TABLE app_details (
+  id                 TEXT NOT NULL PRIMARY KEY,
+  categories         TEXT NOT NULL,
+  authors            TEXT NOT NULL,
+  website            TEXT,
+  issue_tracker      TEXT,
+  discussion         TEXT,
+  user_docs          TEXT,
+  admin_docs         TEXT,
+  developer_docs     TEXT,
+  created            TEXT,
+  last_modified      TEXT,
+  rating_overall     REAL,
+  rating_recent      REAL,
+  rating_num_overall INTEGER,
+  rating_num_recent  INTEGER,
+  screenshots        TEXT NOT NULL
+) WITHOUT ROWID;
+CREATE TABLE app_texts (
+  id          TEXT NOT NULL,
+  lang        TEXT NOT NULL,
+  name        TEXT,
+  summary     TEXT,
+  description TEXT,
+  PRIMARY KEY (id, lang)
+) WITHOUT ROWID;
+CREATE TABLE app_releases (
+  id             TEXT NOT NULL,
+  version        TEXT NOT NULL,
+  created        TEXT,
+  nightly        INTEGER,
+  licenses       TEXT NOT NULL,
+  platform       TEXT,
+  php            TEXT,
+  databases      TEXT NOT NULL,
+  php_extensions TEXT NOT NULL,
+  PRIMARY KEY (id, version)
+) WITHOUT ROWID;
+BEGIN;
+$catalogue_sql
+COMMIT;
+
 VACUUM;
 SELECT 'apps', count(*) FROM apps
 UNION ALL SELECT 'platforms', count(*) FROM platforms
@@ -440,7 +517,9 @@ UNION ALL SELECT 'releases', count(*) FROM releases
 UNION ALL SELECT 'projects', count(DISTINCT project) FROM projects
 UNION ALL SELECT 'summary', count(*) FROM summary
 UNION ALL SELECT 'measurements', count(*) FROM measurements
-UNION ALL SELECT 'findings', count(*) FROM findings;
+UNION ALL SELECT 'findings', count(*) FROM findings
+UNION ALL SELECT 'app_details', count(*) FROM app_details
+UNION ALL SELECT 'app_releases', count(*) FROM app_releases;
 SQL
 trap - ERR
 echo "site database written to $out ($(stat -c %s "$out") bytes)"

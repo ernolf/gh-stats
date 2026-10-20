@@ -30,6 +30,23 @@ function pickRow(row, on) {
 	drawCharts()
 }
 
+// Ticks the rows given instead of those ticked, and returns those: an app page
+// charts the lines of its app and gives the start page its ticks back when it
+// closes.
+function swapPicks(next) {
+	const before = [...picked.values()]
+	for (const row of before) {
+		row.pick.checked = false
+	}
+	picked.clear()
+	for (const row of next) {
+		row.pick.checked = true
+		picked.set(`${row.project}\n${row.line}`, row)
+	}
+	drawCharts()
+	return before
+}
+
 function rows(sql, params = {}) {
 	const stmt = db.prepare(sql)
 	const out = []

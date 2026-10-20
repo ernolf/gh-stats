@@ -15,6 +15,13 @@ let db
 let now
 let results
 let measured
+// The line rows of each project and the project of each app, for the app pages.
+const projectLines = new Map()
+let appProjects
+// What the start page had ticked and where it was scrolled to, while an app
+// page is open.
+let startTicks = null
+let startScroll = 0
 
 // == Loading ==
 
@@ -128,25 +135,31 @@ function projectRepos() {
 
 // The apps.owner and apps.repo columns compare without case, as GitHub does;
 // they stand on the left so their collation applies.
-function projectNames() {
+function projectApps() {
 	return query(`
-		SELECT project, group_concat(name, ', ') AS name FROM (
-		  SELECT DISTINCT j.project, a.name FROM apps a
-		    JOIN projects j ON a.owner = j.owner AND a.repo = j.repo
-		   ORDER BY j.project, a.name)
-		 GROUP BY project`)
+		SELECT DISTINCT j.project, a.id, a.name FROM apps a
+		  JOIN projects j ON a.owner = j.owner AND a.repo = j.repo
+		 ORDER BY j.project, a.name`)
 }
+
+const MEASUREMENT = `m.dir, m.app_id, m.version, m.tag, m.tarball, m.signed, m.diff,
+	(SELECT count(*) FROM findings f WHERE f.dir = m.dir AND f.level = 'warn') AS warn`
 
 // The measurements of each release, keyed by project and tag; a repository that
 // holds several apps has one per app. The measurements.owner and .repo columns
 // compare without case and stand on the left.
 function measurementsByRelease() {
 	const rows = query(`
-		SELECT j.project, m.dir, m.app_id, m.version, m.tag, m.tarball, m.signed, m.diff,
-		       (SELECT count(*) FROM findings f WHERE f.dir = m.dir AND f.level = 'warn') AS warn
+		SELECT j.project, ${MEASUREMENT}
 		  FROM measurements m JOIN projects j ON m.owner = j.owner AND m.repo = j.repo
 		 WHERE m.tag IS NOT NULL ORDER BY m.subdir, m.app_id`)
 	return Map.groupBy(rows, (r) => `${r.project}\n${r.tag}`)
+}
+
+// The measurements of one app, keyed by the version its info.xml declares.
+function measurementsByVersion(id) {
+	return Map.groupBy(query(`SELECT ${MEASUREMENT} FROM measurements m WHERE m.app_id = $id`, { $id: id }),
+		(r) => r.version)
 }
 
 function findingsOf(dir) {
@@ -384,13 +397,13 @@ function checksBlock(m) {
 		}))
 }
 
-// The cell counts the warnings of every measurement of the release; a click
-// opens them in a row below, built on first use.
-function checksCell(row) {
-	row.checks = el('tr', { class: 'checks', hidden: '' })
-	const runs = measured.get(`${row.project}\n${row.tag}`)
+// The cell counts the warnings of the measurements of a release; a click opens
+// them in the row returned with it, built on first use, which spans the
+// table from its second column.
+function checksCell(runs, span) {
+	const checks = el('tr', { class: 'checks', hidden: '' })
 	if (!runs) {
-		return el('td', { title: 'not measured' })
+		return [el('td', { title: 'not measured' }), checks]
 	}
 	const warn = runs.reduce((n, m) => n + m.warn, 0)
 	const button = el('button', {
@@ -400,20 +413,22 @@ function checksCell(row) {
 		title: `${warn} warning${warn === 1 ? '' : 's'} in ${runs.length} measurement${runs.length === 1 ? '' : 's'}`,
 	}, warn ? `⚠ ${warn}` : '✓')
 	button.addEventListener('click', () => {
-		if (!row.checks.hasChildNodes()) {
-			row.checks.append(el('td'), el('td', { colspan: '10' }, ...runs.map(checksBlock)))
+		if (!checks.hasChildNodes()) {
+			checks.append(el('td'), el('td', { colspan: String(span) }, ...runs.map(checksBlock)))
 		}
-		row.checks.hidden = !row.checks.hidden
-		button.setAttribute('aria-expanded', String(!row.checks.hidden))
+		checks.hidden = !checks.hidden
+		button.setAttribute('aria-expanded', String(!checks.hidden))
 	})
-	return el('td', {}, button)
+	return [el('td', {}, button), checks]
 }
 
 // The tick puts the row into the charts.
 function lineRows(row, first) {
 	row.pick = el('input', { type: 'checkbox', 'aria-label': `Chart ${row.name} line ${lineLabel(row.line)}` })
 	row.pick.addEventListener('change', () => pickRow(row, row.pick.checked))
-	row.tr = el('tr', {}, el('td', { class: 'pick' }, row.pick), first, ...releaseCells(row), checksCell(row), el('td'))
+	const [checks, checksRow] = checksCell(measured.get(`${row.project}\n${row.tag}`), 10)
+	row.checks = checksRow
+	row.tr = el('tr', {}, el('td', { class: 'pick' }, row.pick), first, ...releaseCells(row), checks, el('td'))
 	row.compare = el('tr', { class: 'compare', hidden: '' })
 	row.tr.lastChild.append(compareSelect(row))
 	return [row.tr, row.checks, row.compare]
@@ -423,17 +438,22 @@ function initOverview() {
 	initCharts()
 	measured = measurementsByRelease()
 	const repos = Map.groupBy(projectRepos(), (r) => r.project)
-	const names = new Map(projectNames().map((r) => [r.project, r.name]))
+	const apps = Map.groupBy(projectApps(), (r) => r.project)
+	appProjects = new Map([...apps.values()].flat().map((a) => [a.id, a.project]))
 	const projects = [...Map.groupBy(summaryRows(), (r) => r.project)].map(([project, lines]) => {
 		const [main, ...older] = lines
 		const slugs = repos.get(project).map((r) => `${r.owner}/${r.repo}`)
-		const p = { project, name: names.get(project) ?? main.repo, ...main, lines: older }
+		const own = apps.get(project) ?? []
+		const p = { project, name: own.map((a) => a.name).join(', ') || main.repo, ...main, lines: older }
 		for (const r of lines) {
 			r.name = p.name
 		}
+		projectLines.set(project, lines)
 		p.search = `${p.name} ${slugs.join(' ')}`.toLowerCase()
 
-		const head = el('td', {}, el('span', { class: 'name' }, p.name),
+		// Each app links its page; a project that is no App Store app has none.
+		const links = own.flatMap((a, i) => [i ? ', ' : '', el('a', { href: `#app/${encodeURIComponent(a.id)}` }, a.name)])
+		const head = el('td', {}, el('span', { class: 'name' }, ...(links.length ? links : [p.name])),
 			...slugs.map((s) => el('a', { class: 'slug', href: `https://github.com/${s}` }, s)))
 		p.main = el('tbody', {}, ...lineRows(main, head))
 		p.older = el('tbody', { class: 'older', hidden: '' },
@@ -512,6 +532,235 @@ function initOverview() {
 	filter.addEventListener('input', render)
 	since.addEventListener('input', render)
 	render()
+	addEventListener('hashchange', route)
+	route()
+}
+
+// == App page ==
+
+// The page of an app is #app/<id>, so it opens without loading the database
+// again and the browser's back button returns to the start page.
+function route() {
+	const m = /^#app\/(.+)$/.exec(location.hash)
+	if (m) {
+		let id = m[1]
+		try {
+			id = decodeURIComponent(id)
+		} catch {
+			// A malformed escape names no app; the page says so.
+		}
+		openApp(id)
+	} else if (startTicks) {
+		closeApp()
+	}
+}
+
+// The charts move into the app page and chart all lines of the app's project;
+// the start page gets its charts and ticks back when the page closes.
+function openApp(id) {
+	const charts = document.getElementById('charts')
+	document.getElementById('overview').prepend(charts)
+	if (!startTicks) {
+		startScroll = scrollY
+		startTicks = swapPicks([])
+	}
+	const lines = projectLines.get(appProjects.get(id))
+	const body = document.getElementById('app-body')
+	body.replaceChildren(...appPage(id, lines))
+	if (lines) {
+		document.getElementById('app-charts').append(charts)
+		swapPicks(lines)
+	} else {
+		swapPicks([])
+	}
+	document.title = `${body.querySelector('h2').textContent} · gh-stats`
+	document.getElementById('overview').hidden = true
+	document.getElementById('app').hidden = false
+	scrollTo(0, 0)
+}
+
+function closeApp() {
+	document.getElementById('overview').prepend(document.getElementById('charts'))
+	swapPicks(startTicks)
+	startTicks = null
+	document.getElementById('app').hidden = true
+	document.getElementById('app-body').replaceChildren()
+	document.getElementById('overview').hidden = false
+	document.title = 'gh-stats'
+	scrollTo(0, startScroll)
+}
+
+// The catalogue names a language in lower case with its region or script
+// after a hyphen (pt-br, zh-hant). The first language of the browser the app
+// has wins, else its base language, else English.
+function pickLang(langs) {
+	const have = new Set(langs)
+	for (const l of navigator.languages ?? [navigator.language]) {
+		const k = l.toLowerCase()
+		if (have.has(k)) {
+			return k
+		}
+		if (have.has(k.split('-')[0])) {
+			return k.split('-')[0]
+		}
+	}
+	return have.has('en') ? 'en' : langs[0]
+}
+
+function webLink(url, text) {
+	return /^https?:\/\//i.test(url ?? '') ? el('a', { href: url }, text) : null
+}
+
+// An image stays a placeholder until the visitor loads the images of the page,
+// as loading it tells its host the visitor's address. Inside a link the
+// placeholder is plain text, since a link cannot hold another.
+function imageHolder(src, alt, linked) {
+	const attrs = { class: 'image-holder', 'data-src': src, 'data-alt': alt }
+	return linked ? el('a', { ...attrs, href: src }, alt || 'image') : el('span', attrs, alt || 'image')
+}
+
+// The referrer policy is set before the source, which starts the fetch.
+function loadImages(root) {
+	for (const h of root.querySelectorAll('[data-src]')) {
+		h.replaceChildren(el('img', { referrerpolicy: 'no-referrer', loading: 'lazy', alt: h.dataset.alt, src: h.dataset.src }))
+		h.removeAttribute('data-src')
+	}
+}
+
+// Descriptions are Markdown with HTML allowed. What stays of it is text,
+// structure, links and images: no style, class or id that could reach into
+// the page, and no element that loads anything by itself.
+const DESCRIPTION = {
+	ALLOWED_TAGS: ['a', 'b', 'blockquote', 'br', 'code', 'dd', 'del', 'details', 'div', 'dl', 'dt', 'em',
+		'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'i', 'img', 'kbd', 'li', 'ol', 'p', 'pre', 's', 'span',
+		'strong', 'sub', 'summary', 'sup', 'table', 'tbody', 'td', 'th', 'thead', 'tr', 'u', 'ul'],
+	ALLOWED_ATTR: ['align', 'alt', 'colspan', 'href', 'rowspan', 'src', 'start', 'title'],
+	ALLOW_DATA_ATTR: false,
+}
+
+// A document of DOMParser has no browsing context, so its images do not load
+// while they are replaced.
+function description(md) {
+	const doc = new DOMParser().parseFromString(DOMPurify.sanitize(marked.parse(md), DESCRIPTION), 'text/html')
+	for (const img of doc.querySelectorAll('img')) {
+		const src = img.getAttribute('src') ?? ''
+		const alt = img.getAttribute('alt') ?? ''
+		img.replaceWith(/^https?:\/\//i.test(src) ? imageHolder(src, alt, !img.closest('a')) : alt)
+	}
+	return [...doc.body.childNodes]
+}
+
+// The catalogue rates from 0 to 1 and gives 0.5 to an app nobody rated.
+function rating(value, count) {
+	return count ? `${Math.round(value * 100)} % from ${count.toLocaleString('en')} rating${count === 1 ? '' : 's'}` : 'no ratings'
+}
+
+// A database or PHP extension with the versions the release requires; the
+// catalogue writes * for any.
+function specList(json) {
+	return JSON.parse(json).map((s) => (s.spec && s.spec !== '*' ? `${s.id} ${s.spec}` : s.id)).join(', ')
+}
+
+function appReleases(id) {
+	const runs = measurementsByVersion(id)
+	const releases = query(`
+		SELECT version, created, nightly, licenses, platform, php, databases, php_extensions
+		  FROM app_releases WHERE id = $id ORDER BY created DESC`, { $id: id })
+	return el('table', {},
+		el('thead', {}, el('tr', {}, ...['Version', 'Released', 'Channel', 'Nextcloud', 'PHP', 'Databases', 'PHP extensions', 'Licences']
+			.map((h) => el('th', {}, h)), el('th', { title: 'warnings of the measurement of the release' }, 'Checks'))),
+		...releases.map((r) => {
+			const [checks, checksRow] = checksCell(runs.get(r.version), 8)
+			return el('tbody', {}, el('tr', {},
+				el('td', {}, r.version),
+				el('td', {}, (r.created ?? '').slice(0, 10)),
+				el('td', {}, r.nightly ? 'nightly' : 'stable'),
+				el('td', {}, ncRange(r.platform)),
+				el('td', {}, r.php ?? ''),
+				el('td', { class: 'wrap' }, specList(r.databases)),
+				el('td', { class: 'wrap' }, specList(r.php_extensions)),
+				el('td', {}, JSON.parse(r.licenses).join(', ')),
+				checks), checksRow)
+		}))
+}
+
+function appLines(lines) {
+	return el('table', {},
+		el('thead', {}, el('tr', {}, ...['Line', 'Release', 'Nextcloud', 'Published'].map((h) => el('th', {}, h)),
+			...['Total', '1 day', '7 days', '30 days'].map((h) => el('th', { class: 'num' }, h)),
+			el('th', { title: 'warnings of the measurement of the release shown' }, 'Checks'))),
+		...lines.map((r) => {
+			const [checks, checksRow] = checksCell(measured.get(`${r.project}\n${r.tag}`), 8)
+			return el('tbody', {}, el('tr', {}, el('td', {}, lineLabel(r.line)), ...releaseCells(r), checks), checksRow)
+		}))
+}
+
+// What the App Store shows of the app, in the browser's language where the
+// app has it, and below it the downloads gh-stats sampled.
+function appPage(id, lines) {
+	const d = query('SELECT * FROM app_details WHERE id = $id', { $id: id })[0]
+	if (!d) {
+		return [el('h2', {}, id), el('p', {}, 'The App Store catalogue has no app of this id.')]
+	}
+	const texts = new Map(query('SELECT lang, name, summary, description FROM app_texts WHERE id = $id', { $id: id })
+		.map((r) => [r.lang, r]))
+	const lang = pickLang([...texts.keys()])
+	// A text the language lacks comes in English, else in any language the app has.
+	const text = (field) => {
+		const t = [texts.get(lang), texts.get('en'), ...texts.values()].find((r) => r?.[field])
+		return t ? { lang: t.lang, value: t[field] } : { lang: 'en', value: '' }
+	}
+	const name = text('name')
+	const summary = text('summary')
+	const desc = text('description')
+	const authors = JSON.parse(d.authors).flatMap((a, i) => [i ? ', ' : '', webLink(a.homepage, a.name) ?? a.name])
+	const links = [
+		el('a', { href: `https://apps.nextcloud.com/apps/${encodeURIComponent(id)}` }, 'View in the App Store'),
+		webLink(d.website, 'Website'),
+		webLink(d.issue_tracker, 'Issue tracker'),
+		webLink(d.discussion, 'Discussion'),
+		webLink(d.user_docs, 'User documentation'),
+		webLink(d.admin_docs, 'Admin documentation'),
+		webLink(d.developer_docs, 'Developer documentation'),
+	].filter(Boolean)
+	const facts = [
+		['App id', el('code', {}, id)],
+		['Categories', JSON.parse(d.categories).join(', ')],
+		['Authors', ...authors],
+		['Rating', rating(d.rating_overall, d.rating_num_overall)],
+		['Recent rating', rating(d.rating_recent, d.rating_num_recent)],
+		['Added', (d.created ?? '').slice(0, 10)],
+		['Last changed', (d.last_modified ?? '').slice(0, 10)],
+	]
+	const shots = JSON.parse(d.screenshots)
+	const page = el('div', {},
+		el('h2', { lang: name.lang }, name.value || id),
+		el('p', { class: 'summary', lang: summary.lang, dir: 'auto' }, summary.value),
+		el('ul', { class: 'app-links' }, ...links.map((a) => el('li', {}, a))),
+		el('dl', { class: 'facts' }, ...facts.flatMap(([k, ...v]) => [el('dt', {}, k), el('dd', {}, ...v)])))
+	const images = el('p', { class: 'hint' }, el('button', { type: 'button', class: 'quiet' }, 'Load images'),
+		' Images come from the hosts the authors name and load only on request.')
+	images.firstChild.addEventListener('click', () => {
+		loadImages(page)
+		images.remove()
+	})
+	page.append(
+		el('h3', {}, 'Description'),
+		el('div', { class: 'description', lang: desc.lang, dir: 'auto' }, ...description(desc.value)),
+		...(shots.length
+			? [el('h3', {}, 'Screenshots'),
+				el('ul', { class: 'shots' }, ...shots.map((u, i) => el('li', {}, imageHolder(u, `Screenshot ${i + 1}`, true))))]
+			: []),
+		el('h3', {}, 'Releases in the App Store'),
+		el('div', { class: 'scroll' }, appReleases(id)),
+		el('h3', {}, 'Downloads'),
+		...(lines
+			? [el('div', { class: 'scroll' }, appLines(lines)), el('div', { id: 'app-charts' })]
+			: [el('p', { class: 'hint' }, 'gh-stats samples no GitHub repository of this app.')]))
+	if (page.querySelector('[data-src]')) {
+		page.querySelector('h3').before(images)
+	}
+	return [page]
 }
 
 load()
