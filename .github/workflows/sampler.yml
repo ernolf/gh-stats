@@ -1,0 +1,144 @@
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# Hourly sample of the release download counters, run on GitHub's runners
+# instead of a host. The runner keeps nothing between runs, so both inputs that
+# have to survive live as assets of two releases of this repository:
+#
+#   catalogue   apps.json and apps.json.etag, the App Store catalogue with the
+#               ETag of its last answer, so an unchanged catalogue costs one
+#               conditional request
+#   sampler-db  downloads.sqlite.zst, the sampler database
+#
+# The database is never started empty: without its asset the run stops, since a
+# fresh database would replace the whole history. The first asset is seeded
+# once from an existing database with gh-stats-prune -o.
+#
+# The sampler runs with SAMPLER_TOKEN, a personal access token without scopes:
+# GITHUB_TOKEN is limited to 1,000 requests per hour and repository, which does
+# not cover the App Store targets. That token shares its 5,000 per hour with
+# every other sampler of the account, which is why the schedule is hourly. The
+# release assets themselves are written with GITHUB_TOKEN.
+
+name: Sample download counters
+
+on:
+  schedule:
+    # Off the full hour, where scheduled runs pile up and get delayed.
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# A run that is still going must finish and upload before the next one restores
+# the database, otherwise the next one would work on the older copy.
+concurrency:
+  group: sampler
+  cancel-in-progress: false
+
+env:
+  GH_REPO: ${{ github.repository }}
+  CATALOGUE_TAG: catalogue
+  DB_TAG: sampler-db
+  DB_ASSET: downloads.sqlite.zst
+  # Hand-curated targets besides the App Store ones, separated by spaces: owners
+  # or owner/repo slugs, as in targets.json.
+  SAMPLER_TARGETS: ernolf/NcDavTray
+
+jobs:
+  sample:
+    name: sample
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Prepare the state directory
+        run: |
+          state="$RUNNER_TEMP/gh-stats"
+          mkdir -p "$state/catalogue" "$state/targets.d"
+          {
+            echo "STATE=$state"
+            echo "GH_STATS_DIR=$state"
+            echo "GH_STATS_CONFIG=$state/targets.json"
+            echo "GH_STATS_TARGETS_DIR=$state/targets.d"
+          } >> "$GITHUB_ENV"
+          jq -n --arg t "$SAMPLER_TARGETS" \
+            '{targets: ($t | split(" ") | map(select(. != "")))}' > "$state/targets.json"
+
+      - name: Restore the App Store catalogue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "$CATALOGUE_TAG" >/dev/null 2>&1; then
+            gh release create "$CATALOGUE_TAG" --prerelease \
+              --title "App Store catalogue" \
+              --notes "The App Store catalogue with its ETag, kept by the sampler workflow between runs."
+          elif ! gh release download "$CATALOGUE_TAG" -p apps.json -p apps.json.etag -D "$STATE/catalogue"; then
+            # Without a cache the catalogue is fetched in full, which is one request.
+            echo "::warning::No cached catalogue, fetching it in full"
+          fi
+          cp "$STATE/catalogue/apps.json.etag" "$STATE/apps.json.etag.before" 2>/dev/null || true
+
+      - name: Derive the App Store targets
+        env:
+          APPSTORE_SOURCE: download
+        run: |
+          APPSTORE_CACHE="$STATE/catalogue/apps.json" \
+          APPSTORE_TARGETS_FILE="$GH_STATS_TARGETS_DIR/appstore.json" \
+            bin/gh-nc-appstore-targets
+
+      - name: Keep a changed catalogue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          etag="$STATE/catalogue/apps.json.etag"
+          test -r "$etag" || exit 0
+          cmp -s "$etag" "$STATE/apps.json.etag.before" && exit 0
+          gh release upload "$CATALOGUE_TAG" "$STATE/catalogue/apps.json" "$etag" --clobber
+
+      - name: Restore the database
+        id: restore
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release download "$DB_TAG" -p "$DB_ASSET" -D "$STATE"; then
+            echo "::error::No $DB_ASSET in the release $DB_TAG; seed it from an existing database first"
+            exit 1
+          fi
+          zstd -d -q "$STATE/$DB_ASSET" -o "$GH_STATS_DIR/downloads.sqlite"
+          rm -f "$STATE/$DB_ASSET"
+
+      - name: Sample
+        env:
+          GH_TOKEN: ${{ secrets.SAMPLER_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::The repository secret SAMPLER_TOKEN is not set"
+            exit 1
+          fi
+          bin/gh-release-sampler
+
+      # Also after a sampler run that reported failed requests: what it did
+      # sample is committed to the database and would otherwise be lost.
+      - name: Thin and upload the database
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          bin/gh-stats-prune --in-place
+          next="$DB_ASSET.next"
+          zstd -19 -T0 -q "$GH_STATS_DIR/downloads.sqlite" -o "$STATE/$next"
+          # Upload under a second name and swap afterwards: replacing the asset
+          # in place would delete the only copy before the new one is complete.
+          gh release upload "$DB_TAG" "$STATE/$next" --clobber
+          assets="$(gh api "repos/$GH_REPO/releases/tags/$DB_TAG" --jq '.assets[] | "\(.id) \(.name)"')"
+          old="$(awk -v n="$DB_ASSET" '$2 == n { print $1 }' <<<"$assets")"
+          new="$(awk -v n="$next" '$2 == n { print $1 }' <<<"$assets")"
+          test -n "$new"
+          test -z "$old" || gh api -X DELETE "repos/$GH_REPO/releases/assets/$old"
+          gh api -X PATCH "repos/$GH_REPO/releases/assets/$new" -f name="$DB_ASSET" --silent
