@@ -113,7 +113,7 @@ done < <("$SQLITE" -separator $'\t' "$DB" "SELECT path, etag, next FROM etags")
 # status, empty when no answer came. A 200 leaves its body in $body, sets more to
 # whether it links a next page and records its ETag; a 304 takes more from the
 # last 200. gh exits non-zero on a 304 too, so the status line decides.
-failed=()
+failed=() missing=()
 request() {
 	local path="$1" e sq="'"
 	local -a cond=()
@@ -131,6 +131,9 @@ request() {
 			;;
 		304)
 			more="${next_page[$path]:-0}"
+			;;
+		404)
+			missing+=("$path")
 			;;
 		*)
 			failed+=("$path ${status:-no answer}")
@@ -280,6 +283,13 @@ INSERT OR IGNORE INTO runs (ts) VALUES ($ts);
 
 COMMIT;
 SQL
+
+# A 404 means the repository was deleted, renamed away or made private: there
+# is nothing left to sample, so it is reported without failing the run.
+if [ ${#missing[@]} -gt 0 ]; then
+	echo "repositories not found on GitHub (404):" >&2
+	printf '%s\n' "${missing[@]}" | cut -d/ -f2,3 | sort -u | sed 's/^/  /' >&2
+fi
 
 # A request that got neither a 200 nor a 304 left its repo reading as unchanged
 # in this run, so it is reported rather than dropped.
