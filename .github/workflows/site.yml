@@ -4,10 +4,12 @@
 # Builds the site and deploys it to GitHub Pages. The site has no server side:
 # the browser loads the site database whole and queries it with sql.js, so the
 # deployment carries the pages under site/, the database gh-stats-site-db builds
-# from the latest sampler database and catalogue, sql.js itself, and uPlot for
-# the charts. Nothing of it is committed.
+# from the latest sampler database and catalogue and the measurement results on
+# the data branch, sql.js itself, and uPlot for the charts. Nothing of it is
+# committed.
 #
-# The sampler workflow dispatches this one after every upload of its database.
+# The sampler workflow dispatches this one after every upload of its database,
+# so a new measurement shows on the site with the next upload.
 #
 # Every build puts the database under a directory of its own, named by the run,
 # and config.json points to it: Pages lets browsers cache a file for 10 minutes,
@@ -36,6 +38,7 @@ env:
   CATALOGUE_TAG: catalogue
   DB_TAG: sampler-db
   DB_ASSET: downloads.sqlite.zst
+  DATA_BRANCH: data
   # sql.js and uPlot, shipped with the site so visitors load nothing from a
   # third-party host. Each integrity is the one the npm registry lists for the
   # tarball.
@@ -55,6 +58,22 @@ jobs:
         with:
           persist-credentials: false
 
+      # Only the JSON results are checked out. reuse.json lists every file of
+      # a checkout and is by far the largest; the REUSE verdict is the exit
+      # code summary.json records.
+      - name: Checkout the measurement results
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.DATA_BRANCH }}
+          path: data
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            apps/**/*.json
+            apps/**/*.json.gz
+            !apps/**/reuse.json
+            !apps/**/reuse.json.gz
+
       - name: Fetch the sampler database and the catalogue
         env:
           GH_TOKEN: ${{ github.token }}
@@ -73,10 +92,11 @@ jobs:
           db="db/$GITHUB_RUN_ID/gh-stats.sqlite"
           mkdir -p "$out/${db%/*}"
           GH_STATS_DB="$STATE/downloads.sqlite" APPSTORE_CACHE="$STATE/apps.json" \
-            bin/gh-stats-site-db -o "$out/$db"
+            bin/gh-stats-site-db -o "$out/$db" -r data/apps
           jq -n --arg db "$db" --argjson bytes "$(stat -c %s "$out/$db")" \
+            --arg results "https://github.com/$GH_REPO/tree/$DATA_BRANCH/apps" \
             --arg sqljs "$SQLJS_VERSION" --arg uplot "$UPLOT_VERSION" \
-            '{db: $db, bytes: $bytes, lib: {"sql.js": $sqljs, uPlot: $uplot}}' > "$out/config.json"
+            '{db: $db, bytes: $bytes, results: $results, lib: {"sql.js": $sqljs, uPlot: $uplot}}' > "$out/config.json"
           echo "SITE=$out" >> "$GITHUB_ENV"
 
       - name: Add sql.js
