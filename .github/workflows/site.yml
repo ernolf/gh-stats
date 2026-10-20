@@ -4,8 +4,8 @@
 # Builds the site and deploys it to GitHub Pages. The site has no server side:
 # the browser loads the site database whole and queries it with sql.js, so the
 # deployment carries the pages under site/, the database gh-stats-site-db builds
-# from the latest sampler database and catalogue, and sql.js itself. Nothing of
-# it is committed.
+# from the latest sampler database and catalogue, sql.js itself, and uPlot for
+# the charts. Nothing of it is committed.
 #
 # The sampler workflow dispatches this one after every upload of its database.
 #
@@ -34,10 +34,13 @@ env:
   CATALOGUE_TAG: catalogue
   DB_TAG: sampler-db
   DB_ASSET: downloads.sqlite.zst
-  # sql.js, shipped with the site so visitors load nothing from a third-party
-  # host. The integrity is the one the npm registry lists for the tarball.
+  # sql.js and uPlot, shipped with the site so visitors load nothing from a
+  # third-party host. Each integrity is the one the npm registry lists for the
+  # tarball.
   SQLJS_VERSION: 1.14.2
   SQLJS_INTEGRITY: sha512-3ZGPovObMFrdw79zrUHbfdE/DLIsy8jdNdssmMSQuRAymedU6q84asPt0kgiqrdMYlPegDItiIMfmIXzZnYFcw==
+  UPLOT_VERSION: 1.6.32
+  UPLOT_INTEGRITY: sha512-KIMVnG68zvu5XXUbC4LQEPnhwOxBuLyW1AHtpm6IKTXImkbLgkMy+jabjLgSLMasNuGGzQm/ep3tOkyTxpiQIw==
 
 jobs:
   build:
@@ -87,6 +90,21 @@ jobs:
             package/LICENSE package/dist/sql-wasm.js package/dist/sql-wasm.wasm
           mv "$SITE/lib/sql.js/dist/"* "$SITE/lib/sql.js/"
           rmdir "$SITE/lib/sql.js/dist"
+
+      - name: Add uPlot
+        run: |
+          tgz="$RUNNER_TEMP/uplot.tgz"
+          curl -fsSL -o "$tgz" "https://registry.npmjs.org/uplot/-/uplot-$UPLOT_VERSION.tgz"
+          got="sha512-$(openssl dgst -sha512 -binary "$tgz" | base64 -w0)"
+          if [ "$got" != "$UPLOT_INTEGRITY" ]; then
+            echo "::error::uPlot $UPLOT_VERSION does not match its integrity: $got"
+            exit 1
+          fi
+          mkdir -p "$SITE/lib/uplot"
+          tar -xzf "$tgz" -C "$SITE/lib/uplot" --strip-components=1 \
+            package/LICENSE package/dist/uPlot.iife.min.js package/dist/uPlot.min.css
+          mv "$SITE/lib/uplot/dist/"* "$SITE/lib/uplot/"
+          rmdir "$SITE/lib/uplot/dist"
 
       - name: Upload the site
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
