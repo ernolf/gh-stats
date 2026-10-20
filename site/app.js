@@ -96,51 +96,86 @@ function query(sql, params = {}) {
 	return rows
 }
 
-// The apps.owner and apps.repo columns compare without case, as GitHub does;
-// they stand on the left so their collation applies.
-function overviewRows() {
+// One row per project and release line, the newest line of a project first.
+function summaryRows() {
 	return query(`
-		SELECT s.owner, s.repo, s.tag, s.published, s.total, s.d1, s.d7, s.d30,
-		       (SELECT group_concat(name, ', ') FROM (
-		          SELECT DISTINCT a.name FROM apps a
-		           WHERE a.owner = s.owner AND a.repo = s.repo ORDER BY a.name)) AS name
-		  FROM summary s`)
+		SELECT project, line, owner, repo, tag, published, nc, total, d1, d7, d30
+		  FROM summary ORDER BY project, line DESC`)
 }
 
-function otherReleases(owner, repo, tag) {
+function projectRepos() {
+	return query('SELECT project, owner, repo FROM projects ORDER BY project, owner, repo')
+}
+
+// The apps.owner and apps.repo columns compare without case, as GitHub does;
+// they stand on the left so their collation applies.
+function projectNames() {
 	return query(`
-		SELECT tag, published, (prerelease OR pre_tag) AS pre FROM releases
-		 WHERE owner = $owner AND repo = $repo AND tag <> $tag
-		 ORDER BY vkey DESC, published DESC`, { $owner: owner, $repo: repo, $tag: tag })
+		SELECT project, group_concat(name, ', ') AS name FROM (
+		  SELECT DISTINCT j.project, a.name FROM apps a
+		    JOIN projects j ON a.owner = j.owner AND a.repo = j.repo
+		   ORDER BY j.project, a.name)
+		 GROUP BY project`)
+}
+
+// A release of a project is a tag of any of its repositories.
+function otherReleases(project, tag) {
+	return query(`
+		SELECT r.tag, min(r.published) AS published, max(r.vkey) AS vkey,
+		       max(r.prerelease OR r.pre_tag) AS pre,
+		       (SELECT f.spec FROM platforms f JOIN projects k ON f.owner = k.owner AND f.repo = k.repo
+		         WHERE k.project = $project AND f.tag = r.tag LIMIT 1) AS nc
+		  FROM releases r JOIN projects j ON j.owner = r.owner AND j.repo = r.repo
+		 WHERE j.project = $project AND r.tag <> $tag
+		 GROUP BY r.tag ORDER BY vkey DESC, published DESC`, { $project: project, $tag: tag })
 }
 
 // The same figures gh-stats-site-db writes to the summary, for any release: the
 // value of an asset at a time is its last sample at or before it, an asset
-// without one did not exist yet, and a period is left out when the release or
-// the sampling of its repository is younger than it.
-function releaseFigures(owner, repo, tag) {
-	const p = { $owner: owner, $repo: repo, $tag: tag }
+// without one did not exist yet, the assets of all repositories of the project
+// add up, and a period is left out when the release or the sampling of a
+// repository with its assets is younger than it.
+function releaseFigures(project, tag) {
+	const p = { $project: project, $tag: tag }
 	const at = {}
 	for (const r of query(`
 		WITH assets AS (
-		  SELECT DISTINCT asset FROM samples
-		   WHERE owner = $owner AND repo = $repo AND tag = $tag AND (${assetFilter})
+		  SELECT DISTINCT s.owner, s.repo, s.asset FROM samples s
+		    JOIN projects j ON s.owner = j.owner AND s.repo = j.repo
+		   WHERE j.project = $project AND s.tag = $tag AND (${assetFilter})
 		), k(d) AS (VALUES (0), (1), (7), (30))
 		SELECT k.d, sum(coalesce((
 		         SELECT s.downloads FROM samples s
-		          WHERE s.owner = $owner AND s.repo = $repo AND s.tag = $tag AND s.asset = a.asset
+		          WHERE s.owner = a.owner AND s.repo = a.repo AND s.tag = $tag AND s.asset = a.asset
 		            AND s.ts <= $now - k.d * ${DAY}
 		          ORDER BY s.ts DESC LIMIT 1), 0)) AS v
 		  FROM assets a, k GROUP BY k.d`, { ...p, $now: now })) {
 		at[r.d] = r.v
 	}
-	const { published, first } = query(`
-		SELECT (SELECT published FROM releases WHERE owner = $owner AND repo = $repo AND tag = $tag) AS published,
-		       (SELECT min(ts) FROM samples WHERE owner = $owner AND repo = $repo) AS first`, p)[0]
+	const repos = query(`
+		SELECT j.owner, j.repo, j.first,
+		       EXISTS (SELECT 1 FROM samples s WHERE s.owner = j.owner AND s.repo = j.repo
+		                  AND s.tag = $tag AND (${assetFilter})) AS has,
+		       EXISTS (SELECT 1 FROM releases r WHERE r.owner = j.owner AND r.repo = j.repo
+		                  AND r.tag = $tag) AS tagged
+		  FROM projects j WHERE j.project = $project ORDER BY j.owner, j.repo`, p)
+	const { published, nc } = query(`
+		SELECT (SELECT min(r.published) FROM releases r JOIN projects j ON j.owner = r.owner AND j.repo = r.repo
+		         WHERE j.project = $project AND r.tag = $tag) AS published,
+		       (SELECT f.spec FROM platforms f JOIN projects j ON f.owner = j.owner AND f.repo = j.repo
+		         WHERE j.project = $project AND f.tag = $tag LIMIT 1) AS nc`, p)[0]
+	// Like max() and min() in SQL, these skip a repository that was never sampled.
+	const sampled = (rows) => rows.map((r) => r.first).filter((f) => f !== null)
+	const withAssets = sampled(repos.filter((r) => r.has))
+	const all = sampled(repos)
+	const first = repos.some((r) => r.has)
+		? (withAssets.length ? Math.max(...withAssets) : null)
+		: (all.length ? Math.min(...all) : null)
+	const home = repos.filter((r) => r.tagged).sort((a, b) => b.has - a.has)[0]
 	const total = at[0] ?? 0
-	const fig = { tag, published, total }
+	const fig = { owner: home.owner, repo: home.repo, tag, published, nc, total }
 	for (const d of PERIODS) {
-		fig['d' + d] = Math.max(published, first) <= now - d * DAY ? total - (at[d] ?? 0) : null
+		fig['d' + d] = first !== null && Math.max(published, first) <= now - d * DAY ? total - (at[d] ?? 0) : null
 	}
 	return fig
 }
@@ -150,6 +185,26 @@ function releaseFigures(owner, repo, tag) {
 function date(ts, withTime = false) {
 	const iso = new Date(ts * 1000).toISOString()
 	return withTime ? iso.slice(0, 16).replace('T', ' ') : iso.slice(0, 10)
+}
+
+// A line key is the first two six-digit components of the version key.
+function lineLabel(line) {
+	return `${Number(line.slice(0, 6))}.${Number(line.slice(6, 12))}`
+}
+
+// The catalogue writes the range as ">=32 <=34".
+function ncRange(spec) {
+	if (!spec) {
+		return ''
+	}
+	const m = /^>=\s*([\d.]+)(?:\s+<=\s*([\d.]+))?$/.exec(spec.trim())
+	if (!m) {
+		return spec
+	}
+	if (m[2] === undefined) {
+		return `${m[1]}+`
+	}
+	return m[1] === m[2] ? m[1] : `${m[1]}–${m[2]}`
 }
 
 function el(tag, attrs = {}, ...children) {
@@ -169,16 +224,22 @@ function releaseLink(owner, repo, tag) {
 	return el('a', { href: `https://github.com/${owner}/${repo}/releases/tag/${encodeURIComponent(tag)}` }, tag)
 }
 
-function figureCells(fig) {
-	return ['total', ...PERIODS.map((d) => 'd' + d)].map((k) => fig[k] === null
-		? el('td', { class: 'num na', title: 'the release or its sampling is younger than this period' })
-		: el('td', { class: 'num' }, fig[k].toLocaleString('en')))
+function releaseCells(fig) {
+	return [
+		el('td', {}, releaseLink(fig.owner, fig.repo, fig.tag)),
+		el('td', {}, ncRange(fig.nc)),
+		el('td', {}, date(fig.published)),
+		...['total', ...PERIODS.map((d) => 'd' + d)].map((k) => fig[k] === null
+			? el('td', { class: 'num na', title: 'the release or its sampling is younger than this period' })
+			: el('td', { class: 'num' }, fig[k].toLocaleString('en'))),
+	]
 }
 
-// The compare drop-down is filled on first use: all releases of every
-// repository at once would be tens of thousands of options.
+// The compare drop-down is filled on first use: all releases of every project
+// at once would be tens of thousands of options. The releases of the row's own
+// line come first, the other lines follow from the newest.
 function compareSelect(row) {
-	const select = el('select', { 'aria-label': `Compare ${row.owner}/${row.repo} ${row.tag} with` },
+	const select = el('select', { 'aria-label': `Compare ${row.tag} with` },
 		el('option', { value: '' }, 'none'))
 	let filled = false
 	const fill = () => {
@@ -186,9 +247,22 @@ function compareSelect(row) {
 			return
 		}
 		filled = true
-		for (const r of otherReleases(row.owner, row.repo, row.tag)) {
-			select.append(el('option', { value: r.tag },
-				`${r.tag} (${date(r.published)}${r.pre ? ', pre-release' : ''})`))
+		const lines = new Map()
+		for (const r of otherReleases(row.project, row.tag)) {
+			const line = r.vkey.slice(0, 12)
+			if (!lines.has(line)) {
+				lines.set(line, el('optgroup', { label: `line ${lineLabel(line)}` }))
+			}
+			const notes = [date(r.published), r.nc && `Nextcloud ${ncRange(r.nc)}`, r.pre && 'pre-release']
+			lines.get(line).append(el('option', { value: r.tag }, `${r.tag} (${notes.filter(Boolean).join(', ')})`))
+		}
+		if (lines.has(row.line)) {
+			select.append(lines.get(row.line))
+		}
+		for (const [line, group] of lines) {
+			if (line !== row.line) {
+				select.append(group)
+			}
 		}
 	}
 	select.addEventListener('focus', fill)
@@ -197,32 +271,47 @@ function compareSelect(row) {
 		row.compare.replaceChildren()
 		row.compare.hidden = !select.value
 		if (select.value) {
-			const fig = releaseFigures(row.owner, row.repo, select.value)
 			row.compare.append(el('td', { class: 'compare-label' }, 'compared with'),
-				el('td', {}, releaseLink(row.owner, row.repo, fig.tag)),
-				el('td', {}, date(fig.published)), ...figureCells(fig), el('td'))
+				...releaseCells(releaseFigures(row.project, select.value)), el('td'))
 		}
 	})
 	return select
 }
 
+function lineRows(row, first) {
+	row.tr = el('tr', {}, first, ...releaseCells(row), el('td'))
+	row.compare = el('tr', { class: 'compare', hidden: '' })
+	row.tr.lastChild.append(compareSelect(row))
+	return [row.tr, row.compare]
+}
+
 function initOverview() {
-	const rows = overviewRows().map((r) => {
-		r.name = r.name ?? r.repo
-		r.search = `${r.name} ${r.owner}/${r.repo}`.toLowerCase()
-		r.tr = el('tr', {},
-			el('td', {}, el('span', { class: 'name' }, r.name),
-				el('a', { class: 'slug', href: `https://github.com/${r.owner}/${r.repo}` }, `${r.owner}/${r.repo}`)),
-			el('td', {}, releaseLink(r.owner, r.repo, r.tag)),
-			el('td', {}, date(r.published)),
-			...figureCells(r),
-			el('td'))
-		r.compare = el('tr', { class: 'compare', hidden: '' })
-		r.tr.lastChild.append(compareSelect(r))
-		return r
+	const repos = Map.groupBy(projectRepos(), (r) => r.project)
+	const names = new Map(projectNames().map((r) => [r.project, r.name]))
+	const projects = [...Map.groupBy(summaryRows(), (r) => r.project)].map(([project, lines]) => {
+		const [main, ...older] = lines
+		const slugs = repos.get(project).map((r) => `${r.owner}/${r.repo}`)
+		const p = { project, name: names.get(project) ?? main.repo, ...main }
+		p.search = `${p.name} ${slugs.join(' ')}`.toLowerCase()
+
+		const head = el('td', {}, el('span', { class: 'name' }, p.name),
+			...slugs.map((s) => el('a', { class: 'slug', href: `https://github.com/${s}` }, s)))
+		p.main = el('tbody', {}, ...lineRows(main, head))
+		p.older = el('tbody', { class: 'older', hidden: '' },
+			...older.flatMap((r) => lineRows(r, el('td', { class: 'line-label' }, `line ${lineLabel(r.line)}`))))
+		if (older.length) {
+			const toggle = el('button', { type: 'button', class: 'toggle', 'aria-expanded': 'false' },
+				`${older.length} older line${older.length > 1 ? 's' : ''}`)
+			toggle.addEventListener('click', () => {
+				p.older.hidden = !p.older.hidden
+				toggle.setAttribute('aria-expanded', String(!p.older.hidden))
+			})
+			head.append(toggle)
+		}
+		return p
 	})
 
-	const tbody = document.getElementById('rows')
+	const table = document.querySelector('#overview table')
 	const filter = document.getElementById('filter')
 	let sortKey = 'total'
 	let sortDesc = true
@@ -230,7 +319,7 @@ function initOverview() {
 	const render = () => {
 		const f = filter.value.trim().toLowerCase()
 		// Empty periods sort last in either direction.
-		rows.sort((a, b) => {
+		projects.sort((a, b) => {
 			const x = a[sortKey]
 			const y = b[sortKey]
 			if (x === null || y === null) {
@@ -239,13 +328,16 @@ function initOverview() {
 			const c = typeof x === 'string' ? x.localeCompare(y) : x - y
 			return sortDesc ? -c : c
 		})
+		for (const tbody of table.querySelectorAll('tbody')) {
+			tbody.remove()
+		}
 		const frag = document.createDocumentFragment()
-		for (const r of rows) {
-			if (!f || r.search.includes(f)) {
-				frag.append(r.tr, r.compare)
+		for (const p of projects) {
+			if (!f || p.search.includes(f)) {
+				frag.append(p.main, p.older)
 			}
 		}
-		tbody.replaceChildren(frag)
+		table.append(frag)
 		for (const th of document.querySelectorAll('th[data-sort]')) {
 			th.setAttribute('aria-sort', th.dataset.sort === sortKey ? (sortDesc ? 'descending' : 'ascending') : 'none')
 		}

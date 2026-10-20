@@ -7,9 +7,10 @@
 # static host and fetches only the pages a query needs, so the copy is written
 # without a journal and vacuumed into contiguous pages. What the sampler alone
 # needs is dropped; what the browser cannot derive cheaply is added: the apps of
-# the App Store catalogue, the version key and strict pre-release flag of
-# gh-stats on every release, and one summary row per repository for the start
-# page. The source database is only read.
+# the App Store catalogue and the Nextcloud versions of its releases, the
+# version key and strict pre-release flag of gh-stats on every release, the
+# projects the repositories form, and one summary row per project and release
+# line for the start page. The source database is only read.
 
 # == Config ==
 # Optional site config shared with gh-stats and gh-release-sampler. If
@@ -43,19 +44,30 @@ Usage: gh-stats-site-db -o <file>
 
 Writes the database the site serves to <file>, which must not exist yet: a copy
 of the gh-release-sampler database without a journal and without the table
-etags, plus
+etags, with one spelling per repository where the sampler knows it under
+spellings that differ only in case, plus
 
-  apps      app id, name, owner and repo of every App Store app whose releases
-            are downloaded from GitHub, from the catalogue
-  releases  two more columns: vkey, the version sort key of gh-stats, and
-            pre_tag, 1 when the tag denotes a pre-release (gh-stats --stable=strict)
-  summary   one row per repository for its newest release, the highest vkey that
-            is neither flagged nor named a pre-release: downloads in total and
-            in the last day, 7 days and 30 days
+  apps       app id, name, owner and repo of every App Store app whose releases
+             are downloaded from GitHub, from the catalogue
+  platforms  the Nextcloud versions (rawPlatformVersionSpec) of every catalogue
+             release whose download is a GitHub release asset, by owner, repo
+             and tag
+  releases   two more columns: vkey, the version sort key of gh-stats, and
+             pre_tag, 1 when the tag denotes a pre-release (gh-stats --stable=strict)
+  projects   the project every repository belongs to and when its sampling
+             began: repositories the catalogue lists for one app, and
+             repositories of one name under two owners the catalogue lists for
+             one app under that name, form one project
+  summary    one row per project and release line (the major.minor of vkey)
+             for its newest release, the highest vkey that is neither flagged
+             nor named a pre-release: downloads in total and in the last day,
+             7 days and 30 days, summed over the repositories of the project
 
 Downloads are the summed counters of the assets gh-stats counts by default
-(zip, tar.bz2, tar.gz, tar.xz, tgz). A period stays empty when the release is
-younger than it or the repository was not sampled yet at its start.
+(zip, tar.bz2, tar.gz, tar.xz, tgz). A line whose releases have none of them is
+left out unless no line of its project has any. A period stays empty when the
+release is younger than it or a repository with its assets was not sampled yet
+at its start.
 
 Options:
   -o, --output <file>  the database to write
@@ -119,6 +131,20 @@ apps_sql="$(jq -r '
 	| "INSERT OR IGNORE INTO apps VALUES (\($id | q), \($name | q), \(.[0] | q), \(.[1] | q));"
 ' "$APPSTORE_CACHE")"
 
+# The tag is the path segment after releases/download, percent-encoded in the
+# URL (v5.1.4%2B1); tags are ASCII, so each escape decodes to one character.
+platforms_sql="$(jq -r '
+	def q: "'\''" + gsub("'\''"; "'\'''\''") + "'\''";
+	def hex: ascii_downcase | explode | map(if . > 57 then . - 87 else . - 48 end) | .[0] * 16 + .[1];
+	def urldecode: gsub("%(?<h>[0-9A-Fa-f]{2})"; [.h | hex] | implode);
+	(if type == "array" then . else .data end)[]
+	| .releases[]?
+	| (.rawPlatformVersionSpec // empty) as $spec
+	| .download // empty | split("/")
+	| select(.[2] == "github.com" and .[5] == "releases" and .[6] == "download")
+	| "INSERT OR IGNORE INTO platforms VALUES (\(.[3] | q), \(.[4] | q), \(.[7] | urldecode | q), \($spec | q));"
+' "$APPSTORE_CACHE")"
+
 # -bail stops at the first error; the half-written copy is removed then.
 trap 'rm -f "$out"' ERR
 sq="'"
@@ -126,6 +152,19 @@ sq="'"
 "$SQLITE" -bail "$out" "PRAGMA journal_mode = DELETE" >/dev/null
 "$SQLITE" -bail "$out" <<SQL
 DROP TABLE etags;
+
+-- GitHub resolves owner and repository names without case, so two spellings in
+-- the sampler's list are one repository sampled twice. The spelling sampled
+-- first stays, as its series is the longer one.
+CREATE TEMP TABLE dup AS
+SELECT owner, repo FROM (
+  SELECT owner, repo,
+         row_number() OVER (PARTITION BY lower(owner), lower(repo) ORDER BY min(ts), owner, repo) AS n
+    FROM samples GROUP BY owner, repo)
+ WHERE n > 1;
+DELETE FROM samples WHERE (owner, repo) IN (SELECT owner, repo FROM dup);
+DELETE FROM releases WHERE (owner, repo) IN (SELECT owner, repo FROM dup);
+DELETE FROM repo_stats WHERE (owner, repo) IN (SELECT owner, repo FROM dup);
 
 ALTER TABLE releases ADD COLUMN vkey TEXT;
 ALTER TABLE releases ADD COLUMN pre_tag INTEGER;
@@ -141,68 +180,158 @@ CREATE TABLE apps (
   repo  TEXT NOT NULL COLLATE NOCASE,
   PRIMARY KEY (id, owner, repo)
 ) WITHOUT ROWID;
+CREATE TABLE platforms (
+  owner TEXT NOT NULL COLLATE NOCASE,
+  repo  TEXT NOT NULL COLLATE NOCASE,
+  tag   TEXT NOT NULL,
+  spec  TEXT NOT NULL,
+  PRIMARY KEY (owner, repo, tag)
+) WITHOUT ROWID;
 BEGIN;
 $apps_sql
+$platforms_sql
 COMMIT;
 
--- The value of an asset at a time is its last sample at or before it, since the
--- sampler writes a row only on change. An asset without such a sample did not
--- exist yet and counts 0, unless the repository itself was not sampled yet:
--- then the period stays NULL instead of counting the whole total as new.
+CREATE TEMP TABLE counted AS
+SELECT DISTINCT owner, repo, tag, asset FROM samples WHERE $asset_flt;
+CREATE INDEX temp.counted_release ON counted (owner, repo, tag);
+
+-- A project is a connected set of repositories. Two repositories are connected
+-- when the catalogue lists both for one app, or when they share a name and the
+-- catalogue lists one app under that name for both owners elsewhere: such
+-- owners publish the same projects, also those that are no App Store app.
+-- Keys are lowercase, as GitHub compares names; the apps columns stand on the
+-- left so their collation applies.
+CREATE TEMP TABLE nodes AS
+SELECT owner, repo, lower(owner) || '/' || lower(repo) AS k
+  FROM (SELECT DISTINCT owner, repo FROM releases);
+CREATE TEMP TABLE owner_pairs AS
+SELECT DISTINCT lower(a.owner) AS o1, lower(b.owner) AS o2
+  FROM apps a JOIN apps b ON a.id = b.id AND a.repo = b.repo AND a.owner <> b.owner;
+CREATE TEMP TABLE edges AS
+SELECT x.k AS a, y.k AS b
+  FROM apps p JOIN nodes x ON p.owner = x.owner AND p.repo = x.repo
+  JOIN apps q ON q.id = p.id
+  JOIN nodes y ON q.owner = y.owner AND q.repo = y.repo
+ WHERE x.k <> y.k
+UNION
+SELECT x.k, y.k
+  FROM nodes x JOIN nodes y ON lower(x.repo) = lower(y.repo)
+  JOIN owner_pairs o ON o.o1 = lower(x.owner) AND o.o2 = lower(y.owner);
+CREATE INDEX temp.edges_a ON edges (a);
+CREATE TEMP TABLE components AS
+WITH RECURSIVE reach(k, r) AS (
+  SELECT k, k FROM nodes
+  UNION
+  SELECT reach.k, edges.b FROM reach JOIN edges ON edges.a = reach.r
+)
+SELECT k, min(r) AS project FROM reach GROUP BY k;
+
+CREATE TABLE projects (
+  owner   TEXT NOT NULL,
+  repo    TEXT NOT NULL,
+  project TEXT NOT NULL,
+  first   INTEGER,
+  PRIMARY KEY (owner, repo)
+) WITHOUT ROWID;
+INSERT INTO projects
+SELECT n.owner, n.repo, c.project,
+       (SELECT min(ts) FROM samples s WHERE s.owner = n.owner AND s.repo = n.repo)
+  FROM nodes n JOIN components c ON c.k = n.k;
+CREATE INDEX projects_project ON projects (project);
+
+-- A release of a project is a tag of any of its repositories; its figures sum
+-- the assets of all of them. The value of an asset at a time is its last sample
+-- at or before it, since the sampler writes a row only on change. An asset
+-- without such a sample did not exist yet and counts 0, unless a repository
+-- with assets of the release was not sampled yet: then the period stays NULL
+-- instead of counting the whole total as new. Within a line, a release with
+-- counted assets goes before a newer one without, which may be a tag whose
+-- assets are not published yet.
 CREATE TABLE summary (
+  project   TEXT    NOT NULL,
+  line      TEXT    NOT NULL,
   owner     TEXT    NOT NULL,
   repo      TEXT    NOT NULL,
   tag       TEXT    NOT NULL,
   published INTEGER NOT NULL,
+  nc        TEXT,
   total     INTEGER NOT NULL,
   d1        INTEGER,
   d7        INTEGER,
   d30       INTEGER,
-  PRIMARY KEY (owner, repo)
+  PRIMARY KEY (project, line)
 ) WITHOUT ROWID;
 INSERT INTO summary
 WITH now(t) AS (SELECT max(ts) FROM runs),
+rel AS (
+  SELECT j.project, r.tag, min(r.published) AS published, max(r.vkey) AS vkey,
+         max(r.prerelease OR r.pre_tag) AS pre,
+         max(EXISTS (SELECT 1 FROM counted c WHERE c.owner = r.owner AND c.repo = r.repo AND c.tag = r.tag)) AS has
+    FROM releases r JOIN projects j ON j.owner = r.owner AND j.repo = r.repo
+   GROUP BY j.project, r.tag
+),
 newest AS (
-  SELECT owner, repo, tag, published FROM (
-    SELECT owner, repo, tag, published,
-           row_number() OVER (PARTITION BY owner, repo ORDER BY vkey DESC, published DESC) AS n
-      FROM releases WHERE prerelease = 0 AND pre_tag = 0)
+  SELECT project, line, tag, published, has FROM (
+    SELECT project, substr(vkey, 1, 12) AS line, tag, published, has,
+           row_number() OVER (PARTITION BY project, substr(vkey, 1, 12) ORDER BY has DESC, vkey DESC, published DESC) AS n
+      FROM rel WHERE pre = 0)
    WHERE n = 1
 ),
-assets AS (
-  SELECT DISTINCT s.owner, s.repo, s.tag, s.asset
-    FROM samples s JOIN newest USING (owner, repo, tag)
-   WHERE $asset_flt
+picked AS (
+  SELECT * FROM newest n
+   WHERE has OR NOT EXISTS (SELECT 1 FROM newest x WHERE x.project = n.project AND x.has)
+),
+home AS (
+  SELECT p.project, p.line, j.owner, j.repo,
+         row_number() OVER (PARTITION BY p.project, p.line ORDER BY
+           EXISTS (SELECT 1 FROM counted c WHERE c.owner = j.owner AND c.repo = j.repo AND c.tag = p.tag) DESC,
+           j.owner, j.repo) AS n
+    FROM picked p JOIN projects j ON j.project = p.project
+    JOIN releases r ON r.owner = j.owner AND r.repo = j.repo AND r.tag = p.tag
 ),
 since AS (
-  SELECT owner, repo, min(ts) AS first FROM samples GROUP BY owner, repo
+  SELECT p.project, p.line, coalesce(
+           (SELECT max(j.first) FROM projects j WHERE j.project = p.project AND EXISTS (
+              SELECT 1 FROM counted c WHERE c.owner = j.owner AND c.repo = j.repo AND c.tag = p.tag)),
+           (SELECT min(j.first) FROM projects j WHERE j.project = p.project)) AS first
+    FROM picked p
 ),
 at AS (
-  SELECT a.owner, a.repo, a.tag, k.d,
+  SELECT p.project, p.line, k.d,
          (SELECT s.downloads FROM samples s
-           WHERE s.owner = a.owner AND s.repo = a.repo AND s.tag = a.tag AND s.asset = a.asset
+           WHERE s.owner = c.owner AND s.repo = c.repo AND s.tag = c.tag AND s.asset = c.asset
              AND s.ts <= (SELECT t FROM now) - k.d * 86400
            ORDER BY s.ts DESC LIMIT 1) AS downloads
-    FROM assets a, (SELECT 0 AS d UNION ALL SELECT 1 UNION ALL SELECT 7 UNION ALL SELECT 30) k
+    FROM picked p JOIN projects j ON j.project = p.project
+    JOIN counted c ON c.owner = j.owner AND c.repo = j.repo AND c.tag = p.tag,
+         (SELECT 0 AS d UNION ALL SELECT 1 UNION ALL SELECT 7 UNION ALL SELECT 30) k
 ),
 pivot AS (
-  SELECT owner, repo, tag,
+  SELECT project, line,
          sum(CASE WHEN d = 0 THEN v END) AS v0, sum(CASE WHEN d = 1 THEN v END) AS v1,
          sum(CASE WHEN d = 7 THEN v END) AS v7, sum(CASE WHEN d = 30 THEN v END) AS v30
-    FROM (SELECT owner, repo, tag, d, coalesce(downloads, 0) AS v FROM at)
-   GROUP BY owner, repo, tag
+    FROM (SELECT project, line, d, coalesce(downloads, 0) AS v FROM at)
+   GROUP BY project, line
 )
-SELECT n.owner, n.repo, n.tag, n.published, coalesce(p.v0, 0),
-       CASE WHEN max(n.published, since.first) <= now.t - 86400 THEN coalesce(p.v0 - p.v1, 0) END,
-       CASE WHEN max(n.published, since.first) <= now.t - 7 * 86400 THEN coalesce(p.v0 - p.v7, 0) END,
-       CASE WHEN max(n.published, since.first) <= now.t - 30 * 86400 THEN coalesce(p.v0 - p.v30, 0) END
-  FROM newest n
-  JOIN since USING (owner, repo)
-  LEFT JOIN pivot p USING (owner, repo, tag), now;
+SELECT p.project, p.line, h.owner, h.repo, p.tag, p.published,
+       (SELECT f.spec FROM platforms f JOIN projects j ON f.owner = j.owner AND f.repo = j.repo
+         WHERE j.project = p.project AND f.tag = p.tag LIMIT 1),
+       coalesce(v.v0, 0),
+       CASE WHEN max(p.published, s.first) <= now.t - 86400 THEN coalesce(v.v0 - v.v1, 0) END,
+       CASE WHEN max(p.published, s.first) <= now.t - 7 * 86400 THEN coalesce(v.v0 - v.v7, 0) END,
+       CASE WHEN max(p.published, s.first) <= now.t - 30 * 86400 THEN coalesce(v.v0 - v.v30, 0) END
+  FROM picked p
+  JOIN since s ON s.project = p.project AND s.line = p.line
+  JOIN home h ON h.project = p.project AND h.line = p.line AND h.n = 1
+  LEFT JOIN pivot v ON v.project = p.project AND v.line = p.line
+  CROSS JOIN now;
 
 VACUUM;
 SELECT 'apps', count(*) FROM apps
+UNION ALL SELECT 'platforms', count(*) FROM platforms
 UNION ALL SELECT 'releases', count(*) FROM releases
+UNION ALL SELECT 'projects', count(DISTINCT project) FROM projects
 UNION ALL SELECT 'summary', count(*) FROM summary;
 SQL
 trap - ERR
