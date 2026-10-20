@@ -264,15 +264,15 @@ function percent(v, total) {
 }
 
 function drawShares(series, colors, period) {
-	const top = series.slice(0, MAX_SERIES).map((s) => ({ ...s, color: colors.get(s.key) }))
+	const slices = series.slice(0, MAX_SERIES).filter((s) => s.value > 0)
+		.sort((a, b) => b.value - a.value)
+		.map((s) => ({ ...s, color: colors.get(s.key) }))
+	// The folded series close the ring, whatever their sum.
 	const rest = series.slice(MAX_SERIES)
-	if (rest.length) {
-		top.push({
-			key: '', label: `${rest.length} more`, color: cssVar('--muted'),
-			value: rest.reduce((n, s) => n + s.value, 0),
-		})
+	const restValue = rest.reduce((n, s) => n + s.value, 0)
+	if (restValue > 0) {
+		slices.push({ key: '', label: `${rest.length} more`, color: cssVar('--muted'), value: restValue })
 	}
-	const slices = top.filter((s) => s.value > 0).sort((a, b) => b.value - a.value)
 	const total = slices.reduce((n, s) => n + s.value, 0)
 	if (!total) {
 		ui.shares.replaceChildren(el('p', { class: 'hint' }, `No downloads ${period}.`))
@@ -285,9 +285,9 @@ function drawShares(series, colors, period) {
 	const legend = el('ul', { class: 'ring-legend' })
 	const focus = (s) => {
 		ring.classList.toggle('focus', s !== null)
-		for (const t of top) {
-			t.path?.classList.toggle('active', t === s)
-			t.item?.classList.toggle('active', t === s)
+		for (const t of slices) {
+			t.path.classList.toggle('active', t === s)
+			t.item.classList.toggle('active', t === s)
 		}
 		value.textContent = (s?.value ?? total).toLocaleString('en')
 		label.textContent = s ? percent(s.value, total) : period
@@ -351,12 +351,11 @@ function drawHistory(edges, series, step) {
 		ticks: { stroke: cssVar('--line'), width: 1, size: 4 },
 	}
 	const compact = new Intl.NumberFormat('en', { notation: 'compact' })
-	const fmt = (u, v) => (v === null || v === undefined ? '' : v.toLocaleString('en'))
-	const data = [x, ...series.map((s) => {
-		const ys = perBucket ? s.rate : s.total
-		// A logarithmic scale has no place for 0.
-		return log ? ys.map((v) => (v > 0 ? v : null)) : ys
-	})]
+	const values = series.map((s) => (perBucket ? s.rate : s.total))
+	// A logarithmic scale has no place for 0.
+	const data = [x, ...values.map((ys) => (log ? ys.map((v) => (v > 0 ? v : null)) : ys))]
+	// Without the cursor in the chart, the legend shows the last bucket.
+	const at = (idx) => idx ?? x.length - 1
 
 	ui.history.replaceChildren()
 	plot = new uPlot({
@@ -369,10 +368,10 @@ function drawHistory(edges, series, step) {
 		},
 		axes: [axis, { ...axis, size: 56, values: (u, vals) => vals.map((v) => compact.format(v)) }],
 		series: [
-			{ label: perBucket ? 'Bucket from' : 'At', value: (u, t) => (t === null ? '' : date(t, step < DAY)) },
+			{ label: perBucket ? 'Bucket from' : 'At', value: (u, t, si, idx) => date(x[at(idx)], step < DAY) },
 			...series.map((s, k) => ({
 				label: s.label,
-				value: fmt,
+				value: (u, v, si, idx) => values[k][at(idx)].toLocaleString('en'),
 				stroke: s.color,
 				fill: bars ? alpha(s.color, 0.85) : fill(s.color),
 				width: bars ? 0 : 2,
