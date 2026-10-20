@@ -69,8 +69,10 @@ warn() { echo "gh-nc-appstore-targets: $*" >&2; }
 # Each acquirer prints the path of a readable apps.json to stdout (an array, or
 # a {"data":[...]} object; the evaluation normalises both).
 
-# Fetch the catalogue with ETag caching. On 304, rate-limit or any error keep
-# the cached copy and carry on; only a total absence of a cache is fatal.
+# Fetch the catalogue with ETag caching, following the redirects of the App
+# Store load balancer; -D then holds the headers of every hop, the last ETag is
+# the one of the answer. On 304, rate-limit or any error keep the cached copy
+# and carry on; only a total absence of a cache is fatal.
 acquire_download() {
 	local cache="$APPSTORE_CACHE" etagf="${APPSTORE_CACHE}.etag" url="$APPSTORE_URL"
 	[ "$APPSTORE_INCLUDE_ENTERPRISE" = true ] && url="${url}?include_enterprise=true"
@@ -78,7 +80,7 @@ acquire_download() {
 
 	local body headers args code
 	body="$(mktemp)"; headers="$(mktemp)"
-	args=(-sS -A "gh-nc-appstore-targets" -D "$headers" -o "$body")
+	args=(-sSL -A "gh-nc-appstore-targets" -D "$headers" -o "$body")
 	[ -r "$etagf" ] && args+=(-H "If-None-Match: $(cat "$etagf")")
 
 	if ! code="$(curl "${args[@]}" -w '%{http_code}' "$url")"; then
