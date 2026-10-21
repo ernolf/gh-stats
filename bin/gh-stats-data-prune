@@ -1,0 +1,70 @@
+#!/usr/bin/env -S LC_CTYPE=C.UTF-8 LC_MESSAGES=C bash
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# gh-stats-data-prune - thin the measurement results of the data branch to what
+# the site reads. The results lie as gh-nc-appsdiag lays out its logs, one run
+# directory per measurement below the directory of its version, named by its
+# timestamp. A version measured again keeps only its newest run, as the site
+# shows no other; the older runs are removed.
+# The tool works on a checkout and commits nothing; the workflows that write
+# the data branch run it before they commit.
+
+set -euo pipefail
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+usage() {
+	cat <<'EOF'
+Usage: gh-stats-data-prune [--in-place] <dir>
+
+Thins the measurement results below <dir>, the directory apps/ of a checkout of
+the data branch: of every version measured more than once, only the newest run
+directory stays.
+
+Without an option nothing is removed: the tool counts the run directories and
+how many it would remove, and the size they take.
+
+      --in-place  remove them
+  -h, --help      this text
+EOF
+}
+
+dir='' inplace=0
+while [ $# -gt 0 ]; do
+	case "$1" in
+		-h|--help) usage; exit 0 ;;
+		--in-place) inplace=1 ;;
+		-*) echo "unknown argument: $1" >&2; exit 1 ;;
+		*) [ -z "$dir" ] || die "only one directory"; dir="$1" ;;
+	esac
+	shift
+done
+
+[ -n "$dir" ] || { usage >&2; exit 1; }
+[ -d "$dir" ] || die "no directory at $dir"
+
+mib() { awk -v b="$1" 'BEGIN { printf "%.1f MiB", b / 1048576 }'; }
+
+# == Older runs ==
+# A run directory is one with a summary.json. Its timestamp name has a fixed
+# width, so sorted by path the runs of a version follow one another, oldest
+# first, and each run that a newer one of the same version follows is stale.
+mapfile -d '' runs < <(find "$dir" -name summary.json -printf '%h\0' | LC_ALL=C sort -z)
+stale=() prev=''
+for run in "${runs[@]}"; do
+	[ -z "$prev" ] || [ "${prev%/*}" != "${run%/*}" ] || stale+=("$prev")
+	prev="$run"
+done
+
+before="$(du -sb "$dir" | cut -f1)"
+freed=0
+[ ${#stale[@]} -eq 0 ] || freed="$(du -scb "${stale[@]}" | tail -1 | cut -f1)"
+echo "${#runs[@]} runs, ${#stale[@]} older runs of a version measured again, $(mib "$freed")"
+
+if [ "$inplace" -eq 0 ]; then
+	echo "nothing removed; --in-place removes them"
+	exit 0
+fi
+[ ${#stale[@]} -eq 0 ] || rm -rf -- "${stale[@]}"
+echo "$dir: $(mib "$before") before, $(mib "$(du -sb "$dir" | cut -f1)") after"

@@ -9,8 +9,8 @@
 #
 # The extract, catalogue/releases.jsonl, holds one line per release: app id,
 # version, whether it is a nightly, release date and download URL, sorted, so
-# that the history of the store is a readable diff. It mirrors the current
-# catalogue; a removed app or version leaves it and stays in the history.
+# that two extracts compare line by line. It mirrors the current catalogue; a
+# removed app or version leaves it.
 #
 # A stable release whose app id and version were not in the previous extract is
 # new. The new ones go out as repository_dispatch events of the type measure,
@@ -25,6 +25,11 @@
 # names its repository and version. A version the measurement already gave up
 # on, listed in its open issue, is not sent again, and while a measurement runs
 # none is sent, since its versions have no result yet.
+#
+# The data branch keeps no history. Every write replaces it with a single
+# commit of the new tree, after gh-stats-data-prune thinned the measurement
+# results, so what was removed leaves the repository too. Dispatched by hand,
+# the workflow also thins the results without a new catalogue.
 
 name: Extract the catalogue
 
@@ -106,6 +111,8 @@ jobs:
           jq -c '.[] | .id as $id | .releases[]
                  | {id: $id, version, nightly: .isNightly, created, download}' "$STATE/apps.json" \
             | LC_ALL=C sort > "$out"
+          # Kept for a write that starts over from a newer branch.
+          cp "$out" "$STATE/releases.after"
 
       - name: Find the new versions
         run: |
@@ -162,20 +169,32 @@ jobs:
             > "$STATE/unmeasured"
           echo "UNMEASURED=$(wc -l < "$STATE/unmeasured")" >> "$GITHUB_ENV"
 
+      # The measurement writes the branch outside this group. The push goes
+      # through only while the branch is still the commit this write started
+      # from; otherwise the measurement got ahead, and this write starts over
+      # from the branch it left. Its paths are apart from the extract, so the
+      # versions found above stay valid.
       - name: Commit the extract
         run: |
-          git -C "$DATA" add "$EXTRACT"
-          if git -C "$DATA" diff --cached --quiet; then
-            echo "The extract is unchanged"
-            exit 0
-          fi
-          git -C "$DATA" commit -q -m "$MESSAGE"
-          # The measurement writes the branch outside this group; its paths are
-          # apart from the extract, so a rebase onto its push never conflicts.
           for try in 1 2 3 4 5; do
-            git -C "$DATA" push -q origin "HEAD:$DATA_BRANCH" && exit 0
-            sleep $((try * 10))
-            git -C "$DATA" pull -q --rebase origin "$DATA_BRANCH"
+            if [ "$try" -gt 1 ]; then
+              sleep $((try * 10))
+              git -C "$DATA" fetch -q --depth 1 origin "$DATA_BRANCH"
+              git -C "$DATA" reset -q --hard FETCH_HEAD
+              git -C "$DATA" clean -q -f -d
+              mkdir -p "$DATA/${EXTRACT%/*}"
+              cp "$STATE/releases.after" "$DATA/$EXTRACT"
+            fi
+            base="$(git -C "$DATA" rev-parse -q --verify HEAD || true)"
+            [ ! -d "$DATA/apps" ] || bin/gh-stats-data-prune --in-place "$DATA/apps"
+            git -C "$DATA" add -A
+            if git -C "$DATA" diff --cached --quiet; then
+              echo "The data branch is unchanged"
+              exit 0
+            fi
+            commit="$(git -C "$DATA" commit-tree "$(git -C "$DATA" write-tree)" -m "$MESSAGE")"
+            git -C "$DATA" push -q --force-with-lease="refs/heads/$DATA_BRANCH:$base" \
+              origin "$commit:refs/heads/$DATA_BRANCH" && exit 0
           done
           exit 1
 
