@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: MIT
 #
 # Keeps an extract of the App Store catalogue in the data branch and sends the
-# versions that are new in it to the measurement. The sampler workflow fetches
-# the catalogue and dispatches this one whenever the asset apps.json of the
-# release catalogue has changed, so the App Store is asked no more often than
-# the sampler asks it already.
+# versions that are new in it, and those that were never measured, to the
+# measurement. The sampler workflow fetches the catalogue and dispatches this
+# one after every run, so the App Store is asked no more often than the sampler
+# asks it already.
 #
 # The extract, catalogue/releases.jsonl, holds one line per release: app id,
 # version, whether it is a nightly, release date and download URL, sorted, so
@@ -16,8 +16,15 @@
 # new. The new ones go out as repository_dispatch events of the type measure,
 # at most 256 per event, the most jobs one matrix holds. A nightly is not sent:
 # it is replaced under the same version. The first extract sends nothing, since
-# every version would count as new; the existing versions are measured by
-# dispatching the measurement workflow by hand.
+# every version would count as new.
+#
+# A version that was in the catalogue before it could be measured is never new:
+# one from a release host gh-stats learned to handle later, or one whose
+# measurement was lost. So every run also sends the newest stable version of
+# each app, as gh-nc-appslist lists it, when no summary.json in the data branch
+# names its repository and version. A version the measurement already gave up
+# on, listed in its open issue, is not sent again, and while a measurement runs
+# none is sent, since its versions have no result yet.
 
 name: Extract the catalogue
 
@@ -27,6 +34,10 @@ on:
 permissions:
   # Pushes to the data branch and creates the repository_dispatch events.
   contents: write
+  # Sees whether a measurement runs.
+  actions: read
+  # Reads the versions the measurement gave up on.
+  issues: read
 
 # No two extracts run at once. A pending run that a newer one replaces loses
 # nothing: each run compares the latest catalogue with the extract committed
@@ -42,6 +53,9 @@ env:
   EXTRACT: catalogue/releases.jsonl
   EVENT_TYPE: measure
   EVENT_VERSIONS: 256
+  # The issue in which measure.yml lists the versions it gave up on.
+  ISSUE_TITLE: App versions without a result
+  ISSUE_LABEL: appsdiag
 
 jobs:
   extract:
@@ -51,6 +65,11 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
       - name: Fetch the catalogue
         run: |
           state="$RUNNER_TEMP/catalogue"
@@ -104,6 +123,45 @@ jobs:
             echo "MESSAGE=$message"
           } >> "$GITHUB_ENV"
 
+      - name: Find the versions without a result
+        env:
+          APPSTORE_SOURCE: appdata
+          APPSTORE_TARGETS: bin/gh-nc-appstore-targets
+        run: |
+          : > "$STATE/unmeasured"
+          busy="$(gh run list -w measure.yml -L 100 --json status --jq 'map(select(.status != "completed")) | length')"
+          if [ "$busy" -gt 0 ]; then
+            echo "::notice::A measurement runs, the versions without a result wait for the next run"
+            echo "UNMEASURED=0" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          export APPSTORE_APPDATA_FILE="$STATE/apps.json"
+          # "[<host>/]<owner>/<repo> <version>" in lower case, as gh-nc-appslist
+          # names a version and gh-nc-appsdiag is asked for it.
+          {
+            # Every result, whatever its status: measure.yml repeats a run that
+            # says nothing about the app on its own.
+            if [ -d "$DATA/apps" ]; then
+              find "$DATA/apps" -name summary.json -exec jq -r '
+                (if (.repo_host // "github.com") == "github.com" then "" else .repo_host + "/" end)
+                + .owner + "/" + .repo + " " + (.requested_version // .version // "")' {} +
+            fi
+            number="$(gh issue list --state open --label "$ISSUE_LABEL" --json number,title \
+              | jq -r --arg t "$ISSUE_TITLE" 'map(select(.title == $t))[0].number // empty')"
+            if [ -n "$number" ]; then
+              gh issue view "$number" --json body,comments --jq '.body, .comments[].body' \
+                | sed -n 's/^| `\([^`]*\)` |.*/\1/p'
+            fi
+            # The new versions, which this run sends anyway.
+            if [ -s "$STATE/new" ]; then
+              bin/gh-nc-appslist -v "$STATE/new" -o - | sed '/^#/d'
+            fi
+          } | tr '[:upper:]' '[:lower:]' | LC_ALL=C sort -u > "$STATE/known"
+          bin/gh-nc-appslist -o - | sed '/^#/d' \
+            | awk 'FILENAME == ARGV[1] { known[$0]; next } !(tolower($0) in known)' "$STATE/known" - \
+            > "$STATE/unmeasured"
+          echo "UNMEASURED=$(wc -l < "$STATE/unmeasured")" >> "$GITHUB_ENV"
+
       - name: Commit the extract
         run: |
           git -C "$DATA" add "$EXTRACT"
@@ -134,3 +192,13 @@ jobs:
                 gh api --method POST "repos/$GH_REPO/dispatches" --input - <<<"$event"
               done
           echo "::notice::Sent $NEW new versions"
+
+      # In one event: measure.yml passes on what one run cannot hold, so the
+      # runs follow one another.
+      - name: Send the versions without a result to the measurement
+        if: env.UNMEASURED != '0'
+        run: |
+          jq -R -n -c --arg type "$EVENT_TYPE" \
+            '{event_type: $type, client_payload: {apps: [inputs | select(length > 0)]}}' "$STATE/unmeasured" \
+            | gh api --method POST "repos/$GH_REPO/dispatches" --input -
+          echo "::notice::Sent $UNMEASURED versions without a result"

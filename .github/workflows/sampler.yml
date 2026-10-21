@@ -22,9 +22,10 @@
 # only when the remaining budget covers it, so two runs per hour fit. The
 # release assets themselves are written with GITHUB_TOKEN.
 #
-# A changed apps.json dispatches catalogue.yml, which extracts it into the data
-# branch and sends its new versions to the measurement. appapi_apps.json takes
-# no part in that: an ExApp is not built, so it is never measured.
+# Every run dispatches catalogue.yml, which extracts apps.json into the data
+# branch and sends its new and its never measured versions to the measurement.
+# appapi_apps.json takes no part in that: an ExApp is not built, so it is never
+# measured.
 #
 # The workflow has no schedule: its schedule trigger never started a run. An
 # external cron dispatches it instead, for example with a /etc/cron.d entry
@@ -106,7 +107,6 @@ jobs:
             bin/gh-nc-appstore-targets
 
       - name: Keep a changed catalogue
-        id: catalogue
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -115,11 +115,11 @@ jobs:
             test -r "$etag" || continue
             cmp -s "$etag" "$STATE/$f.etag.before" && continue
             gh release upload "$CATALOGUE_TAG" "$STATE/catalogue/$f" "$etag" --clobber
-            [ "$f" != apps.json ] || echo "changed=true" >> "$GITHUB_OUTPUT"
           done
 
-      - name: Extract the changed catalogue
-        if: steps.catalogue.outputs.changed == 'true'
+      # Also with an unchanged catalogue, which may hold versions that were
+      # never measured.
+      - name: Extract the catalogue
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run catalogue.yml --ref "$GITHUB_REF_NAME"
