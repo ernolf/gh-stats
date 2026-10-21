@@ -88,7 +88,7 @@ function assetsOf(item, split) {
 	}
 	if (item.line !== undefined) {
 		where.push(`s.tag IN (
-			SELECT r.tag FROM releases r JOIN projects k ON r.owner = k.owner AND r.repo = k.repo
+			SELECT r.tag FROM releases r JOIN projects k ON r.host = k.host AND r.owner = k.owner AND r.repo = k.repo
 			 WHERE k.project = $project AND substr(r.vkey, 1, 12) = $line)`)
 		params.$line = item.line
 	}
@@ -99,8 +99,8 @@ function assetsOf(item, split) {
 			: "''"
 	return {
 		cte: `assets AS (
-			SELECT DISTINCT s.owner, s.repo, s.tag, s.asset, ${group} AS g, j.first
-			  FROM samples s JOIN projects j ON s.owner = j.owner AND s.repo = j.repo
+			SELECT DISTINCT s.host, s.owner, s.repo, s.tag, s.asset, ${group} AS g, j.first
+			  FROM samples s JOIN projects j ON s.host = j.host AND s.owner = j.owner AND s.repo = j.repo
 			 WHERE ${where.join(' AND ')} AND (${assetFilter}))`,
 		params,
 	}
@@ -108,7 +108,8 @@ function assetsOf(item, split) {
 
 function lastSample(at) {
 	return `(SELECT x.downloads FROM samples x
-		WHERE x.owner = a.owner AND x.repo = a.repo AND x.tag = a.tag AND x.asset = a.asset AND x.ts <= ${at}
+		WHERE x.host = a.host AND x.owner = a.owner AND x.repo = a.repo AND x.tag = a.tag AND x.asset = a.asset
+		  AND x.ts <= ${at}
 		ORDER BY x.ts DESC LIMIT 1)`
 }
 
@@ -194,7 +195,7 @@ function seriesHistory(items, split, start, step, keys) {
 		const sums = new Map()
 		const grown = new Map()
 		for (const [id, g, v] of rows(`WITH ${cte}
-			SELECT a.owner || '/' || a.repo || '/' || a.tag || '/' || a.asset, a.g, ${lastSample('$start')}
+			SELECT a.host || '/' || a.owner || '/' || a.repo || '/' || a.tag || '/' || a.asset, a.g, ${lastSample('$start')}
 			  FROM assets a`, p)) {
 			if (v !== null) {
 				current.set(id, v)
@@ -202,9 +203,9 @@ function seriesHistory(items, split, start, step, keys) {
 			}
 		}
 		const changes = rows(`WITH ${cte}
-			SELECT a.owner || '/' || a.repo || '/' || a.tag || '/' || a.asset, a.g, a.first, s.ts, s.downloads
+			SELECT a.host || '/' || a.owner || '/' || a.repo || '/' || a.tag || '/' || a.asset, a.g, a.first, s.ts, s.downloads
 			  FROM assets a JOIN samples s
-			    ON s.owner = a.owner AND s.repo = a.repo AND s.tag = a.tag AND s.asset = a.asset
+			    ON s.host = a.host AND s.owner = a.owner AND s.repo = a.repo AND s.tag = a.tag AND s.asset = a.asset
 			 WHERE s.ts > $start AND s.ts <= $end ORDER BY s.ts`, p)
 		const series = new Map()
 		let i = 0

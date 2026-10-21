@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 #
 # gh-nc-appsdiag - try ncmake on a Nextcloud app that was never built with it. Takes
-# a GitHub URL, clones the app, reports what the checkout is made of, and on
+# the URL of a repository on GitHub or on a Forgejo or Gitea host, clones the app, reports what the checkout is made of, and on
 # confirmation adds the ncmake bootstrap stub as GNUmakefile, which make reads
 # before the app's own makefile or Makefile. Then it offers the ncmake targets one by
 # one and records exit code and duration of each; where an analyser has a --json
@@ -15,7 +15,7 @@
 # comparison against bytes anyone actually installs.
 # Every checkout is a throwaway, so the log is written outside it: the checkout can
 # be removed when the app is done and what the app answered stays. One run writes
-# one directory, logs/<owner>/<repo>/<version>/<timestamp>/ with console.log in it,
+# one directory, logs/[<host>/]<owner>/<repo>/<version>/<timestamp>/ with console.log in it,
 # so two versions of the same app never share a place and an older release can be
 # measured again later. Which version that is can be said on the command line.
 # A repository whose app is not at its root, or that holds several apps, is measured
@@ -124,8 +124,11 @@ warn() {
 
 usage() {
 	cat <<'EOF'
-Usage: gh-nc-appsdiag <github-url|owner/repo>[:<dir>] [version]
-       gh-nc-appsdiag -a [-l <file>] [<github-url|owner/repo>[:<dir>] [version]] ...
+Usage: gh-nc-appsdiag <url|[host/]owner/repo>[:<dir>] [version]
+       gh-nc-appsdiag -a [-l <file>] [<url|[host/]owner/repo>[:<dir>] [version]] ...
+
+A repository on GitHub is named by its URL or as owner/repo, one on a Forgejo
+or Gitea host by its URL or as host/owner/repo.
 
 Clones the app, reports what it is built with, and on confirmation adds the
 ncmake bootstrap stub as GNUmakefile, which make reads before a makefile or a
@@ -156,12 +159,14 @@ measures one of them directly. The tag is the repository's, the version, the App
 Store release and the results are the app's.
 
 Everything one run produces goes into one directory, for an app below the root
-with its app id after the repo (or its directory, while the id is unknown):
+with its app id after the repo (or its directory, while the id is unknown), for
+a repository on a Forgejo or Gitea host below a directory of that host:
 
-  <logs>/<owner>/<repo>/<version>/<timestamp>/
-  <logs>/<owner>/<repo>/<app-id>/<version>/<timestamp>/
+  <logs>/[<host>/]<owner>/<repo>/<version>/<timestamp>/
+  <logs>/[<host>/]<owner>/<repo>/<app-id>/<version>/<timestamp>/
       console.log         the full output of the run
-      summary.json        app, its directory, version, head, ncmake ref, host,
+      summary.json        app, its repository host (repo_host) and directory,
+                          version, head, ncmake ref, the machine (host),
                           the build file make read before the stub and its
                           kind, every target with exit code and duration
                           (and, for a reuse that never linted, why it has no
@@ -329,7 +334,8 @@ if [ "$batch" -eq 1 ]; then
 			batch_entry "$e" "$rc" "$secs" "${run_dirs[0]:-}"
 		else
 			for d in "${run_dirs[@]}"; do
-				IFS=$'\t' read -r label app_rc app_secs < <("$JQ" -r '[.owner + "/" + .repo + (if .subdir then ":" + .subdir else "" end)
+				IFS=$'\t' read -r label app_rc app_secs < <("$JQ" -r '[(if (.repo_host // "github.com") == "github.com" then "" else .repo_host + "/" end)
+					+ .owner + "/" + .repo + (if .subdir then ":" + .subdir else "" end)
 					+ (if .requested_version then " " + .requested_version else "" end),
 					.exit, ((.finished | fromdate) - (.started | fromdate))] | @tsv' "$d/summary.json" 2>/dev/null) \
 					|| { label="$e"; app_rc="$rc"; app_secs="$secs"; }
@@ -360,9 +366,10 @@ fi
 
 [ ${#pos[@]} -ge 1 ] && [ ${#pos[@]} -le 2 ] || { usage; exit 1; }
 
-# github.com/owner/repo, git@github.com:owner/repo.git and owner/repo all reduce
-# to the last two path elements. A directory comes after a last colon that follows
-# the repository; the colon of git@github.com:owner/repo has no slash before it.
+# github.com/owner/repo, git@codeberg.org:owner/repo.git, codeberg.org/owner/repo
+# and owner/repo all reduce to the last two path elements. A directory comes after
+# a last colon that follows the repository; the colon of git@host:owner/repo has
+# no slash before it.
 spec="${pos[0]%/}"
 subdir=""
 if [[ "$spec" == *:* ]] && [[ "${spec%:*}" == */* ]]; then
@@ -374,6 +381,13 @@ spec="${spec%.git}"
 owner="$(printf '%s\n' "$spec" | awk -F'[/:]' '{print $(NF-1)}')"
 repo="$(printf '%s\n' "$spec" | awk -F'[/:]' '{print $NF}')"
 [ -n "$owner" ] && [ -n "$repo" ] || die "cannot read owner/repo from '${pos[0]}'"
+# The element before the owner names the host, without a user before an @. GitHub
+# names hold no dot, so without a dotted element there the repository is on
+# GitHub. Logs and messages name a repository elsewhere as host/owner/repo.
+repo_host="$(printf '%s\n' "$spec" | awk -F'[/:]' 'NF >= 3 { h = $(NF-2); sub(/^.*@/, "", h); if (h ~ /\./) print tolower(h) }')"
+repo_host="${repo_host:-github.com}"
+slug="$owner/$repo"
+[ "$repo_host" = github.com ] || slug="$repo_host/$slug"
 # The second argument, if there is one, is the version to measure.
 want_version="${pos[1]:-}"
 
@@ -461,7 +475,7 @@ promote_run_dir() {
 	local v="${1:-${app_version:-unversioned}}" old="$RUN_DIR" key=""
 	v="${v//\//-}"
 	[ -z "$subdir" ] || key="/${app_id:-${subdir//\//-}}"
-	RUN_DIR="$LOG_DIR/$owner/$repo$key/$v/$STAMP"
+	RUN_DIR="$LOG_DIR/$slug$key/$v/$STAMP"
 	mkdir -p "$RUN_DIR" || die "cannot create $RUN_DIR"
 	if [ -f "$LOG" ] && [ "$LOG" != "$RUN_DIR/console.log" ]; then
 		mv "$LOG" "$RUN_DIR/console.log"
@@ -484,7 +498,7 @@ promote_run_dir() {
 inventory() {
 	local f d x
 	log ""
-	log "== inventory: $owner/$repo${subdir:+:$subdir}"
+	log "== inventory: $slug${subdir:+:$subdir}"
 	inv_files=()
 	for f in $BUILD_FILES krankerl.toml package.json package-lock.json yarn.lock \
 	         pnpm-lock.yaml composer.json composer.lock .nvmrc tsconfig.json \
@@ -752,7 +766,7 @@ init_submodules() {
 	if "$GIT" -C "$CHECKOUT" submodule update --init --recursive 2>&1 | tee_plain "$LOG"; then
 		log "   submodules: $("$GIT" -C "$CHECKOUT" submodule status --recursive | wc -l) initialised"
 	else
-		warn "cannot initialise the submodules of $owner/$repo"
+		warn "cannot initialise the submodules of $slug"
 		log "   submodules: not initialised"
 	fi
 }
@@ -777,7 +791,7 @@ fan_out() {
 	log "   no appinfo/info.xml at the root; $# apps below it: $*"
 	for d in "$@"; do
 		rc=0
-		NC_APPSDIAG_CLONE_FROM="$CHECKOUT" "$0" "$owner/$repo:$d" ${want_version:+"$want_version"} || rc=$?
+		NC_APPSDIAG_CLONE_FROM="$CHECKOUT" "$0" "$slug:$d" ${want_version:+"$want_version"} || rc=$?
 		[ "$rc" -ne 130 ] || exit 130
 		[ "$rc" -eq 0 ] || last="$rc"
 	done
@@ -821,7 +835,8 @@ release_list() {
 release_versions() {
 	release_list "$1" | head -6 | tr '\n' ' '
 }
-# The App Store download of a version is a GitHub release asset, and its URL names
+# The App Store download of a version is a release asset, on GitHub or on a
+# Forgejo or Gitea host under the same path, and its URL names
 # the tag the shipped tarball was built from. A release counts when it lies in this
 # repository, or when it comes from one of APPLIST_RELEASE_REPOS and the app's issue
 # tracker, else its website, names this repository: the mapping gh-nc-appslist
@@ -831,7 +846,7 @@ release_versions() {
 store_tags() {
 	local cache
 	cache="$(appstore_catalogue)" || return 0
-	{ "$JQ" -r --arg repo "${owner,,}/${repo,,}" --arg v "$1" --arg rel "$APPLIST_RELEASE_REPOS" '
+	{ "$JQ" -r --arg repo "${slug,,}" --arg v "$1" --arg rel "$APPLIST_RELEASE_REPOS" '
 		def gh: (. // "") | capture("^https?://github\\.com/(?<o>[^/#?]+)/(?<r>[^/#?]+)")
 			| "\(.o)/\(.r | sub("\\.git$"; ""))";
 		($rel | gsub(","; " ") | split(" ") | map(select(length > 0))) as $release
@@ -840,9 +855,11 @@ store_tags() {
 		    | ($all | map(select(.isNightly != true))) as $stable
 		    | (if ($stable | length) > 0 then $stable else $all end)[]
 		    | (.download | split("/")) as $p
-		    | select($p[2] == "github.com" and $p[5] == "releases" and $p[6] == "download" and ($p[7] // "") != "")
-		    | ($p[3] + "/" + $p[4]) as $dl
-		    | (if ($release | index($p[3])) or ($release | index($dl))
+		    | select($p[5] == "releases" and $p[6] == "download" and ($p[7] // "") != "")
+		    | ($p[2] | ascii_downcase) as $host
+		    | ($p[3] + "/" + $p[4]) as $gh
+		    | ((if $host == "github.com" then "" else $host + "/" end) + $gh) as $dl
+		    | (if $host == "github.com" and (($release | index($p[3])) or ($release | index($gh)))
 		       then ([$a.issueTracker, $a.website | gh] | first // $dl)
 		       else $dl end) as $src
 		    | select(($src | ascii_downcase) == $repo)
@@ -877,10 +894,10 @@ release_checkout() {
 	tags="$(store_tags "$want")"
 	n="$(printf '%s' "$tags" | grep -c .)" || true
 	if [ "$n" -gt 1 ]; then
-		warn "the App Store ships $want of $owner/$repo from several tags: ${tags//$'\n'/ }"
+		warn "the App Store ships $want of $slug from several tags: ${tags//$'\n'/ }"
 		return 1
 	elif [ "$n" -eq 1 ]; then
-		has_tag "$tags" || { warn "the App Store download of $want names the tag $tags, which $owner/$repo does not have"; return 1; }
+		has_tag "$tags" || { warn "the App Store download of $want names the tag $tags, which $slug does not have"; return 1; }
 		log "   tag   $tags, from the App Store download"
 		checkout_tag "$tags"
 		return
@@ -893,13 +910,13 @@ release_checkout() {
 	done)" || true
 	n="$(printf '%s' "$tags" | grep -c .)" || true
 	if [ "$n" -gt 1 ]; then
-		warn "several tags of $owner/$repo carry $want from their first digit on: ${tags//$'\n'/ }"
+		warn "several tags of $slug carry $want from their first digit on: ${tags//$'\n'/ }"
 		return 1
 	elif [ "$n" -eq 1 ]; then
 		checkout_tag "$tags"
 		return
 	fi
-	warn "neither an App Store download nor a tag of $owner/$repo names $want"
+	warn "neither an App Store download nor a tag of $slug names $want"
 	return 1
 }
 
@@ -914,10 +931,10 @@ TAG_MENU_MAX="${TAG_MENU_MAX:-12}"
 pick_tag() {
 	local cache="$1" tags versions tag v i=0 default=0 n chosen
 	tags="$("$GIT" -C "$CHECKOUT" "${TAG_PRERELEASE[@]}" tag --sort=-v:refname | head -"$TAG_MENU_MAX")"
-	[ -n "$tags" ] || { log "   no tags in $owner/$repo, so the branch is all there is"; return 1; }
+	[ -n "$tags" ] || { log "   no tags in $slug, so the branch is all there is"; return 1; }
 	versions="$(release_list "$cache")"
 	log ""
-	log "== tags of $owner/$repo, newest first"
+	log "== tags of $slug, newest first"
 	while IFS= read -r tag; do
 		i=$((i + 1))
 		v="${tag#"${tag%%[0-9]*}"}"
@@ -946,8 +963,8 @@ pick_tag() {
 	checkout_tag "$chosen"
 }
 
-# What the App Store ships, else what the app or the Nextcloud release mirror
-# attached to the tag of this version.
+# What the App Store ships, else, on GitHub, what the app or the Nextcloud release
+# mirror attached to the tag of this version.
 fetch_tarball() {
 	local dest="$1" cache url name r f pattern='*.tar.gz'
 	# The release of a repository with several apps carries a tarball for each.
@@ -960,6 +977,7 @@ fetch_tarball() {
 			"$CURL" -fsSL "$url" -o "$dest/$name" && { printf '%s\n' "$dest/$name"; return 0; }
 		fi
 	fi
+	[ "$repo_host" = github.com ] || return 1
 	for r in "$owner/$repo" "nextcloud-releases/$repo"; do
 		"$GH" release download "v$app_version" --repo "$r" --pattern "$pattern" --dir "$dest" >/dev/null 2>&1 || continue
 		f="$(find "$dest" -maxdepth 1 -name "$pattern" | head -1)"
@@ -978,7 +996,11 @@ release_diff() {
 	log ""
 	log "== release: $app_id $app_version"
 	if ! tgz="$(fetch_tarball "$dir")"; then
-		log "   no tarball for this version on the App Store, in $owner/$repo or in nextcloud-releases/$repo"
+		if [ "$repo_host" = github.com ]; then
+			log "   no tarball for this version on the App Store, in $owner/$repo or in nextcloud-releases/$repo"
+		else
+			log "   no tarball for this version on the App Store"
+		fi
 		return 0
 	fi
 	rel_tarball="$(basename "$tgz")"
@@ -1101,7 +1123,7 @@ write_summary_json() {
 	diff=null
 	[ -s "$RUN_DIR/release/diff.json" ] && diff="$("$JQ" -c '{signed, counts}' "$RUN_DIR/release/diff.json")" || true
 	printf '%s\n' "${results[@]}" | "$JQ" -R -s \
-		--arg owner "$owner" --arg repo "$repo" --arg subdir "$subdir" --arg app_id "$app_id" --arg version "$app_version" \
+		--arg repo_host "$repo_host" --arg owner "$owner" --arg repo "$repo" --arg subdir "$subdir" --arg app_id "$app_id" --arg version "$app_version" \
 		--arg want "$want_version" --arg stamp "$STAMP" --arg started "$STARTED" \
 		--arg finished "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg status "$status" --argjson code "$code" --arg reason "$end_reason" \
 		--arg head "$head" --arg tag "$head_tag" --arg stub "$STUB_URL" \
@@ -1112,7 +1134,7 @@ write_summary_json() {
 		def nul($s): if $s == "" then null else $s end;
 		def num($s): if $s == "" then null else ($s | tonumber) end;
 		{tool: "gh-nc-appsdiag", schema: 1,
-		 owner: $owner, repo: $repo, subdir: nul($subdir), app_id: nul($app_id), version: nul($version),
+		 repo_host: $repo_host, owner: $owner, repo: $repo, subdir: nul($subdir), app_id: nul($app_id), version: nul($version),
 		 requested_version: nul($want), stamp: $stamp, started: $started, finished: $finished,
 		 status: $status, exit: $code, reason: nul($reason),
 		 head: (if $head == "" then null else ($head | split("\t") | {sha: .[0], date: .[1], subject: (.[2:] | join("\t")), tag: nul($tag)}) end),
@@ -1153,7 +1175,7 @@ on_exit() {
 summary() {
 	local r t rc s failed=""
 	log ""
-	log "== summary: $owner/$repo"
+	log "== summary: $slug"
 	if [ ${#results[@]} -eq 0 ]; then
 		log "   no target was run"
 	else
@@ -1176,19 +1198,19 @@ trap 'on_exit "$?"' EXIT
 # A run ended from outside, as by the time limit of a CI job, says so in its
 # summary.json rather than leaving a bare exit code.
 trap 'end_reason="terminated by SIGTERM"; exit 143' TERM
-log "== gh-nc-appsdiag $owner/$repo${subdir:+:$subdir}"
+log "== gh-nc-appsdiag $slug${subdir:+:$subdir}"
 if [ -d "$CHECKOUT" ]; then
 	ask_yes "   checkout exists - remove it and clone again?" && rm -rf "$CHECKOUT"
 fi
 if [ ! -d "$CHECKOUT" ] && [ -n "${NC_APPSDIAG_CLONE_FROM:-}" ]; then
 	# The run that found this app has the repository already. origin points back
-	# to GitHub, so relative submodule URLs resolve against it.
+	# to the host, so relative submodule URLs resolve against it.
 	"$GIT" clone "$NC_APPSDIAG_CLONE_FROM" "$CHECKOUT" 2>&1 | tee_plain "$LOG" \
 		|| die "cannot clone $NC_APPSDIAG_CLONE_FROM"
-	"$GIT" -C "$CHECKOUT" remote set-url origin "https://github.com/$owner/$repo.git"
+	"$GIT" -C "$CHECKOUT" remote set-url origin "https://$repo_host/$owner/$repo.git"
 elif [ ! -d "$CHECKOUT" ]; then
-	"$GIT" clone "https://github.com/$owner/$repo.git" "$CHECKOUT" 2>&1 | tee_plain "$LOG" \
-		|| die "cannot clone https://github.com/$owner/$repo"
+	"$GIT" clone "https://$repo_host/$owner/$repo.git" "$CHECKOUT" 2>&1 | tee_plain "$LOG" \
+		|| die "cannot clone https://$repo_host/$owner/$repo"
 fi
 [ -d "$CHECKOUT/.git" ] || die "no checkout at $CHECKOUT"
 log "   head  $("$GIT" -C "$CHECKOUT" log -1 --format='%h %ad %s' --date=short)"
@@ -1201,11 +1223,11 @@ init_submodules
 if [ -n "$want_version" ]; then
 	log ""
 	log "== requested version $want_version"
-	release_checkout "$want_version" || die "no tag for $want_version in $owner/$repo"
+	release_checkout "$want_version" || die "no tag for $want_version in $slug"
 fi
 
 if [ -n "$subdir" ]; then
-	[ -f "$APP_DIR/appinfo/info.xml" ] || die "no appinfo/info.xml in $subdir of $owner/$repo"
+	[ -f "$APP_DIR/appinfo/info.xml" ] || die "no appinfo/info.xml in $subdir of $slug"
 elif [ ! -f "$CHECKOUT/appinfo/info.xml" ]; then
 	mapfile -t below < <(app_dirs)
 	[ ${#below[@]} -eq 0 ] || fan_out "${below[@]}"

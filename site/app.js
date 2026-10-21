@@ -124,30 +124,30 @@ function query(sql, params = {}) {
 }
 
 // A release the App Store lists as stable counts as stable, as there, even when
-// GitHub flags it as a pre-release or its tag names one; the site shows that
+// its host flags it as a pre-release or its tag names one; the site shows that
 // mismatch. The expression aggregates over releases r of one project and tag.
 const MISMATCH = 'max(r.mismatch)'
-const MISMATCH_TEXT = 'a pre-release on GitHub by its flag or its tag, listed as stable in the App Store'
+const MISMATCH_TEXT = 'a pre-release by the flag of its host or by its tag, listed as stable in the App Store'
 
 // One row per project and release line, the newest line of a project first.
 function summaryRows() {
 	return query(`
-		SELECT project, line, owner, repo, tag, published, nc, total, d1, d7, d30,
-		       (SELECT ${MISMATCH} FROM releases r JOIN projects j ON j.owner = r.owner AND j.repo = r.repo
+		SELECT project, line, host, owner, repo, tag, published, nc, total, d1, d7, d30,
+		       (SELECT ${MISMATCH} FROM releases r JOIN projects j ON j.host = r.host AND j.owner = r.owner AND j.repo = r.repo
 		         WHERE j.project = summary.project AND r.tag = summary.tag) AS mismatch
 		  FROM summary ORDER BY project, line DESC`)
 }
 
 function projectRepos() {
-	return query('SELECT project, owner, repo FROM projects ORDER BY project, owner, repo')
+	return query('SELECT project, host, owner, repo FROM projects ORDER BY project, host, owner, repo')
 }
 
-// The apps.owner and apps.repo columns compare without case, as GitHub does;
+// The apps.owner and apps.repo columns compare without case, as the hosts do;
 // they stand on the left so their collation applies.
 function projectApps() {
 	return query(`
 		SELECT DISTINCT j.project, a.id, a.name, d.exapp FROM apps a
-		  JOIN projects j ON a.owner = j.owner AND a.repo = j.repo
+		  JOIN projects j ON a.host = j.host AND a.owner = j.owner AND a.repo = j.repo
 		  JOIN app_details d ON d.id = a.id
 		 ORDER BY j.project, a.name`)
 }
@@ -176,22 +176,22 @@ const MEASUREMENT = `m.dir, m.app_id, m.version, m.tag, m.tarball, m.signed, m.d
 function measurementsByRelease() {
 	const rows = query(`
 		SELECT p.project, ${MEASUREMENT},
-		       (SELECT max(r.vkey) FROM releases r JOIN projects k ON k.owner = r.owner AND k.repo = r.repo
+		       (SELECT max(r.vkey) FROM releases r JOIN projects k ON k.host = r.host AND k.owner = r.owner AND k.repo = r.repo
 		         WHERE k.project = p.project AND r.tag = m.tag) AS vkey,
-		       (SELECT max(r.pre) FROM releases r JOIN projects k ON k.owner = r.owner AND k.repo = r.repo
+		       (SELECT max(r.pre) FROM releases r JOIN projects k ON k.host = r.host AND k.owner = r.owner AND k.repo = r.repo
 		         WHERE k.project = p.project AND r.tag = m.tag) AS pre
 		  FROM measurements m JOIN (
 		       SELECT m.dir, j.project FROM measurements m
-		         JOIN projects j ON m.owner = j.owner AND m.repo = j.repo
+		         JOIN projects j ON m.host = j.host AND m.owner = j.owner AND m.repo = j.repo
 		       UNION
 		       SELECT m.dir, j.project FROM measurements m JOIN apps a ON a.id = m.app_id
-		         JOIN projects j ON a.owner = j.owner AND a.repo = j.repo) p ON p.dir = m.dir
+		         JOIN projects j ON a.host = j.host AND a.owner = j.owner AND a.repo = j.repo) p ON p.dir = m.dir
 		 WHERE m.tag IS NOT NULL ORDER BY m.subdir, m.app_id`)
 	return Map.groupBy(rows, (r) => `${r.project}\n${r.tag}`)
 }
 
 // The measurements of the newest measured stable release of each line, keyed
-// by project and line: GitHub may have a newer release of the line than the
+// by project and line: the host may have a newer release of the line than the
 // App Store ships, and that one is not measured yet.
 function measurementsByLine(byRelease) {
 	const lines = new Map()
@@ -223,9 +223,9 @@ function otherReleases(project, tag) {
 	return query(`
 		SELECT r.tag, min(r.published) AS published, max(r.vkey) AS vkey,
 		       max(r.pre) AS pre, ${MISMATCH} AS mismatch,
-		       (SELECT f.spec FROM platforms f JOIN projects k ON f.owner = k.owner AND f.repo = k.repo
+		       (SELECT f.spec FROM platforms f JOIN projects k ON f.host = k.host AND f.owner = k.owner AND f.repo = k.repo
 		         WHERE k.project = $project AND f.tag = r.tag LIMIT 1) AS nc
-		  FROM releases r JOIN projects j ON j.owner = r.owner AND j.repo = r.repo
+		  FROM releases r JOIN projects j ON j.host = r.host AND j.owner = r.owner AND j.repo = r.repo
 		 WHERE j.project = $project AND r.tag <> $tag
 		 GROUP BY r.tag ORDER BY vkey DESC, published DESC`, { $project: project, $tag: tag })
 }
@@ -240,31 +240,31 @@ function releaseFigures(project, tag) {
 	const at = {}
 	for (const r of query(`
 		WITH assets AS (
-		  SELECT DISTINCT s.owner, s.repo, s.asset FROM samples s
-		    JOIN projects j ON s.owner = j.owner AND s.repo = j.repo
+		  SELECT DISTINCT s.host, s.owner, s.repo, s.asset FROM samples s
+		    JOIN projects j ON s.host = j.host AND s.owner = j.owner AND s.repo = j.repo
 		   WHERE j.project = $project AND s.tag = $tag AND (${assetFilter})
 		), k(d) AS (VALUES (0), (1), (7), (30))
 		SELECT k.d, sum(coalesce((
 		         SELECT s.downloads FROM samples s
-		          WHERE s.owner = a.owner AND s.repo = a.repo AND s.tag = $tag AND s.asset = a.asset
+		          WHERE s.host = a.host AND s.owner = a.owner AND s.repo = a.repo AND s.tag = $tag AND s.asset = a.asset
 		            AND s.ts <= $now - k.d * ${DAY}
 		          ORDER BY s.ts DESC LIMIT 1), 0)) AS v
 		  FROM assets a, k GROUP BY k.d`, { ...p, $now: now })) {
 		at[r.d] = r.v
 	}
 	const repos = query(`
-		SELECT j.owner, j.repo, j.first,
-		       EXISTS (SELECT 1 FROM samples s WHERE s.owner = j.owner AND s.repo = j.repo
+		SELECT j.host, j.owner, j.repo, j.first,
+		       EXISTS (SELECT 1 FROM samples s WHERE s.host = j.host AND s.owner = j.owner AND s.repo = j.repo
 		                  AND s.tag = $tag AND (${assetFilter})) AS has,
-		       EXISTS (SELECT 1 FROM releases r WHERE r.owner = j.owner AND r.repo = j.repo
+		       EXISTS (SELECT 1 FROM releases r WHERE j.host = r.host AND j.owner = r.owner AND j.repo = r.repo
 		                  AND r.tag = $tag) AS tagged
-		  FROM projects j WHERE j.project = $project ORDER BY j.owner, j.repo`, p)
+		  FROM projects j WHERE j.project = $project ORDER BY j.host, j.owner, j.repo`, p)
 	const { published, mismatch, nc } = query(`
-		SELECT (SELECT min(r.published) FROM releases r JOIN projects j ON j.owner = r.owner AND j.repo = r.repo
+		SELECT (SELECT min(r.published) FROM releases r JOIN projects j ON j.host = r.host AND j.owner = r.owner AND j.repo = r.repo
 		         WHERE j.project = $project AND r.tag = $tag) AS published,
-		       (SELECT ${MISMATCH} FROM releases r JOIN projects j ON j.owner = r.owner AND j.repo = r.repo
+		       (SELECT ${MISMATCH} FROM releases r JOIN projects j ON j.host = r.host AND j.owner = r.owner AND j.repo = r.repo
 		         WHERE j.project = $project AND r.tag = $tag) AS mismatch,
-		       (SELECT f.spec FROM platforms f JOIN projects j ON f.owner = j.owner AND f.repo = j.repo
+		       (SELECT f.spec FROM platforms f JOIN projects j ON f.host = j.host AND f.owner = j.owner AND f.repo = j.repo
 		         WHERE j.project = $project AND f.tag = $tag LIMIT 1) AS nc`, p)[0]
 	// Like max() and min() in SQL, these skip a repository that was never sampled.
 	const sampled = (rows) => rows.map((r) => r.first).filter((f) => f !== null)
@@ -275,7 +275,7 @@ function releaseFigures(project, tag) {
 		: (all.length ? Math.min(...all) : null)
 	const home = repos.filter((r) => r.tagged).sort((a, b) => b.has - a.has)[0]
 	const total = at[0] ?? 0
-	const fig = { owner: home.owner, repo: home.repo, tag, published, mismatch, nc, total }
+	const fig = { host: home.host, owner: home.owner, repo: home.repo, tag, published, mismatch, nc, total }
 	for (const d of PERIODS) {
 		fig['d' + d] = first !== null && Math.max(published, first) <= now - d * DAY ? total - (at[d] ?? 0) : null
 	}
@@ -367,8 +367,18 @@ function el(tag, attrs = {}, ...children) {
 	return e
 }
 
-function releaseLink(owner, repo, tag) {
-	return el('a', { href: `https://github.com/${owner}/${repo}/releases/tag/${encodeURIComponent(tag)}` }, tag)
+// Forgejo and Gitea name a repository and its releases with the paths GitHub uses.
+function repoUrl(r) {
+	return `https://${r.host}/${r.owner}/${r.repo}`
+}
+
+// A repository on GitHub is named owner/repo, one on another host host/owner/repo.
+function slugOf(r) {
+	return r.host === 'github.com' ? `${r.owner}/${r.repo}` : `${r.host}/${r.owner}/${r.repo}`
+}
+
+function releaseLink(fig) {
+	return el('a', { href: `${repoUrl(fig)}/releases/tag/${encodeURIComponent(fig.tag)}` }, fig.tag)
 }
 
 function mismatchMark() {
@@ -377,7 +387,7 @@ function mismatchMark() {
 
 function releaseCells(fig) {
 	return [
-		el('td', { class: 'tag' }, releaseLink(fig.owner, fig.repo, fig.tag), ...(fig.mismatch ? [mismatchMark()] : [])),
+		el('td', { class: 'tag' }, releaseLink(fig), ...(fig.mismatch ? [mismatchMark()] : [])),
 		el('td', {}, ncRange(fig.nc)),
 		el('td', {}, date(fig.published)),
 		...['total', ...PERIODS.map((d) => 'd' + d)].map((k) => fig[k] === null
@@ -541,7 +551,8 @@ function projectTab(apps) {
 }
 
 // A catalogue app no project row shows has the row of what the App Store lists:
-// its releases are downloaded from elsewhere than GitHub or not sampled, or it
+// its releases are downloaded from elsewhere than a release of GitHub, Forgejo or
+// Gitea or not sampled, or it
 // has none. Its download columns stay empty, so there is nothing to chart or
 // compare.
 function catalogueRow(a) {
@@ -555,7 +566,7 @@ function catalogueRow(a) {
 	const runs = p.tab === 'apps' ? measurementsByVersion(a.id).get(a.version) : undefined
 	p.warn = warnings(runs)
 	const [checks, checksRow] = checksCell(runs, 10)
-	const empty = released ? { class: 'num na', title: 'gh-stats samples no GitHub release of this app' } : { class: 'num' }
+	const empty = released ? { class: 'num na', title: 'gh-stats samples no GitHub, Forgejo or Gitea release of this app' } : { class: 'num' }
 	p.main = el('tbody', {}, el('tr', {},
 		el('td', { class: 'pick' }),
 		el('td', {}, el('span', { class: 'name' }, el('a', { href: `#app/${encodeURIComponent(a.id)}` }, a.name))),
@@ -578,19 +589,19 @@ function initOverview() {
 	appProjects = new Map([...apps.values()].flat().map((a) => [a.id, a.project]))
 	const projects = [...Map.groupBy(summaryRows(), (r) => r.project)].map(([project, lines]) => {
 		const [main, ...older] = lines
-		const slugs = repos.get(project).map((r) => `${r.owner}/${r.repo}`)
+		const members = repos.get(project)
 		const own = apps.get(project) ?? []
 		const p = { project, tab: projectTab(own), name: own.map((a) => a.name).join(', ') || main.repo, ...main, lines: older }
 		for (const r of lines) {
 			r.name = p.name
 		}
 		projectLines.set(project, lines)
-		p.search = `${p.name} ${slugs.join(' ')}`.toLowerCase()
+		p.search = `${p.name} ${members.map(slugOf).join(' ')}`.toLowerCase()
 
 		// Each app links its page; a project that is no App Store app has none.
 		const links = own.flatMap((a, i) => [i ? ', ' : '', el('a', { href: `#app/${encodeURIComponent(a.id)}` }, a.name)])
 		const head = el('td', {}, el('span', { class: 'name' }, ...(links.length ? links : [p.name])),
-			...slugs.map((s) => el('a', { class: 'slug', href: `https://github.com/${s}` }, s)))
+			...members.map((r) => el('a', { class: 'slug', href: repoUrl(r) }, slugOf(r))))
 		p.main = el('tbody', {}, ...lineRows(main, head))
 		p.warn = main.warn
 		p.older = el('tbody', { class: 'older', hidden: '' },
@@ -944,7 +955,7 @@ function appPage(id, lines) {
 		el('h3', {}, 'Downloads'),
 		...(lines
 			? [el('div', { class: 'scroll' }, appLines(lines)), el('div', { id: 'app-charts' })]
-			: [el('p', { class: 'hint' }, 'gh-stats samples no GitHub repository of this app.')]))
+			: [el('p', { class: 'hint' }, 'gh-stats samples no GitHub, Forgejo or Gitea repository of this app.')]))
 	if (page.querySelector('[data-src]')) {
 		page.querySelector('h3').before(images)
 	}

@@ -4,9 +4,10 @@
 #
 # gh-nc-appstore-targets - build a gh-release-sampler targets drop-in from the
 # Nextcloud App Store catalogue. It reads the App Store's apps.json and
-# appapi_apps.json, keeps every app that publishes its releases on GitHub and was
-# updated recently enough, and writes them as an "owner/repo" target list to a
-# drop-in that the sampler merges with its hand-curated targets.json. Re-running
+# appapi_apps.json, keeps every app that publishes its releases on GitHub, or on
+# a Forgejo or Gitea host, and was updated recently enough, and writes them as an
+# "owner/repo" or "host/owner/repo" target list to a drop-in that the sampler
+# merges with its hand-curated targets.json. Re-running
 # keeps the list current: new apps (and new owners) appear, apps gone stale drop
 # out.
 #
@@ -169,23 +170,28 @@ mkdir -p "$(dirname "$APPSTORE_TARGETS_FILE")"
 tmp_out="$(mktemp "${APPSTORE_TARGETS_FILE}.XXXXXX")"
 trap 'rm -f "$tmp_out"' EXIT
 
-# For every GitHub release-download URL derive owner/repo and its newest release
-# date. Whole owners are emitted bare and excluded from the pair list; every
-# other owner/repo is kept only if its latest release is recent enough, then the
-# pairs are sorted so an owner's repos stay together and the list reads
-# alphabetically. GitHub resolves names without case, and the catalogue links
-# some repositories under several spellings; each becomes one pair, spelled as
-# its newest release.
+# For every release-download URL derive owner/repo and its newest release date.
+# Forgejo and Gitea serve release assets under the path GitHub uses,
+# host/owner/repo/releases/download/tag/file; a repository there becomes
+# host/owner/repo with the host in lowercase, and the sampler tells whether the
+# host answers the Forgejo API. Whole owners (on GitHub) are emitted bare and
+# excluded from the pair list; every other repository is kept only if its latest
+# release is recent enough, then the pairs are sorted so an owner's repos stay
+# together and the list reads alphabetically. The hosts resolve names without
+# case, and the catalogue links some repositories under several spellings; each
+# becomes one pair, spelled as its newest release.
 jq -n --argjson whole "$whole_json" --arg since "$APPSTORE_SINCE_YEAR" '
 	[inputs | if type == "array" then . else .data end] | add as $apps
 	| ($whole | map(ascii_downcase)) as $whole_lc
 	| [ $apps[] | .releases[]? | select(.download != null)
 	    | . as $r | (.download | split("/")) as $p
-	    | select($p[2] == "github.com" and $p[5] == "releases")
-	    | {owner: $p[3], repo: $p[4], created: $r.created} ]
-	| ( [ .[] | select(.owner | ascii_downcase | IN($whole_lc[]) | not) ]
-	    | group_by(.owner + "/" + .repo | ascii_downcase)
-	    | map(max_by(.created) | { slug: (.owner + "/" + .repo), last: .created })
+	    | select($p[5] == "releases" and ($p[2] == "github.com" or $p[6] == "download"))
+	    | ($p[2] | ascii_downcase) as $host
+	    | {host: $host, slug: ((if $host == "github.com" then "" else $host + "/" end) + $p[3] + "/" + $p[4]),
+	       owner: $p[3], created: $r.created} ]
+	| ( [ .[] | select(.host != "github.com" or (.owner | ascii_downcase | IN($whole_lc[]) | not)) ]
+	    | group_by(.slug | ascii_downcase)
+	    | map(max_by(.created) | { slug, last: .created })
 	    | map(select(.last[0:4] >= $since))
 	    | sort_by(.slug | ascii_downcase)
 	    | map(.slug) ) as $pairs

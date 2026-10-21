@@ -3,9 +3,10 @@
 # SPDX-License-Identifier: MIT
 #
 # gh-nc-appslist - write an app list for 'gh-nc-appsdiag -l' from the Nextcloud App
-# Store catalogue: one line "owner/repo version" per source repository, with the
-# newest stable version the App Store ships for it. Which repositories qualify is
-# decided by gh-nc-appstore-targets (GitHub releases, recent enough), so this list and
+# Store catalogue: one line "owner/repo version" per source repository, or
+# "host/owner/repo version" for one on a Forgejo or Gitea host, with the newest
+# stable version the App Store ships for it. Which repositories qualify is
+# decided by gh-nc-appstore-targets (releases, recent enough), so this list and
 # the sampler's targets agree. The list is written to a file that is meant to be
 # trimmed by hand, so an existing one is only replaced when that is asked for.
 
@@ -54,11 +55,12 @@ catalogue, one line per repository an app is developed in:
   # App Store, ebtb source, releases since 2025, 2026-10-03: 564 repositories
   nextcloud/calendar 6.6.2
   nextcloud/cookbook 0.11.10
+  codeberg.org/someone/someapp 1.2.0
   ...
 
 The repositories are the ones gh-nc-appstore-targets picks: every app whose
-releases are downloaded from GitHub and whose newest release is from <year> or
-later. Each one is listed once, with the newest stable version the App Store
+releases are downloaded from GitHub, or from a Forgejo or Gitea host, which the
+line then names in front, and whose newest release is from <year> or later. Each one is listed once, with the newest stable version the App Store
 ships for it - nightlies and versions with a suffix such as -beta.1 or -rc.1 do
 not count. Where several apps come from one repository, the newest version among
 them stands for it. A repository without a single stable release is left out.
@@ -185,11 +187,13 @@ list="$("$JQ" -r --slurpfile t "$work/targets.json" --argjson release "$release_
 	    | if $want == null then select(length > 0) | max_by(.version | vkey)
 	      else .[] | select($want["\($a.id) \(.version)"]) end
 	    | (.download | split("/")) as $p
-	    | select($p[2] == "github.com" and $p[5] == "releases")
-	    | ($p[3] + "/" + $p[4]) as $dl
+	    | select($p[5] == "releases" and ($p[2] == "github.com" or $p[6] == "download"))
+	    | ($p[2] | ascii_downcase) as $host
+	    | ($p[3] + "/" + $p[4]) as $gh
+	    | ((if $host == "github.com" then "" else $host + "/" end) + $gh) as $dl
 	    | select($targets | index($dl))
 	    | { version,
-	        src: (if ($release | index($p[3])) or ($release | index($dl))
+	        src: (if $host == "github.com" and (($release | index($p[3])) or ($release | index($gh)))
 	              then ([$a.issueTracker, $a.website | gh] | first // $dl)
 	              else $dl end) } ]
 	| if $want == null then group_by(.src | ascii_downcase) | map(max_by(.version | vkey))

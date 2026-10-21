@@ -7,6 +7,8 @@
 # sample with ts <= X (change-only aware). A release/asset that did not yet exist
 # at A counts from 0 (LEFT JOIN + COALESCE), so newly published releases are not
 # ignored. All times are Unix epoch (UTC).
+# A repository on a Forgejo or Gitea host shows its owner as host/owner; one on
+# GitHub shows the owner alone.
 
 # == Config ==
 # Optional site config. If /etc/gh-stats/gh-stats.env exists it is sourced here,
@@ -38,7 +40,7 @@ Usage: gh-stats <when> [options]
     now                      current cumulative counters
     days                     daily course (cumulative, last sample per day)
     repo-stats               current stars, forks and watchers per repo;
-                             filter with --owner/--repo/--exclude-repo, order with
+                             filter with --host/--owner/--repo/--exclude-repo, order with
                              --sort-by=stars|forks|watchers|owner|repo (default stars:desc)
     <N>m|h|d|w               moving interval now-N .. now         (30m, 1h, 2h, 1d, 7d, 4w)
     YYYY-MM-DD               one calendar day (00:00 .. 23:59:59)
@@ -48,6 +50,8 @@ Usage: gh-stats <when> [options]
     <A> <B>                  two absolute timestamps (a " - " separator is ignored)
 
   options
+    --host=<name>            filter by host: github.com or a Forgejo or Gitea host
+                             such as codeberg.org (same rules as --owner)
     --owner=<name>           filter by owner (exact, '*' wildcard, or comma-list; see matching below)
     --repo=<name>            filter by repo  (same rules as --owner)
     --exclude-repo=<name>    drop these repos (same rules as --owner, negated); a
@@ -111,11 +115,11 @@ Usage: gh-stats <when> [options]
     cached there for GH_STATS_CACHE_TTL seconds (default 900); an identical call
     within that window returns instantly. --no-cache forces a fresh computation.
 
-  matching (--owner / --repo / --tag)
+  matching (--host / --owner / --repo / --tag)
     Exact match by default. A '*' anywhere in the value switches THAT filter to a
     glob wildcard (SQLite GLOB, case-sensitive, '*' = any run of characters).
-    Each filter matches its own column only: --owner the owner, --repo the repo
-    name, --tag the tag - they are never mixed. A comma-separated value is a set:
+    Each filter matches its own column only: --host the host, --owner the owner
+    without its host, --repo the repo name, --tag the tag - they are never mixed. A comma-separated value is a set:
     each item is matched on its own (exact, or GLOB if it contains '*') and the
     items are OR'd, so one query can span several owners/repos/tags.
       --owner=nextcloud     exactly the owner "nextcloud"    (NOT nextcloud-releases)
@@ -133,7 +137,7 @@ EOF
 q() { "$SQLITE" "$@"; }
 
 # ---- argument parsing ----
-owner_f="" repo_f="" tag_f="" major_f="" pre_f="" stable_strict="" pubsince_f="" latest_mode=""
+host_f="" owner_f="" repo_f="" tag_f="" major_f="" pre_f="" stable_strict="" pubsince_f="" latest_mode=""
 exclrepo_f=""
 assets="zip,tar.bz2,tar.gz,tar.xz,tgz" by="" table_g="" sort_by="" min_f=""
 maxpatches_f="" maxminor_f=""
@@ -147,6 +151,7 @@ while [ $# -gt 0 ]; do
 	if [[ "$1" =~ ^-[0-9]+[mhdw]$ ]]; then pos+=("$1"); shift; continue; fi
 	case "$1" in
 		--) opts_end=1 ;;            # end of options; rest is positional
+		--host=*)  host_f="${1#*=}" ;;
 		--owner=*) owner_f="${1#*=}" ;;
 		--repo=*)  repo_f="${1#*=}" ;;
 		--exclude-repo=*) exclrepo_f="${1#*=}" ;;
@@ -256,6 +261,7 @@ mkmatch() { # $1=column  $2=comma-separated value(s)  [$3="not" to exclude]
 	else printf " AND (%s)" "$out"; fi
 }
 flt=""
+[ -n "$host_f" ]  && flt+=$(mkmatch host "$host_f")
 [ -n "$owner_f" ] && flt+=$(mkmatch owner "$owner_f")
 [ -n "$repo_f" ]  && flt+=$(mkmatch repo "$repo_f")
 [ -n "$exclrepo_f" ] && flt+=$(mkmatch repo "$exclrepo_f" not)
@@ -267,21 +273,21 @@ flt=""
 pre_tag="lower(tag) GLOB '*-dev*' OR lower(tag) GLOB '*-rc*' OR lower(tag) GLOB '*-beta*' OR lower(tag) GLOB '*-alpha*' OR lower(tag) GLOB '*-nightly*' OR lower(tag) GLOB '*-pre*' OR lower(tag) GLOB '*-snapshot*'"
 [ -n "$stable_strict" ] && flt+=" AND NOT ($pre_tag)"
 [ -n "$pubsince_f" ] && flt+=" AND r.published >= $(to_epoch "$pubsince_f")"
-# GitHub resolves names without case, so a repository sampled under several
-# spellings counts once, in the spelling sampled first, as gh-stats-site-db
-# keeps it.
+# GitHub, Forgejo and Gitea resolve names without case, so a repository sampled
+# under several spellings counts once, in the spelling sampled first, as
+# gh-stats-site-db keeps it.
 dup_spellings="$(q -noheader -list "$DB" "
-WITH sp AS (SELECT DISTINCT owner, repo FROM releases),
-multi AS (SELECT owner, repo FROM sp WHERE (lower(owner), lower(repo)) IN
-  (SELECT lower(owner), lower(repo) FROM sp GROUP BY 1, 2 HAVING count(*) > 1)),
-firsts AS (SELECT owner, repo,
-  (SELECT min(ts) FROM samples s WHERE s.owner = m.owner AND s.repo = m.repo) AS f FROM multi m)
-SELECT group_concat('(' || quote(owner) || ',' || quote(repo) || ')', ',') FROM (SELECT owner, repo,
-  row_number() OVER (PARTITION BY lower(owner), lower(repo) ORDER BY f, owner, repo) AS n
+WITH sp AS (SELECT DISTINCT host, owner, repo FROM releases),
+multi AS (SELECT host, owner, repo FROM sp WHERE (host, lower(owner), lower(repo)) IN
+  (SELECT host, lower(owner), lower(repo) FROM sp GROUP BY 1, 2, 3 HAVING count(*) > 1)),
+firsts AS (SELECT host, owner, repo,
+  (SELECT min(ts) FROM samples s WHERE s.host = m.host AND s.owner = m.owner AND s.repo = m.repo) AS f FROM multi m)
+SELECT group_concat('(' || quote(host) || ',' || quote(owner) || ',' || quote(repo) || ')', ',') FROM (SELECT host, owner, repo,
+  row_number() OVER (PARTITION BY host, lower(owner), lower(repo) ORDER BY f, owner, repo) AS n
   FROM firsts WHERE f IS NOT NULL) WHERE n > 1")"
 dup_flt=""
 [ -z "$dup_spellings" ] || dup_flt=" NOT IN (VALUES $dup_spellings)"
-[ -z "$dup_flt" ] || flt+=" AND (r.owner, r.repo)$dup_flt"
+[ -z "$dup_flt" ] || flt+=" AND (r.host, r.owner, r.repo)$dup_flt"
 # grp_flt narrows series_cte to a single --by group (set per series by --plot --by)
 grp_flt=""
 
@@ -300,9 +306,9 @@ fi
 # latest filter -> restrict to newest release per repo / per (repo,major)
 latest_flt=""
 if [ "$latest_mode" = "repo" ]; then
-	latest_flt=" AND (r.owner,r.repo,r.tag) IN (SELECT owner,repo,tag FROM releases x WHERE x.published=(SELECT max(published) FROM releases y WHERE y.owner=x.owner AND y.repo=x.repo))"
+	latest_flt=" AND (r.host,r.owner,r.repo,r.tag) IN (SELECT host,owner,repo,tag FROM releases x WHERE x.published=(SELECT max(published) FROM releases y WHERE y.host=x.host AND y.owner=x.owner AND y.repo=x.repo))"
 elif [ "$latest_mode" = "major" ]; then
-	latest_flt=" AND (r.owner,r.repo,r.tag) IN (SELECT owner,repo,tag FROM releases x WHERE x.published=(SELECT max(published) FROM releases y WHERE y.owner=x.owner AND y.repo=x.repo AND y.major IS x.major))"
+	latest_flt=" AND (r.host,r.owner,r.repo,r.tag) IN (SELECT host,owner,repo,tag FROM releases x WHERE x.published=(SELECT max(published) FROM releases y WHERE y.host=x.host AND y.owner=x.owner AND y.repo=x.repo AND y.major IS x.major))"
 fi
 
 # --min=<n>: keep only groups whose summed downloads reach n. Applied as a HAVING
@@ -318,14 +324,17 @@ min_dl=""
 #   outcols  = the same columns by their output name, for the outer result select
 #   aggmajor = extra ", r.major AS major" so the outer ORDER BY / point-release caps
 #              can reach the major even where it is not displayed (tag-level only)
+# The owner column shows host/owner for a forge, so it tells the hosts apart in
+# every grouping, the ranking of --max-patches and --max-minor included.
 pub="date(r.published,'unixepoch') AS published"
+owner_col="CASE WHEN host = 'github.com' THEN owner ELSE host || '/' || owner END"
 case "$by" in
-	owner) grp="owner"; sel="owner"; outcols="owner"; aggmajor=""; sortable="owner downloads" ;;
-	repo)  grp="owner,repo"; sel="owner,repo"; outcols="owner,repo"; aggmajor=""; sortable="owner repo downloads" ;;
-	tag)   grp="owner,repo,tag"; sel="owner,repo,tag, $pub"; outcols="owner,repo,tag,published"; aggmajor=", r.major AS major"; sortable="owner repo tag published major downloads" ;;
-	major) grp="owner,repo,r.major"; sel="owner,repo,r.major AS major"; outcols="owner,repo,major"; aggmajor=""; sortable="owner repo major downloads" ;;
-	asset) grp="owner,repo,tag,asset"; sel="owner,repo,tag, $pub, asset"; outcols="owner,repo,tag,published,asset"; aggmajor=", r.major AS major"; sortable="owner repo tag published asset major downloads" ;;
-	"")    grp="owner,repo,tag"; sel="owner,repo,tag, $pub"; outcols="owner,repo,tag,published"; aggmajor=", r.major AS major"; sortable="owner repo tag published major downloads" ;;
+	owner) grp="host,owner"; sel="$owner_col AS owner"; outcols="owner"; aggmajor=""; sortable="owner downloads" ;;
+	repo)  grp="host,owner,repo"; sel="$owner_col AS owner,repo"; outcols="owner,repo"; aggmajor=""; sortable="owner repo downloads" ;;
+	tag)   grp="host,owner,repo,tag"; sel="$owner_col AS owner,repo,tag, $pub"; outcols="owner,repo,tag,published"; aggmajor=", r.major AS major"; sortable="owner repo tag published major downloads" ;;
+	major) grp="host,owner,repo,r.major"; sel="$owner_col AS owner,repo,r.major AS major"; outcols="owner,repo,major"; aggmajor=""; sortable="owner repo major downloads" ;;
+	asset) grp="host,owner,repo,tag,asset"; sel="$owner_col AS owner,repo,tag, $pub, asset"; outcols="owner,repo,tag,published,asset"; aggmajor=", r.major AS major"; sortable="owner repo tag published asset major downloads" ;;
+	"")    grp="host,owner,repo,tag"; sel="$owner_col AS owner,repo,tag, $pub"; outcols="owner,repo,tag,published"; aggmajor=", r.major AS major"; sortable="owner repo tag published major downloads" ;;
 	*) echo "bad --by: $by" >&2; exit 1 ;;
 esac
 
@@ -341,7 +350,7 @@ fi
 # glabel: SQL expression for a group's display label, per --by dimension.
 # grpmatch: the matching WHERE fragment that narrows series_cte to one group.
 case "$by" in
-	owner) glabel="owner" ;;
+	owner) glabel="$owner_col" ;;
 	repo)  glabel="repo" ;;
 	tag)   glabel="tag" ;;
 	major) glabel="'v'||r.major" ;;
@@ -475,9 +484,9 @@ fi
 # snapshot CTE: value of every asset at a given epoch (last sample <= epoch)
 snap() { # $1 = epoch alias name, $2 = epoch value
 	cat <<SQL
-$1 AS (SELECT owner,repo,tag,asset,downloads FROM
-  (SELECT owner,repo,tag,asset,downloads,
-          ROW_NUMBER() OVER (PARTITION BY owner,repo,tag,asset ORDER BY ts DESC) rn
+$1 AS (SELECT host,owner,repo,tag,asset,downloads FROM
+  (SELECT host,owner,repo,tag,asset,downloads,
+          ROW_NUMBER() OVER (PARTITION BY host,owner,repo,tag,asset ORDER BY ts DESC) rn
    FROM samples WHERE ts <= $2) WHERE rn=1)
 SQL
 }
@@ -498,7 +507,7 @@ SQL
 # started inside the range: that first sample holds the whole cumulative count up
 # to that point and must not be drawn, or it dwarfs every real bucket. The LAG
 # window sees samples with ts <= A too, so the first in-range sample is measured
-# against its real predecessor. Uses the (owner,repo,tag,asset,ts) index.
+# against its real predecessor. Uses the (host,owner,repo,tag,asset,ts) index.
 series_cte() {
 	cat <<SQL
 WITH RECURSIVE grid(t) AS (
@@ -507,8 +516,8 @@ WITH RECURSIVE grid(t) AS (
 incr AS (
   SELECT s.ts AS ts,
          s.downloads - LAG(s.downloads) OVER (
-           PARTITION BY s.owner,s.repo,s.tag,s.asset ORDER BY s.ts) AS d
-  FROM samples s JOIN releases r USING(owner,repo,tag)
+           PARTITION BY s.host,s.owner,s.repo,s.tag,s.asset ORDER BY s.ts) AS d
+  FROM samples s JOIN releases r USING(host,owner,repo,tag)
   WHERE s.ts <= $B $flt $asset_flt $latest_flt $grp_flt
 ),
 binned AS (
@@ -526,7 +535,8 @@ SQL
 # plot_label: one-line description of the current selection, for the chart header
 plot_label() {
 	local p=""
-	[ -n "$owner_f" ] && p+="$owner_f"
+	[ -n "$host_f" ]  && p+="$host_f"
+	[ -n "$owner_f" ] && p+="${p:+/}$owner_f"
 	[ -n "$repo_f" ]  && p+="${p:+/}$repo_f"
 	[ -n "$tag_f" ]   && p+=" $tag_f"
 	[ -n "$major_f" ] && p+=" v$major_f"
@@ -587,7 +597,7 @@ if [ "$mode" = "now" ]; then
 WITH $(snap b "$now"),
 agg AS (
   SELECT $sel, SUM(b.downloads) AS downloads$aggmajor$aggver
-  FROM b JOIN releases r USING(owner,repo,tag)
+  FROM b JOIN releases r USING(host,owner,repo,tag)
   WHERE 1=1 $flt $asset_flt $latest_flt
   GROUP BY $grp ${min_dl:+HAVING downloads >= $min_dl}
 )$cap_cte
@@ -597,30 +607,31 @@ fi
 
 if [ "$mode" = "days" ]; then
 	q -header -column "$DB" "
-SELECT date(ts,'unixepoch') AS day, owner, repo, SUM(downloads) AS cumulative
-FROM samples s JOIN releases r USING(owner,repo,tag)
+SELECT date(ts,'unixepoch') AS day, $owner_col AS owner, repo, SUM(downloads) AS cumulative
+FROM samples s JOIN releases r USING(host,owner,repo,tag)
 WHERE ts IN (SELECT max(ts) FROM samples GROUP BY date(ts,'unixepoch')) $flt $asset_flt
-GROUP BY day, owner, repo ORDER BY day, owner, repo;"
+GROUP BY day, host, s.owner, repo ORDER BY day, owner, repo;"
 	exit 0
 fi
 
 # ---- repo popularity snapshot (stars / forks / watchers per repo) ----
 # Reads the repo_stats table (change-only), taking each repo's most recent snapshot
-# at or before now. Only owner/repo/exclude-repo apply here; repo_stats carries no
+# at or before now. Only host/owner/repo/exclude-repo apply here; repo_stats carries no
 # tag, major or release-kind columns, so the other filters are not offered.
 if [ "$mode" = "repostats" ]; then
 	rs_flt=""
+	[ -n "$host_f" ]     && rs_flt+=$(mkmatch host "$host_f")
 	[ -n "$owner_f" ]    && rs_flt+=$(mkmatch owner "$owner_f")
 	[ -n "$repo_f" ]     && rs_flt+=$(mkmatch repo "$repo_f")
 	[ -n "$exclrepo_f" ] && rs_flt+=$(mkmatch repo "$exclrepo_f" not)
-	[ -z "$dup_flt" ] || rs_flt+=" AND (owner, repo)$dup_flt"
+	[ -z "$dup_flt" ] || rs_flt+=" AND (host, owner, repo)$dup_flt"
 	q -header -column "$DB" "
 WITH latest AS (
-  SELECT owner,repo,stars,forks,watchers FROM
-    (SELECT owner,repo,stars,forks,watchers,
-            ROW_NUMBER() OVER (PARTITION BY owner,repo ORDER BY ts DESC) rn
+  SELECT host,owner,repo,stars,forks,watchers FROM
+    (SELECT host,owner,repo,stars,forks,watchers,
+            ROW_NUMBER() OVER (PARTITION BY host,owner,repo ORDER BY ts DESC) rn
      FROM repo_stats WHERE ts <= $now) WHERE rn=1)
-SELECT owner,repo,stars,forks,watchers FROM latest
+SELECT $owner_col AS owner,repo,stars,forks,watchers FROM latest
 WHERE 1=1 $rs_flt ORDER BY $orderby;"
 	exit 0
 fi
@@ -637,10 +648,10 @@ if [ -n "$plot_mode" ] && [ -n "$by" ]; then
 WITH
 $(snap a "$A"),
 $(snap b "$B"),
-delta AS (SELECT bb.owner,bb.repo,bb.tag,bb.asset,
+delta AS (SELECT bb.host,bb.owner,bb.repo,bb.tag,bb.asset,
                  bb.downloads - COALESCE(aa.downloads,0) AS d
-          FROM b bb LEFT JOIN a aa USING(owner,repo,tag,asset))
-SELECT $glabel FROM delta JOIN releases r USING(owner,repo,tag)
+          FROM b bb LEFT JOIN a aa USING(host,owner,repo,tag,asset))
+SELECT $glabel FROM delta JOIN releases r USING(host,owner,repo,tag)
 WHERE d > 0 $flt $asset_flt $latest_flt
 GROUP BY $glabel HAVING SUM(d) > 0 ORDER BY SUM(d) DESC;")
 	[ ${#groups[@]} -gt 0 ] || { echo "(no data in range)"; exit 0; }
@@ -823,12 +834,12 @@ WITH
 $(snap a "$A"),
 $(snap b "$B"),
 delta AS (
-  SELECT bb.owner,bb.repo,bb.tag,bb.asset,
+  SELECT bb.host,bb.owner,bb.repo,bb.tag,bb.asset,
          bb.downloads - COALESCE(aa.downloads,0) AS d
-  FROM b bb LEFT JOIN a aa USING(owner,repo,tag,asset)),
+  FROM b bb LEFT JOIN a aa USING(host,owner,repo,tag,asset)),
 agg AS (
   SELECT $sel, SUM(d) AS downloads$aggmajor$aggver
-  FROM delta JOIN releases r USING(owner,repo,tag)
+  FROM delta JOIN releases r USING(host,owner,repo,tag)
   WHERE d > 0 $flt $asset_flt $latest_flt
   GROUP BY $grp HAVING SUM(d) > 0 ${min_dl:+AND downloads >= $min_dl}
 )$cap_cte
