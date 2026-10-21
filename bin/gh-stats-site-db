@@ -47,9 +47,10 @@ usage() {
 Usage: gh-stats-site-db -o <file> [-r <dir>]
 
 Writes the database the site serves to <file>, which must not exist yet: a copy
-of the gh-release-sampler database without a journal and without the table
-etags, with one spelling per repository where the sampler knows it under
-spellings that differ only in case, plus
+of the gh-release-sampler database without a journal and without the tables
+etags and repos, with one spelling per repository where the sampler knows it
+under spellings that differ only in case, and the series of a renamed
+repository under its current name, plus
 
   apps       app id, name, owner and repo of every App Store app whose releases
              are downloaded from GitHub, from the catalogue
@@ -66,8 +67,9 @@ spellings that differ only in case, plus
              store when the catalogue links it, else by the GitHub flag or the
              tag; and mismatch, 1 when the App Store lists the release as stable
              but GitHub flags it as a pre-release or its tag names one
-  projects   the project every repository belongs to and when its sampling
-             began: repositories the catalogue lists for one app, and
+  projects   the project every repository belongs to that the sampler still
+             samples or the catalogue lists, and when its sampling began:
+             repositories the catalogue lists for one app, and
              repositories of one name under two owners the catalogue lists for
              one app under that name, form one project
   summary    one row per project and release line (the major.minor of vkey)
@@ -282,6 +284,34 @@ DELETE FROM samples WHERE (owner, repo) IN (SELECT owner, repo FROM dup);
 DELETE FROM releases WHERE (owner, repo) IN (SELECT owner, repo FROM dup);
 DELETE FROM repo_stats WHERE (owner, repo) IN (SELECT owner, repo FROM dup);
 
+-- GitHub redirects the old name of a renamed repository, so the sampler may
+-- have sampled it under both. Its series goes on under the current name, in the
+-- spelling the database has for that name, and the rows of the old name fill
+-- in what the current one lacks.
+CREATE TEMP TABLE renamed AS
+SELECT n.owner, n.repo,
+       coalesce(k.owner, substr(n.name, 1, instr(n.name, '/') - 1)) AS to_owner,
+       coalesce(k.repo, substr(n.name, instr(n.name, '/') + 1)) AS to_repo
+  FROM repos n LEFT JOIN (SELECT DISTINCT owner, repo FROM releases) k
+    ON lower(k.owner) || '/' || lower(k.repo) = lower(n.name)
+ WHERE lower(n.name) <> lower(n.owner) || '/' || lower(n.repo);
+UPDATE OR IGNORE samples SET owner = n.to_owner, repo = n.to_repo
+  FROM renamed n WHERE n.owner = samples.owner AND n.repo = samples.repo;
+UPDATE OR IGNORE releases SET owner = n.to_owner, repo = n.to_repo
+  FROM renamed n WHERE n.owner = releases.owner AND n.repo = releases.repo;
+UPDATE OR IGNORE repo_stats SET owner = n.to_owner, repo = n.to_repo
+  FROM renamed n WHERE n.owner = repo_stats.owner AND n.repo = repo_stats.repo;
+DELETE FROM samples WHERE (owner, repo) IN (SELECT owner, repo FROM renamed);
+DELETE FROM releases WHERE (owner, repo) IN (SELECT owner, repo FROM renamed);
+DELETE FROM repo_stats WHERE (owner, repo) IN (SELECT owner, repo FROM renamed);
+
+-- The repositories the last run sampled, by their current name. The sampler
+-- writes seen and the run in one transaction.
+CREATE TEMP TABLE targeted AS
+SELECT lower(coalesce(name, owner || '/' || repo)) AS k
+  FROM repos WHERE seen = (SELECT max(ts) FROM runs);
+DROP TABLE repos;
+
 ALTER TABLE releases ADD COLUMN vkey TEXT;
 ALTER TABLE releases ADD COLUMN pre_tag INTEGER;
 CREATE TEMP TABLE v AS SELECT owner, repo, tag, $nver AS nver FROM releases;
@@ -344,10 +374,14 @@ CREATE INDEX temp.counted_release ON counted (owner, repo, tag);
 -- catalogue lists one app under that name for both owners elsewhere: such
 -- owners publish the same projects, also those that are no App Store app.
 -- Keys are lowercase, as GitHub compares names; the apps columns stand on the
--- left so their collation applies.
+-- left so their collation applies. A repository the sampler no longer samples
+-- and the catalogue does not list is no project any more; its samples stay.
 CREATE TEMP TABLE nodes AS
-SELECT owner, repo, lower(owner) || '/' || lower(repo) AS k
-  FROM (SELECT DISTINCT owner, repo FROM releases);
+SELECT owner, repo, k FROM (
+  SELECT owner, repo, lower(owner) || '/' || lower(repo) AS k
+    FROM (SELECT DISTINCT owner, repo FROM releases)) r
+ WHERE k IN (SELECT k FROM targeted)
+    OR EXISTS (SELECT 1 FROM apps a WHERE a.owner = r.owner AND a.repo = r.repo);
 CREATE TEMP TABLE owner_pairs AS
 SELECT DISTINCT lower(a.owner) AS o1, lower(b.owner) AS o2
   FROM apps a JOIN apps b ON a.id = b.id AND a.repo = b.repo AND a.owner <> b.owner;
