@@ -3,19 +3,27 @@
 # SPDX-License-Identifier: MIT
 #
 # gh-nc-appstore-targets - build a gh-release-sampler targets drop-in from the
-# Nextcloud App Store catalogue. It reads the App Store's apps.json, keeps every
-# app that publishes its releases on GitHub and was updated recently enough, and
-# writes them as an "owner/repo" target list to a drop-in that the sampler merges
-# with its hand-curated targets.json. Re-running keeps the list current: new apps
-# (and new owners) appear, apps gone stale drop out.
+# Nextcloud App Store catalogue. It reads the App Store's apps.json and
+# appapi_apps.json, keeps every app that publishes its releases on GitHub and was
+# updated recently enough, and writes them as an "owner/repo" target list to a
+# drop-in that the sampler merges with its hand-curated targets.json. Re-running
+# keeps the list current: new apps (and new owners) appear, apps gone stale drop
+# out.
 #
-# The *evaluation* is identical for everyone; only how apps.json is obtained
+# The App Store serves the AppAPI apps (ExApps) in appapi_apps.json and leaves
+# them out of apps.json, so an ExApp becomes a target only through the second
+# file.
+#
+# The *evaluation* is identical for everyone; only how the catalogue is obtained
 # differs, selected by APPSTORE_SOURCE:
-#   download - fetch https://apps.nextcloud.com/api/v1/apps.json (ETag-cached).
+#   download - fetch https://apps.nextcloud.com/api/v1/apps.json and
+#              appapi_apps.json (ETag-cached).
 #   appdata  - read a Nextcloud instance's own copy under
-#              datadir/appdata_<instanceid>/appstore/apps.json.
+#              datadir/appdata_<instanceid>/appstore/apps.json, and the
+#              appapi_apps.json next to it, which only the AppAPI app writes.
 #   ebtb     - read the copy maintained by the ebtb "nc-apps" tool, resolved
-#              through its apps.db (SELECT json_data_file WHERE platform='all').
+#              through its apps.db (SELECT json_data_file WHERE platform='all');
+#              it keeps no appapi_apps.json.
 # Only the "download" source touches the network.
 
 # == Config ==
@@ -49,6 +57,8 @@ APPSTORE_SINCE_YEAR="${APPSTORE_SINCE_YEAR:-$(($(date -u +%Y) - 1))}"
 # -- download source --
 APPSTORE_URL="${APPSTORE_URL:-https://apps.nextcloud.com/api/v1/apps.json}"
 APPSTORE_CACHE="${APPSTORE_CACHE:-/var/lib/gh-stats/apps.json}"
+APPSTORE_APPAPI_URL="${APPSTORE_APPAPI_URL:-${APPSTORE_URL%/*}/appapi_apps.json}"
+APPSTORE_APPAPI_CACHE="${APPSTORE_APPAPI_CACHE:-$(dirname "$APPSTORE_CACHE")/appapi_apps.json}"
 APPSTORE_INCLUDE_ENTERPRISE="${APPSTORE_INCLUDE_ENTERPRISE:-true}"
 
 # -- appdata source -- explicit file, or derive it from a working occ command.
@@ -65,16 +75,17 @@ set -euo pipefail
 die()  { echo "ERROR: $*" >&2; exit 1; }
 warn() { echo "gh-nc-appstore-targets: $*" >&2; }
 
-# == Acquire apps.json ==
-# Each acquirer prints the path of a readable apps.json to stdout (an array, or
-# a {"data":[...]} object; the evaluation normalises both).
+# == Acquire the catalogue ==
+# Each acquirer prints the paths of the readable catalogue files to stdout, one
+# per line (each an array, or a {"data":[...]} object; the evaluation
+# normalises both).
 
-# Fetch the catalogue with ETag caching, following the redirects of the App
+# Fetch one catalogue file with ETag caching, following the redirects of the App
 # Store load balancer; -D then holds the headers of every hop, the last ETag is
 # the one of the answer. On 304, rate-limit or any error keep the cached copy
 # and carry on; only a total absence of a cache is fatal.
-acquire_download() {
-	local cache="$APPSTORE_CACHE" etagf="${APPSTORE_CACHE}.etag" url="$APPSTORE_URL"
+fetch_cached() {
+	local url="$1" cache="$2" etagf="$2.etag"
 	[ "$APPSTORE_INCLUDE_ENTERPRISE" = true ] && url="${url}?include_enterprise=true"
 	mkdir -p "$(dirname "$cache")"
 
@@ -109,6 +120,11 @@ acquire_download() {
 	esac
 }
 
+acquire_download() {
+	fetch_cached "$APPSTORE_URL" "$APPSTORE_CACHE"
+	fetch_cached "$APPSTORE_APPAPI_URL" "$APPSTORE_APPAPI_CACHE"
+}
+
 # Read a Nextcloud instance's own copy. Either take the explicit file, or derive
 # datadir and instanceid from a working occ command.
 acquire_appdata() {
@@ -122,6 +138,7 @@ acquire_appdata() {
 	fi
 	[ -r "$f" ] || die "appdata apps.json not readable: $f"
 	printf '%s\n' "$f"
+	[ ! -r "${f%/*}/appapi_apps.json" ] || printf '%s\n' "${f%/*}/appapi_apps.json"
 }
 
 # Resolve the current apps.json through the ebtb nc-apps database, which is the
@@ -136,11 +153,12 @@ acquire_ebtb() {
 }
 
 case "$APPSTORE_SOURCE" in
-	download) apps_json="$(acquire_download)" ;;
-	appdata)  apps_json="$(acquire_appdata)" ;;
-	ebtb)     apps_json="$(acquire_ebtb)" ;;
+	download) catalogue="$(acquire_download)" ;;
+	appdata)  catalogue="$(acquire_appdata)" ;;
+	ebtb)     catalogue="$(acquire_ebtb)" ;;
 	*) die "unknown APPSTORE_SOURCE: '$APPSTORE_SOURCE' (use download|appdata|ebtb)" ;;
 esac
+mapfile -t catalogue_files <<< "$catalogue"
 
 # == Evaluate ==
 # whole owners -> a JSON array; commas or spaces both separate.
@@ -158,8 +176,8 @@ trap 'rm -f "$tmp_out"' EXIT
 # alphabetically. GitHub resolves names without case, and the catalogue links
 # some repositories under several spellings; each becomes one pair, spelled as
 # its newest release.
-jq --argjson whole "$whole_json" --arg since "$APPSTORE_SINCE_YEAR" '
-	(if type == "array" then . else .data end) as $apps
+jq -n --argjson whole "$whole_json" --arg since "$APPSTORE_SINCE_YEAR" '
+	[inputs | if type == "array" then . else .data end] | add as $apps
 	| ($whole | map(ascii_downcase)) as $whole_lc
 	| [ $apps[] | .releases[]? | select(.download != null)
 	    | . as $r | (.download | split("/")) as $p
@@ -172,7 +190,7 @@ jq --argjson whole "$whole_json" --arg since "$APPSTORE_SINCE_YEAR" '
 	    | sort_by(.slug | ascii_downcase)
 	    | map(.slug) ) as $pairs
 	| {targets: ($whole + $pairs)}
-' "$apps_json" > "$tmp_out"
+' "${catalogue_files[@]}" > "$tmp_out"
 
 mv "$tmp_out" "$APPSTORE_TARGETS_FILE"
 trap - EXIT

@@ -5,9 +5,10 @@
 # runners instead of a host. The runner keeps nothing between runs, so both
 # inputs that have to survive live as assets of two releases of this repository:
 #
-#   catalogue   apps.json and apps.json.etag, the App Store catalogue with the
-#               ETag of its last answer, so an unchanged catalogue costs one
-#               conditional request
+#   catalogue   apps.json and appapi_apps.json, the two files of the App Store
+#               catalogue, the second with the AppAPI apps (ExApps), each with
+#               the ETag of its last answer in a .etag beside it, so an
+#               unchanged file costs one conditional request
 #   sampler-db  downloads.sqlite.zst, the sampler database
 #
 # The database is never started empty: without its asset the run stops, since a
@@ -21,8 +22,9 @@
 # only when the remaining budget covers it, so two runs per hour fit. The
 # release assets themselves are written with GITHUB_TOKEN.
 #
-# A changed catalogue dispatches catalogue.yml, which extracts it into the data
-# branch and sends its new versions to the measurement.
+# A changed apps.json dispatches catalogue.yml, which extracts it into the data
+# branch and sends its new versions to the measurement. appapi_apps.json takes
+# no part in that: an ExApp is not built, so it is never measured.
 #
 # The workflow has no schedule: its schedule trigger never started a run. An
 # external cron dispatches it instead, for example with a /etc/cron.d entry
@@ -87,11 +89,13 @@ jobs:
             gh release create "$CATALOGUE_TAG" --prerelease \
               --title "App Store catalogue" \
               --notes "The App Store catalogue with its ETag, kept by the sampler workflow between runs."
-          elif ! gh release download "$CATALOGUE_TAG" -p apps.json -p apps.json.etag -D "$STATE/catalogue"; then
-            # Without a cache the catalogue is fetched in full, which is one request.
+          elif ! gh release download "$CATALOGUE_TAG" -p apps.json -p apps.json.etag -p appapi_apps.json -p appapi_apps.json.etag -D "$STATE/catalogue"; then
+            # Without a cache the catalogue is fetched in full, which is one request per file.
             echo "::warning::No cached catalogue, fetching it in full"
           fi
-          cp "$STATE/catalogue/apps.json.etag" "$STATE/apps.json.etag.before" 2>/dev/null || true
+          for f in apps.json appapi_apps.json; do
+            cp "$STATE/catalogue/$f.etag" "$STATE/$f.etag.before" 2>/dev/null || true
+          done
 
       - name: Derive the App Store targets
         env:
@@ -106,11 +110,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          etag="$STATE/catalogue/apps.json.etag"
-          test -r "$etag" || exit 0
-          cmp -s "$etag" "$STATE/apps.json.etag.before" && exit 0
-          gh release upload "$CATALOGUE_TAG" "$STATE/catalogue/apps.json" "$etag" --clobber
-          echo "changed=true" >> "$GITHUB_OUTPUT"
+          for f in apps.json appapi_apps.json; do
+            etag="$STATE/catalogue/$f.etag"
+            test -r "$etag" || continue
+            cmp -s "$etag" "$STATE/$f.etag.before" && continue
+            gh release upload "$CATALOGUE_TAG" "$STATE/catalogue/$f" "$etag" --clobber
+            [ "$f" != apps.json ] || echo "changed=true" >> "$GITHUB_OUTPUT"
+          done
 
       - name: Extract the changed catalogue
         if: steps.catalogue.outputs.changed == 'true'
