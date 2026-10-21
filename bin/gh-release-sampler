@@ -12,6 +12,9 @@
 # unchanged one with 304, which does not count against the rate limit. A run
 # starts only when the remaining budget covers it, and the requests that fail are
 # reported.
+# Per repository it also records the current name GitHub answers under, which
+# differs from the sampled one after a rename, and the last run that sampled it
+# as a target.
 
 # == Config ==
 # Optional site config shared with gh-stats. If /etc/gh-stats/gh-stats.env
@@ -90,6 +93,18 @@ CREATE TABLE IF NOT EXISTS etags (
   etag TEXT    NOT NULL,
   next INTEGER NOT NULL
 ) WITHOUT ROWID;
+-- What GitHub answered for a repository. GitHub redirects the old name of a
+-- renamed repository, so name, the full_name of the last 200 answer, is its
+-- current owner/repo; NULL after a 404. seen is the last run that sampled it as
+-- a target, NULL while it was only asked for its name. A repository gets its row
+-- with its first 200 or 404 answer.
+CREATE TABLE IF NOT EXISTS repos (
+  owner TEXT    NOT NULL,
+  repo  TEXT    NOT NULL,
+  name  TEXT,
+  seen  INTEGER,
+  PRIMARY KEY (owner, repo)
+) WITHOUT ROWID;
 SQL
 
 # == Collect current values into a TSV ==
@@ -97,17 +112,23 @@ SQL
 # rtsv: owner, repo, stars, forks, watchers  (one line per repo, repo_stats)
 # esql: one upsert per 200 answer into etags. An ETag starts with a double quote,
 #       which .import would take for CSV quoting, so it goes in as an SQL literal.
+# nsql: one upsert or update per answer for a repository into repos, as SQL
+#       literals for the same reason.
 tsv="$(mktemp)"
 rtsv="$(mktemp)"
 esql="$(mktemp)"
+nsql="$(mktemp)"
 resp="$(mktemp)"
 body="$(mktemp)"
-trap 'rm -f "$tsv" "$rtsv" "$esql" "$resp" "$body"' EXIT
+trap 'rm -f "$tsv" "$rtsv" "$esql" "$nsql" "$resp" "$body"' EXIT
 
-declare -A etag=() next_page=()
+declare -A etag=() next_page=() named=()
 while IFS=$'\t' read -r p e n; do
 	etag["$p"]="$e"; next_page["$p"]="$n"
 done < <("$SQLITE" -separator $'\t' "$DB" "SELECT path, etag, next FROM etags")
+while read -r slug; do
+	named["$slug"]=1
+done < <("$SQLITE" "$DB" "SELECT owner || '/' || repo FROM repos")
 
 # One GET, conditional on the stored ETag of the path. Sets status to the HTTP
 # status, empty when no answer came. A 200 leaves its body in $body, sets more to
@@ -139,6 +160,31 @@ request() {
 			failed+=("$path ${status:-no answer}")
 			;;
 	esac
+}
+
+# Records the answer request gave for repos/<owner>/<repo> in repos: a 200 its
+# full_name, a 404 NULL, and seen the run when the third argument is it, for a
+# target. Any other answer only renews seen of a row that exists, and leaves
+# name as it was. A 304 carries no name, so a repository without a row is asked
+# without its ETag.
+record_repo() {
+	local sq="'" seen="$3" n=NULL
+	local o="${1//$sq/$sq$sq}" r="${2//$sq/$sq$sq}"
+	case "$status" in
+		200)
+			n="$(jq -r '.full_name // empty' "$body")"
+			[ -n "$n" ] || return 0
+			n="'${n//$sq/$sq$sq}'"
+			;;
+		404) ;;
+		*)
+			[ "$seen" = NULL ] || printf "UPDATE repos SET seen = %s WHERE owner = '%s' AND repo = '%s';\n" \
+				"$seen" "$o" "$r" >>"$nsql"
+			return 0
+			;;
+	esac
+	printf "INSERT INTO repos (owner, repo, name, seen) VALUES ('%s', '%s', %s, %s) ON CONFLICT (owner, repo) DO UPDATE SET name = excluded.name, seen = coalesce(excluded.seen, seen);\n" \
+		"$o" "$r" "$n" "$seen" >>"$nsql"
 }
 
 # Merge the main config with any targets.d/*.json drop-ins, de-duplicated
@@ -201,14 +247,23 @@ collect_slugs() {
 slugs="$(collect_slugs)"
 [ -n "$slugs" ] || { echo "ERROR: no targets found in $CONFIG or $TARGETS_DIR/*.json" >&2; exit 1; }
 
-# A run asks twice per repo and once more for every further page a release list
-# had last time; that a 304 costs nothing is known only afterwards. A run that
-# ran out halfway would leave the rest of the repos reading as unchanged, so with
-# less budget than that it does not start, and records no run.
+# The repositories the database holds that are no target and were never asked
+# for their name: each is asked once, so one that was renamed is found under
+# the name it has now.
+unasked="$("$SQLITE" -separator / "$DB" "
+SELECT DISTINCT owner, repo FROM releases r
+ WHERE NOT EXISTS (SELECT 1 FROM repos n WHERE n.owner = r.owner AND n.repo = r.repo)" \
+	| awk 'FILENAME == ARGV[1] { t[tolower($0)]; next } NF && !(tolower($0) in t)' <(printf '%s\n' "$slugs") -)"
+
+# A run asks twice per repo, once more for every further page a release list
+# had last time and once per repository asked for its name; that a 304 costs
+# nothing is known only afterwards. A run that ran out halfway would leave the
+# rest of the repos reading as unchanged, so with less budget than that it does
+# not start, and records no run.
 budget="$("$GH" api rate_limit --jq '.resources.core | "\(.remaining) \(.reset)"' 2>/dev/null)" \
 	|| { echo "ERROR: cannot read the API budget" >&2; exit 1; }
 read -r remaining reset <<<"$budget"
-needed=$(( 2 * $(grep -c . <<<"$slugs") ))
+needed=$(( 2 * $(grep -c . <<<"$slugs") + $(grep -c . <<<"$unasked" || true) ))
 for p in "${!next_page[@]}"; do
 	[ "${next_page[$p]}" != 1 ] || needed=$((needed + 1))
 done
@@ -244,12 +299,21 @@ while read -r slug; do
 	# One extra call per repo for the popularity snapshot. watchers is
 	# subscribers_count (the real watch count); the select guards against an
 	# error object (no stargazers_count) so a failed call adds no row.
+	[ -n "${named[$slug]:-}" ] || unset "etag[repos/${slug}]"
 	request "repos/${slug}"
 	[ "$status" != 200 ] || jq -r --arg o "$owner" --arg r "$repo" '
 		select(.stargazers_count != null)
 		| [$o, $r, .stargazers_count, .forks_count, .subscribers_count]
 		| @tsv' "$body" >> "$rtsv" || true
+	record_repo "$owner" "$repo" "$ts"
 done <<< "$slugs"
+
+while read -r slug; do
+	[ -n "$slug" ] || continue
+	unset "etag[repos/${slug}]"
+	request "repos/${slug}"
+	record_repo "${slug%%/*}" "${slug#*/}" NULL
+done <<< "$unasked"
 
 # == Apply: release meta (upsert-ignore) + change-only samples + run marker ==
 "$SQLITE" "$DB" <<SQL
@@ -294,6 +358,7 @@ WHERE NOT EXISTS (
 -- The ETags go in with the data they describe: a run that does not commit keeps
 -- the old ones, so its 200 answers are asked for again.
 .read "$esql"
+.read "$nsql"
 
 INSERT OR IGNORE INTO runs (ts) VALUES ($ts);
 
