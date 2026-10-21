@@ -7,8 +7,10 @@
 # "host/owner/repo version" for one on a Forgejo or Gitea host, with the newest
 # stable version the App Store ships for it. Which repositories qualify is
 # decided by gh-nc-appstore-targets (releases, recent enough), so this list and
-# the sampler's targets agree. The list is written to a file that is meant to be
-# trimmed by hand, so an existing one is only replaced when that is asked for.
+# the sampler's targets agree. With --lines, the newest version of each of as
+# many release lines before the newest is listed as well. The list is written
+# to a file that is meant to be trimmed by hand, so an existing one is only
+# replaced when that is asked for.
 
 # == Config ==
 # The same site config gh-nc-appstore-targets reads, with the same precedence:
@@ -32,6 +34,8 @@ APPSTORE_CACHE="${APPSTORE_CACHE:-/var/lib/gh-stats/apps.json}"
 APPSTORE_APPDATA_FILE="${APPSTORE_APPDATA_FILE:-}"
 APPSTORE_EBTB_DB="${APPSTORE_EBTB_DB:-}"
 APPSTORE_SINCE_YEAR="${APPSTORE_SINCE_YEAR:-$(($(date -u +%Y) - 1))}"
+# Release lines before the newest whose newest version is listed as well.
+APPLIST_LINES="${APPLIST_LINES:-0}"
 # Repositories that publish the releases of an app developed in another one, as
 # a whole owner or as owner/repo. Such an app is listed under the repository it
 # is developed in, taken from its issue tracker or website. Space- or
@@ -47,7 +51,7 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 
 usage() {
 	cat <<'EOF'
-Usage: gh-nc-appslist [-f] [-s <year>] [-v <file>] [-o <file>|-]
+Usage: gh-nc-appslist [-f] [-s <year>] [-L <n>] [-v <file>] [-o <file>|-]
 
 Writes the list of apps for 'gh-nc-appsdiag -l' from the Nextcloud App Store
 catalogue, one line per repository an app is developed in:
@@ -64,6 +68,11 @@ line then names in front, and whose newest release is from <year> or later. Each
 ships for it - nightlies and versions with a suffix such as -beta.1 or -rc.1 do
 not count. Where several apps come from one repository, the newest version among
 them stands for it. A repository without a single stable release is left out.
+
+With -L the repository has a line for each of its newest release lines as
+well: the newest stable version of each of the <n> lines before the newest, a
+release line being the major.minor of a version. With 0.7.5, 0.7.6, 0.8.0 and
+0.8.1 in the catalogue, -L 1 lists 0.8.1 and 0.7.6.
 The list is meant to be trimmed by hand before 'gh-nc-appsdiag -l' runs it, so an
 existing file is not replaced without -f.
 
@@ -91,6 +100,8 @@ catalogue does not ship as a stable release from a listed repository is left out
   -f, --force            replace an existing list file
   -s, --since <year>     keep repositories with a release from <year> or later
                          (default: last year)
+  -L, --lines <n>        list the newest version of <n> release lines before
+                         the newest as well (default: 0)
   -v, --versions <file>  list the versions <file> names
   -h, --help             this text
 
@@ -98,6 +109,7 @@ Environment (or /etc/gh-stats/gh-stats.env):
   APPLIST_RELEASE_REPOS  release repositories, as above (default:
                          nextcloud-releases christianlupus-nextcloud/cookbook-releases)
   APPLIST_FILE           the list file, as -o
+  APPLIST_LINES          as -L
   NC_APPSDIAG_DIR        base directory (default: $HOME/Projekte/appstorestats)
   APPSTORE_SINCE_YEAR    as -s
   APPSTORE_TARGETS       the gh-nc-appstore-targets command
@@ -121,6 +133,7 @@ while [ $# -gt 0 ]; do
 			[ $# -ge 2 ] || die "$1 needs a year"
 			[[ "$2" =~ ^[0-9]{4}$ ]] || die "not a year: $2"
 			APPSTORE_SINCE_YEAR="$2"; shift ;;
+		-L|--lines) [ $# -ge 2 ] || die "$1 needs a number"; APPLIST_LINES="$2"; shift ;;
 		*) echo "unknown argument: $1" >&2; exit 1 ;;
 	esac
 	shift
@@ -130,6 +143,7 @@ if [ "$APPLIST_FILE" != - ] && [ -e "$APPLIST_FILE" ] && [ "$force" -eq 0 ]; the
 	die "$APPLIST_FILE exists; -f replaces it, -o writes another file"
 fi
 [ -z "$versions" ] || [ -r "$versions" ] || die "cannot read $versions"
+[[ "$APPLIST_LINES" =~ ^[0-9]+$ ]] || die "not a number of lines: $APPLIST_LINES"
 
 # == Repositories ==
 # gh-nc-appstore-targets writes its result to a file; point it at a scratch one. A
@@ -169,22 +183,26 @@ if [ -n "$versions" ]; then
 fi
 
 # Only stable releases count: no nightly, no version with a pre-release suffix.
-# Of each app id only the newest of them counts: an app that moved to another
-# repository keeps its old releases in the catalogue, and the repository it left
-# would stay listed with a version nobody installs any more. Several app ids can
-# come from one repository; the newest version among them stands for it. With -v
+# Of each app id only the newest of them counts, with -L the newest of each of
+# its newest lines: an app that moved to another repository keeps its old
+# releases in the catalogue, and the repository it left would stay listed with
+# a version nobody installs any more. Several app ids can come from one
+# repository; per line the newest version among them stands for it. With -v
 # every asked version counts instead, once per repository.
-list="$("$JQ" -r --slurpfile t "$work/targets.json" --argjson release "$release_json" --argjson want "$want_json" '
+list="$("$JQ" -r --slurpfile t "$work/targets.json" --argjson release "$release_json" --argjson want "$want_json" \
+	--argjson lines "$APPLIST_LINES" '
 	def gh: (. // "") | capture("^https?://github\\.com/(?<o>[^/#?]+)/(?<r>[^/#?]+)")
 		| "\(.o)/\(.r | sub("\\.git$"; ""))";
 	def vkey: split(".") | map(tonumber);
+	def newest_lines: group_by(.version | vkey | .[0:2]) | map(max_by(.version | vkey))
+		| sort_by(.version | vkey) | reverse | .[0:$lines + 1];
 	$t[0].targets as $targets
 	| (if type == "array" then . else .data end)
 	| [ .[] | . as $a
 	    | [ .releases[]?
 	        | select(.download != null and (.isNightly | not)
 	                 and (.version | test("^[0-9]+(\\.[0-9]+)*$"))) ]
-	    | if $want == null then select(length > 0) | max_by(.version | vkey)
+	    | if $want == null then newest_lines[]
 	      else .[] | select($want["\($a.id) \(.version)"]) end
 	    | (.download | split("/")) as $p
 	    | select($p[5] == "releases" and ($p[2] == "github.com" or $p[6] == "download"))
@@ -196,7 +214,7 @@ list="$("$JQ" -r --slurpfile t "$work/targets.json" --argjson release "$release_
 	        src: (if $host == "github.com" and (($release | index($p[3])) or ($release | index($gh)))
 	              then ([$a.issueTracker, $a.website | gh] | first // $dl)
 	              else $dl end) } ]
-	| if $want == null then group_by(.src | ascii_downcase) | map(max_by(.version | vkey))
+	| if $want == null then group_by(.src | ascii_downcase) | map(newest_lines[])
 	  else unique_by([(.src | ascii_downcase), (.version | vkey)]) end
 	| sort_by((.src | ascii_downcase), (.version | vkey))
 	| .[] | "\(.src) \(.version)"
@@ -204,7 +222,7 @@ list="$("$JQ" -r --slurpfile t "$work/targets.json" --argjson release "$release_
 
 n="$(printf '%s\n' "$list" | grep -c .)" || true
 what=repositories
-[ -z "$versions" ] || what=versions
+[ -z "$versions" ] && [ "$APPLIST_LINES" -eq 0 ] || what=versions
 {
 	printf '# App Store, %s source, releases since %s, %s: %s %s\n' \
 		"$APPSTORE_SOURCE" "$APPSTORE_SINCE_YEAR" "$(date -u +%Y-%m-%d)" "$n" "$what"

@@ -165,7 +165,12 @@ function catalogueApps() {
 }
 
 const MEASUREMENT = `m.dir, m.app_id, m.version, m.tag, m.tarball, m.signed, m.diff,
-	(SELECT count(*) FROM findings f WHERE f.dir = m.dir AND f.level = 'warn') AS warn`
+	(SELECT count(*) FROM findings f WHERE f.dir = m.dir AND f.level = 'warn') AS warn,
+	(SELECT count(*) FROM findings f WHERE f.dir = m.dir AND f.id = 'not kept') AS slim`
+
+// A measurement of any version but the newest stable one of its app keeps the
+// small results only, so the checks of the large reports are missing from it.
+const SLIM = 'The large reports are kept for the newest stable version of the app only.'
 
 // The measurements of each release, keyed by project and tag; a repository that
 // holds several apps has one per app. A measurement belongs to the project of
@@ -471,6 +476,7 @@ function checksBlock(m) {
 	return el('section', { class: 'run' },
 		el('h4', {}, `${m.app_id ?? m.dir} ${m.version ?? ''} `, el('a', { href: `${results}/${m.dir}` }, 'run directory')),
 		el('p', {}, diffText(m)),
+		...(m.slim ? [el('p', { class: 'hint' }, SLIM)] : []),
 		...tools.map(([tool, fs]) => {
 			const rest = fs.filter((f) => f.level !== 'warn')
 			const counts = ['ok', 'info'].map((l) => [l, rest.filter((f) => f.level === l).length]).filter(([, n]) => n)
@@ -496,7 +502,7 @@ function checksCell(runs, span, version = null) {
 		type: 'button',
 		class: warn ? 'check-count warn' : 'check-count',
 		'aria-expanded': 'false',
-		title: `${warn} warning${warn === 1 ? '' : 's'} in ${runs.length} measurement${runs.length === 1 ? '' : 's'}${version ? ` of ${version}` : ''}`,
+		title: `${warn} warning${warn === 1 ? '' : 's'} in ${runs.length} measurement${runs.length === 1 ? '' : 's'}${version ? ` of ${version}` : ''}${runs.some((m) => m.slim) ? `. ${SLIM}` : ''}`,
 	}, warn ? `⚠ ${warn}` : '✓')
 	button.addEventListener('click', () => {
 		if (!checks.hasChildNodes()) {
