@@ -11,7 +11,7 @@
 # Every request is conditional on the ETag of its last answer: GitHub answers an
 # unchanged one with 304, which does not count against the rate limit. A run
 # starts only when the remaining budget covers it, and the requests that fail are
-# reported.
+# reported. A server error or a missing answer is repeated a few times first.
 # Per repository it also records the current name GitHub answers under, which
 # differs from the sampled one after a rename, and the last run that sampled it
 # as a target.
@@ -44,6 +44,12 @@ STATE_DIR="${GH_STATS_DIR:-/var/lib/gh-stats}"
 DB="${GH_STATS_DB:-${STATE_DIR}/downloads.sqlite}"
 GH="${GH_BIN:-/usr/bin/gh}"
 SQLITE="${SQLITE_BIN:-/usr/bin/sqlite3}"
+# Pauses in seconds before each repetition of a request that got a 5xx answer
+# or none. Once RETRY_GIVE_UP requests failed through all of them, the run
+# repeats no further request: during an outage the pauses would otherwise
+# stretch the run past its timeout.
+RETRY_DELAYS="${GH_STATS_RETRY_DELAYS:-2 5 10}"
+RETRY_GIVE_UP="${GH_STATS_RETRY_GIVE_UP:-5}"
 
 set -euo pipefail
 
@@ -206,25 +212,36 @@ api_path() {
 # whether it links a next page and records its ETag; a 304 takes more from the
 # last 200. gh exits non-zero on a 304 too, so the status line decides. A URL
 # goes to a forge through curl, which follows redirects as gh does; $resp holds
-# the headers either way.
-failed=() missing=()
+# the headers either way. A 5xx answer or none is repeated after the pauses of
+# RETRY_DELAYS.
+failed=() missing=() transient=() given_up=0
 request() {
-	local path="$1" e sq="'"
-	local -a cond=()
+	local path="$1" e n=0 sq="'"
+	local -a cond=() pause
+	read -ra pause <<<"$RETRY_DELAYS"
 	[ -z "${etag[$path]:-}" ] || cond=(-H "If-None-Match: ${etag[$path]}")
-	case "$path" in
-		https://*)
-			status="$(curl -sS -L --max-time 60 "${cond[@]}" -D "$resp" -o "$body" -w '%{http_code}' "$path" 2>/dev/null)" || true
-			sed -i 's/\r$//' "$resp"
-			[ "$status" != 000 ] || status=''
-			;;
-		*)
-			"$GH" api -i "${cond[@]}" "$path" 2>/dev/null | tr -d '\r' >"$body" || true
-			sed -n '1,/^$/p' "$body" >"$resp"
-			sed -i '1,/^$/d' "$body"
-			status="$(awk 'NR == 1 && /^HTTP\// { print $2 }' "$resp")"
-			;;
-	esac
+	while :; do
+		case "$path" in
+			https://*)
+				status="$(curl -sS -L --max-time 60 "${cond[@]}" -D "$resp" -o "$body" -w '%{http_code}' "$path" 2>/dev/null)" || true
+				sed -i 's/\r$//' "$resp"
+				[ "$status" != 000 ] || status=''
+				;;
+			*)
+				"$GH" api -i "${cond[@]}" "$path" 2>/dev/null | tr -d '\r' >"$body" || true
+				sed -n '1,/^$/p' "$body" >"$resp"
+				sed -i '1,/^$/d' "$body"
+				status="$(awk 'NR == 1 && /^HTTP\// { print $2 }' "$resp")"
+				;;
+		esac
+		[[ "${status:-5}" == 5* ]] || break
+		[ "$given_up" -lt "$RETRY_GIVE_UP" ] || break
+		if [ "$n" -ge "${#pause[@]}" ]; then
+			given_up=$((given_up + 1))
+			break
+		fi
+		sleep "${pause[n++]}"
+	done
 	more=0
 	case "$status" in
 		200)
@@ -239,10 +256,19 @@ request() {
 		404)
 			missing+=("$path")
 			;;
+		5*|'')
+			transient+=("$path ${status:-no answer}")
+			;;
 		*)
 			failed+=("$path ${status:-no answer}")
 			;;
 	esac
+}
+
+# The first 20 of the requests given, indented, and how many more there are.
+list_requests() {
+	printf '  %s\n' "${@:1:20}" >&2
+	[ $# -le 20 ] || echo "  ... and $(( $# - 20 )) more" >&2
 }
 
 # Records the answer request gave for the repository host, owner, repo in
@@ -487,10 +513,16 @@ if [ ${#missing[@]} -gt 0 ]; then
 fi
 
 # A request that got neither a 200 nor a 304 left its repo reading as unchanged
-# in this run, so it is reported rather than dropped.
+# in this run, so it is reported rather than dropped. A server error or a
+# missing answer that outlasted its repetitions is mostly a passing fault of the
+# host, and the next run asks again, so it does not fail the run; any other
+# answer points at the token or the budget, which the next run does not mend.
+if [ ${#transient[@]} -gt 0 ]; then
+	echo "${#transient[@]} API requests got a server error or no answer, the next run asks again:" >&2
+	list_requests "${transient[@]}"
+fi
 if [ ${#failed[@]} -gt 0 ]; then
 	echo "${#failed[@]} API requests failed:" >&2
-	printf '  %s\n' "${failed[@]:0:20}" >&2
-	[ ${#failed[@]} -le 20 ] || echo "  ... and $(( ${#failed[@]} - 20 )) more" >&2
+	list_requests "${failed[@]}"
 	exit 1
 fi
