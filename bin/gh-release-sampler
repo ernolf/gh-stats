@@ -141,9 +141,10 @@ request() {
 	esac
 }
 
-# Merge the main config with any targets.d/*.json drop-ins, de-duplicated,
-# blank lines dropped, first occurrence wins. Both sources are optional; the
-# caller checks that at least one target came out.
+# Merge the main config with any targets.d/*.json drop-ins, de-duplicated
+# without case, as GitHub resolves names, blank lines dropped, first occurrence
+# wins. Both sources are optional; the caller checks that at least one target
+# came out.
 collect_targets() {
 	{
 		if [ -f "$CONFIG" ]; then jq -r '.targets[]?' "$CONFIG"; fi
@@ -153,7 +154,7 @@ collect_targets() {
 				jq -r '.targets[]?' "$f"
 			done
 		fi
-	} | awk 'NF && !seen[$0]++'
+	} | awk 'NF && !seen[tolower($0)]++'
 }
 
 # Expand a target into "owner/repo" lines: a plain owner lists all its
@@ -173,13 +174,28 @@ list_repos() {
 # those also present as an explicit pair - for instance one carried by the
 # generated App Store drop-in - collapses to a single entry, so each repo is
 # sampled exactly once. First occurrence wins; order does not matter.
+# Slugs are compared without case. A repository the database already holds is
+# sampled under the spelling it was sampled first, whatever the targets spell,
+# so its series goes on; with several spellings, that is the one gh-stats and
+# gh-stats-site-db keep.
 # A target that cannot be expanded ends the run before anything is recorded:
 # its repositories would otherwise be missing from it and read as unchanged.
+known_spellings() {
+	"$SQLITE" -separator $'\t' "$DB" "
+WITH sp AS (SELECT DISTINCT owner, repo FROM releases),
+firsts AS (SELECT owner, repo,
+  (SELECT min(ts) FROM samples s WHERE s.owner = sp.owner AND s.repo = sp.repo) AS f FROM sp)
+SELECT lower(owner) || '/' || lower(repo), owner || '/' || repo FROM (SELECT owner, repo,
+  row_number() OVER (PARTITION BY lower(owner), lower(repo) ORDER BY f IS NULL, f, owner, repo) AS n
+  FROM firsts) WHERE n = 1"
+}
 collect_slugs() {
 	while read -r target; do
 		[ -n "$target" ] || continue
 		list_repos "$target" || { echo "ERROR: cannot list the repositories of $target" >&2; exit 1; }
-	done <<< "$(collect_targets)" | awk 'NF && !seen[$0]++'
+	done <<< "$(collect_targets)" \
+		| awk -F'\t' 'FILENAME == ARGV[1] { known[$1] = $2; next }
+			NF && !seen[k = tolower($0)]++ { print ((k in known) ? known[k] : $0) }' <(known_spellings) -
 }
 
 slugs="$(collect_slugs)"
