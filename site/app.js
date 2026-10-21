@@ -146,12 +146,19 @@ const MEASUREMENT = `m.dir, m.app_id, m.version, m.tag, m.tarball, m.signed, m.d
 	(SELECT count(*) FROM findings f WHERE f.dir = m.dir AND f.level = 'warn') AS warn`
 
 // The measurements of each release, keyed by project and tag; a repository that
-// holds several apps has one per app. The measurements.owner and .repo columns
-// compare without case and stand on the left.
+// holds several apps has one per app. A measurement belongs to the project of
+// the repository it measured and to those of the repositories the catalogue
+// links for its app, which may be others. The measurements and apps owner and
+// repo columns compare without case and stand on the left.
 function measurementsByRelease() {
 	const rows = query(`
-		SELECT j.project, ${MEASUREMENT}
-		  FROM measurements m JOIN projects j ON m.owner = j.owner AND m.repo = j.repo
+		SELECT p.project, ${MEASUREMENT}
+		  FROM measurements m JOIN (
+		       SELECT m.dir, j.project FROM measurements m
+		         JOIN projects j ON m.owner = j.owner AND m.repo = j.repo
+		       UNION
+		       SELECT m.dir, j.project FROM measurements m JOIN apps a ON a.id = m.app_id
+		         JOIN projects j ON a.owner = j.owner AND a.repo = j.repo) p ON p.dir = m.dir
 		 WHERE m.tag IS NOT NULL ORDER BY m.subdir, m.app_id`)
 	return Map.groupBy(rows, (r) => `${r.project}\n${r.tag}`)
 }
