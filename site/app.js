@@ -15,6 +15,7 @@ let db
 let now
 let results
 let measured
+let measuredLines
 // The line rows of each project and the project of each app, for the app pages.
 const projectLines = new Map()
 let appProjects
@@ -170,10 +171,15 @@ const MEASUREMENT = `m.dir, m.app_id, m.version, m.tag, m.tarball, m.signed, m.d
 // holds several apps has one per app. A measurement belongs to the project of
 // the repository it measured and to those of the repositories the catalogue
 // links for its app, which may be others. The measurements and apps owner and
-// repo columns compare without case and stand on the left.
+// repo columns compare without case and stand on the left. Each carries the
+// version key and pre-release flag of its release in the project.
 function measurementsByRelease() {
 	const rows = query(`
-		SELECT p.project, ${MEASUREMENT}
+		SELECT p.project, ${MEASUREMENT},
+		       (SELECT max(r.vkey) FROM releases r JOIN projects k ON k.owner = r.owner AND k.repo = r.repo
+		         WHERE k.project = p.project AND r.tag = m.tag) AS vkey,
+		       (SELECT max(r.pre) FROM releases r JOIN projects k ON k.owner = r.owner AND k.repo = r.repo
+		         WHERE k.project = p.project AND r.tag = m.tag) AS pre
 		  FROM measurements m JOIN (
 		       SELECT m.dir, j.project FROM measurements m
 		         JOIN projects j ON m.owner = j.owner AND m.repo = j.repo
@@ -182,6 +188,24 @@ function measurementsByRelease() {
 		         JOIN projects j ON a.owner = j.owner AND a.repo = j.repo) p ON p.dir = m.dir
 		 WHERE m.tag IS NOT NULL ORDER BY m.subdir, m.app_id`)
 	return Map.groupBy(rows, (r) => `${r.project}\n${r.tag}`)
+}
+
+// The measurements of the newest measured stable release of each line, keyed
+// by project and line: GitHub may have a newer release of the line than the
+// App Store ships, and that one is not measured yet.
+function measurementsByLine(byRelease) {
+	const lines = new Map()
+	for (const runs of byRelease.values()) {
+		const { project, vkey, pre } = runs[0]
+		if (vkey === null || pre) {
+			continue
+		}
+		const key = `${project}\n${vkey.slice(0, 12)}`
+		if (!lines.has(key) || vkey > lines.get(key)[0].vkey) {
+			lines.set(key, runs)
+		}
+	}
+	return lines
 }
 
 // The measurements of one app, keyed by the version its info.xml declares.
@@ -450,8 +474,9 @@ function checksBlock(m) {
 
 // The cell counts the warnings of the measurements of a release; a click opens
 // them in the row returned with it, built on first use, which spans the
-// table from its second column.
-function checksCell(runs, span) {
+// table from its second column. A version given names the release measured
+// when it is another than the one the row shows.
+function checksCell(runs, span, version = null) {
 	const checks = el('tr', { class: 'checks', hidden: '' })
 	if (!runs) {
 		return [el('td', { class: 'check-col', title: 'not measured' }), checks]
@@ -461,7 +486,7 @@ function checksCell(runs, span) {
 		type: 'button',
 		class: warn ? 'check-count warn' : 'check-count',
 		'aria-expanded': 'false',
-		title: `${warn} warning${warn === 1 ? '' : 's'} in ${runs.length} measurement${runs.length === 1 ? '' : 's'}`,
+		title: `${warn} warning${warn === 1 ? '' : 's'} in ${runs.length} measurement${runs.length === 1 ? '' : 's'}${version ? ` of ${version}` : ''}`,
 	}, warn ? `⚠ ${warn}` : '✓')
 	button.addEventListener('click', () => {
 		if (!checks.hasChildNodes()) {
@@ -470,14 +495,25 @@ function checksCell(runs, span) {
 		checks.hidden = !checks.hidden
 		button.setAttribute('aria-expanded', String(!checks.hidden))
 	})
-	return [el('td', { class: 'check-col' }, button), checks]
+	return [el('td', { class: 'check-col' }, button, ...(version ? [' ', el('span', { class: 'check-of' }, version)] : [])), checks]
+}
+
+// The checks of a line row: those of the release it shows, else those of the
+// newest measured release of its line, with that release's version.
+function lineChecks(row, span) {
+	const own = measured.get(`${row.project}\n${row.tag}`)
+	if (own) {
+		return checksCell(own, span)
+	}
+	const runs = measuredLines.get(`${row.project}\n${row.line}`)
+	return checksCell(runs, span, runs?.[0].version ?? runs?.[0].tag)
 }
 
 // The tick puts the row into the charts.
 function lineRows(row, first) {
 	row.pick = el('input', { type: 'checkbox', 'aria-label': `Chart ${row.name} line ${lineLabel(row.line)}` })
 	row.pick.addEventListener('change', () => pickRow(row, row.pick.checked))
-	const [checks, checksRow] = checksCell(measured.get(`${row.project}\n${row.tag}`), 10)
+	const [checks, checksRow] = lineChecks(row, 10)
 	row.checks = checksRow
 	row.tr = el('tr', {}, el('td', { class: 'pick' }, row.pick), first, ...releaseCells(row), checks, el('td'))
 	row.compare = el('tr', { class: 'compare', hidden: '' })
@@ -525,6 +561,7 @@ function catalogueRow(a) {
 function initOverview() {
 	initCharts()
 	measured = measurementsByRelease()
+	measuredLines = measurementsByLine(measured)
 	const repos = Map.groupBy(projectRepos(), (r) => r.project)
 	const apps = Map.groupBy(projectApps(), (r) => r.project)
 	appProjects = new Map([...apps.values()].flat().map((a) => [a.id, a.project]))
@@ -829,7 +866,7 @@ function appLines(lines) {
 			...['Total', '1 day', '7 days', '30 days'].map((h) => el('th', { class: 'num' }, h)),
 			el('th', { title: 'warnings of the measurement of the release shown' }, 'Checks'))),
 		...lines.map((r) => {
-			const [checks, checksRow] = checksCell(measured.get(`${r.project}\n${r.tag}`), 8)
+			const [checks, checksRow] = lineChecks(r, 8)
 			return el('tbody', {}, el('tr', {}, el('td', {}, lineLabel(r.line)), ...releaseCells(r), checks), checksRow)
 		}))
 }
