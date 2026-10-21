@@ -54,15 +54,18 @@ spellings that differ only in case, plus
   platforms  the Nextcloud versions (rawPlatformVersionSpec) of every catalogue
              release whose download is a GitHub release asset, by owner, repo
              and tag
-  releases   two more columns: vkey, the version sort key of gh-stats, and
-             pre_tag, 1 when the tag denotes a pre-release (gh-stats --stable=strict)
+  releases   three more columns: vkey, the version sort key of gh-stats,
+             pre_tag, 1 when the tag denotes a pre-release (gh-stats --stable=strict),
+             and store, 1 when the catalogue links the release as stable, 0
+             when only as nightly, NULL when not at all
   projects   the project every repository belongs to and when its sampling
              began: repositories the catalogue lists for one app, and
              repositories of one name under two owners the catalogue lists for
              one app under that name, form one project
   summary    one row per project and release line (the major.minor of vkey)
-             for its newest release, the highest vkey that is neither flagged
-             nor named a pre-release: downloads in total and in the last day,
+             for its newest release, the highest vkey that is not named a
+             pre-release and not flagged one, unless the App Store lists it as
+             stable: downloads in total and in the last day,
              7 days and 30 days, summed over the repositories of the project
   measurements  the newest run of every app version measured by
              gh-nc-appsdiag, from the summary.json of the run directories
@@ -78,7 +81,10 @@ spellings that differ only in case, plus
   app_texts  name, summary and description of every app in every language of
              the catalogue
   app_releases  every catalogue release with its date, nightly flag,
-             licences, Nextcloud and PHP versions, databases and PHP extensions
+             licences, Nextcloud and PHP versions, databases and PHP extensions,
+             and mismatch, 1 when the release is stable in the App Store but
+             GitHub flags the release it is downloaded from as a pre-release
+             whose tag names none
 
 Downloads are the summed counters of the assets gh-stats counts by default
 (zip, tar.bz2, tar.gz, tar.xz, tgz). A line whose releases have none of them is
@@ -153,18 +159,23 @@ apps_sql="$(jq -r '
 	| "INSERT OR IGNORE INTO apps VALUES (\($id | q), \($name | q), \(.[0] | q), \(.[1] | q));"
 ' "$APPSTORE_CACHE")"
 
+# Every catalogue release whose download is a GitHub release asset, linked to
+# that release with its channel, and its Nextcloud versions where it has them.
 # The tag is the path segment after releases/download, percent-encoded in the
 # URL (v5.1.4%2B1); tags are ASCII, so each escape decodes to one character.
-platforms_sql="$(jq -r '
+links_sql="$(jq -r '
 	def q: "'\''" + gsub("'\''"; "'\'''\''") + "'\''";
 	def hex: ascii_downcase | explode | map(if . > 57 then . - 87 else . - 48 end) | .[0] * 16 + .[1];
 	def urldecode: gsub("%(?<h>[0-9A-Fa-f]{2})"; [.h | hex] | implode);
 	(if type == "array" then . else .data end)[]
-	| .releases[]?
-	| (.rawPlatformVersionSpec // empty) as $spec
+	| .id as $id
+	| .releases[]? | . as $r
 	| .download // empty | split("/")
 	| select(.[2] == "github.com" and .[5] == "releases" and .[6] == "download")
-	| "INSERT OR IGNORE INTO platforms VALUES (\(.[3] | q), \(.[4] | q), \(.[7] | urldecode | q), \($spec | q));"
+	| [.[3], .[4], (.[7] | urldecode)] as [$owner, $repo, $tag]
+	| "INSERT OR IGNORE INTO links VALUES (\($id | q), \($r.version | q), \($owner | q), \($repo | q), \($tag | q), \(if $r.isNightly then 1 else 0 end));",
+	  ($r.rawPlatformVersionSpec // empty
+	  | "INSERT OR IGNORE INTO platforms VALUES (\($owner | q), \($repo | q), \($tag | q), \(q));")
 ' "$APPSTORE_CACHE")"
 
 # == Measurements ==
@@ -265,10 +276,28 @@ CREATE TABLE platforms (
   spec  TEXT NOT NULL,
   PRIMARY KEY (owner, repo, tag)
 ) WITHOUT ROWID;
+CREATE TEMP TABLE links (
+  id      TEXT    NOT NULL,
+  version TEXT    NOT NULL,
+  owner   TEXT    NOT NULL COLLATE NOCASE,
+  repo    TEXT    NOT NULL COLLATE NOCASE,
+  tag     TEXT    NOT NULL,
+  nightly INTEGER NOT NULL,
+  PRIMARY KEY (id, version, owner, repo, tag)
+);
 BEGIN;
 $apps_sql
-$platforms_sql
+$links_sql
 COMMIT;
+
+-- Some publishers flag a release as a pre-release on GitHub that the App Store
+-- lists as stable, although its tag names no pre-release. The site handles it
+-- as the App Store does and shows the mismatch, so the channel the App Store
+-- links a release under is kept.
+ALTER TABLE releases ADD COLUMN store INTEGER;
+UPDATE releases SET store = x.stable
+  FROM (SELECT owner, repo, tag, max(NOT nightly) AS stable FROM links GROUP BY owner, repo, tag) x
+ WHERE x.owner = releases.owner COLLATE NOCASE AND x.repo = releases.repo COLLATE NOCASE AND x.tag = releases.tag;
 
 CREATE TEMP TABLE counted AS
 SELECT DISTINCT owner, repo, tag, asset FROM samples WHERE $asset_flt;
@@ -344,7 +373,7 @@ INSERT INTO summary
 WITH now(t) AS (SELECT max(ts) FROM runs),
 rel AS (
   SELECT j.project, r.tag, min(r.published) AS published, max(r.vkey) AS vkey,
-         max(r.prerelease OR r.pre_tag) AS pre,
+         max((r.prerelease AND r.store IS NOT 1) OR r.pre_tag) AS pre,
          max(EXISTS (SELECT 1 FROM counted c WHERE c.owner = r.owner AND c.repo = r.repo AND c.tag = r.tag)) AS has
     FROM releases r JOIN projects j ON j.owner = r.owner AND j.repo = r.repo
    GROUP BY j.project, r.tag
@@ -509,6 +538,10 @@ CREATE TABLE app_releases (
 BEGIN;
 $catalogue_sql
 COMMIT;
+ALTER TABLE app_releases ADD COLUMN mismatch INTEGER NOT NULL DEFAULT 0;
+UPDATE app_releases SET mismatch = 1 WHERE NOT nightly AND EXISTS (
+  SELECT 1 FROM links l JOIN releases r ON l.owner = r.owner AND l.repo = r.repo AND l.tag = r.tag
+   WHERE l.id = app_releases.id AND l.version = app_releases.version AND r.prerelease AND NOT r.pre_tag);
 
 VACUUM;
 SELECT 'apps', count(*) FROM apps
