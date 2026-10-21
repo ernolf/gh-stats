@@ -481,7 +481,7 @@ function checksCell(runs, span, version = null) {
 	if (!runs) {
 		return [el('td', { class: 'check-col', title: 'not measured' }), checks]
 	}
-	const warn = runs.reduce((n, m) => n + m.warn, 0)
+	const warn = warnings(runs)
 	const button = el('button', {
 		type: 'button',
 		class: warn ? 'check-count warn' : 'check-count',
@@ -498,14 +498,23 @@ function checksCell(runs, span, version = null) {
 	return [el('td', { class: 'check-col' }, button, ...(version ? [' ', el('span', { class: 'check-of' }, version)] : [])), checks]
 }
 
+// The warnings of the measurements of a release, null when it has none, so an
+// unmeasured row sorts like an empty period.
+function warnings(runs) {
+	return runs ? runs.reduce((n, m) => n + m.warn, 0) : null
+}
+
 // The checks of a line row: those of the release it shows, else those of the
-// newest measured release of its line, with that release's version.
+// newest measured release of its line, with that release's version. The row
+// keeps the count of the cell to sort by.
 function lineChecks(row, span) {
 	const own = measured.get(`${row.project}\n${row.tag}`)
 	if (own) {
+		row.warn = warnings(own)
 		return checksCell(own, span)
 	}
 	const runs = measuredLines.get(`${row.project}\n${row.line}`)
+	row.warn = warnings(runs)
 	return checksCell(runs, span, runs?.[0].version ?? runs?.[0].tag)
 }
 
@@ -543,7 +552,9 @@ function catalogueRow(a) {
 		total: null, d1: null, d7: null, d30: null, lines: [],
 		search: `${a.name} ${a.id}`.toLowerCase(),
 	}
-	const [checks, checksRow] = checksCell(p.tab === 'apps' ? measurementsByVersion(a.id).get(a.version) : undefined, 10)
+	const runs = p.tab === 'apps' ? measurementsByVersion(a.id).get(a.version) : undefined
+	p.warn = warnings(runs)
+	const [checks, checksRow] = checksCell(runs, 10)
 	const empty = released ? { class: 'num na', title: 'gh-stats samples no GitHub release of this app' } : { class: 'num' }
 	p.main = el('tbody', {}, el('tr', {},
 		el('td', { class: 'pick' }),
@@ -581,6 +592,7 @@ function initOverview() {
 		const head = el('td', {}, el('span', { class: 'name' }, ...(links.length ? links : [p.name])),
 			...slugs.map((s) => el('a', { class: 'slug', href: `https://github.com/${s}` }, s)))
 		p.main = el('tbody', {}, ...lineRows(main, head))
+		p.warn = main.warn
 		p.older = el('tbody', { class: 'older', hidden: '' },
 			...older.flatMap((r) => lineRows(r, el('td', { class: 'line-label' }, `line ${lineLabel(r.line)}`))))
 		p.toggle = el('button', { type: 'button', class: 'toggle', 'aria-expanded': 'false' })
