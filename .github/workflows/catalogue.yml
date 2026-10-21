@@ -21,15 +21,17 @@
 # A version that was in the catalogue before it could be measured is never new:
 # one from a release host gh-stats learned to handle later, or one whose
 # measurement was lost. So every run also sends the newest stable version of
-# each app, as gh-nc-appslist lists it, when no summary.json in the data branch
+# each app, and that of each of the MEASURE_LINES release lines before its
+# newest, as gh-nc-appslist lists them, when no summary.json in the data branch
 # names its repository and version. A version the measurement already gave up
 # on, listed in its open issue, is not sent again, and while a measurement runs
 # none is sent, since its versions have no result yet.
 #
 # The data branch keeps no history. Every write replaces it with a single
 # commit of the new tree, after gh-stats-data-prune thinned the measurement
-# results, so what was removed leaves the repository too. Dispatched by hand,
-# the workflow also thins the results without a new catalogue.
+# results as measure.yml describes, so what was removed leaves the repository
+# too. Dispatched by hand, the workflow also thins the results without a new
+# catalogue.
 
 name: Extract the catalogue
 
@@ -61,6 +63,11 @@ env:
   # The issue in which measure.yml lists the versions it gave up on.
   ISSUE_TITLE: App versions without a result
   ISSUE_LABEL: appsdiag
+  # Release lines before the newest that are measured as well, 0 to 4; unset
+  # means 1. With MEASURE_PRUNE_LINES true, the results of lines beyond them
+  # are removed.
+  MEASURE_LINES: ${{ vars.MEASURE_LINES }}
+  MEASURE_PRUNE_LINES: ${{ vars.MEASURE_PRUNE_LINES }}
 
 jobs:
   extract:
@@ -81,6 +88,20 @@ jobs:
           mkdir -p "$state"
           echo "STATE=$state" >> "$GITHUB_ENV"
           gh release download "$CATALOGUE_TAG" -p apps.json -D "$state"
+
+      - name: Read the settings
+        run: |
+          lines="${MEASURE_LINES:-1}"
+          if ! [[ "$lines" =~ ^[0-4]$ ]]; then
+            echo "::error::MEASURE_LINES is $lines, it takes 0 to 4"
+            exit 1
+          fi
+          prune=--in-place
+          [ "$MEASURE_PRUNE_LINES" != true ] || prune+=" --lines $lines"
+          {
+            echo "LINES=$lines"
+            echo "PRUNE=$prune"
+          } >> "$GITHUB_ENV"
 
       - name: Check out the data branch
         run: |
@@ -164,7 +185,7 @@ jobs:
               bin/gh-nc-appslist -v "$STATE/new" -o - | sed '/^#/d'
             fi
           } | tr '[:upper:]' '[:lower:]' | LC_ALL=C sort -u > "$STATE/known"
-          bin/gh-nc-appslist -o - | sed '/^#/d' \
+          bin/gh-nc-appslist -L "$LINES" -o - | sed '/^#/d' \
             | awk 'FILENAME == ARGV[1] { known[$0]; next } !(tolower($0) in known)' "$STATE/known" - \
             > "$STATE/unmeasured"
           echo "UNMEASURED=$(wc -l < "$STATE/unmeasured")" >> "$GITHUB_ENV"
@@ -186,7 +207,8 @@ jobs:
               cp "$STATE/releases.after" "$DATA/$EXTRACT"
             fi
             base="$(git -C "$DATA" rev-parse -q --verify HEAD || true)"
-            [ ! -d "$DATA/apps" ] || bin/gh-stats-data-prune --in-place "$DATA/apps"
+            # shellcheck disable=SC2086 # PRUNE holds the options
+            [ ! -d "$DATA/apps" ] || bin/gh-stats-data-prune $PRUNE "$DATA/apps"
             git -C "$DATA" add -A
             if git -C "$DATA" diff --cached --quiet; then
               echo "The data branch is unchanged"

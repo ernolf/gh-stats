@@ -29,8 +29,11 @@
 # the artifact.
 #
 # The data branch keeps no history. Every write replaces it with a single
-# commit of the new tree, after gh-stats-data-prune removed the older runs of a
-# version measured again, so what was removed leaves the repository too.
+# commit of the new tree, after gh-stats-data-prune thinned the results, so
+# what was removed leaves the repository too: the older runs of a version
+# measured again, the large reports of every version but the newest stable one
+# of its app, and with MEASURE_PRUNE_LINES the release lines beyond
+# MEASURE_LINES.
 #
 # A version whose run says nothing about the app is measured again: one that
 # did not complete, whose rebuild was stopped at its time limit, or whose job
@@ -69,6 +72,11 @@ env:
   MAX_ATTEMPTS: 3
   ISSUE_TITLE: App versions without a result
   ISSUE_LABEL: appsdiag
+  # Release lines before the newest that are measured as well, 0 to 4; unset
+  # means 1. With MEASURE_PRUNE_LINES true, the results of lines beyond them
+  # are removed.
+  MEASURE_LINES: ${{ vars.MEASURE_LINES }}
+  MEASURE_PRUNE_LINES: ${{ vars.MEASURE_PRUNE_LINES }}
 
 jobs:
   plan:
@@ -227,6 +235,19 @@ jobs:
           pattern: outcome-*
           path: ${{ runner.temp }}/outcomes
 
+      # A setting out of range keeps every line rather than lose the results
+      # of this run; catalogue.yml fails on it.
+      - name: Read the settings
+        run: |
+          lines="${MEASURE_LINES:-1}"
+          prune=--in-place
+          if ! [[ "$lines" =~ ^[0-4]$ ]]; then
+            echo "::warning::MEASURE_LINES is $lines, it takes 0 to 4; no release line is removed"
+          elif [ "$MEASURE_PRUNE_LINES" = true ]; then
+            prune+=" --lines $lines"
+          fi
+          echo "PRUNE=$prune" >> "$GITHUB_ENV"
+
       - name: Check out the data branch
         run: |
           data="$RUNNER_TEMP/data"
@@ -277,7 +298,8 @@ jobs:
               echo "No new results"
               exit 0
             fi
-            bin/gh-stats-data-prune --in-place "$DATA/apps"
+            # shellcheck disable=SC2086 # PRUNE holds the options
+            bin/gh-stats-data-prune $PRUNE "$DATA/apps"
             git -C "$DATA" add -A apps
             commit="$(git -C "$DATA" commit-tree "$(git -C "$DATA" write-tree)" -m "measure: $n runs")"
             git -C "$DATA" push -q --force-with-lease="refs/heads/$DATA_BRANCH:$base" \

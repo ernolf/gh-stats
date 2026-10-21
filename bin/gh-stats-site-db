@@ -86,7 +86,8 @@ repository under its current name, plus
   targets    the make targets of each run, with exit code, whether they left a
              JSON result and why one was skipped
   findings   the findings of the analysers of each run, and one finding per
-             aborted run, failed target, skipped JSON result and REUSE lint
+             aborted run, failed target, skipped JSON result, JSON result the
+             data branch no longer holds and REUSE lint
   app_details  what the App Store shows of every catalogue app: categories,
              authors, links, dates, ratings and the original URLs of its
              screenshots, and exapp, 1 when it is an AppAPI app of
@@ -243,6 +244,17 @@ $(find "$results" -name '*.json' ! -name summary.json ! -name reuse.json ! -path
 		results_sql+="
 $(gzip -dc "$f" | jq -r --arg root "$results/" --arg name "$f" "$findings_jq")"
 	done < <(find "$results" -name '*.json.gz' ! -name reuse.json.gz ! -path '*/release/*' -print0)
+	# The JSON results at hand, by run directory and target. gh-stats-data-prune
+	# removes the large ones of every version but the newest of an app, and
+	# summary.json still lists them.
+	results_sql+="
+$(find "$results" \( -name '*.json' -o -name '*.json.gz' \) ! -name summary.json ! -path '*/release/*' -printf '%P\n' \
+		| awk -v q="'" '{
+			n = split($0, p, "/"); name = p[n]; sub(/\.gz$/, "", name); sub(/\.json$/, "", name)
+			dir = substr($0, 1, length($0) - length(p[n]) - 1)
+			gsub(q, q q, dir); gsub(q, q q, name)
+			print "INSERT INTO kept VALUES (" q dir q ", " q name q ");"
+		}')"
 fi
 
 # == App pages ==
@@ -563,6 +575,11 @@ CREATE TABLE findings (
   text  TEXT    NOT NULL,
   PRIMARY KEY (dir, tool, n)
 ) WITHOUT ROWID;
+CREATE TEMP TABLE kept (
+  dir   TEXT    NOT NULL,
+  name  TEXT    NOT NULL,
+  PRIMARY KEY (dir, name)
+) WITHOUT ROWID;
 BEGIN;
 $results_sql
 COMMIT;
@@ -582,11 +599,20 @@ SELECT dir, name, 0, 'info', 'skipped', skipped FROM targets WHERE skipped IS NO
 INSERT INTO findings
 SELECT dir, name, 0, 'warn', 'failed', 'make ' || name || ' ended with exit ' || exit || ' and left no result.'
   FROM targets WHERE exit <> 0 AND skipped IS NULL AND NOT json;
+-- A result the data branch no longer holds is said so, or its target would
+-- look clean. The site never reads reuse.json, so its absence says nothing.
 INSERT INTO findings
-SELECT dir, name, 0, CASE exit WHEN 0 THEN 'ok' ELSE 'warn' END, 'compliance',
-       CASE exit WHEN 0 THEN 'The checkout is REUSE compliant.'
+SELECT t.dir, t.name, 0, 'info', 'not kept',
+       'make ' || t.name || ' left a result, which the data branch keeps for the newest stable version of the app only.'
+  FROM targets t WHERE t.json AND t.skipped IS NULL AND t.name <> 'reuse'
+   AND NOT EXISTS (SELECT 1 FROM kept k WHERE k.dir = t.dir AND k.name = t.name);
+INSERT INTO findings
+SELECT t.dir, t.name, 0, CASE t.exit WHEN 0 THEN 'ok' ELSE 'warn' END, 'compliance',
+       CASE WHEN t.exit = 0 THEN 'The checkout is REUSE compliant.'
+            WHEN EXISTS (SELECT 1 FROM findings f WHERE f.dir = t.dir AND f.id = 'not kept')
+            THEN 'The checkout is not REUSE compliant.'
             ELSE 'The checkout is not REUSE compliant; reuse.json in the run directory lists the files.' END
-  FROM targets WHERE name = 'reuse' AND json AND skipped IS NULL;
+  FROM targets t WHERE t.name = 'reuse' AND t.json AND t.skipped IS NULL;
 
 -- Every catalogue app, also one that is downloaded from elsewhere than a
 -- release of GitHub, Forgejo or Gitea: its page then shows only what the App
