@@ -123,11 +123,10 @@ function query(sql, params = {}) {
 }
 
 // A release the App Store lists as stable counts as stable, as there, even when
-// GitHub flags it as a pre-release; unless its tag names one, the site shows
-// that mismatch. The expression aggregates over releases r of one project and
-// tag.
-const MISMATCH = 'max(r.prerelease AND r.store IS 1 AND NOT r.pre_tag)'
-const MISMATCH_TEXT = 'flagged as a pre-release on GitHub, listed as stable in the App Store'
+// GitHub flags it as a pre-release or its tag names one; the site shows that
+// mismatch. The expression aggregates over releases r of one project and tag.
+const MISMATCH = 'max(r.mismatch)'
+const MISMATCH_TEXT = 'a pre-release on GitHub by its flag or its tag, listed as stable in the App Store'
 
 // One row per project and release line, the newest line of a project first.
 function summaryRows() {
@@ -186,7 +185,7 @@ function findingsOf(dir) {
 function otherReleases(project, tag) {
 	return query(`
 		SELECT r.tag, min(r.published) AS published, max(r.vkey) AS vkey,
-		       max((r.prerelease AND r.store IS NOT 1) OR r.pre_tag) AS pre, ${MISMATCH} AS mismatch,
+		       max(r.pre) AS pre, ${MISMATCH} AS mismatch,
 		       (SELECT f.spec FROM platforms f JOIN projects k ON f.owner = k.owner AND f.repo = k.repo
 		         WHERE k.project = $project AND f.tag = r.tag LIMIT 1) AS nc
 		  FROM releases r JOIN projects j ON j.owner = r.owner AND j.repo = r.repo
@@ -730,7 +729,7 @@ function specList(json) {
 function appReleases(id) {
 	const runs = measurementsByVersion(id)
 	const releases = query(`
-		SELECT version, created, nightly, mismatch, licenses, platform, php, databases, php_extensions
+		SELECT version, created, nightly, stable, mismatch, licenses, platform, php, databases, php_extensions
 		  FROM app_releases WHERE id = $id ORDER BY created DESC`, { $id: id })
 	return el('table', {},
 		el('thead', {}, el('tr', {}, ...['Version', 'Released', 'Channel', 'Nextcloud', 'PHP', 'Databases', 'PHP extensions', 'Licences']
@@ -740,7 +739,7 @@ function appReleases(id) {
 			return el('tbody', {}, el('tr', {},
 				el('td', {}, r.version),
 				el('td', {}, (r.created ?? '').slice(0, 10)),
-				el('td', {}, r.nightly ? 'nightly' : 'stable', ...(r.mismatch ? [mismatchMark()] : [])),
+				el('td', {}, r.nightly ? 'nightly' : r.stable ? 'stable' : 'pre-release', ...(r.mismatch ? [mismatchMark()] : [])),
 				el('td', {}, ncRange(r.platform)),
 				el('td', {}, r.php ?? ''),
 				el('td', { class: 'wrap' }, specList(r.databases)),

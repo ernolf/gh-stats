@@ -54,18 +54,23 @@ spellings that differ only in case, plus
   platforms  the Nextcloud versions (rawPlatformVersionSpec) of every catalogue
              release whose download is a GitHub release asset, by owner, repo
              and tag
-  releases   three more columns: vkey, the version sort key of gh-stats,
-             pre_tag, 1 when the tag denotes a pre-release (gh-stats --stable=strict),
-             and store, 1 when the catalogue links the release as stable, 0
-             when only as nightly, NULL when not at all
+  releases   five more columns: vkey, the version sort key of gh-stats, of
+             the highest App Store version the catalogue links the release
+             under, or of its tag when the catalogue does not link it;
+             pre_tag, 1 when the tag denotes a pre-release (gh-stats
+             --stable=strict); store, 1 when the catalogue links the release as
+             stable, 0 when only as nightly or with a pre-release version, NULL
+             when not at all; pre, 1 when the release is a pre-release: by
+             store when the catalogue links it, else by the GitHub flag or the
+             tag; and mismatch, 1 when the App Store lists the release as stable
+             but GitHub flags it as a pre-release or its tag names one
   projects   the project every repository belongs to and when its sampling
              began: repositories the catalogue lists for one app, and
              repositories of one name under two owners the catalogue lists for
              one app under that name, form one project
   summary    one row per project and release line (the major.minor of vkey)
-             for its newest release, the highest vkey that is not named a
-             pre-release and not flagged one, unless the App Store lists it as
-             stable: downloads in total and in the last day,
+             for its newest release, the highest vkey that is not a
+             pre-release: downloads in total and in the last day,
              7 days and 30 days, summed over the repositories of the project
   measurements  the newest run of every app version measured by
              gh-nc-appsdiag, from the summary.json of the run directories
@@ -82,9 +87,9 @@ spellings that differ only in case, plus
              the catalogue
   app_releases  every catalogue release with its date, nightly flag,
              licences, Nextcloud and PHP versions, databases and PHP extensions,
-             and mismatch, 1 when the release is stable in the App Store but
-             GitHub flags the release it is downloaded from as a pre-release
-             whose tag names none
+             stable, 1 when the App Store lists it as stable, and mismatch, 1
+             when it is stable but GitHub flags the release it is downloaded
+             from as a pre-release or its tag names one
 
 Downloads are the summed counters of the assets gh-stats counts by default
 (zip, tar.bz2, tar.gz, tar.xz, tgz). A line whose releases have none of them is
@@ -140,6 +145,9 @@ nr2="substr($nr1, instr($nr1,'.')+1)"
 nr3="substr($nr2, instr($nr2,'.')+1)"
 vpad() { printf "substr('000000' || CAST(substr(%s,1,instr(%s,'.')-1) AS INTEGER), -6)" "$1" "$1"; }
 vkey="$(vpad "$nb")||$(vpad "$nr1")||$(vpad "$nr2")||$(vpad "$nr3")"
+# The App Store lists a release as stable when it is not nightly and its
+# version has no pre-release suffix; the tag plays no part in that.
+store_stable="NOT nightly AND instr(version,'-') = 0"
 pre_tag="lower(tag) GLOB '*-dev*' OR lower(tag) GLOB '*-rc*' OR lower(tag) GLOB '*-beta*' OR lower(tag) GLOB '*-alpha*' OR lower(tag) GLOB '*-nightly*' OR lower(tag) GLOB '*-pre*' OR lower(tag) GLOB '*-snapshot*'"
 
 asset_flt=""
@@ -290,14 +298,23 @@ $apps_sql
 $links_sql
 COMMIT;
 
--- Some publishers flag a release as a pre-release on GitHub that the App Store
--- lists as stable, although its tag names no pre-release. The site handles it
--- as the App Store does and shows the mismatch, so the channel the App Store
--- links a release under is kept.
+-- The App Store takes version and channel from the info.xml of the tarball and
+-- the nightly flag of the upload, never from the tag, and publishers name tags
+-- freely: v.387 for 3.87.0, v1.7.0-rc.1 for a stable 1.7.0. A release the
+-- catalogue links is sorted by the highest version it is linked under and is a
+-- pre-release unless the App Store lists it as stable; the GitHub flag and the
+-- tag decide only for a release the catalogue does not link. A stable release
+-- that GitHub or its tag call a pre-release is shown as a mismatch.
 ALTER TABLE releases ADD COLUMN store INTEGER;
-UPDATE releases SET store = x.stable
-  FROM (SELECT owner, repo, tag, max(NOT nightly) AS stable FROM links GROUP BY owner, repo, tag) x
- WHERE x.owner = releases.owner COLLATE NOCASE AND x.repo = releases.repo COLLATE NOCASE AND x.tag = releases.tag;
+ALTER TABLE releases ADD COLUMN pre INTEGER;
+ALTER TABLE releases ADD COLUMN mismatch INTEGER;
+CREATE TEMP TABLE sv AS SELECT owner, repo, rtag, $nver AS nver, stable
+  FROM (SELECT owner, repo, tag AS rtag, version AS tag, ($store_stable) AS stable FROM links);
+UPDATE releases SET store = x.stable, vkey = x.vkey
+  FROM (SELECT owner, repo, rtag, max(stable) AS stable, max($vkey) AS vkey FROM sv GROUP BY owner, repo, rtag) x
+ WHERE x.owner = releases.owner COLLATE NOCASE AND x.repo = releases.repo COLLATE NOCASE AND x.rtag = releases.tag;
+UPDATE releases SET pre = CASE WHEN store IS NULL THEN prerelease OR pre_tag ELSE NOT store END,
+                    mismatch = store IS 1 AND (prerelease OR pre_tag);
 
 CREATE TEMP TABLE counted AS
 SELECT DISTINCT owner, repo, tag, asset FROM samples WHERE $asset_flt;
@@ -373,7 +390,7 @@ INSERT INTO summary
 WITH now(t) AS (SELECT max(ts) FROM runs),
 rel AS (
   SELECT j.project, r.tag, min(r.published) AS published, max(r.vkey) AS vkey,
-         max((r.prerelease AND r.store IS NOT 1) OR r.pre_tag) AS pre,
+         max(r.pre) AS pre,
          max(EXISTS (SELECT 1 FROM counted c WHERE c.owner = r.owner AND c.repo = r.repo AND c.tag = r.tag)) AS has
     FROM releases r JOIN projects j ON j.owner = r.owner AND j.repo = r.repo
    GROUP BY j.project, r.tag
@@ -538,10 +555,12 @@ CREATE TABLE app_releases (
 BEGIN;
 $catalogue_sql
 COMMIT;
+ALTER TABLE app_releases ADD COLUMN stable INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE app_releases ADD COLUMN mismatch INTEGER NOT NULL DEFAULT 0;
-UPDATE app_releases SET mismatch = 1 WHERE NOT nightly AND EXISTS (
+UPDATE app_releases SET stable = coalesce(($store_stable), 0);
+UPDATE app_releases SET mismatch = 1 WHERE stable AND EXISTS (
   SELECT 1 FROM links l JOIN releases r ON l.owner = r.owner AND l.repo = r.repo AND l.tag = r.tag
-   WHERE l.id = app_releases.id AND l.version = app_releases.version AND r.prerelease AND NOT r.pre_tag);
+   WHERE l.id = app_releases.id AND l.version = app_releases.version AND (r.prerelease OR r.pre_tag));
 
 VACUUM;
 SELECT 'apps', count(*) FROM apps
