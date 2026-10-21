@@ -145,9 +145,22 @@ function projectRepos() {
 // they stand on the left so their collation applies.
 function projectApps() {
 	return query(`
-		SELECT DISTINCT j.project, a.id, a.name FROM apps a
+		SELECT DISTINCT j.project, a.id, a.name, d.exapp FROM apps a
 		  JOIN projects j ON a.owner = j.owner AND a.repo = j.repo
+		  JOIN app_details d ON d.id = a.id
 		 ORDER BY j.project, a.name`)
+}
+
+// Every catalogue app with its newest release, the newest stable one where it
+// has one; an app without a release, as the App Store lists an integration,
+// comes without.
+function catalogueApps() {
+	return query(`
+		SELECT d.id, d.exapp, coalesce((SELECT t.name FROM app_texts t WHERE t.id = d.id AND t.lang = 'en'), d.id) AS name,
+		       r.version, CAST(strftime('%s', r.created) AS INTEGER) AS published, r.platform
+		  FROM app_details d LEFT JOIN app_releases r ON r.id = d.id AND r.version = (
+		       SELECT x.version FROM app_releases x WHERE x.id = d.id ORDER BY x.stable DESC, x.created DESC LIMIT 1)
+		 ORDER BY d.id`)
 }
 
 const MEASUREMENT = `m.dir, m.app_id, m.version, m.tag, m.tarball, m.signed, m.diff,
@@ -441,7 +454,7 @@ function checksBlock(m) {
 function checksCell(runs, span) {
 	const checks = el('tr', { class: 'checks', hidden: '' })
 	if (!runs) {
-		return [el('td', { title: 'not measured' }), checks]
+		return [el('td', { class: 'check-col', title: 'not measured' }), checks]
 	}
 	const warn = runs.reduce((n, m) => n + m.warn, 0)
 	const button = el('button', {
@@ -457,7 +470,7 @@ function checksCell(runs, span) {
 		checks.hidden = !checks.hidden
 		button.setAttribute('aria-expanded', String(!checks.hidden))
 	})
-	return [el('td', {}, button), checks]
+	return [el('td', { class: 'check-col' }, button), checks]
 }
 
 // The tick puts the row into the charts.
@@ -473,6 +486,42 @@ function lineRows(row, first) {
 	return [row.tr, row.checks, row.compare, row.compareChecks]
 }
 
+// A project whose apps are all ExApps goes to their tab, one with any other app
+// to the apps, and one without an app to the rest.
+function projectTab(apps) {
+	if (!apps.length) {
+		return 'other'
+	}
+	return apps.every((a) => a.exapp) ? 'exapps' : 'apps'
+}
+
+// A catalogue app no project row shows has the row of what the App Store lists:
+// its releases are downloaded from elsewhere than GitHub or not sampled, or it
+// has none. Its download columns stay empty, so there is nothing to chart or
+// compare.
+function catalogueRow(a) {
+	const released = a.version !== null
+	const p = {
+		tab: !released ? 'other' : a.exapp ? 'exapps' : 'apps',
+		name: a.name, tag: a.version, published: a.published,
+		total: null, d1: null, d7: null, d30: null, lines: [],
+		search: `${a.name} ${a.id}`.toLowerCase(),
+	}
+	const [checks, checksRow] = checksCell(p.tab === 'apps' ? measurementsByVersion(a.id).get(a.version) : undefined, 10)
+	const empty = released ? { class: 'num na', title: 'gh-stats samples no GitHub release of this app' } : { class: 'num' }
+	p.main = el('tbody', {}, el('tr', {},
+		el('td', { class: 'pick' }),
+		el('td', {}, el('span', { class: 'name' }, el('a', { href: `#app/${encodeURIComponent(a.id)}` }, a.name))),
+		el('td', { class: 'tag' }, a.version ?? ''),
+		el('td', {}, ncRange(a.platform)),
+		el('td', {}, a.published === null ? '' : date(a.published)),
+		...['total', ...PERIODS].map(() => el('td', empty)),
+		checks, el('td')), checksRow)
+	p.older = el('tbody', { class: 'older', hidden: '' })
+	p.toggle = el('button', { type: 'button', class: 'toggle', hidden: '' })
+	return p
+}
+
 function initOverview() {
 	initCharts()
 	measured = measurementsByRelease()
@@ -483,7 +532,7 @@ function initOverview() {
 		const [main, ...older] = lines
 		const slugs = repos.get(project).map((r) => `${r.owner}/${r.repo}`)
 		const own = apps.get(project) ?? []
-		const p = { project, name: own.map((a) => a.name).join(', ') || main.repo, ...main, lines: older }
+		const p = { project, tab: projectTab(own), name: own.map((a) => a.name).join(', ') || main.repo, ...main, lines: older }
 		for (const r of lines) {
 			r.name = p.name
 		}
@@ -505,8 +554,15 @@ function initOverview() {
 		head.append(p.toggle)
 		return p
 	})
+	const shown = new Set(projects.flatMap((p) => (apps.get(p.project) ?? []).map((a) => a.id)))
+	projects.push(...catalogueApps().filter((a) => !shown.has(a.id)).map(catalogueRow))
 
 	const table = document.querySelector('#overview table')
+	const tabs = document.querySelectorAll('#tabs button')
+	const nameHead = document.querySelector('th[data-sort="name"]')
+	let tab = 'apps'
+	// Each tab keeps its own ticks, so the charts show the rows of the tab shown.
+	const ticks = new Map()
 	const filter = document.getElementById('filter')
 	const since = document.getElementById('since')
 	const sinceDate = document.getElementById('since-date')
@@ -541,7 +597,7 @@ function initOverview() {
 		const frag = document.createDocumentFragment()
 		for (const p of projects) {
 			const older = p.lines.filter((r) => r.published >= from)
-			if ((f && !p.search.includes(f)) || (p.published < from && !older.length)) {
+			if (p.tab !== tab || (f && !p.search.includes(f)) || (p.published < from && !older.length)) {
 				continue
 			}
 			p.older.replaceChildren(...older.flatMap((r) => [r.tr, r.checks, r.compare, r.compareChecks]))
@@ -553,6 +609,24 @@ function initOverview() {
 		for (const th of document.querySelectorAll('th[data-sort]')) {
 			th.setAttribute('aria-sort', th.dataset.sort === sortKey ? (sortDesc ? 'descending' : 'ascending') : 'none')
 		}
+	}
+
+	// Only the apps are built and measured, so only their tab has the checks.
+	const showTab = (next) => {
+		if (next === tab) {
+			return
+		}
+		ticks.set(tab, swapPicks(ticks.get(next) ?? []))
+		tab = next
+		table.dataset.tab = tab
+		nameHead.textContent = { apps: 'App', exapps: 'ExApp', other: 'Project' }[tab]
+		for (const b of tabs) {
+			b.setAttribute('aria-pressed', String(b.dataset.tab === tab))
+		}
+		render()
+	}
+	for (const b of tabs) {
+		b.addEventListener('click', () => showTab(b.dataset.tab))
 	}
 
 	for (const th of document.querySelectorAll('th[data-sort]')) {
