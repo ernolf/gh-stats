@@ -122,10 +122,19 @@ function query(sql, params = {}) {
 	return rows
 }
 
+// A release the App Store lists as stable counts as stable, as there, even when
+// GitHub flags it as a pre-release; unless its tag names one, the site shows
+// that mismatch. The expression aggregates over releases r of one project and
+// tag.
+const MISMATCH = 'max(r.prerelease AND r.store IS 1 AND NOT r.pre_tag)'
+const MISMATCH_TEXT = 'flagged as a pre-release on GitHub, listed as stable in the App Store'
+
 // One row per project and release line, the newest line of a project first.
 function summaryRows() {
 	return query(`
-		SELECT project, line, owner, repo, tag, published, nc, total, d1, d7, d30
+		SELECT project, line, owner, repo, tag, published, nc, total, d1, d7, d30,
+		       (SELECT ${MISMATCH} FROM releases r JOIN projects j ON j.owner = r.owner AND j.repo = r.repo
+		         WHERE j.project = summary.project AND r.tag = summary.tag) AS mismatch
 		  FROM summary ORDER BY project, line DESC`)
 }
 
@@ -177,7 +186,7 @@ function findingsOf(dir) {
 function otherReleases(project, tag) {
 	return query(`
 		SELECT r.tag, min(r.published) AS published, max(r.vkey) AS vkey,
-		       max(r.prerelease OR r.pre_tag) AS pre,
+		       max((r.prerelease AND r.store IS NOT 1) OR r.pre_tag) AS pre, ${MISMATCH} AS mismatch,
 		       (SELECT f.spec FROM platforms f JOIN projects k ON f.owner = k.owner AND f.repo = k.repo
 		         WHERE k.project = $project AND f.tag = r.tag LIMIT 1) AS nc
 		  FROM releases r JOIN projects j ON j.owner = r.owner AND j.repo = r.repo
@@ -214,9 +223,11 @@ function releaseFigures(project, tag) {
 		       EXISTS (SELECT 1 FROM releases r WHERE r.owner = j.owner AND r.repo = j.repo
 		                  AND r.tag = $tag) AS tagged
 		  FROM projects j WHERE j.project = $project ORDER BY j.owner, j.repo`, p)
-	const { published, nc } = query(`
+	const { published, mismatch, nc } = query(`
 		SELECT (SELECT min(r.published) FROM releases r JOIN projects j ON j.owner = r.owner AND j.repo = r.repo
 		         WHERE j.project = $project AND r.tag = $tag) AS published,
+		       (SELECT ${MISMATCH} FROM releases r JOIN projects j ON j.owner = r.owner AND j.repo = r.repo
+		         WHERE j.project = $project AND r.tag = $tag) AS mismatch,
 		       (SELECT f.spec FROM platforms f JOIN projects j ON f.owner = j.owner AND f.repo = j.repo
 		         WHERE j.project = $project AND f.tag = $tag LIMIT 1) AS nc`, p)[0]
 	// Like max() and min() in SQL, these skip a repository that was never sampled.
@@ -228,7 +239,7 @@ function releaseFigures(project, tag) {
 		: (all.length ? Math.min(...all) : null)
 	const home = repos.filter((r) => r.tagged).sort((a, b) => b.has - a.has)[0]
 	const total = at[0] ?? 0
-	const fig = { owner: home.owner, repo: home.repo, tag, published, nc, total }
+	const fig = { owner: home.owner, repo: home.repo, tag, published, mismatch, nc, total }
 	for (const d of PERIODS) {
 		fig['d' + d] = first !== null && Math.max(published, first) <= now - d * DAY ? total - (at[d] ?? 0) : null
 	}
@@ -324,9 +335,13 @@ function releaseLink(owner, repo, tag) {
 	return el('a', { href: `https://github.com/${owner}/${repo}/releases/tag/${encodeURIComponent(tag)}` }, tag)
 }
 
+function mismatchMark() {
+	return el('span', { class: 'mismatch', role: 'img', 'aria-label': MISMATCH_TEXT, title: MISMATCH_TEXT }, '⚠')
+}
+
 function releaseCells(fig) {
 	return [
-		el('td', { class: 'tag' }, releaseLink(fig.owner, fig.repo, fig.tag)),
+		el('td', { class: 'tag' }, releaseLink(fig.owner, fig.repo, fig.tag), ...(fig.mismatch ? [mismatchMark()] : [])),
 		el('td', {}, ncRange(fig.nc)),
 		el('td', {}, date(fig.published)),
 		...['total', ...PERIODS.map((d) => 'd' + d)].map((k) => fig[k] === null
@@ -353,7 +368,8 @@ function compareSelect(row) {
 			if (!lines.has(line)) {
 				lines.set(line, el('optgroup', { label: `line ${lineLabel(line)}` }))
 			}
-			const notes = [date(r.published), r.nc && `Nextcloud ${ncRange(r.nc)}`, r.pre && 'pre-release']
+			const notes = [date(r.published), r.nc && `Nextcloud ${ncRange(r.nc)}`, r.pre && 'pre-release',
+				r.mismatch && `⚠ ${MISMATCH_TEXT}`]
 			lines.get(line).append(el('option', { value: r.tag }, `${r.tag} (${notes.filter(Boolean).join(', ')})`))
 		}
 		if (lines.has(row.line)) {
@@ -370,9 +386,12 @@ function compareSelect(row) {
 	select.addEventListener('change', () => {
 		row.compare.replaceChildren()
 		row.compare.hidden = !select.value
+		const [checks, checksRow] = checksCell(select.value && measured.get(`${row.project}\n${select.value}`), 10)
+		row.compareChecks.replaceWith(checksRow)
+		row.compareChecks = checksRow
 		if (select.value) {
 			row.compare.append(el('td'), el('td', { class: 'compare-label' }, 'compared with'),
-				...releaseCells(releaseFigures(row.project, select.value)), el('td'), el('td'))
+				...releaseCells(releaseFigures(row.project, select.value)), checks, el('td'))
 		}
 	})
 	return select
@@ -450,8 +469,9 @@ function lineRows(row, first) {
 	row.checks = checksRow
 	row.tr = el('tr', {}, el('td', { class: 'pick' }, row.pick), first, ...releaseCells(row), checks, el('td'))
 	row.compare = el('tr', { class: 'compare', hidden: '' })
+	row.compareChecks = el('tr', { class: 'checks', hidden: '' })
 	row.tr.lastChild.append(compareSelect(row))
-	return [row.tr, row.checks, row.compare]
+	return [row.tr, row.checks, row.compare, row.compareChecks]
 }
 
 function initOverview() {
@@ -525,7 +545,7 @@ function initOverview() {
 			if ((f && !p.search.includes(f)) || (p.published < from && !older.length)) {
 				continue
 			}
-			p.older.replaceChildren(...older.flatMap((r) => [r.tr, r.checks, r.compare]))
+			p.older.replaceChildren(...older.flatMap((r) => [r.tr, r.checks, r.compare, r.compareChecks]))
 			p.toggle.hidden = !older.length
 			p.toggle.textContent = `${older.length} older line${older.length > 1 ? 's' : ''}`
 			frag.append(p.main, p.older)
@@ -710,7 +730,7 @@ function specList(json) {
 function appReleases(id) {
 	const runs = measurementsByVersion(id)
 	const releases = query(`
-		SELECT version, created, nightly, licenses, platform, php, databases, php_extensions
+		SELECT version, created, nightly, mismatch, licenses, platform, php, databases, php_extensions
 		  FROM app_releases WHERE id = $id ORDER BY created DESC`, { $id: id })
 	return el('table', {},
 		el('thead', {}, el('tr', {}, ...['Version', 'Released', 'Channel', 'Nextcloud', 'PHP', 'Databases', 'PHP extensions', 'Licences']
@@ -720,7 +740,7 @@ function appReleases(id) {
 			return el('tbody', {}, el('tr', {},
 				el('td', {}, r.version),
 				el('td', {}, (r.created ?? '').slice(0, 10)),
-				el('td', {}, r.nightly ? 'nightly' : 'stable'),
+				el('td', {}, r.nightly ? 'nightly' : 'stable', ...(r.mismatch ? [mismatchMark()] : [])),
 				el('td', {}, ncRange(r.platform)),
 				el('td', {}, r.php ?? ''),
 				el('td', { class: 'wrap' }, specList(r.databases)),
