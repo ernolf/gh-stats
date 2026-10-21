@@ -7,7 +7,8 @@
 # static host and fetches only the pages a query needs, so the copy is written
 # without a journal and vacuumed into contiguous pages. What the sampler alone
 # needs is dropped; what the browser cannot derive cheaply is added: the apps of
-# the App Store catalogue and the Nextcloud versions of its releases, the
+# the App Store catalogue, the ordinary ones of apps.json and the AppAPI apps
+# (ExApps) of appapi_apps.json, and the Nextcloud versions of its releases, the
 # version key and strict pre-release flag of gh-stats on every release, the
 # projects the repositories form, one summary row per project and release line
 # for the start page, the measurement results of the data branch, and what the
@@ -32,6 +33,7 @@ fi
 STATE_DIR="${GH_STATS_DIR:-/var/lib/gh-stats}"
 DB="${GH_STATS_DB:-${STATE_DIR}/downloads.sqlite}"
 APPSTORE_CACHE="${APPSTORE_CACHE:-${STATE_DIR}/apps.json}"
+APPSTORE_APPAPI_CACHE="${APPSTORE_APPAPI_CACHE:-$(dirname "$APPSTORE_CACHE")/appapi_apps.json}"
 SQLITE="${SQLITE_BIN:-/usr/bin/sqlite3}"
 # The asset extensions gh-stats counts by default; the summary counts the same.
 ASSETS="zip tar.bz2 tar.gz tar.xz tgz"
@@ -82,7 +84,8 @@ spellings that differ only in case, plus
              aborted run, failed target, skipped JSON result and REUSE lint
   app_details  what the App Store shows of every catalogue app: categories,
              authors, links, dates, ratings and the original URLs of its
-             screenshots
+             screenshots, and exapp, 1 when it is an AppAPI app of
+             appapi_apps.json
   app_texts  name, summary and description of every app in every language of
              the catalogue
   app_releases  every catalogue release with its date, nightly flag,
@@ -107,6 +110,8 @@ Environment (or /etc/gh-stats/gh-stats.env):
   GH_STATS_DB     the source database (default: $GH_STATS_DIR/downloads.sqlite)
   GH_STATS_DIR    state directory (default: /var/lib/gh-stats)
   APPSTORE_CACHE  the App Store catalogue apps.json (default: $GH_STATS_DIR/apps.json)
+  APPSTORE_APPAPI_CACHE  the AppAPI catalogue appapi_apps.json (default: next
+                  to apps.json)
   SQLITE_BIN      sqlite3 (default: /usr/bin/sqlite3)
 EOF
 }
@@ -126,8 +131,21 @@ done
 [ -n "$out" ] || die "-o <file> is required"
 [ -f "$DB" ] || die "no database at $DB"
 [ -r "$APPSTORE_CACHE" ] || die "no catalogue at $APPSTORE_CACHE"
+[ -r "$APPSTORE_APPAPI_CACHE" ] || die "no AppAPI catalogue at $APPSTORE_APPAPI_CACHE"
 [ ! -e "$out" ] || die "$out exists"
 [ -z "$results" ] || [ -d "$results" ] || die "no results directory at $results"
+
+# == Catalogue ==
+# Both catalogue files as one array, each app marked with the file it comes
+# from. The App Store puts an app into appapi_apps.json when it has AppAPI
+# releases and into apps.json when it has others; an app with both would be in
+# both, and the entry of apps.json, read first, describes it.
+catalogue="$(mktemp)"
+trap 'rm -f "$catalogue"' EXIT
+jq -n --arg appapi "$APPSTORE_APPAPI_CACHE" '
+	[inputs | (input_filename == $appapi) as $exapp
+	 | (if type == "array" then . else .data end)[] | . + {exapp: $exapp}]
+' "$APPSTORE_CACHE" "$APPSTORE_APPAPI_CACHE" > "$catalogue"
 
 # == Version key ==
 # The same key gh-stats sorts tags by: the version starts at the first digit of
@@ -165,7 +183,7 @@ apps_sql="$(jq -r '
 	    | select(.[2] == "github.com" and .[5] == "releases") | [.[3], .[4]] ]
 	| unique[]
 	| "INSERT OR IGNORE INTO apps VALUES (\($id | q), \($name | q), \(.[0] | q), \(.[1] | q));"
-' "$APPSTORE_CACHE")"
+' "$catalogue")"
 
 # Every catalogue release whose download is a GitHub release asset, linked to
 # that release with its channel, and its Nextcloud versions where it has them.
@@ -184,7 +202,7 @@ links_sql="$(jq -r '
 	| "INSERT OR IGNORE INTO links VALUES (\($id | q), \($r.version | q), \($owner | q), \($repo | q), \($tag | q), \(if $r.isNightly then 1 else 0 end));",
 	  ($r.rawPlatformVersionSpec // empty
 	  | "INSERT OR IGNORE INTO platforms VALUES (\($owner | q), \($repo | q), \($tag | q), \(q));")
-' "$APPSTORE_CACHE")"
+' "$catalogue")"
 
 # == Measurements ==
 # One INSERT per run, target and finding of the run directories below
@@ -235,12 +253,12 @@ catalogue_sql="$(jq -r "$sql_defs"'
 	def specs: map({id, spec: .rawVersionSpec}) | tojson | q;
 	(if type == "array" then . else .data end)[]
 	| .id as $id
-	| "INSERT INTO app_details VALUES (\($id | q), \(.categories // [] | tojson | q), \(.authors // [] | map({name, homepage}) | tojson | q), \(.website | t), \(.issueTracker | t), \(.discussion | t), \(.userDocs | t), \(.adminDocs | t), \(.developerDocs | t), \(.created | t), \(.lastModified | t), \(.ratingOverall | v), \(.ratingRecent | v), \(.ratingNumOverall | v), \(.ratingNumRecent | v), \([.screenshots[]?.url | unproxy | select(test("^https?://"))] | tojson | q));",
+	| "INSERT OR IGNORE INTO app_details VALUES (\($id | q), \(.categories // [] | tojson | q), \(.authors // [] | map({name, homepage}) | tojson | q), \(.website | t), \(.issueTracker | t), \(.discussion | t), \(.userDocs | t), \(.adminDocs | t), \(.developerDocs | t), \(.created | t), \(.lastModified | t), \(.ratingOverall | v), \(.ratingRecent | v), \(.ratingNumOverall | v), \(.ratingNumRecent | v), \([.screenshots[]?.url | unproxy | select(test("^https?://"))] | tojson | q), \(.exapp | v));",
 	  (.translations // {} | to_entries[]
-	  | "INSERT INTO app_texts VALUES (\($id | q), \(.key | q), \(.value.name | t), \(.value.summary | t), \(.value.description | t));"),
+	  | "INSERT OR IGNORE INTO app_texts VALUES (\($id | q), \(.key | q), \(.value.name | t), \(.value.summary | t), \(.value.description | t));"),
 	  (.releases[]?
 	  | "INSERT OR IGNORE INTO app_releases VALUES (\($id | q), \(.version | q), \(.created | t), \(.isNightly | v), \(.licenses // [] | tojson | q), \(.rawPlatformVersionSpec | t), \(.rawPhpVersionSpec | t), \(.databases // [] | specs), \(.phpExtensions // [] | specs));")
-' "$APPSTORE_CACHE")"
+' "$catalogue")"
 
 # -bail stops at the first error; the half-written copy is removed then.
 trap 'rm -f "$out"' ERR
@@ -513,7 +531,8 @@ SELECT dir, name, 0, CASE exit WHEN 0 THEN 'ok' ELSE 'warn' END, 'compliance',
 
 -- Every catalogue app, also one that is downloaded from elsewhere than GitHub:
 -- its page then shows only what the App Store shows. The JSON columns keep
--- the lists of the catalogue as they are.
+-- the lists of the catalogue as they are; exapp marks an AppAPI app, which is
+-- never measured.
 CREATE TABLE app_details (
   id                 TEXT NOT NULL PRIMARY KEY,
   categories         TEXT NOT NULL,
@@ -530,7 +549,8 @@ CREATE TABLE app_details (
   rating_recent      REAL,
   rating_num_overall INTEGER,
   rating_num_recent  INTEGER,
-  screenshots        TEXT NOT NULL
+  screenshots        TEXT NOT NULL,
+  exapp              INTEGER NOT NULL
 ) WITHOUT ROWID;
 CREATE TABLE app_texts (
   id          TEXT NOT NULL,
