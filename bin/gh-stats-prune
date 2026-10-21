@@ -125,11 +125,11 @@ if [ -n "$out" ] || [ "$inplace" -eq 1 ]; then
 	apply="BEGIN;
 DELETE FROM samples WHERE NOT EXISTS (
   SELECT 1 FROM keep_samples k
-   WHERE k.owner = samples.owner AND k.repo = samples.repo AND k.tag = samples.tag
+   WHERE k.host = samples.host AND k.owner = samples.owner AND k.repo = samples.repo AND k.tag = samples.tag
      AND k.asset = samples.asset AND k.ts = samples.ts);
 DELETE FROM repo_stats WHERE NOT EXISTS (
   SELECT 1 FROM keep_repo_stats k
-   WHERE k.owner = repo_stats.owner AND k.repo = repo_stats.repo AND k.ts = repo_stats.ts);
+   WHERE k.host = repo_stats.host AND k.owner = repo_stats.owner AND k.repo = repo_stats.repo AND k.ts = repo_stats.ts);
 DELETE FROM runs WHERE ts NOT IN (SELECT ts FROM keep_runs);
 COMMIT;
 VACUUM;"
@@ -140,22 +140,22 @@ fi
 printf '%-10s %10s %10s\n' table rows kept
 "$SQLITE" -bail -separator $'\t' "$target" <<SQL | while IFS=$'\t' read -r t n k; do printf '%-10s %10s %10s\n' "$t" "$n" "$k"; done
 CREATE TEMP TABLE keep_samples (
-  owner, repo, tag, asset, ts,
-  PRIMARY KEY (owner, repo, tag, asset, ts)
+  host, owner, repo, tag, asset, ts,
+  PRIMARY KEY (host, owner, repo, tag, asset, ts)
 ) WITHOUT ROWID;
 INSERT OR IGNORE INTO keep_samples
-SELECT owner, repo, tag, asset, max(ts) FROM samples GROUP BY owner, repo, tag, asset, $bucket;
+SELECT host, owner, repo, tag, asset, max(ts) FROM samples GROUP BY host, owner, repo, tag, asset, $bucket;
 INSERT OR IGNORE INTO keep_samples
-SELECT owner, repo, tag, asset, min(ts) FROM samples GROUP BY owner, repo, tag, asset;
+SELECT host, owner, repo, tag, asset, min(ts) FROM samples GROUP BY host, owner, repo, tag, asset;
 
 CREATE TEMP TABLE keep_repo_stats (
-  owner, repo, ts,
-  PRIMARY KEY (owner, repo, ts)
+  host, owner, repo, ts,
+  PRIMARY KEY (host, owner, repo, ts)
 ) WITHOUT ROWID;
 INSERT OR IGNORE INTO keep_repo_stats
-SELECT owner, repo, max(ts) FROM repo_stats GROUP BY owner, repo, $bucket;
+SELECT host, owner, repo, max(ts) FROM repo_stats GROUP BY host, owner, repo, $bucket;
 INSERT OR IGNORE INTO keep_repo_stats
-SELECT owner, repo, min(ts) FROM repo_stats GROUP BY owner, repo;
+SELECT host, owner, repo, min(ts) FROM repo_stats GROUP BY host, owner, repo;
 
 CREATE TEMP TABLE keep_runs (ts INTEGER PRIMARY KEY);
 INSERT OR IGNORE INTO keep_runs SELECT max(ts) FROM runs GROUP BY $bucket;

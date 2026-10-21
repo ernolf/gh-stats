@@ -52,10 +52,11 @@ etags and repos, with one spelling per repository where the sampler knows it
 under spellings that differ only in case, and the series of a renamed
 repository under its current name, plus
 
-  apps       app id, name, owner and repo of every App Store app whose releases
-             are downloaded from GitHub, from the catalogue
+  apps       app id, name, host, owner and repo of every App Store app whose
+             releases are downloaded from GitHub or from the releases of a
+             Forgejo or Gitea host, from the catalogue
   platforms  the Nextcloud versions (rawPlatformVersionSpec) of every catalogue
-             release whose download is a GitHub release asset, by owner, repo
+             release whose download is a release asset, by host, owner, repo
              and tag
   releases   five more columns: vkey, the version sort key of gh-stats, of
              the highest App Store version the catalogue links the release
@@ -64,14 +65,15 @@ repository under its current name, plus
              --stable=strict); store, 1 when the catalogue links the release as
              stable, 0 when only as nightly or with a pre-release version, NULL
              when not at all; pre, 1 when the release is a pre-release: by
-             store when the catalogue links it, else by the GitHub flag or the
-             tag; and mismatch, 1 when the App Store lists the release as stable
-             but GitHub flags it as a pre-release or its tag names one
+             store when the catalogue links it, else by the flag of its host or
+             the tag; and mismatch, 1 when the App Store lists the release as
+             stable but its host flags it as a pre-release or its tag names one
   projects   the project every repository belongs to that the sampler still
              samples or the catalogue lists, and when its sampling began:
              repositories the catalogue lists for one app, and
              repositories of one name under two owners the catalogue lists for
-             one app under that name, form one project
+             one app under that name, form one project; a repository on
+             another host than GitHub has the host in front of its key
   summary    one row per project and release line (the major.minor of vkey)
              for its newest release, the highest vkey that is not a
              pre-release, of a project with an app among the releases the
@@ -79,8 +81,8 @@ repository under its current name, plus
              7 days and 30 days, summed over the repositories of the project
   measurements  the newest run of every app version measured by
              gh-nc-appsdiag, from the summary.json of the run directories
-             below <dir>: its directory, app, version, tag, status, the shipped
-             tarball and the counts of the release diff
+             below <dir>: its directory, repository host, app, version, tag,
+             status, the shipped tarball and the counts of the release diff
   targets    the make targets of each run, with exit code, whether they left a
              JSON result and why one was skipped
   findings   the findings of the analysers of each run, and one finding per
@@ -94,7 +96,7 @@ repository under its current name, plus
   app_releases  every catalogue release with its date, nightly flag,
              licences, Nextcloud and PHP versions, databases and PHP extensions,
              stable, 1 when the App Store lists it as stable, and mismatch, 1
-             when it is stable but GitHub flags the release it is downloaded
+             when it is stable but the host flags the release it is downloaded
              from as a pre-release or its tag names one
 
 Downloads are the summed counters of the assets gh-stats counts by default
@@ -175,24 +177,28 @@ asset_flt=""
 for e in $ASSETS; do asset_flt+="${asset_flt:+ OR }asset GLOB '*.$e'"; done
 
 # == Apps ==
-# One INSERT per app and GitHub repository its releases are downloaded from, as
-# SQL literals: an app name may hold a quote, which .import would take for CSV
-# quoting.
-apps_sql="$(jq -r '
+# One INSERT per app and repository its releases are downloaded from, as SQL
+# literals: an app name may hold a quote, which .import would take for CSV
+# quoting. Forgejo and Gitea serve release assets under the path GitHub uses,
+# host/owner/repo/releases/download/tag/file; on GitHub any releases URL counts.
+# Hosts are lowercase, as the sampler gets them from gh-nc-appstore-targets.
+release_url='
+	def release_url: .[5] == "releases" and (.[2] == "github.com" or .[6] == "download");'
+apps_sql="$(jq -r "$release_url"'
 	def q: "'\''" + gsub("'\''"; "'\'''\''") + "'\''";
 	(if type == "array" then . else .data end)[]
 	| .id as $id | (.translations.en.name // $id) as $name
 	| [ .releases[]? | .download // empty | split("/")
-	    | select(.[2] == "github.com" and .[5] == "releases") | [.[3], .[4]] ]
+	    | select(release_url) | [(.[2] | ascii_downcase), .[3], .[4]] ]
 	| unique[]
-	| "INSERT OR IGNORE INTO apps VALUES (\($id | q), \($name | q), \(.[0] | q), \(.[1] | q));"
+	| "INSERT OR IGNORE INTO apps VALUES (\($id | q), \($name | q), \(.[0] | q), \(.[1] | q), \(.[2] | q));"
 ' "$catalogue")"
 
-# Every catalogue release whose download is a GitHub release asset, linked to
-# that release with its channel, and its Nextcloud versions where it has them.
+# Every catalogue release whose download is a release asset, linked to that
+# release with its channel, and its Nextcloud versions where it has them.
 # The tag is the path segment after releases/download, percent-encoded in the
 # URL (v5.1.4%2B1); tags are ASCII, so each escape decodes to one character.
-links_sql="$(jq -r '
+links_sql="$(jq -r "$release_url"'
 	def q: "'\''" + gsub("'\''"; "'\'''\''") + "'\''";
 	def hex: ascii_downcase | explode | map(if . > 57 then . - 87 else . - 48 end) | .[0] * 16 + .[1];
 	def urldecode: gsub("%(?<h>[0-9A-Fa-f]{2})"; [.h | hex] | implode);
@@ -200,17 +206,17 @@ links_sql="$(jq -r '
 	| .id as $id
 	| .releases[]? | . as $r
 	| .download // empty | split("/")
-	| select(.[2] == "github.com" and .[5] == "releases" and .[6] == "download")
-	| [.[3], .[4], (.[7] | urldecode)] as [$owner, $repo, $tag]
-	| "INSERT OR IGNORE INTO links VALUES (\($id | q), \($r.version | q), \($owner | q), \($repo | q), \($tag | q), \(if $r.isNightly then 1 else 0 end));",
+	| select(release_url and .[6] == "download")
+	| [(.[2] | ascii_downcase), .[3], .[4], (.[7] | urldecode)] as [$host, $owner, $repo, $tag]
+	| "INSERT OR IGNORE INTO links VALUES (\($id | q), \($r.version | q), \($host | q), \($owner | q), \($repo | q), \($tag | q), \(if $r.isNightly then 1 else 0 end));",
 	  ($r.rawPlatformVersionSpec // empty
-	  | "INSERT OR IGNORE INTO platforms VALUES (\($owner | q), \($repo | q), \($tag | q), \(q));")
+	  | "INSERT OR IGNORE INTO platforms VALUES (\($host | q), \($owner | q), \($repo | q), \($tag | q), \(q));")
 ' "$catalogue")"
 
 # == Measurements ==
 # One INSERT per run, target and finding of the run directories below
 # $results. The directory relative to $results keys all three tables, so the
-# site can link each run. Analyser results above 1 MiB are stored gzipped and
+# site can link each run. A run of a repository on GitHub names no repo_host. Analyser results above 1 MiB are stored gzipped and
 # read one by one; reuse.json carries no findings and release/ holds the diff,
 # whose counts summary.json already has.
 sql_defs='
@@ -222,7 +228,7 @@ if [ -n "$results" ]; then
 	results_sql="$(find "$results" -name summary.json -print0 | xargs -0 -r jq -r --arg root "$results/" "$sql_defs"'
 		(input_filename | ltrimstr($root) | rtrimstr("/summary.json")) as $dir
 		| (.files // []) as $files
-		| "INSERT INTO measurements VALUES (\($dir | q), \(.owner | v), \(.repo | v), \(.subdir | v), \(.app_id | v), \(.version | v), \(.head.tag | v), \(.stamp | v), \(.status | v), \(.reason | v), \(.release.tarball | v), \(.release.signed | v), \(.release.counts | if . == null then null else tojson end | v));",
+		| "INSERT INTO measurements VALUES (\($dir | q), \(.repo_host // "github.com" | v), \(.owner | v), \(.repo | v), \(.subdir | v), \(.app_id | v), \(.version | v), \(.head.tag | v), \(.stamp | v), \(.status | v), \(.reason | v), \(.release.tarball | v), \(.release.signed | v), \(.release.counts | if . == null then null else tojson end | v));",
 		  (.targets[]? | .name as $n
 		  | "INSERT INTO targets VALUES (\($dir | q), \($n | v), \(.exit | v), \(.json_skipped | v), \($files | any(. == $n + ".json") | v));")
 	')"
@@ -265,82 +271,88 @@ catalogue_sql="$(jq -r "$sql_defs"'
 
 # -bail stops at the first error; the half-written copy is removed then.
 trap 'rm -f "$out"' ERR
+# The key of a repository in the projects: owner/repo on GitHub, host/owner/repo
+# elsewhere, lowercase.
+host_k="CASE WHEN host = 'github.com' THEN '' ELSE host || '/' END"
 sq="'"
 "$SQLITE" -bail "$DB" "VACUUM INTO '${out//$sq/$sq$sq}'"
 "$SQLITE" -bail "$out" "PRAGMA journal_mode = DELETE" >/dev/null
 "$SQLITE" -bail "$out" <<SQL
 DROP TABLE etags;
 
--- GitHub resolves owner and repository names without case, so two spellings in
--- the sampler's list are one repository sampled twice. The spelling sampled
--- first stays, as its series is the longer one.
+-- GitHub, Forgejo and Gitea resolve owner and repository names without case,
+-- so two spellings in the sampler's list are one repository sampled twice. The
+-- spelling sampled first stays, as its series is the longer one.
 CREATE TEMP TABLE dup AS
-SELECT owner, repo FROM (
-  SELECT owner, repo,
-         row_number() OVER (PARTITION BY lower(owner), lower(repo) ORDER BY min(ts), owner, repo) AS n
-    FROM samples GROUP BY owner, repo)
+SELECT host, owner, repo FROM (
+  SELECT host, owner, repo,
+         row_number() OVER (PARTITION BY host, lower(owner), lower(repo) ORDER BY min(ts), owner, repo) AS n
+    FROM samples GROUP BY host, owner, repo)
  WHERE n > 1;
-DELETE FROM samples WHERE (owner, repo) IN (SELECT owner, repo FROM dup);
-DELETE FROM releases WHERE (owner, repo) IN (SELECT owner, repo FROM dup);
-DELETE FROM repo_stats WHERE (owner, repo) IN (SELECT owner, repo FROM dup);
+DELETE FROM samples WHERE (host, owner, repo) IN (SELECT host, owner, repo FROM dup);
+DELETE FROM releases WHERE (host, owner, repo) IN (SELECT host, owner, repo FROM dup);
+DELETE FROM repo_stats WHERE (host, owner, repo) IN (SELECT host, owner, repo FROM dup);
 
--- GitHub redirects the old name of a renamed repository, so the sampler may
+-- The host redirects the old name of a renamed repository, so the sampler may
 -- have sampled it under both. Its series goes on under the current name, in the
 -- spelling the database has for that name, and the rows of the old name fill
 -- in what the current one lacks.
 CREATE TEMP TABLE renamed AS
-SELECT n.owner, n.repo,
+SELECT n.host, n.owner, n.repo,
        coalesce(k.owner, substr(n.name, 1, instr(n.name, '/') - 1)) AS to_owner,
        coalesce(k.repo, substr(n.name, instr(n.name, '/') + 1)) AS to_repo
-  FROM repos n LEFT JOIN (SELECT DISTINCT owner, repo FROM releases) k
-    ON lower(k.owner) || '/' || lower(k.repo) = lower(n.name)
+  FROM repos n LEFT JOIN (SELECT DISTINCT host, owner, repo FROM releases) k
+    ON k.host = n.host AND lower(k.owner) || '/' || lower(k.repo) = lower(n.name)
  WHERE lower(n.name) <> lower(n.owner) || '/' || lower(n.repo);
 UPDATE OR IGNORE samples SET owner = n.to_owner, repo = n.to_repo
-  FROM renamed n WHERE n.owner = samples.owner AND n.repo = samples.repo;
+  FROM renamed n WHERE n.host = samples.host AND n.owner = samples.owner AND n.repo = samples.repo;
 UPDATE OR IGNORE releases SET owner = n.to_owner, repo = n.to_repo
-  FROM renamed n WHERE n.owner = releases.owner AND n.repo = releases.repo;
+  FROM renamed n WHERE n.host = releases.host AND n.owner = releases.owner AND n.repo = releases.repo;
 UPDATE OR IGNORE repo_stats SET owner = n.to_owner, repo = n.to_repo
-  FROM renamed n WHERE n.owner = repo_stats.owner AND n.repo = repo_stats.repo;
-DELETE FROM samples WHERE (owner, repo) IN (SELECT owner, repo FROM renamed);
-DELETE FROM releases WHERE (owner, repo) IN (SELECT owner, repo FROM renamed);
-DELETE FROM repo_stats WHERE (owner, repo) IN (SELECT owner, repo FROM renamed);
+  FROM renamed n WHERE n.host = repo_stats.host AND n.owner = repo_stats.owner AND n.repo = repo_stats.repo;
+DELETE FROM samples WHERE (host, owner, repo) IN (SELECT host, owner, repo FROM renamed);
+DELETE FROM releases WHERE (host, owner, repo) IN (SELECT host, owner, repo FROM renamed);
+DELETE FROM repo_stats WHERE (host, owner, repo) IN (SELECT host, owner, repo FROM renamed);
 
 -- The repositories the last run sampled, by their current name. The sampler
 -- writes seen and the run in one transaction.
 CREATE TEMP TABLE targeted AS
-SELECT lower(coalesce(name, owner || '/' || repo)) AS k
+SELECT $host_k || lower(coalesce(name, owner || '/' || repo)) AS k
   FROM repos WHERE seen = (SELECT max(ts) FROM runs);
 DROP TABLE repos;
 
 ALTER TABLE releases ADD COLUMN vkey TEXT;
 ALTER TABLE releases ADD COLUMN pre_tag INTEGER;
-CREATE TEMP TABLE v AS SELECT owner, repo, tag, $nver AS nver FROM releases;
+CREATE TEMP TABLE v AS SELECT host, owner, repo, tag, $nver AS nver FROM releases;
 UPDATE releases SET vkey = x.vkey, pre_tag = x.pre_tag
-  FROM (SELECT owner, repo, tag, $vkey AS vkey, ($pre_tag) AS pre_tag FROM v) x
- WHERE x.owner = releases.owner AND x.repo = releases.repo AND x.tag = releases.tag;
+  FROM (SELECT host, owner, repo, tag, $vkey AS vkey, ($pre_tag) AS pre_tag FROM v) x
+ WHERE x.host = releases.host AND x.owner = releases.owner AND x.repo = releases.repo AND x.tag = releases.tag;
 
 CREATE TABLE apps (
   id    TEXT NOT NULL,
   name  TEXT NOT NULL,
+  host  TEXT NOT NULL,
   owner TEXT NOT NULL COLLATE NOCASE,
   repo  TEXT NOT NULL COLLATE NOCASE,
-  PRIMARY KEY (id, owner, repo)
+  PRIMARY KEY (id, host, owner, repo)
 ) WITHOUT ROWID;
 CREATE TABLE platforms (
+  host  TEXT NOT NULL,
   owner TEXT NOT NULL COLLATE NOCASE,
   repo  TEXT NOT NULL COLLATE NOCASE,
   tag   TEXT NOT NULL,
   spec  TEXT NOT NULL,
-  PRIMARY KEY (owner, repo, tag)
+  PRIMARY KEY (host, owner, repo, tag)
 ) WITHOUT ROWID;
 CREATE TEMP TABLE links (
   id      TEXT    NOT NULL,
   version TEXT    NOT NULL,
+  host    TEXT    NOT NULL,
   owner   TEXT    NOT NULL COLLATE NOCASE,
   repo    TEXT    NOT NULL COLLATE NOCASE,
   tag     TEXT    NOT NULL,
   nightly INTEGER NOT NULL,
-  PRIMARY KEY (id, version, owner, repo, tag)
+  PRIMARY KEY (id, version, host, owner, repo, tag)
 );
 BEGIN;
 $apps_sql
@@ -351,50 +363,52 @@ COMMIT;
 -- the nightly flag of the upload, never from the tag, and publishers name tags
 -- freely: v.387 for 3.87.0, v1.7.0-rc.1 for a stable 1.7.0. A release the
 -- catalogue links is sorted by the highest version it is linked under and is a
--- pre-release unless the App Store lists it as stable; the GitHub flag and the
--- tag decide only for a release the catalogue does not link. A stable release
--- that GitHub or its tag call a pre-release is shown as a mismatch.
+-- pre-release unless the App Store lists it as stable; the flag of its host and
+-- the tag decide only for a release the catalogue does not link. A stable
+-- release that its host or its tag call a pre-release is shown as a mismatch.
 ALTER TABLE releases ADD COLUMN store INTEGER;
 ALTER TABLE releases ADD COLUMN pre INTEGER;
 ALTER TABLE releases ADD COLUMN mismatch INTEGER;
-CREATE TEMP TABLE sv AS SELECT owner, repo, rtag, $nver AS nver, stable
-  FROM (SELECT owner, repo, tag AS rtag, version AS tag, ($store_stable) AS stable FROM links);
+CREATE TEMP TABLE sv AS SELECT host, owner, repo, rtag, $nver AS nver, stable
+  FROM (SELECT host, owner, repo, tag AS rtag, version AS tag, ($store_stable) AS stable FROM links);
 UPDATE releases SET store = x.stable, vkey = x.vkey
-  FROM (SELECT owner, repo, rtag, max(stable) AS stable, max($vkey) AS vkey FROM sv GROUP BY owner, repo, rtag) x
- WHERE x.owner = releases.owner COLLATE NOCASE AND x.repo = releases.repo COLLATE NOCASE AND x.rtag = releases.tag;
+  FROM (SELECT host, owner, repo, rtag, max(stable) AS stable, max($vkey) AS vkey FROM sv GROUP BY host, owner, repo, rtag) x
+ WHERE x.host = releases.host AND x.owner = releases.owner COLLATE NOCASE AND x.repo = releases.repo COLLATE NOCASE
+   AND x.rtag = releases.tag;
 UPDATE releases SET pre = CASE WHEN store IS NULL THEN prerelease OR pre_tag ELSE NOT store END,
                     mismatch = store IS 1 AND (prerelease OR pre_tag);
 
 CREATE TEMP TABLE counted AS
-SELECT DISTINCT owner, repo, tag, asset FROM samples WHERE $asset_flt;
-CREATE INDEX temp.counted_release ON counted (owner, repo, tag);
+SELECT DISTINCT host, owner, repo, tag, asset FROM samples WHERE $asset_flt;
+CREATE INDEX temp.counted_release ON counted (host, owner, repo, tag);
 
 -- A project is a connected set of repositories. Two repositories are connected
 -- when the catalogue lists both for one app, or when they share a name and the
 -- catalogue lists one app under that name for both owners elsewhere: such
--- owners publish the same projects, also those that are no App Store app.
--- Keys are lowercase, as GitHub compares names; the apps columns stand on the
--- left so their collation applies. A repository the sampler no longer samples
--- and the catalogue does not list is no project any more; its samples stay.
+-- owners publish the same projects, also those that are no App Store app. An
+-- owner is one owner on one host. Keys are lowercase, as the hosts compare
+-- names; the apps columns stand on the left so their collation applies. A
+-- repository the sampler no longer samples and the catalogue does not list is
+-- no project any more; its samples stay.
 CREATE TEMP TABLE nodes AS
-SELECT owner, repo, k FROM (
-  SELECT owner, repo, lower(owner) || '/' || lower(repo) AS k
-    FROM (SELECT DISTINCT owner, repo FROM releases)) r
+SELECT host, owner, repo, k FROM (
+  SELECT host, owner, repo, $host_k || lower(owner) || '/' || lower(repo) AS k
+    FROM (SELECT DISTINCT host, owner, repo FROM releases)) r
  WHERE k IN (SELECT k FROM targeted)
-    OR EXISTS (SELECT 1 FROM apps a WHERE a.owner = r.owner AND a.repo = r.repo);
+    OR EXISTS (SELECT 1 FROM apps a WHERE a.host = r.host AND a.owner = r.owner AND a.repo = r.repo);
 CREATE TEMP TABLE owner_pairs AS
-SELECT DISTINCT lower(a.owner) AS o1, lower(b.owner) AS o2
-  FROM apps a JOIN apps b ON a.id = b.id AND a.repo = b.repo AND a.owner <> b.owner;
+SELECT DISTINCT a.host AS h1, lower(a.owner) AS o1, b.host AS h2, lower(b.owner) AS o2
+  FROM apps a JOIN apps b ON a.id = b.id AND a.repo = b.repo AND (a.host <> b.host OR a.owner <> b.owner);
 CREATE TEMP TABLE edges AS
 SELECT x.k AS a, y.k AS b
-  FROM apps p JOIN nodes x ON p.owner = x.owner AND p.repo = x.repo
+  FROM apps p JOIN nodes x ON p.host = x.host AND p.owner = x.owner AND p.repo = x.repo
   JOIN apps q ON q.id = p.id
-  JOIN nodes y ON q.owner = y.owner AND q.repo = y.repo
+  JOIN nodes y ON q.host = y.host AND q.owner = y.owner AND q.repo = y.repo
  WHERE x.k <> y.k
 UNION
 SELECT x.k, y.k
   FROM nodes x JOIN nodes y ON lower(x.repo) = lower(y.repo)
-  JOIN owner_pairs o ON o.o1 = lower(x.owner) AND o.o2 = lower(y.owner);
+  JOIN owner_pairs o ON o.h1 = x.host AND o.o1 = lower(x.owner) AND o.h2 = y.host AND o.o2 = lower(y.owner);
 CREATE INDEX temp.edges_a ON edges (a);
 CREATE TEMP TABLE components AS
 WITH RECURSIVE reach(k, r) AS (
@@ -405,15 +419,16 @@ WITH RECURSIVE reach(k, r) AS (
 SELECT k, min(r) AS project FROM reach GROUP BY k;
 
 CREATE TABLE projects (
+  host    TEXT NOT NULL,
   owner   TEXT NOT NULL,
   repo    TEXT NOT NULL,
   project TEXT NOT NULL,
   first   INTEGER,
-  PRIMARY KEY (owner, repo)
+  PRIMARY KEY (host, owner, repo)
 ) WITHOUT ROWID;
 INSERT INTO projects
-SELECT n.owner, n.repo, c.project,
-       (SELECT min(ts) FROM samples s WHERE s.owner = n.owner AND s.repo = n.repo)
+SELECT n.host, n.owner, n.repo, c.project,
+       (SELECT min(ts) FROM samples s WHERE s.host = n.host AND s.owner = n.owner AND s.repo = n.repo)
   FROM nodes n JOIN components c ON c.k = n.k;
 CREATE INDEX projects_project ON projects (project);
 
@@ -429,10 +444,11 @@ CREATE INDEX projects_project ON projects (project);
 -- come from the releases the catalogue links; the others still count as older
 -- releases of the project.
 CREATE TEMP TABLE linked AS
-SELECT DISTINCT j.project FROM apps a JOIN projects j ON a.owner = j.owner AND a.repo = j.repo;
+SELECT DISTINCT j.project FROM apps a JOIN projects j ON a.host = j.host AND a.owner = j.owner AND a.repo = j.repo;
 CREATE TABLE summary (
   project   TEXT    NOT NULL,
   line      TEXT    NOT NULL,
+  host      TEXT    NOT NULL,
   owner     TEXT    NOT NULL,
   repo      TEXT    NOT NULL,
   tag       TEXT    NOT NULL,
@@ -449,8 +465,8 @@ WITH now(t) AS (SELECT max(ts) FROM runs),
 rel AS (
   SELECT j.project, r.tag, min(r.published) AS published, max(r.vkey) AS vkey,
          max(r.pre) AS pre,
-         max(EXISTS (SELECT 1 FROM counted c WHERE c.owner = r.owner AND c.repo = r.repo AND c.tag = r.tag)) AS has
-    FROM releases r JOIN projects j ON j.owner = r.owner AND j.repo = r.repo
+         max(EXISTS (SELECT 1 FROM counted c WHERE c.host = r.host AND c.owner = r.owner AND c.repo = r.repo AND c.tag = r.tag)) AS has
+    FROM releases r JOIN projects j ON j.host = r.host AND j.owner = r.owner AND j.repo = r.repo
    GROUP BY j.project, r.tag
   HAVING max(r.store IS NOT NULL) OR j.project NOT IN (SELECT project FROM linked)
 ),
@@ -466,28 +482,28 @@ picked AS (
    WHERE has OR NOT EXISTS (SELECT 1 FROM newest x WHERE x.project = n.project AND x.has)
 ),
 home AS (
-  SELECT p.project, p.line, j.owner, j.repo,
+  SELECT p.project, p.line, j.host, j.owner, j.repo,
          row_number() OVER (PARTITION BY p.project, p.line ORDER BY
-           EXISTS (SELECT 1 FROM counted c WHERE c.owner = j.owner AND c.repo = j.repo AND c.tag = p.tag) DESC,
-           j.owner, j.repo) AS n
+           EXISTS (SELECT 1 FROM counted c WHERE c.host = j.host AND c.owner = j.owner AND c.repo = j.repo AND c.tag = p.tag) DESC,
+           j.host, j.owner, j.repo) AS n
     FROM picked p JOIN projects j ON j.project = p.project
-    JOIN releases r ON r.owner = j.owner AND r.repo = j.repo AND r.tag = p.tag
+    JOIN releases r ON r.host = j.host AND r.owner = j.owner AND r.repo = j.repo AND r.tag = p.tag
 ),
 since AS (
   SELECT p.project, p.line, coalesce(
            (SELECT max(j.first) FROM projects j WHERE j.project = p.project AND EXISTS (
-              SELECT 1 FROM counted c WHERE c.owner = j.owner AND c.repo = j.repo AND c.tag = p.tag)),
+              SELECT 1 FROM counted c WHERE c.host = j.host AND c.owner = j.owner AND c.repo = j.repo AND c.tag = p.tag)),
            (SELECT min(j.first) FROM projects j WHERE j.project = p.project)) AS first
     FROM picked p
 ),
 at AS (
   SELECT p.project, p.line, k.d,
          (SELECT s.downloads FROM samples s
-           WHERE s.owner = c.owner AND s.repo = c.repo AND s.tag = c.tag AND s.asset = c.asset
+           WHERE s.host = c.host AND s.owner = c.owner AND s.repo = c.repo AND s.tag = c.tag AND s.asset = c.asset
              AND s.ts <= (SELECT t FROM now) - k.d * 86400
            ORDER BY s.ts DESC LIMIT 1) AS downloads
     FROM picked p JOIN projects j ON j.project = p.project
-    JOIN counted c ON c.owner = j.owner AND c.repo = j.repo AND c.tag = p.tag,
+    JOIN counted c ON c.host = j.host AND c.owner = j.owner AND c.repo = j.repo AND c.tag = p.tag,
          (SELECT 0 AS d UNION ALL SELECT 1 UNION ALL SELECT 7 UNION ALL SELECT 30) k
 ),
 pivot AS (
@@ -497,8 +513,8 @@ pivot AS (
     FROM (SELECT project, line, d, coalesce(downloads, 0) AS v FROM at)
    GROUP BY project, line
 )
-SELECT p.project, p.line, h.owner, h.repo, p.tag, p.published,
-       (SELECT f.spec FROM platforms f JOIN projects j ON f.owner = j.owner AND f.repo = j.repo
+SELECT p.project, p.line, h.host, h.owner, h.repo, p.tag, p.published,
+       (SELECT f.spec FROM platforms f JOIN projects j ON f.host = j.host AND f.owner = j.owner AND f.repo = j.repo
          WHERE j.project = p.project AND f.tag = p.tag LIMIT 1),
        coalesce(v.v0, 0),
        CASE WHEN max(p.published, s.first) <= now.t - 86400 THEN coalesce(v.v0 - v.v1, 0) END,
@@ -516,6 +532,7 @@ SELECT p.project, p.line, h.owner, h.repo, p.tag, p.published,
 -- code tells whether the checkout is compliant.
 CREATE TABLE measurements (
   dir     TEXT NOT NULL PRIMARY KEY,
+  host    TEXT NOT NULL,
   owner   TEXT NOT NULL COLLATE NOCASE,
   repo    TEXT NOT NULL COLLATE NOCASE,
   subdir  TEXT,
@@ -551,7 +568,8 @@ $results_sql
 COMMIT;
 DELETE FROM measurements WHERE EXISTS (
   SELECT 1 FROM measurements m
-   WHERE m.owner = measurements.owner AND m.repo = measurements.repo AND m.subdir IS measurements.subdir
+   WHERE m.host = measurements.host AND m.owner = measurements.owner AND m.repo = measurements.repo
+     AND m.subdir IS measurements.subdir
      AND m.version IS measurements.version AND m.stamp > measurements.stamp);
 DELETE FROM targets WHERE dir NOT IN (SELECT dir FROM measurements);
 DELETE FROM findings WHERE dir NOT IN (SELECT dir FROM measurements);
@@ -570,8 +588,9 @@ SELECT dir, name, 0, CASE exit WHEN 0 THEN 'ok' ELSE 'warn' END, 'compliance',
             ELSE 'The checkout is not REUSE compliant; reuse.json in the run directory lists the files.' END
   FROM targets WHERE name = 'reuse' AND json AND skipped IS NULL;
 
--- Every catalogue app, also one that is downloaded from elsewhere than GitHub:
--- its page then shows only what the App Store shows. The JSON columns keep
+-- Every catalogue app, also one that is downloaded from elsewhere than a
+-- release of GitHub, Forgejo or Gitea: its page then shows only what the App
+-- Store shows. The JSON columns keep
 -- the lists of the catalogue as they are; exapp marks an AppAPI app, which is
 -- never measured.
 CREATE TABLE app_details (
@@ -620,7 +639,7 @@ ALTER TABLE app_releases ADD COLUMN stable INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE app_releases ADD COLUMN mismatch INTEGER NOT NULL DEFAULT 0;
 UPDATE app_releases SET stable = coalesce(($store_stable), 0);
 UPDATE app_releases SET mismatch = 1 WHERE stable AND EXISTS (
-  SELECT 1 FROM links l JOIN releases r ON l.owner = r.owner AND l.repo = r.repo AND l.tag = r.tag
+  SELECT 1 FROM links l JOIN releases r ON l.host = r.host AND l.owner = r.owner AND l.repo = r.repo AND l.tag = r.tag
    WHERE l.id = app_releases.id AND l.version = app_releases.version AND (r.prerelease OR r.pre_tag));
 
 VACUUM;

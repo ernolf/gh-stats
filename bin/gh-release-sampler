@@ -15,6 +15,9 @@
 # Per repository it also records the current name GitHub answers under, which
 # differs from the sampled one after a rename, and the last run that sampled it
 # as a target.
+# A target host/owner/repo is a repository on a Forgejo or Gitea host, sampled
+# the same way through its API at https://<host>/api/v1. Every table keys its
+# rows by host, github.com for GitHub.
 
 # == Config ==
 # Optional site config shared with gh-stats. If /etc/gh-stats/gh-stats.env
@@ -48,46 +51,83 @@ ts="$(date -u +%s)"
 mkdir -p "$STATE_DIR"
 
 # == Schema (idempotent) ==
+# A database from before the host column has its tables renamed aside here,
+# created anew below and refilled with host github.com, in one transaction.
+migrate=0
+if [ "$("$SQLITE" "$DB" "SELECT count(*) FROM sqlite_master WHERE name = 'samples'")" = 1 ] \
+	&& [ "$("$SQLITE" "$DB" "SELECT count(*) FROM pragma_table_info('samples') WHERE name = 'host'")" = 0 ]; then
+	migrate=1
+fi
+migrate_aside=''
+migrate_fill=''
+if [ "$migrate" = 1 ]; then
+	migrate_aside="
+DROP INDEX idx_samples_last;
+DROP INDEX idx_repo_stats_last;
+ALTER TABLE samples RENAME TO samples_v1;
+ALTER TABLE releases RENAME TO releases_v1;
+ALTER TABLE repo_stats RENAME TO repo_stats_v1;
+ALTER TABLE repos RENAME TO repos_v1;"
+	migrate_fill="
+INSERT INTO samples (ts, owner, repo, tag, asset, downloads)
+SELECT ts, owner, repo, tag, asset, downloads FROM samples_v1;
+INSERT INTO releases (owner, repo, tag, published, prerelease, major)
+SELECT owner, repo, tag, published, prerelease, major FROM releases_v1;
+INSERT INTO repo_stats (ts, owner, repo, stars, forks, watchers)
+SELECT ts, owner, repo, stars, forks, watchers FROM repo_stats_v1;
+INSERT INTO repos (owner, repo, name, seen)
+SELECT owner, repo, name, seen FROM repos_v1;
+DROP TABLE samples_v1;
+DROP TABLE releases_v1;
+DROP TABLE repo_stats_v1;
+DROP TABLE repos_v1;"
+fi
 # PRAGMA journal_mode answers with the mode it set; only errors belong in the output.
-"$SQLITE" "$DB" >/dev/null <<'SQL'
+"$SQLITE" -bail "$DB" >/dev/null <<SQL
 PRAGMA journal_mode=WAL;
+BEGIN;
+$migrate_aside
 CREATE TABLE IF NOT EXISTS samples (
   ts        INTEGER NOT NULL,
+  host      TEXT    NOT NULL DEFAULT 'github.com',
   owner     TEXT    NOT NULL,
   repo      TEXT    NOT NULL,
   tag       TEXT    NOT NULL,
   asset     TEXT    NOT NULL,
   downloads INTEGER NOT NULL,
-  PRIMARY KEY (ts, owner, repo, tag, asset)
+  PRIMARY KEY (ts, host, owner, repo, tag, asset)
 ) WITHOUT ROWID;
-CREATE INDEX IF NOT EXISTS idx_samples_last ON samples(owner, repo, tag, asset, ts);
+CREATE INDEX IF NOT EXISTS idx_samples_last ON samples(host, owner, repo, tag, asset, ts);
 CREATE TABLE IF NOT EXISTS releases (
+  host       TEXT    NOT NULL DEFAULT 'github.com',
   owner      TEXT    NOT NULL,
   repo       TEXT    NOT NULL,
   tag        TEXT    NOT NULL,
   published  INTEGER NOT NULL,
   prerelease INTEGER NOT NULL,
   major      INTEGER,
-  PRIMARY KEY (owner, repo, tag)
+  PRIMARY KEY (host, owner, repo, tag)
 ) WITHOUT ROWID;
 CREATE TABLE IF NOT EXISTS runs (ts INTEGER PRIMARY KEY);
 -- Repo-level popularity time series, independent of releases. Change-only like
 -- samples: a new row is written only when at least one value changed, and each
 -- row is a full snapshot. watchers is GitHub's subscribers_count (the real
 -- watch count); the API's watchers_count is a legacy alias of stars and unused.
+-- Forgejo and Gitea answer the real watch count as watchers_count.
 CREATE TABLE IF NOT EXISTS repo_stats (
   ts       INTEGER NOT NULL,
+  host     TEXT    NOT NULL DEFAULT 'github.com',
   owner    TEXT    NOT NULL,
   repo     TEXT    NOT NULL,
   stars    INTEGER NOT NULL,
   forks    INTEGER NOT NULL,
   watchers INTEGER NOT NULL,
-  PRIMARY KEY (ts, owner, repo)
+  PRIMARY KEY (ts, host, owner, repo)
 ) WITHOUT ROWID;
-CREATE INDEX IF NOT EXISTS idx_repo_stats_last ON repo_stats(owner, repo, ts);
+CREATE INDEX IF NOT EXISTS idx_repo_stats_last ON repo_stats(host, owner, repo, ts);
 -- The ETag of the last 200 answer per request path, and whether that answer
 -- linked a next page. A 304 carries no Link header, so the stored flag says
--- whether a release list goes on.
+-- whether a release list goes on. The path of a forge request is its URL.
 CREATE TABLE IF NOT EXISTS etags (
   path TEXT    PRIMARY KEY,
   etag TEXT    NOT NULL,
@@ -99,17 +139,26 @@ CREATE TABLE IF NOT EXISTS etags (
 -- a target, NULL while it was only asked for its name. A repository gets its row
 -- with its first 200 or 404 answer.
 CREATE TABLE IF NOT EXISTS repos (
+  host  TEXT    NOT NULL DEFAULT 'github.com',
   owner TEXT    NOT NULL,
   repo  TEXT    NOT NULL,
   name  TEXT,
   seen  INTEGER,
-  PRIMARY KEY (owner, repo)
+  PRIMARY KEY (host, owner, repo)
 ) WITHOUT ROWID;
+$migrate_fill
+COMMIT;
 SQL
+# The copy leaves the pages of the old tables free.
+[ "$migrate" = 0 ] || "$SQLITE" -bail "$DB" "VACUUM"
+
+# The slug of a repository: owner/repo on GitHub, host/owner/repo on a forge.
+# GitHub names hold no dot, so a first segment with one is a host.
+slug_sql="CASE WHEN host = 'github.com' THEN '' ELSE host || '/' END || owner || '/' || repo"
 
 # == Collect current values into a TSV ==
-# tsv:  owner, repo, tag, asset, downloads, published(ISO), prerelease(0/1), major
-# rtsv: owner, repo, stars, forks, watchers  (one line per repo, repo_stats)
+# tsv:  host, owner, repo, tag, asset, downloads, published(ISO), prerelease(0/1), major
+# rtsv: host, owner, repo, stars, forks, watchers  (one line per repo, repo_stats)
 # esql: one upsert per 200 answer into etags. An ETag starts with a double quote,
 #       which .import would take for CSV quoting, so it goes in as an SQL literal.
 # nsql: one upsert or update per answer for a repository into repos, as SQL
@@ -128,24 +177,58 @@ while IFS=$'\t' read -r p e n; do
 done < <("$SQLITE" -separator $'\t' "$DB" "SELECT path, etag, next FROM etags")
 while read -r slug; do
 	named["$slug"]=1
-done < <("$SQLITE" "$DB" "SELECT owner || '/' || repo FROM repos")
+done < <("$SQLITE" "$DB" "SELECT $slug_sql FROM repos")
+
+# Splits a slug into host, owner and repo.
+split_slug() {
+	local rest="$1"
+	case "${1%%/*}" in
+		*.*) host="${1%%/*}"; rest="${1#*/}" ;;
+		*) host=github.com ;;
+	esac
+	owner="${rest%%/*}"; repo="${rest#*/}"
+}
+
+# The request path of a repository, with the second argument appended: a path
+# of the GitHub API, or a URL of the forge's.
+api_path() {
+	local host owner repo
+	split_slug "$1"
+	if [ "$host" = github.com ]; then
+		printf 'repos/%s/%s%s' "$owner" "$repo" "${2:-}"
+	else
+		printf 'https://%s/api/v1/repos/%s/%s%s' "$host" "$owner" "$repo" "${2:-}"
+	fi
+}
 
 # One GET, conditional on the stored ETag of the path. Sets status to the HTTP
 # status, empty when no answer came. A 200 leaves its body in $body, sets more to
 # whether it links a next page and records its ETag; a 304 takes more from the
-# last 200. gh exits non-zero on a 304 too, so the status line decides.
+# last 200. gh exits non-zero on a 304 too, so the status line decides. A URL
+# goes to a forge through curl, which follows redirects as gh does; $resp holds
+# the headers either way.
 failed=() missing=()
 request() {
 	local path="$1" e sq="'"
 	local -a cond=()
 	[ -z "${etag[$path]:-}" ] || cond=(-H "If-None-Match: ${etag[$path]}")
-	"$GH" api -i "${cond[@]}" "$path" 2>/dev/null | tr -d '\r' >"$resp" || true
-	status="$(awk 'NR == 1 && /^HTTP\// { print $2 }' "$resp")"
+	case "$path" in
+		https://*)
+			status="$(curl -sS -L --max-time 60 "${cond[@]}" -D "$resp" -o "$body" -w '%{http_code}' "$path" 2>/dev/null)" || true
+			sed -i 's/\r$//' "$resp"
+			[ "$status" != 000 ] || status=''
+			;;
+		*)
+			"$GH" api -i "${cond[@]}" "$path" 2>/dev/null | tr -d '\r' >"$body" || true
+			sed -n '1,/^$/p' "$body" >"$resp"
+			sed -i '1,/^$/d' "$body"
+			status="$(awk 'NR == 1 && /^HTTP\// { print $2 }' "$resp")"
+			;;
+	esac
 	more=0
 	case "$status" in
 		200)
-			sed '1,/^$/d' "$resp" >"$body"
-			grep -qi '^link:.*rel="next"' <(sed -n '1,/^$/p' "$resp") && more=1
+			grep -qi '^link:.*rel="next"' "$resp" && more=1
 			e="$(sed -n 's/^etag: //Ip' "$resp" | head -1)"
 			[ -z "$e" ] || printf "INSERT OR REPLACE INTO etags (path, etag, next) VALUES ('%s', '%s', %d);\n" \
 				"${path//$sq/$sq$sq}" "${e//$sq/$sq$sq}" "$more" >>"$esql"
@@ -162,14 +245,14 @@ request() {
 	esac
 }
 
-# Records the answer request gave for repos/<owner>/<repo> in repos: a 200 its
-# full_name, a 404 NULL, and seen the run when the third argument is it, for a
-# target. Any other answer only renews seen of a row that exists, and leaves
-# name as it was. A 304 carries no name, so a repository without a row is asked
-# without its ETag.
+# Records the answer request gave for the repository host, owner, repo in
+# repos: a 200 its full_name, a 404 NULL, and seen the run when the fourth
+# argument is it, for a target. Any other answer only renews seen of a row that
+# exists, and leaves name as it was. A 304 carries no name, so a repository
+# without a row is asked without its ETag.
 record_repo() {
-	local sq="'" seen="$3" n=NULL
-	local o="${1//$sq/$sq$sq}" r="${2//$sq/$sq$sq}"
+	local sq="'" seen="$4" n=NULL
+	local h="${1//$sq/$sq$sq}" o="${2//$sq/$sq$sq}" r="${3//$sq/$sq$sq}"
 	case "$status" in
 		200)
 			n="$(jq -r '.full_name // empty' "$body")"
@@ -178,13 +261,13 @@ record_repo() {
 			;;
 		404) ;;
 		*)
-			[ "$seen" = NULL ] || printf "UPDATE repos SET seen = %s WHERE owner = '%s' AND repo = '%s';\n" \
-				"$seen" "$o" "$r" >>"$nsql"
+			[ "$seen" = NULL ] || printf "UPDATE repos SET seen = %s WHERE host = '%s' AND owner = '%s' AND repo = '%s';\n" \
+				"$seen" "$h" "$o" "$r" >>"$nsql"
 			return 0
 			;;
 	esac
-	printf "INSERT INTO repos (owner, repo, name, seen) VALUES ('%s', '%s', %s, %s) ON CONFLICT (owner, repo) DO UPDATE SET name = excluded.name, seen = coalesce(excluded.seen, seen);\n" \
-		"$o" "$r" "$n" "$seen" >>"$nsql"
+	printf "INSERT INTO repos (host, owner, repo, name, seen) VALUES ('%s', '%s', '%s', %s, %s) ON CONFLICT (host, owner, repo) DO UPDATE SET name = excluded.name, seen = coalesce(excluded.seen, seen);\n" \
+		"$h" "$o" "$r" "$n" "$seen" >>"$nsql"
 }
 
 # Merge the main config with any targets.d/*.json drop-ins, de-duplicated
@@ -203,11 +286,15 @@ collect_targets() {
 	} | awk 'NF && !seen[tolower($0)]++'
 }
 
-# Expand a target into "owner/repo" lines: a plain owner lists all its
-# non-archived repos, an "owner/repo" passes through unchanged.
+# Expand a target into slugs: a plain owner lists all its non-archived repos
+# on GitHub, an "owner/repo" or "host/owner/repo" passes through unchanged. An
+# owner is listed whole on GitHub only.
 list_repos() {
 	local t="$1"
-	if [[ "$t" == */* ]]; then
+	if [[ "${t%%/*}" == *.* && "$t" != */*/* ]]; then
+		echo "ERROR: $t names no repository; owners are listed whole on GitHub only" >&2
+		return 1
+	elif [[ "$t" == */* ]]; then
 		printf '%s\n' "$t"
 	else
 		"$GH" repo list "$t" --no-archived --limit 1000 --json nameWithOwner --jq '.[].nameWithOwner'
@@ -228,11 +315,11 @@ list_repos() {
 # its repositories would otherwise be missing from it and read as unchanged.
 known_spellings() {
 	"$SQLITE" -separator $'\t' "$DB" "
-WITH sp AS (SELECT DISTINCT owner, repo FROM releases),
-firsts AS (SELECT owner, repo,
-  (SELECT min(ts) FROM samples s WHERE s.owner = sp.owner AND s.repo = sp.repo) AS f FROM sp)
-SELECT lower(owner) || '/' || lower(repo), owner || '/' || repo FROM (SELECT owner, repo,
-  row_number() OVER (PARTITION BY lower(owner), lower(repo) ORDER BY f IS NULL, f, owner, repo) AS n
+WITH sp AS (SELECT DISTINCT host, owner, repo FROM releases),
+firsts AS (SELECT host, owner, repo,
+  (SELECT min(ts) FROM samples s WHERE s.host = sp.host AND s.owner = sp.owner AND s.repo = sp.repo) AS f FROM sp)
+SELECT lower($slug_sql), $slug_sql FROM (SELECT host, owner, repo,
+  row_number() OVER (PARTITION BY host, lower(owner), lower(repo) ORDER BY f IS NULL, f, owner, repo) AS n
   FROM firsts) WHERE n = 1"
 }
 collect_slugs() {
@@ -247,25 +334,42 @@ collect_slugs() {
 slugs="$(collect_slugs)"
 [ -n "$slugs" ] || { echo "ERROR: no targets found in $CONFIG or $TARGETS_DIR/*.json" >&2; exit 1; }
 
+# A forge host is sampled only when it answers its version as Forgejo and Gitea
+# do. Another host, or one that hides its API behind a bot check, cannot be
+# sampled; its repositories are reported and left out, so the run goes on.
+no_forge=''
+while read -r h; do
+	curl -sS -L --max-time 30 "https://$h/api/v1/version" 2>/dev/null | jq -e '.version | strings' >/dev/null 2>&1 \
+		|| no_forge+="$h"$'\n'
+done < <(sed -n 's#^\([^/]*\.[^/]*\)/.*#\1#p' <<<"$slugs" | sort -u)
+if [ -n "$no_forge" ]; then
+	echo "hosts without a Forgejo or Gitea API, their repositories are not sampled:" >&2
+	printf '%s' "$no_forge" | sed 's/^/  /' >&2
+	slugs="$(awk -F/ 'FILENAME == ARGV[1] { skip[$0]; next } !($1 in skip)' <(printf '%s' "$no_forge") - <<<"$slugs")"
+fi
+
 # The repositories the database holds that are no target and were never asked
 # for their name: each is asked once, so one that was renamed is found under
-# the name it has now.
-unasked="$("$SQLITE" -separator / "$DB" "
-SELECT DISTINCT owner, repo FROM releases r
- WHERE NOT EXISTS (SELECT 1 FROM repos n WHERE n.owner = r.owner AND n.repo = r.repo)" \
-	| awk 'FILENAME == ARGV[1] { t[tolower($0)]; next } NF && !(tolower($0) in t)' <(printf '%s\n' "$slugs") -)"
+# the name it has now. One on a host without a forge API stays unasked.
+unasked="$("$SQLITE" "$DB" "
+SELECT DISTINCT $slug_sql FROM releases r
+ WHERE NOT EXISTS (SELECT 1 FROM repos n WHERE n.host = r.host AND n.owner = r.owner AND n.repo = r.repo)" \
+	| awk -F/ 'FILENAME == ARGV[1] { t[tolower($0)]; next } FILENAME == ARGV[2] { skip[$0]; next }
+		NF && !(tolower($0) in t) && !($1 in skip)' <(printf '%s\n' "$slugs") <(printf '%s' "$no_forge") -)"
 
 # A run asks twice per repo, once more for every further page a release list
 # had last time and once per repository asked for its name; that a 304 costs
 # nothing is known only afterwards. A run that ran out halfway would leave the
 # rest of the repos reading as unchanged, so with less budget than that it does
-# not start, and records no run.
+# not start, and records no run. Only the GitHub requests count; a forge
+# request its host refuses is reported as failed.
 budget="$("$GH" api rate_limit --jq '.resources.core | "\(.remaining) \(.reset)"' 2>/dev/null)" \
 	|| { echo "ERROR: cannot read the API budget" >&2; exit 1; }
 read -r remaining reset <<<"$budget"
-needed=$(( 2 * $(grep -c . <<<"$slugs") + $(grep -c . <<<"$unasked" || true) ))
+on_github() { grep -v '^[^/]*\.' <<<"$1" | grep -c . || true; }
+needed=$(( 2 * $(on_github "$slugs") + $(on_github "$unasked") ))
 for p in "${!next_page[@]}"; do
-	[ "${next_page[$p]}" != 1 ] || needed=$((needed + 1))
+	[[ "$p" == https://* || "${next_page[$p]}" != 1 ]] || needed=$((needed + 1))
 done
 if [ "$remaining" -lt "$needed" ]; then
 	echo "skipped: $remaining API requests left, the run needs up to $needed; the budget resets at $(date -u -d "@$reset" +%H:%M) UTC" >&2
@@ -274,12 +378,14 @@ fi
 
 while read -r slug; do
 	[ -n "$slug" ] || continue
-	owner="${slug%%/*}"; repo="${slug#*/}"
-	# One request per page; jq derives major from the tag.
+	split_slug "$slug"
+	# One request per page; jq derives major from the tag. Forgejo and Gitea
+	# answer the release fields of GitHub, at most 50 items per page.
+	if [ "$host" = github.com ]; then per_page="per_page=100"; else per_page="limit=50"; fi
 	page=1
 	while :; do
-		request "repos/${slug}/releases?per_page=100&page=${page}"
-		[ "$status" != 200 ] || jq -r --arg o "$owner" --arg r "$repo" '
+		request "$(api_path "$slug" "/releases?${per_page}&page=${page}")"
+		[ "$status" != 200 ] || jq -r --arg h "$host" --arg o "$owner" --arg r "$repo" '
 			(if type == "array" then .[] else empty end)
 			| .tag_name as $rawtag
 			# A release published without a git tag gets GitHub auto tag
@@ -291,38 +397,44 @@ while read -r slug; do
 			| (if .prerelease then 1 else 0 end) as $pre
 			| (($tag | capture("^[vV]?(?<m>[0-9]+)") | .m) // "") as $maj
 			| .assets[]
-			| [$o, $r, $tag, .name, .download_count, $pub, $pre, $maj]
+			| [$h, $o, $r, $tag, .name, .download_count, $pub, $pre, $maj]
 			| @tsv' "$body" >> "$tsv" || true
 		[ "$more" = 1 ] || break
 		page=$((page + 1))
 	done
 	# One extra call per repo for the popularity snapshot. watchers is
-	# subscribers_count (the real watch count); the select guards against an
-	# error object (no stargazers_count) so a failed call adds no row.
-	[ -n "${named[$slug]:-}" ] || unset "etag[repos/${slug}]"
-	request "repos/${slug}"
-	[ "$status" != 200 ] || jq -r --arg o "$owner" --arg r "$repo" '
-		select(.stargazers_count != null)
-		| [$o, $r, .stargazers_count, .forks_count, .subscribers_count]
+	# subscribers_count on GitHub and watchers_count on a forge (the real watch
+	# count of each); the select guards against an error object (no star count)
+	# so a failed call adds no row.
+	path="$(api_path "$slug")"
+	[ -n "${named[$slug]:-}" ] || unset "etag[$path]"
+	request "$path"
+	[ "$status" != 200 ] || jq -r --arg h "$host" --arg o "$owner" --arg r "$repo" '
+		if $h == "github.com" then [.stargazers_count, .forks_count, .subscribers_count]
+		else [.stars_count, .forks_count, .watchers_count] end
+		| select(.[0] != null)
+		| [$h, $o, $r] + .
 		| @tsv' "$body" >> "$rtsv" || true
-	record_repo "$owner" "$repo" "$ts"
+	record_repo "$host" "$owner" "$repo" "$ts"
 done <<< "$slugs"
 
 while read -r slug; do
 	[ -n "$slug" ] || continue
-	unset "etag[repos/${slug}]"
-	request "repos/${slug}"
-	record_repo "${slug%%/*}" "${slug#*/}" NULL
+	split_slug "$slug"
+	path="$(api_path "$slug")"
+	unset "etag[$path]"
+	request "$path"
+	record_repo "$host" "$owner" "$repo" NULL
 done <<< "$unasked"
 
 # == Apply: release meta (upsert-ignore) + change-only samples + run marker ==
 "$SQLITE" "$DB" <<SQL
 CREATE TEMP TABLE incoming (
-  owner TEXT, repo TEXT, tag TEXT, asset TEXT,
+  host TEXT, owner TEXT, repo TEXT, tag TEXT, asset TEXT,
   downloads INTEGER, published TEXT, prerelease INTEGER, major INTEGER
 );
 CREATE TEMP TABLE incoming_repo (
-  owner TEXT, repo TEXT, stars INTEGER, forks INTEGER, watchers INTEGER
+  host TEXT, owner TEXT, repo TEXT, stars INTEGER, forks INTEGER, watchers INTEGER
 );
 .mode tabs
 .import "$tsv" incoming
@@ -330,29 +442,29 @@ CREATE TEMP TABLE incoming_repo (
 
 BEGIN;
 
-INSERT OR IGNORE INTO releases (owner, repo, tag, published, prerelease, major)
-SELECT DISTINCT owner, repo, tag,
+INSERT OR IGNORE INTO releases (host, owner, repo, tag, published, prerelease, major)
+SELECT DISTINCT host, owner, repo, tag,
        CAST(strftime('%s', published) AS INTEGER), prerelease, major
 FROM incoming;
 
-INSERT INTO samples (ts, owner, repo, tag, asset, downloads)
-SELECT $ts, i.owner, i.repo, i.tag, i.asset, i.downloads
+INSERT INTO samples (ts, host, owner, repo, tag, asset, downloads)
+SELECT $ts, i.host, i.owner, i.repo, i.tag, i.asset, i.downloads
 FROM incoming i
 WHERE i.downloads <> COALESCE(
         (SELECT s.downloads FROM samples s
-         WHERE s.owner=i.owner AND s.repo=i.repo AND s.tag=i.tag AND s.asset=i.asset
+         WHERE s.host=i.host AND s.owner=i.owner AND s.repo=i.repo AND s.tag=i.tag AND s.asset=i.asset
          ORDER BY s.ts DESC LIMIT 1), -1);
 
 -- Change-only repo popularity: write a snapshot only when the incoming triple
 -- differs from this repo's latest stored one (or none exists yet).
-INSERT INTO repo_stats (ts, owner, repo, stars, forks, watchers)
-SELECT $ts, i.owner, i.repo, i.stars, i.forks, i.watchers
+INSERT INTO repo_stats (ts, host, owner, repo, stars, forks, watchers)
+SELECT $ts, i.host, i.owner, i.repo, i.stars, i.forks, i.watchers
 FROM incoming_repo i
 WHERE NOT EXISTS (
         SELECT 1 FROM repo_stats s
-         WHERE s.owner=i.owner AND s.repo=i.repo
+         WHERE s.host=i.host AND s.owner=i.owner AND s.repo=i.repo
            AND s.ts=(SELECT max(z.ts) FROM repo_stats z
-                     WHERE z.owner=i.owner AND z.repo=i.repo)
+                     WHERE z.host=i.host AND z.owner=i.owner AND z.repo=i.repo)
            AND s.stars=i.stars AND s.forks=i.forks AND s.watchers=i.watchers);
 
 -- The ETags go in with the data they describe: a run that does not commit keeps
@@ -368,8 +480,10 @@ SQL
 # A 404 means the repository was deleted, renamed away or made private: there
 # is nothing left to sample, so it is reported without failing the run.
 if [ ${#missing[@]} -gt 0 ]; then
-	echo "repositories not found on GitHub (404):" >&2
-	printf '%s\n' "${missing[@]}" | cut -d/ -f2,3 | sort -u | sed 's/^/  /' >&2
+	echo "repositories not found (404):" >&2
+	printf '%s\n' "${missing[@]}" \
+		| sed -E 's#^https://([^/]+)/api/v1/repos/([^/]+/[^/?]+).*#\1/\2#; s#^repos/([^/]+/[^/?]+).*#\1#' \
+		| sort -u | sed 's/^/  /' >&2
 fi
 
 # A request that got neither a 200 nor a 304 left its repo reading as unchanged
