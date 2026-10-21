@@ -72,7 +72,8 @@ spellings that differ only in case, plus
              one app under that name, form one project
   summary    one row per project and release line (the major.minor of vkey)
              for its newest release, the highest vkey that is not a
-             pre-release: downloads in total and in the last day,
+             pre-release, of a project with an app among the releases the
+             catalogue links: downloads in total and in the last day,
              7 days and 30 days, summed over the repositories of the project
   measurements  the newest run of every app version measured by
              gh-nc-appsdiag, from the summary.json of the run directories
@@ -389,7 +390,12 @@ CREATE INDEX projects_project ON projects (project);
 -- with assets of the release was not sampled yet: then the period stays NULL
 -- instead of counting the whole total as new. Within a line, a release with
 -- counted assets goes before a newer one without, which may be a tag whose
--- assets are not published yet.
+-- assets are not published yet. A repository may tag more than its app, a
+-- desktop client, a server or a branch, so the lines of a project with an app
+-- come from the releases the catalogue links; the others still count as older
+-- releases of the project.
+CREATE TEMP TABLE linked AS
+SELECT DISTINCT j.project FROM apps a JOIN projects j ON a.owner = j.owner AND a.repo = j.repo;
 CREATE TABLE summary (
   project   TEXT    NOT NULL,
   line      TEXT    NOT NULL,
@@ -412,6 +418,7 @@ rel AS (
          max(EXISTS (SELECT 1 FROM counted c WHERE c.owner = r.owner AND c.repo = r.repo AND c.tag = r.tag)) AS has
     FROM releases r JOIN projects j ON j.owner = r.owner AND j.repo = r.repo
    GROUP BY j.project, r.tag
+  HAVING max(r.store IS NOT NULL) OR j.project NOT IN (SELECT project FROM linked)
 ),
 newest AS (
   SELECT project, line, tag, published, has FROM (
