@@ -155,17 +155,19 @@ trap 'rm -f "$tmp_out"' EXIT
 # date. Whole owners are emitted bare and excluded from the pair list; every
 # other owner/repo is kept only if its latest release is recent enough, then the
 # pairs are sorted so an owner's repos stay together and the list reads
-# alphabetically.
+# alphabetically. GitHub resolves names without case, and the catalogue links
+# some repositories under several spellings; each becomes one pair, spelled as
+# its newest release.
 jq --argjson whole "$whole_json" --arg since "$APPSTORE_SINCE_YEAR" '
 	(if type == "array" then . else .data end) as $apps
+	| ($whole | map(ascii_downcase)) as $whole_lc
 	| [ $apps[] | .releases[]? | select(.download != null)
 	    | . as $r | (.download | split("/")) as $p
 	    | select($p[2] == "github.com" and $p[5] == "releases")
 	    | {owner: $p[3], repo: $p[4], created: $r.created} ]
-	| ( [ .[] | select(.owner as $o | ($whole | index($o)) | not) ]
-	    | group_by(.owner + "/" + .repo)
-	    | map({ slug: (.[0].owner + "/" + .[0].repo),
-	            last: (max_by(.created).created) })
+	| ( [ .[] | select(.owner | ascii_downcase | IN($whole_lc[]) | not) ]
+	    | group_by(.owner + "/" + .repo | ascii_downcase)
+	    | map(max_by(.created) | { slug: (.owner + "/" + .repo), last: .created })
 	    | map(select(.last[0:4] >= $since))
 	    | sort_by(.slug | ascii_downcase)
 	    | map(.slug) ) as $pairs

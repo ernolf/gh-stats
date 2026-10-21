@@ -267,6 +267,21 @@ flt=""
 pre_tag="lower(tag) GLOB '*-dev*' OR lower(tag) GLOB '*-rc*' OR lower(tag) GLOB '*-beta*' OR lower(tag) GLOB '*-alpha*' OR lower(tag) GLOB '*-nightly*' OR lower(tag) GLOB '*-pre*' OR lower(tag) GLOB '*-snapshot*'"
 [ -n "$stable_strict" ] && flt+=" AND NOT ($pre_tag)"
 [ -n "$pubsince_f" ] && flt+=" AND r.published >= $(to_epoch "$pubsince_f")"
+# GitHub resolves names without case, so a repository sampled under several
+# spellings counts once, in the spelling sampled first, as gh-stats-site-db
+# keeps it.
+dup_spellings="$(q -noheader -list "$DB" "
+WITH sp AS (SELECT DISTINCT owner, repo FROM releases),
+multi AS (SELECT owner, repo FROM sp WHERE (lower(owner), lower(repo)) IN
+  (SELECT lower(owner), lower(repo) FROM sp GROUP BY 1, 2 HAVING count(*) > 1)),
+firsts AS (SELECT owner, repo,
+  (SELECT min(ts) FROM samples s WHERE s.owner = m.owner AND s.repo = m.repo) AS f FROM multi m)
+SELECT group_concat('(' || quote(owner) || ',' || quote(repo) || ')', ',') FROM (SELECT owner, repo,
+  row_number() OVER (PARTITION BY lower(owner), lower(repo) ORDER BY f, owner, repo) AS n
+  FROM firsts WHERE f IS NOT NULL) WHERE n > 1")"
+dup_flt=""
+[ -z "$dup_spellings" ] || dup_flt=" NOT IN (VALUES $dup_spellings)"
+[ -z "$dup_flt" ] || flt+=" AND (r.owner, r.repo)$dup_flt"
 # grp_flt narrows series_cte to a single --by group (set per series by --plot --by)
 grp_flt=""
 
@@ -598,6 +613,7 @@ if [ "$mode" = "repostats" ]; then
 	[ -n "$owner_f" ]    && rs_flt+=$(mkmatch owner "$owner_f")
 	[ -n "$repo_f" ]     && rs_flt+=$(mkmatch repo "$repo_f")
 	[ -n "$exclrepo_f" ] && rs_flt+=$(mkmatch repo "$exclrepo_f" not)
+	[ -z "$dup_flt" ] || rs_flt+=" AND (owner, repo)$dup_flt"
 	q -header -column "$DB" "
 WITH latest AS (
   SELECT owner,repo,stars,forks,watchers FROM
