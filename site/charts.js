@@ -118,20 +118,20 @@ function seriesOf(item, g, alone = false) {
 }
 
 // Downloads in total and in the last `days` days per series. A repository that
-// was not sampled yet when the period began adds nothing to it, instead of its
-// whole total.
+// was not sampled yet when the period began counts from its first sample, as
+// in the chart over time.
 function shares(items, split, days) {
 	const then = now - days * DAY
 	const out = []
 	for (const item of items) {
 		const { cte, params } = assetsOf(item, split)
 		const sums = new Map()
-		for (const [g, first, v, w] of rows(`WITH ${cte}
-			SELECT a.g, a.first, ${lastSample('$now')}, ${lastSample('$then')} FROM assets a`,
+		for (const [g, v, w] of rows(`WITH ${cte}
+			SELECT a.g, ${lastSample('$now')}, ${lastSample('max($then, a.first)')} FROM assets a`,
 		{ ...params, $now: now, $then: then })) {
 			const s = sums.get(g) ?? { total: 0, value: 0 }
 			s.total += v
-			s.value += days ? v - (w ?? (first > then ? v : 0)) : v
+			s.value += days ? v - (w ?? 0) : v
 			sums.set(g, s)
 		}
 		for (const [g, s] of sums) {
