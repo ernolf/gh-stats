@@ -415,7 +415,7 @@ function releaseCells(fig) {
 // at once would be tens of thousands of options. The releases of the row's own
 // line come first, the other lines follow from the newest.
 function compareSelect(row) {
-	const select = el('select', { 'aria-label': `Compare ${row.tag} with` },
+	const select = el('select', { class: 'compare-select', 'aria-label': `Compare ${row.tag} with` },
 		el('option', { value: '' }, 'none'))
 	let filled = false
 	const fill = () => {
