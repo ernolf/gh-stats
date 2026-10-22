@@ -14,6 +14,7 @@ const assetFilter = ASSETS.map((e) => `asset GLOB '*.${e}'`).join(' OR ')
 let db
 let now
 let results
+let issues
 let measured
 let measuredLines
 // The line rows of each project and the project of each app, for the app pages.
@@ -82,6 +83,7 @@ async function load() {
 		}
 		const config = await res.json()
 		results = config.results
+		issues = config.issues
 		showVersions(config.lib ?? {})
 		progress.max = config.bytes
 		const [SQL, bytes] = await Promise.all([
@@ -866,16 +868,59 @@ function specList(json) {
 	return JSON.parse(json).map((s) => (s.spec && s.spec !== '*' ? `${s.id} ${s.spec}` : s.id)).join(', ')
 }
 
-function appReleases(id) {
+// A version as request.yml accepts it: a stable release, numbers only.
+const STABLE = /^[0-9]+(\.[0-9]+)*$/
+
+function compareVersions(a, b) {
+	const x = a.split('.').map(Number)
+	const y = b.split('.').map(Number)
+	for (let i = 0; i < Math.max(x.length, y.length); i++) {
+		const d = (x[i] ?? 0) - (y[i] ?? 0)
+		if (d) {
+			return d
+		}
+	}
+	return 0
+}
+
+// The site is static, so a request is a new issue with the title request.yml
+// reads; submitting it is what asks for the request.
+function requestLink(text, title, help) {
+	const body = `${help}\n\nSubmitting this issue asks for it. A request of a user without write access to this repository waits until a maintainer approves it.`
+	const params = [['title', title], ['labels', 'appsdiag'], ['body', body]]
+		.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')
+	return el('a', { class: 'request', href: `${issues}?${params}`, target: '_blank', rel: 'noopener', title: help }, text)
+}
+
+// The newest stable version keeps its check, so it has no button to remove it.
+function requestCell(id, r, runs, newest) {
+	const links = []
+	if (r.stable && !r.nightly && STABLE.test(r.version)) {
+		links.push(requestLink(runs ? 'recheck' : 'check', `Measure ${id} ${r.version}`,
+			`Measures ${id} ${r.version} ${runs ? 'again, with a new build, ' : ''}and keeps its result.`))
+		if (runs && r.version !== newest) {
+			links.push(' ', requestLink('remove check', `Remove the check of ${id} ${r.version}`,
+				`Removes the results of ${id} ${r.version} and keeps the version from being measured again.`))
+		}
+	}
+	return el('td', { class: 'request-col' }, ...links)
+}
+
+// Requests are offered for the apps that are measured, which no ExApp is.
+function appReleases(id, requests) {
 	const runs = measurementsByVersion(id)
 	const releases = query(`
 		SELECT version, created, nightly, stable, mismatch, licenses, platform, php, databases, php_extensions
 		  FROM app_releases WHERE id = $id ORDER BY created DESC`, { $id: id })
+	const asks = Boolean(requests && issues)
+	const newest = releases.filter((r) => r.stable && !r.nightly && STABLE.test(r.version))
+		.map((r) => r.version).sort(compareVersions).at(-1)
 	return el('table', {},
 		el('thead', {}, el('tr', {}, ...['Version', 'Released', 'Channel', 'Nextcloud', 'PHP', 'Databases', 'PHP extensions', 'Licences']
-			.map((h) => el('th', {}, h)), el('th', { title: 'warnings of the measurement of the release' }, 'Checks'))),
+			.map((h) => el('th', {}, h)), el('th', { title: 'warnings of the measurement of the release' }, 'Checks'),
+		...(asks ? [el('th', { title: 'opens a prefilled issue that asks for the measurement' }, 'Request')] : []))),
 		...releases.map((r) => {
-			const [checks, checksRow] = checksCell(runs.get(r.version), 8)
+			const [checks, checksRow] = checksCell(runs.get(r.version), asks ? 9 : 8)
 			return el('tbody', {}, el('tr', {},
 				el('td', {}, r.version),
 				el('td', {}, (r.created ?? '').slice(0, 10)),
@@ -885,7 +930,8 @@ function appReleases(id) {
 				el('td', { class: 'wrap' }, specList(r.databases)),
 				el('td', { class: 'wrap' }, specList(r.php_extensions)),
 				el('td', {}, JSON.parse(r.licenses).join(', ')),
-				checks), checksRow)
+				checks,
+				...(asks ? [requestCell(id, r, runs.get(r.version), newest)] : [])), checksRow)
 		}))
 }
 
@@ -957,7 +1003,7 @@ function appPage(id, lines) {
 				el('ul', { class: 'shots' }, ...shots.map((u, i) => el('li', {}, imageHolder(u, `Screenshot ${i + 1}`, true))))]
 			: []),
 		el('h3', {}, 'Releases in the App Store'),
-		el('div', { class: 'scroll' }, appReleases(id)),
+		el('div', { class: 'scroll' }, appReleases(id, !d.exapp)),
 		el('h3', {}, 'Downloads'),
 		...(lines
 			? [el('div', { class: 'scroll' }, appLines(lines)), el('div', { id: 'app-charts' })]

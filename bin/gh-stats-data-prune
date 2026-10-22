@@ -9,7 +9,8 @@
 # shows no other; the older runs are removed. Of an app, only its newest stable
 # version keeps the large reports; every other version keeps the small results
 # the site shows for an older release. With --lines, the versions of release
-# lines beyond the given number of lines before the newest are removed.
+# lines beyond the given number of lines before the newest are removed. A
+# version the file of --keep names keeps all its results but its older runs.
 # The tool works on a checkout and commits nothing; the workflows that write
 # the data branch run it before they commit.
 
@@ -19,7 +20,7 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 
 usage() {
 	cat <<'EOF'
-Usage: gh-stats-data-prune [--in-place] [--lines <n>] <dir>
+Usage: gh-stats-data-prune [--in-place] [--lines <n>] [--keep <file>] <dir>
 
 Thins the measurement results below <dir>, the directory apps/ of a checkout of
 the data branch:
@@ -32,6 +33,9 @@ the data branch:
   - with --lines, of every app only the versions of its newest release line and
     of the <n> lines before it stay; a release line is the major.minor of a
     stable version, and a version that is not stable stays
+  - with --keep, a version <file> names keeps all its results, whatever its
+    line; <file> holds one "[<host>/]<owner>/<repo> <version>" per line, as
+    gh-nc-appslist writes them, compared without case, # starts a comment
 
 An app is the directory that holds the version directories. One without a
 stable version keeps all its results.
@@ -39,13 +43,14 @@ stable version keeps all its results.
 Without --in-place nothing is removed: the tool counts the run directories and
 what it would remove, and the size that takes.
 
-      --in-place   remove them
-      --lines <n>  remove the release lines beyond <n> before the newest
-  -h, --help       this text
+      --in-place     remove them
+      --lines <n>    remove the release lines beyond <n> before the newest
+      --keep <file>  keep the versions <file> names
+  -h, --help         this text
 EOF
 }
 
-dir='' inplace=0 lines=''
+dir='' inplace=0 lines='' keep=''
 while [ $# -gt 0 ]; do
 	case "$1" in
 		-h|--help) usage; exit 0 ;;
@@ -54,6 +59,10 @@ while [ $# -gt 0 ]; do
 			[ $# -ge 2 ] || die "$1 needs a number"
 			[[ "$2" =~ ^[0-9]+$ ]] || die "not a number of lines: $2"
 			lines="$2"; shift ;;
+		--keep)
+			[ $# -ge 2 ] || die "$1 needs a file"
+			[ -r "$2" ] || die "no file at $2"
+			keep="$2"; shift ;;
 		-*) echo "unknown argument: $1" >&2; exit 1 ;;
 		*) [ -z "$dir" ] || die "only one directory"; dir="$1" ;;
 	esac
@@ -62,6 +71,7 @@ done
 
 [ -n "$dir" ] || { usage >&2; exit 1; }
 [ -d "$dir" ] || die "no directory at $dir"
+dir="${dir%/}"
 
 mib() { awk -v b="$1" 'BEGIN { printf "%.1f MiB", b / 1048576 }'; }
 
@@ -82,11 +92,14 @@ done
 [ -z "$prev" ] || current+=("$prev")
 
 # == Versions ==
-# Each current run as "<app>\t<version>\t<run>", the stable versions of an app
-# newest first. The first of them is the newest of the app, and each new
-# major.minor below it starts the next line. Every other run of an app with a
-# stable version is slimmed, and with --lines a stable one beyond the lines is
-# removed.
+# Each current run as "<app>\t<version>\t<run>", the app below the directory,
+# the stable versions of an app newest first. The first of them is the newest
+# of the app, and each new major.minor below it starts the next line. Every
+# other run of an app with a stable version is slimmed, and with --lines a
+# stable one beyond the lines is removed. A kept version still counts for its
+# line. The file of --keep names a repository; an app below the repository root
+# lies one directory deeper. A host has a dot and an owner on GitHub none, so a
+# repository on a host never looks like an app below the root of one on GitHub.
 gone=() slim=()
 while IFS=$'\t' read -r what run; do
 	case "$what" in
@@ -96,9 +109,23 @@ while IFS=$'\t' read -r what run; do
 done < <(
 	for run in "${current[@]}"; do
 		version="${run%/*}"
-		printf '%s\t%s\t%s\n' "${version%/*}" "${version##*/}" "$run"
-	done | LC_ALL=C sort -t $'\t' -k1,1 -k2,2Vr | awk -F '\t' -v lines="$lines" '
+		app="${version%/*}"
+		printf '%s\t%s\t%s\n' "${app#"$dir"/}" "${version##*/}" "$run"
+	done | LC_ALL=C sort -t $'\t' -k1,1 -k2,2Vr | awk -F '\t' -v lines="$lines" -v keep="$keep" '
+		BEGIN {
+			if (keep != "")
+				while ((getline l < keep) > 0) {
+					sub(/#.*/, "", l)
+					if (split(l, w, " ") == 2) kept[tolower(w[1]) " " w[2]]
+				}
+		}
 		function stable(v) { return v ~ /^[0-9]+(\.[0-9]+)*$/ }
+		function pinned(a, v) {
+			a = tolower(a)
+			if ((a " " v) in kept) return 1
+			sub(/\/[^\/]*$/, "", a)
+			return (a " " v) in kept
+		}
 		function line(v,   p) { split(v, p, "."); return p[1] "." p[2] }
 		$1 != app { flush(); app = $1; n = 0; newest = ""; seen = ""; count = 0 }
 		{ ver[++n] = $2; dir[n] = $3 }
@@ -110,8 +137,9 @@ done < <(
 				if (stable(ver[i])) {
 					l = line(ver[i])
 					if (l != seen) { seen = l; count++ }
-					if (lines != "" && count > lines + 1) { print "gone\t" dir[i]; continue }
 				}
+				if (pinned(app, ver[i])) continue
+				if (stable(ver[i]) && lines != "" && count > lines + 1) { print "gone\t" dir[i]; continue }
 				if (ver[i] != newest) print "slim\t" dir[i]
 			}
 		}'

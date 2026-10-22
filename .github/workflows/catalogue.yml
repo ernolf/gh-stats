@@ -24,8 +24,9 @@
 # each app, and that of each of the MEASURE_LINES release lines before its
 # newest, as gh-nc-appslist lists them, when no summary.json in the data branch
 # names its repository and version. A version the measurement already gave up
-# on, listed in its open issue, is not sent again, and while a measurement runs
-# none is sent, since its versions have no result yet.
+# on, listed in its open issue, is not sent again, nor one whose check a request
+# removed, and while a measurement runs none is sent, since its versions have no
+# result yet.
 #
 # The data branch keeps no history. Every write replaces it with a single
 # commit of the new tree, after gh-stats-data-prune thinned the measurement
@@ -68,6 +69,9 @@ env:
   # are removed.
   MEASURE_LINES: ${{ vars.MEASURE_LINES }}
   MEASURE_PRUNE_LINES: ${{ vars.MEASURE_PRUNE_LINES }}
+  # The lists request.yml keeps, as gh-stats-data-prune --keep reads them.
+  PINNED: requests/pinned.txt
+  REMOVED: requests/removed.txt
 
 jobs:
   extract:
@@ -180,6 +184,8 @@ jobs:
               gh issue view "$number" --json body,comments --jq '.body, .comments[].body' \
                 | sed -n 's/^| `\([^`]*\)` |.*/\1/p'
             fi
+            # The versions whose check a request removed.
+            [ ! -f "$DATA/$REMOVED" ] || sed 's/#.*//; /^[[:space:]]*$/d' "$DATA/$REMOVED"
             # The new versions, which this run sends anyway.
             if [ -s "$STATE/new" ]; then
               bin/gh-nc-appslist -v "$STATE/new" -o - | sed '/^#/d'
@@ -207,8 +213,10 @@ jobs:
               cp "$STATE/releases.after" "$DATA/$EXTRACT"
             fi
             base="$(git -C "$DATA" rev-parse -q --verify HEAD || true)"
+            keep=()
+            [ ! -f "$DATA/$PINNED" ] || keep=(--keep "$DATA/$PINNED")
             # shellcheck disable=SC2086 # PRUNE holds the options
-            [ ! -d "$DATA/apps" ] || bin/gh-stats-data-prune $PRUNE "$DATA/apps"
+            [ ! -d "$DATA/apps" ] || bin/gh-stats-data-prune $PRUNE "${keep[@]}" "$DATA/apps"
             git -C "$DATA" add -A
             if git -C "$DATA" diff --cached --quiet; then
               echo "The data branch is unchanged"

@@ -11,7 +11,8 @@
 #                                catalogue.yml sends for the versions new to the
 #                                catalogue, or client_payload.apps, the
 #                                "[<host>/]<owner>/<repo> <version>" lines a run before
-#                                passed on
+#                                passed on or request.yml sends for a request
+#                                issue, whose number client_payload.issue holds
 #   workflow_dispatch            the "<app-id> <version>" pairs of the input
 #                                versions, or without one the newest stable
 #                                version of every app, as gh-nc-appslist lists them
@@ -33,7 +34,9 @@
 # what was removed leaves the repository too: the older runs of a version
 # measured again, the large reports of every version but the newest stable one
 # of its app, and with MEASURE_PRUNE_LINES the release lines beyond
-# MEASURE_LINES.
+# MEASURE_LINES. A version a request pinned keeps all its results. Once the
+# results are pushed, the site is rebuilt, so they show without waiting for the
+# next sampler run.
 #
 # A version whose run says nothing about the app is measured again: one that
 # did not complete, whose rebuild was stopped at its time limit, or whose job
@@ -77,12 +80,17 @@ env:
   # are removed.
   MEASURE_LINES: ${{ vars.MEASURE_LINES }}
   MEASURE_PRUNE_LINES: ${{ vars.MEASURE_PRUNE_LINES }}
+  PINNED: requests/pinned.txt
 
 jobs:
   plan:
     name: plan
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      # Comments on and closes the request issue.
+      issues: write
     outputs:
       apps: ${{ steps.plan.outputs.apps }}
       rest: ${{ steps.plan.outputs.rest }}
@@ -127,6 +135,13 @@ jobs:
             echo "rest=$(tail -n "+$((MATRIX_MAX + 1))" "$list" | as_json)"
           } >> "$GITHUB_OUTPUT"
           echo "::notice::$(wc -l < "$list") app versions, at most $MATRIX_MAX in this run"
+
+      - name: Answer the request
+        if: github.event.client_payload.issue
+        env:
+          NUMBER: ${{ github.event.client_payload.issue }}
+        run: |
+          gh issue close "$NUMBER" --reason completed --comment "Measuring $(sed 's/.*/`&`/' "$RUNNER_TEMP/apps.txt" | paste -sd ' ') in $GITHUB_SERVER_URL/$GH_REPO/actions/runs/$GITHUB_RUN_ID; the site shows the result after the build that follows it."
 
   measure:
     name: ${{ matrix.app }}
@@ -211,6 +226,8 @@ jobs:
       contents: write
       # Reports the versions still without a result after the last attempt.
       issues: write
+      # Rebuilds the site.
+      actions: write
     env:
       GH_TOKEN: ${{ github.token }}
       ATTEMPT: ${{ github.event.client_payload.attempt || 1 }}
@@ -298,14 +315,23 @@ jobs:
               echo "No new results"
               exit 0
             fi
+            keep=()
+            [ ! -f "$DATA/$PINNED" ] || keep=(--keep "$DATA/$PINNED")
             # shellcheck disable=SC2086 # PRUNE holds the options
-            bin/gh-stats-data-prune $PRUNE "$DATA/apps"
+            bin/gh-stats-data-prune $PRUNE "${keep[@]}" "$DATA/apps"
             git -C "$DATA" add -A apps
             commit="$(git -C "$DATA" commit-tree "$(git -C "$DATA" write-tree)" -m "measure: $n runs")"
-            git -C "$DATA" push -q --force-with-lease="refs/heads/$DATA_BRANCH:$base" \
-              origin "$commit:refs/heads/$DATA_BRANCH" && exit 0
+            if git -C "$DATA" push -q --force-with-lease="refs/heads/$DATA_BRANCH:$base" \
+                origin "$commit:refs/heads/$DATA_BRANCH"; then
+              echo "COMMITTED=1" >> "$GITHUB_ENV"
+              exit 0
+            fi
           done
           exit 1
+
+      - name: Rebuild the site
+        if: env.COMMITTED == '1'
+        run: gh workflow run site.yml --ref "$GITHUB_REF_NAME"
 
       # Only after the commit, so the next run starts once this one is kept.
       - name: Pass the rest on
