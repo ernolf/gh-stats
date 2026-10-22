@@ -1,0 +1,242 @@
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# Acts on the issues the buttons of an app page open. The site is static, so a
+# button can only prefill a new issue:
+#
+#   Measure <app-id> <version>                sends the version to measure.yml
+#                                             and pins it
+#   Remove the check of <app-id> <version>    removes its results from the data
+#                                             branch and lifts its pin
+#
+# Anyone can open such an issue, so it is acted on only for a user with the
+# permission write, maintain or admin on this repository: right away when the
+# author has it, else once such a user adds the label approved, which runs this
+# workflow again with that user as the sender. The permission of the sender is
+# asked every time; the API answers maintain as write and triage as read.
+# Closing the issue rejects it.
+#
+# The title is read as the event carries it, reaches the script through env
+# only and must match a strict pattern. The version must be one the catalogue
+# ships as a stable release, as gh-nc-appslist lists it, which also names the
+# repository that is measured.
+#
+# The data branch holds both lists, one "[<host>/]<owner>/<repo> <version>" per
+# line in lower case: a pinned version keeps all its results whatever
+# MEASURE_LINES says, and a removed one is not sent again by catalogue.yml as a
+# version without a result, until a new request measures it. The newest stable
+# version of a repository always keeps its result.
+
+name: Act on a measurement request
+
+on:
+  issues:
+    types: [opened, labeled]
+
+permissions:
+  # Writes the data branch and creates the repository_dispatch event.
+  contents: write
+  # Comments on, labels and closes the request.
+  issues: write
+  # Rebuilds the site after a removal.
+  actions: write
+
+concurrency:
+  group: request-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+env:
+  GH_REPO: ${{ github.repository }}
+  CATALOGUE_TAG: catalogue
+  DATA_BRANCH: data
+  EVENT_TYPE: measure
+  ISSUE_LABEL: appsdiag
+  APPROVED_LABEL: approved
+  PINNED: requests/pinned.txt
+  REMOVED: requests/removed.txt
+  NUMBER: ${{ github.event.issue.number }}
+
+jobs:
+  # A request that waits for approval is no failure, so the permission is its
+  # own job and the request job is skipped without it.
+  permission:
+    name: permission
+    if: >-
+      github.event.issue.state == 'open'
+      && (github.event.action == 'opened' || github.event.label.name == 'approved')
+      && (startsWith(github.event.issue.title, 'Measure ') || startsWith(github.event.issue.title, 'Remove the check of '))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+    outputs:
+      allowed: ${{ steps.sender.outputs.allowed }}
+    steps:
+      # A user who is no collaborator may get 404 instead of none.
+      - name: Check the permission of the sender
+        id: sender
+        env:
+          SENDER: ${{ github.event.sender.login }}
+          ACTION: ${{ github.event.action }}
+        run: |
+          if [ "$ACTION" = opened ]; then
+            gh issue edit "$NUMBER" --add-label "$ISSUE_LABEL"
+          fi
+          permission="$(gh api "repos/$GH_REPO/collaborators/$SENDER/permission" --jq .permission 2>/dev/null || echo none)"
+          case "$permission" in
+            admin|write)
+              echo "allowed=1" >> "$GITHUB_OUTPUT"
+              exit 0 ;;
+          esac
+          if [ "$ACTION" = opened ]; then
+            gh issue comment "$NUMBER" --body "This request waits for approval: a user with the permission write, maintain or admin approves it by adding the label \`$APPROVED_LABEL\`. Closing the issue rejects it."
+          else
+            gh issue comment "$NUMBER" --body "@$SENDER the label \`$APPROVED_LABEL\` approves a request only when a user with the permission write, maintain or admin adds it."
+          fi
+          echo "::notice::$SENDER has the permission $permission, the request waits"
+
+  request:
+    name: request
+    needs: permission
+    if: needs.permission.outputs.allowed == '1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Read the request
+        env:
+          TITLE: ${{ github.event.issue.title }}
+        run: |
+          if [[ "$TITLE" =~ ^Measure\ ([a-z0-9_]+)\ ([0-9]+(\.[0-9]+)*)$ ]]; then
+            kind=measure
+          elif [[ "$TITLE" =~ ^Remove\ the\ check\ of\ ([a-z0-9_]+)\ ([0-9]+(\.[0-9]+)*)$ ]]; then
+            kind=remove
+          else
+            gh issue close "$NUMBER" --reason "not planned" --comment "The title names no app id and stable version, as \`Measure <app-id> <version>\` or \`Remove the check of <app-id> <version>\`."
+            exit 1
+          fi
+          {
+            echo "KIND=$kind"
+            echo "APP=${BASH_REMATCH[1]}"
+            echo "VERSION=${BASH_REMATCH[2]}"
+          } >> "$GITHUB_ENV"
+
+      - name: Find the version in the catalogue
+        env:
+          APPSTORE_SOURCE: appdata
+          APPSTORE_TARGETS: bin/gh-nc-appstore-targets
+        run: |
+          state="$RUNNER_TEMP/request"
+          mkdir -p "$state"
+          echo "STATE=$state" >> "$GITHUB_ENV"
+          gh release download "$CATALOGUE_TAG" -p apps.json -D "$state"
+          export APPSTORE_APPDATA_FILE="$state/apps.json"
+          printf '%s %s\n' "$APP" "$VERSION" > "$state/versions"
+          bin/gh-nc-appslist -v "$state/versions" -o - | sed '/^#/d' | tr '[:upper:]' '[:lower:]' \
+            | LC_ALL=C sort -u > "$state/lines"
+          if [ ! -s "$state/lines" ]; then
+            gh issue close "$NUMBER" --reason "not planned" --comment "The catalogue ships no stable release $VERSION of \`$APP\` from a repository gh-stats measures."
+            exit 1
+          fi
+          if [ "$KIND" = remove ]; then
+            bin/gh-nc-appslist -o - | sed '/^#/d' | tr '[:upper:]' '[:lower:]' | LC_ALL=C sort -u > "$state/newest"
+            if [ -n "$(LC_ALL=C comm -12 "$state/lines" "$state/newest")" ]; then
+              gh issue close "$NUMBER" --reason "not planned" --comment "$VERSION is the newest stable version of \`$APP\`, its check stays."
+              exit 1
+            fi
+          fi
+
+      - name: Check out the data branch
+        run: |
+          data="$RUNNER_TEMP/data"
+          echo "DATA=$data" >> "$GITHUB_ENV"
+          url="https://github.com/$GH_REPO.git"
+          if git ls-remote --exit-code --heads "$url" "$DATA_BRANCH" >/dev/null; then
+            git clone -q --depth 1 --branch "$DATA_BRANCH" "$url" "$data"
+          else
+            # The first writer starts the branch without the history of main.
+            git init -q -b "$DATA_BRANCH" "$data"
+            git -C "$data" remote add origin "$url"
+          fi
+          git -C "$data" config user.name 'github-actions[bot]'
+          git -C "$data" config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # The repository is public, so only the push needs the token, sent
+          # the way actions/checkout sends it.
+          git -C "$data" config http.https://github.com/.extraheader \
+            "AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+
+      # The push goes through only while the branch is still the commit this
+      # write started from; otherwise another write got ahead, and this one
+      # starts over from the branch it left.
+      - name: Write the request to the data branch
+        run: |
+          # Adds the lines of the request to one list and takes them off the other.
+          lists() {
+            mkdir -p "$DATA/${PINNED%/*}" "$DATA/${REMOVED%/*}"
+            touch "$DATA/$1" "$DATA/$2"
+            LC_ALL=C sort -u -o "$DATA/$1" "$DATA/$1" "$STATE/lines"
+            LC_ALL=C comm -23 <(LC_ALL=C sort -u "$DATA/$2") "$STATE/lines" > "$STATE/rest"
+            cp "$STATE/rest" "$DATA/$2"
+          }
+          for try in 1 2 3 4 5; do
+            if [ "$try" -gt 1 ]; then
+              sleep $((try * 10))
+              git -C "$DATA" fetch -q --depth 1 origin "$DATA_BRANCH"
+              git -C "$DATA" reset -q --hard FETCH_HEAD
+              git -C "$DATA" clean -q -f -d
+            fi
+            base="$(git -C "$DATA" rev-parse -q --verify HEAD || true)"
+            dirs=0
+            if [ "$KIND" = measure ]; then
+              lists "$PINNED" "$REMOVED"
+              message="request: measure $APP $VERSION"
+            else
+              lists "$REMOVED" "$PINNED"
+              message="request: remove the check of $APP $VERSION"
+              # The version directories of the repository, and of its apps below
+              # the root, which lie one directory deeper.
+              while read -r repo version; do
+                while IFS= read -r -d '' dir; do
+                  app="${dir%/*}"
+                  app="${app#"$DATA/apps/"}"
+                  app="${app,,}"
+                  if [ "$app" = "$repo" ] || [ "${app%/*}" = "$repo" ]; then
+                    rm -rf -- "$dir"
+                    dirs=$((dirs + 1))
+                  fi
+                done < <(find "$DATA/apps" -mindepth 3 -type d -name "$version" -print0 2>/dev/null)
+              done < "$STATE/lines"
+              [ ! -d "$DATA/apps" ] || find "$DATA/apps" -mindepth 1 -type d -empty -delete
+            fi
+            echo "REMOVED_DIRS=$dirs" >> "$GITHUB_ENV"
+            git -C "$DATA" add -A
+            if git -C "$DATA" diff --cached --quiet; then
+              echo "The data branch is unchanged"
+              exit 0
+            fi
+            commit="$(git -C "$DATA" commit-tree "$(git -C "$DATA" write-tree)" -m "$message")"
+            git -C "$DATA" push -q --force-with-lease="refs/heads/$DATA_BRANCH:$base" \
+              origin "$commit:refs/heads/$DATA_BRANCH" && exit 0
+          done
+          exit 1
+
+      # measure.yml comments on the issue with a link to its run and closes it.
+      - name: Send the version to the measurement
+        if: env.KIND == 'measure'
+        run: |
+          jq -R -n -c --arg type "$EVENT_TYPE" --argjson issue "$NUMBER" \
+            '{event_type: $type, client_payload: {apps: [inputs | select(length > 0)], issue: $issue}}' "$STATE/lines" \
+            | gh api --method POST "repos/$GH_REPO/dispatches" --input -
+          echo "::notice::Sent $APP $VERSION to the measurement"
+
+      - name: Report the removal
+        if: env.KIND == 'remove'
+        run: |
+          gh workflow run site.yml --ref "$GITHUB_REF_NAME"
+          gh issue close "$NUMBER" --reason completed --comment "Removed the check of \`$APP\` $VERSION, $REMOVED_DIRS version directories, from the data branch. It is no longer measured again unless a new request asks for it; the site shows the change after its build in $GITHUB_SERVER_URL/$GH_REPO/actions/workflows/site.yml."
