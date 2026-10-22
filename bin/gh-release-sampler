@@ -15,6 +15,9 @@
 # Per repository it also records the current name GitHub answers under, which
 # differs from the sampled one after a rename, and the last run that sampled it
 # as a target.
+# A repository that answers 404 in UNREACHABLE_RUNS runs in a row counts as
+# unreachable until it answers again; a repository removed from the database
+# keeps its row in repos as a mark, so it is never sampled again.
 # A target host/owner/repo is a repository on a Forgejo or Gitea host, sampled
 # the same way through its API at https://<host>/api/v1. Every table keys its
 # rows by host, github.com for GitHub.
@@ -50,6 +53,10 @@ SQLITE="${SQLITE_BIN:-/usr/bin/sqlite3}"
 # stretch the run past its timeout.
 RETRY_DELAYS="${GH_STATS_RETRY_DELAYS:-2 5 10}"
 RETRY_GIVE_UP="${GH_STATS_RETRY_GIVE_UP:-5}"
+# The runs in a row with a 404 after which a repository counts as unreachable.
+# Until then each run lists it in its report; an unreachable one is still asked
+# once per run.
+UNREACHABLE_RUNS="${GH_STATS_UNREACHABLE_RUNS:-3}"
 
 set -euo pipefail
 
@@ -87,6 +94,18 @@ DROP TABLE samples_v1;
 DROP TABLE releases_v1;
 DROP TABLE repo_stats_v1;
 DROP TABLE repos_v1;"
+fi
+# A repos table from before the columns of unreachable and removed repositories
+# gets them here; the table of a migration is created with them.
+repos_add=''
+if [ "$migrate" = 0 ] \
+	&& [ "$("$SQLITE" "$DB" "SELECT count(*) FROM sqlite_master WHERE name = 'repos'")" = 1 ] \
+	&& [ "$("$SQLITE" "$DB" "SELECT count(*) FROM pragma_table_info('repos') WHERE name = 'missing'")" = 0 ]; then
+	repos_add="
+ALTER TABLE repos ADD COLUMN missing INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE repos ADD COLUMN since INTEGER;
+ALTER TABLE repos ADD COLUMN unreachable INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE repos ADD COLUMN removed INTEGER;"
 fi
 # PRAGMA journal_mode answers with the mode it set; only errors belong in the output.
 "$SQLITE" -bail "$DB" >/dev/null <<SQL
@@ -143,15 +162,24 @@ CREATE TABLE IF NOT EXISTS etags (
 -- renamed repository, so name, the full_name of the last 200 answer, is its
 -- current owner/repo; NULL after a 404. seen is the last run that sampled it as
 -- a target, NULL while it was only asked for its name. A repository gets its row
--- with its first 200 or 404 answer.
+-- with its first 200 or 404 answer. missing counts the runs in a row that got a
+-- 404, since is the first of them, and unreachable is 1 from the
+-- UNREACHABLE_RUNS-th on; a 200 or a 304 resets all three. removed is the time
+-- the repository was removed from the database, which keeps it from being
+-- sampled again.
 CREATE TABLE IF NOT EXISTS repos (
-  host  TEXT    NOT NULL DEFAULT 'github.com',
-  owner TEXT    NOT NULL,
-  repo  TEXT    NOT NULL,
-  name  TEXT,
-  seen  INTEGER,
+  host        TEXT    NOT NULL DEFAULT 'github.com',
+  owner       TEXT    NOT NULL,
+  repo        TEXT    NOT NULL,
+  name        TEXT,
+  seen        INTEGER,
+  missing     INTEGER NOT NULL DEFAULT 0,
+  since       INTEGER,
+  unreachable INTEGER NOT NULL DEFAULT 0,
+  removed     INTEGER,
   PRIMARY KEY (host, owner, repo)
 ) WITHOUT ROWID;
+$repos_add
 $migrate_fill
 COMMIT;
 SQL
@@ -177,13 +205,16 @@ resp="$(mktemp)"
 body="$(mktemp)"
 trap 'rm -f "$tsv" "$rtsv" "$esql" "$nsql" "$resp" "$body"' EXIT
 
-declare -A etag=() next_page=() named=()
+declare -A etag=() next_page=() named=() misses=() quiet=()
 while IFS=$'\t' read -r p e n; do
 	etag["$p"]="$e"; next_page["$p"]="$n"
 done < <("$SQLITE" -separator $'\t' "$DB" "SELECT path, etag, next FROM etags")
 while read -r slug; do
 	named["$slug"]=1
 done < <("$SQLITE" "$DB" "SELECT $slug_sql FROM repos")
+while IFS=$'\t' read -r slug m; do
+	misses["$slug"]="$m"
+done < <("$SQLITE" -separator $'\t' "$DB" "SELECT $slug_sql, missing FROM repos WHERE missing > 0")
 
 # Splits a slug into host, owner and repo.
 split_slug() {
@@ -214,7 +245,7 @@ api_path() {
 # goes to a forge through curl, which follows redirects as gh does; $resp holds
 # the headers either way. A 5xx answer or none is repeated after the pauses of
 # RETRY_DELAYS.
-failed=() missing=() transient=() given_up=0
+failed=() missing=() transient=() unreachable=() given_up=0
 request() {
 	local path="$1" e n=0 sq="'"
 	local -a cond=() pause
@@ -273,27 +304,42 @@ list_requests() {
 
 # Records the answer request gave for the repository host, owner, repo in
 # repos: a 200 its full_name, a 404 NULL, and seen the run when the fourth
-# argument is it, for a target. Any other answer only renews seen of a row that
-# exists, and leaves name as it was. A 304 carries no name, so a repository
-# without a row is asked without its ETag.
+# argument is it, for a target. A 404 counts one more run in a row with a 404,
+# a 200 or a 304 ends the count. Any other answer only renews seen of a row
+# that exists, and leaves the rest as it was. A 304 carries no name, so a
+# repository without a row is asked without its ETag. A repository with a 404
+# is reported until it counts as unreachable, and once more as such.
 record_repo() {
-	local sq="'" seen="$4" n=NULL
+	local sq="'" seen="$4" n=NULL m=0 since=NULL slug
 	local h="${1//$sq/$sq$sq}" o="${2//$sq/$sq$sq}" r="${3//$sq/$sq$sq}"
+	if [ "$1" = github.com ]; then slug="$2/$3"; else slug="$1/$2/$3"; fi
 	case "$status" in
 		200)
 			n="$(jq -r '.full_name // empty' "$body")"
 			[ -n "$n" ] || return 0
 			n="'${n//$sq/$sq$sq}'"
 			;;
-		404) ;;
+		404)
+			m=$(( ${misses[$slug]:-0} + 1 ))
+			since="$ts"
+			if [ "$m" -ge "$UNREACHABLE_RUNS" ]; then
+				quiet["$slug"]=1
+				[ "$m" -gt "$UNREACHABLE_RUNS" ] || unreachable+=("$slug")
+			fi
+			;;
+		304)
+			printf "UPDATE repos SET seen = coalesce(%s, seen), missing = 0, since = NULL, unreachable = 0 WHERE host = '%s' AND owner = '%s' AND repo = '%s';\n" \
+				"$seen" "$h" "$o" "$r" >>"$nsql"
+			return 0
+			;;
 		*)
 			[ "$seen" = NULL ] || printf "UPDATE repos SET seen = %s WHERE host = '%s' AND owner = '%s' AND repo = '%s';\n" \
 				"$seen" "$h" "$o" "$r" >>"$nsql"
 			return 0
 			;;
 	esac
-	printf "INSERT INTO repos (host, owner, repo, name, seen) VALUES ('%s', '%s', '%s', %s, %s) ON CONFLICT (host, owner, repo) DO UPDATE SET name = excluded.name, seen = coalesce(excluded.seen, seen);\n" \
-		"$h" "$o" "$r" "$n" "$seen" >>"$nsql"
+	printf "INSERT INTO repos (host, owner, repo, name, seen, missing, since, unreachable) VALUES ('%s', '%s', '%s', %s, %s, %d, %s, %d) ON CONFLICT (host, owner, repo) DO UPDATE SET name = excluded.name, seen = coalesce(excluded.seen, seen), missing = excluded.missing, since = CASE WHEN excluded.missing = 0 THEN NULL ELSE coalesce(since, excluded.since) END, unreachable = excluded.unreachable;\n" \
+		"$h" "$o" "$r" "$n" "$seen" "$m" "$since" "$(( m >= UNREACHABLE_RUNS ))" >>"$nsql"
 }
 
 # Merge the main config with any targets.d/*.json drop-ins, de-duplicated
@@ -336,7 +382,7 @@ list_repos() {
 # Slugs are compared without case. A repository the database already holds is
 # sampled under the spelling it was sampled first, whatever the targets spell,
 # so its series goes on; with several spellings, that is the one gh-stats and
-# gh-stats-site-db keep.
+# gh-stats-site-db keep. A repository removed from the database is left out.
 # A target that cannot be expanded ends the run before anything is recorded:
 # its repositories would otherwise be missing from it and read as unchanged.
 known_spellings() {
@@ -348,13 +394,17 @@ SELECT lower($slug_sql), $slug_sql FROM (SELECT host, owner, repo,
   row_number() OVER (PARTITION BY host, lower(owner), lower(repo) ORDER BY f IS NULL, f, owner, repo) AS n
   FROM firsts) WHERE n = 1"
 }
+removed_slugs() {
+	"$SQLITE" "$DB" "SELECT lower($slug_sql) FROM repos WHERE removed IS NOT NULL"
+}
 collect_slugs() {
 	while read -r target; do
 		[ -n "$target" ] || continue
 		list_repos "$target" || { echo "ERROR: cannot list the repositories of $target" >&2; exit 1; }
 	done <<< "$(collect_targets)" \
-		| awk -F'\t' 'FILENAME == ARGV[1] { known[$1] = $2; next }
-			NF && !seen[k = tolower($0)]++ { print ((k in known) ? known[k] : $0) }' <(known_spellings) -
+		| awk -F'\t' 'FILENAME == ARGV[1] { known[$1] = $2; next } FILENAME == ARGV[2] { removed[$1]; next }
+			NF && !seen[k = tolower($0)]++ && !(k in removed) { print ((k in known) ? known[k] : $0) }' \
+			<(known_spellings) <(removed_slugs) -
 }
 
 slugs="$(collect_slugs)"
@@ -405,6 +455,22 @@ fi
 while read -r slug; do
 	[ -n "$slug" ] || continue
 	split_slug "$slug"
+	# One call per repo for the popularity snapshot, before the releases: a
+	# repository that answers 404 has no releases to ask for. watchers is
+	# subscribers_count on GitHub and watchers_count on a forge (the real watch
+	# count of each); the select guards against an error object (no star count)
+	# so a failed call adds no row.
+	path="$(api_path "$slug")"
+	[ -n "${named[$slug]:-}" ] || unset "etag[$path]"
+	request "$path"
+	[ "$status" != 200 ] || jq -r --arg h "$host" --arg o "$owner" --arg r "$repo" '
+		if $h == "github.com" then [.stargazers_count, .forks_count, .subscribers_count]
+		else [.stars_count, .forks_count, .watchers_count] end
+		| select(.[0] != null)
+		| [$h, $o, $r] + .
+		| @tsv' "$body" >> "$rtsv" || true
+	record_repo "$host" "$owner" "$repo" "$ts"
+	[ "$status" != 404 ] || continue
 	# One request per page; jq derives major from the tag. Forgejo and Gitea
 	# answer the release fields of GitHub, at most 50 items per page.
 	if [ "$host" = github.com ]; then per_page="per_page=100"; else per_page="limit=50"; fi
@@ -428,20 +494,6 @@ while read -r slug; do
 		[ "$more" = 1 ] || break
 		page=$((page + 1))
 	done
-	# One extra call per repo for the popularity snapshot. watchers is
-	# subscribers_count on GitHub and watchers_count on a forge (the real watch
-	# count of each); the select guards against an error object (no star count)
-	# so a failed call adds no row.
-	path="$(api_path "$slug")"
-	[ -n "${named[$slug]:-}" ] || unset "etag[$path]"
-	request "$path"
-	[ "$status" != 200 ] || jq -r --arg h "$host" --arg o "$owner" --arg r "$repo" '
-		if $h == "github.com" then [.stargazers_count, .forks_count, .subscribers_count]
-		else [.stars_count, .forks_count, .watchers_count] end
-		| select(.[0] != null)
-		| [$h, $o, $r] + .
-		| @tsv' "$body" >> "$rtsv" || true
-	record_repo "$host" "$owner" "$repo" "$ts"
 done <<< "$slugs"
 
 while read -r slug; do
@@ -504,12 +556,20 @@ COMMIT;
 SQL
 
 # A 404 means the repository was deleted, renamed away or made private: there
-# is nothing left to sample, so it is reported without failing the run.
+# is nothing left to sample, so it is reported without failing the run, until it
+# counts as unreachable.
 if [ ${#missing[@]} -gt 0 ]; then
-	echo "repositories not found (404):" >&2
-	printf '%s\n' "${missing[@]}" \
+	mapfile -t gone < <(printf '%s\n' "${missing[@]}" \
 		| sed -E 's#^https://([^/]+)/api/v1/repos/([^/]+/[^/?]+).*#\1/\2#; s#^repos/([^/]+/[^/?]+).*#\1#' \
-		| sort -u | sed 's/^/  /' >&2
+		| sort -u | awk 'FILENAME == ARGV[1] { q[$0]; next } NF && !($0 in q)' <(printf '%s\n' "${!quiet[@]}") -)
+	if [ ${#gone[@]} -gt 0 ]; then
+		echo "repositories not found (404):" >&2
+		printf '  %s\n' "${gone[@]}" >&2
+	fi
+fi
+if [ ${#unreachable[@]} -gt 0 ]; then
+	echo "repositories unreachable from now on, after $UNREACHABLE_RUNS runs in a row with a 404:" >&2
+	printf '  %s\n' "${unreachable[@]}" >&2
 fi
 
 # A request that got neither a 200 nor a 304 left its repo reading as unchanged

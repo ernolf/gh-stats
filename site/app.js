@@ -141,7 +141,7 @@ function summaryRows() {
 }
 
 function projectRepos() {
-	return query('SELECT project, host, owner, repo FROM projects ORDER BY project, host, owner, repo')
+	return query('SELECT project, host, owner, repo, since FROM projects ORDER BY project, host, owner, repo')
 }
 
 // The apps.owner and apps.repo columns compare without case, as the hosts do;
@@ -384,6 +384,14 @@ function slugOf(r) {
 	return r.host === 'github.com' ? `${r.owner}/${r.repo}` : `${r.host}/${r.owner}/${r.repo}`
 }
 
+const UNREACHABLE_TEXT = 'the repository has answered 404 since then; its figures are the last ones it answered'
+
+// since is the run of the first 404 of a repository the sampler counts as
+// unreachable, NULL for any other.
+function unreachableMark(r) {
+	return r.since === null ? [] : [el('span', { class: 'unreachable', title: UNREACHABLE_TEXT }, `unreachable since ${date(r.since)}`)]
+}
+
 function releaseLink(fig) {
 	return el('a', { href: `${repoUrl(fig)}/releases/tag/${encodeURIComponent(fig.tag)}` }, fig.tag)
 }
@@ -609,7 +617,7 @@ function initOverview() {
 		// Each app links its page; a project that is no App Store app has none.
 		const links = own.flatMap((a, i) => [i ? ', ' : '', el('a', { href: `#app/${encodeURIComponent(a.id)}` }, a.name)])
 		const head = el('td', {}, el('span', { class: 'name' }, ...(links.length ? links : [p.name])),
-			...members.map((r) => el('a', { class: 'slug', href: repoUrl(r) }, slugOf(r))))
+			...members.flatMap((r) => [el('a', { class: 'slug', href: repoUrl(r) }, slugOf(r)), ...unreachableMark(r)]))
 		p.main = el('tbody', {}, ...lineRows(main, head))
 		p.warn = main.warn
 		p.older = el('tbody', { class: 'older', hidden: '' },
@@ -885,9 +893,9 @@ function compareVersions(a, b) {
 
 // The site is static, so a request is a new issue with the title request.yml
 // reads; submitting it is what asks for the request.
-function requestLink(text, title, help) {
+function requestLink(text, title, help, label = 'appsdiag') {
 	const body = `${help}\n\nSubmitting this issue asks for it. A request of a user without write access to this repository waits until a maintainer approves it.`
-	const params = [['title', title], ['labels', 'appsdiag'], ['body', body]]
+	const params = [['title', title], ['labels', label], ['body', body]]
 		.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')
 	return el('a', { class: 'request', href: `${issues}?${params}`, target: '_blank', rel: 'noopener', title: help }, text)
 }
@@ -904,6 +912,17 @@ function requestCell(id, r, runs, newest) {
 		}
 	}
 	return el('td', { class: 'request-col' }, ...links)
+}
+
+// The repositories of the app's project. Only an unreachable one can be removed
+// from the database, together with its whole history.
+function appRepos(project) {
+	return query('SELECT host, owner, repo, since FROM projects WHERE project = $project ORDER BY host, owner, repo', { $project: project })
+		.map((r) => el('div', {}, el('a', { href: repoUrl(r) }, slugOf(r)), ...unreachableMark(r),
+			...(r.since !== null && issues
+				? [requestLink('remove', `Remove ${r.host}/${r.owner}/${r.repo} from the database`,
+					`Removes ${slugOf(r)} and its whole history from the database, and keeps the sampler from asking it again.`, 'sampler')]
+				: [])))
 }
 
 // Requests are offered for the apps that are measured, which no ExApp is.
@@ -982,6 +1001,7 @@ function appPage(id, lines) {
 		['Recent rating', rating(d.rating_recent, d.rating_num_recent)],
 		['Added', (d.created ?? '').slice(0, 10)],
 		['Last changed', (d.last_modified ?? '').slice(0, 10)],
+		...(appProjects.has(id) ? [['Repositories', ...appRepos(appProjects.get(id))]] : []),
 	]
 	const shots = JSON.parse(d.screenshots)
 	const page = el('div', {},
