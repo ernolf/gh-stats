@@ -22,8 +22,9 @@
 # one from a release host gh-stats learned to handle later, or one whose
 # measurement was lost. So every run also sends the newest stable version of
 # each app, and that of each of the MEASURE_LINES release lines before its
-# newest, as gh-nc-appslist lists them, when no summary.json in the data branch
-# names its repository and version. A version the measurement already gave up
+# newest, as gh-nc-appslist lists them, when no complete run in the data branch
+# names its repository and version: a run is complete while it holds every
+# result its summary.json lists. A version the measurement already gave up
 # on, listed in its open issue, is not sent again, nor one whose check a request
 # removed, and while a measurement runs none is sent, since its versions have no
 # result yet.
@@ -172,11 +173,21 @@ jobs:
           # names a version and gh-nc-appsdiag is asked for it.
           {
             # Every result, whatever its status: measure.yml repeats a run that
-            # says nothing about the app on its own.
+            # says nothing about the app on its own. A run counts only while it
+            # holds every file its summary.json lists, as is or as <name>.gz;
+            # one that lost a report, as the large ones gh-stats-data-prune
+            # once removed, is measured again, so all its checks show.
             if [ -d "$DATA/apps" ]; then
               find "$DATA/apps" -name summary.json -exec jq -r '
-                (if (.repo_host // "github.com") == "github.com" then "" else .repo_host + "/" end)
-                + .owner + "/" + .repo + " " + (.requested_version // .version // "")' {} +
+                [ (if (.repo_host // "github.com") == "github.com" then "" else .repo_host + "/" end)
+                  + .owner + "/" + .repo + " " + (.requested_version // .version // ""),
+                  (input_filename | rtrimstr("/summary.json")), (.files // [])[] ] | join("\t")' {} + \
+                | while IFS=$'\t' read -r -a run; do
+                    for file in "${run[@]:2}"; do
+                      [ -e "${run[1]}/$file" ] || [ -e "${run[1]}/$file.gz" ] || continue 2
+                    done
+                    printf '%s\n' "${run[0]}"
+                  done
             fi
             number="$(gh issue list --state open --label "$ISSUE_LABEL" --json number,title \
               | jq -r --arg t "$ISSUE_TITLE" 'map(select(.title == $t))[0].number // empty')"
