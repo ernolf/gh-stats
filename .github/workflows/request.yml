@@ -8,6 +8,10 @@
 #                                             and pins it
 #   Remove the check of <app-id> <version>    removes its results from the data
 #                                             branch and lifts its pin
+#   Remove <host>/<owner>/<repo> from the database
+#                                             removes a repository the sampler
+#                                             counts as unreachable from the
+#                                             sampler database
 #
 # Anyone can open such an issue, so it is acted on only for a user with the
 # permission write, maintain or admin on this repository: right away when the
@@ -26,6 +30,13 @@
 # MEASURE_LINES says, and a removed one is not sent again by catalogue.yml as a
 # version without a result, until a new request measures it. The newest stable
 # version of a repository always keeps its result.
+#
+# A removed repository leaves every table of the sampler database but keeps its
+# row in repos, marked as removed, so the sampler neither asks it again nor adds
+# it back from the catalogue. The removal runs in the concurrency group of the
+# sampler, so no sampler run restores the database before the removal has
+# uploaded it. A run that queues in that group while the removal still waits
+# for a sampler run replaces it; adding the label approved again repeats it.
 
 name: Act on a measurement request
 
@@ -34,7 +45,8 @@ on:
     types: [opened, labeled]
 
 permissions:
-  # Writes the data branch and creates the repository_dispatch event.
+  # Writes the data branch and the database asset, and creates the
+  # repository_dispatch event.
   contents: write
   # Comments on, labels and closes the request.
   issues: write
@@ -51,7 +63,10 @@ env:
   DATA_BRANCH: data
   EVENT_TYPE: measure
   ISSUE_LABEL: appsdiag
+  SAMPLER_LABEL: sampler
   APPROVED_LABEL: approved
+  DB_TAG: sampler-db
+  DB_ASSET: downloads.sqlite.zst
   PINNED: requests/pinned.txt
   REMOVED: requests/removed.txt
   NUMBER: ${{ github.event.issue.number }}
@@ -64,7 +79,8 @@ jobs:
     if: >-
       github.event.issue.state == 'open'
       && (github.event.action == 'opened' || github.event.label.name == 'approved')
-      && (startsWith(github.event.issue.title, 'Measure ') || startsWith(github.event.issue.title, 'Remove the check of '))
+      && (startsWith(github.event.issue.title, 'Measure ') || startsWith(github.event.issue.title, 'Remove the check of ')
+        || (startsWith(github.event.issue.title, 'Remove ') && endsWith(github.event.issue.title, ' from the database')))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -78,9 +94,12 @@ jobs:
         env:
           SENDER: ${{ github.event.sender.login }}
           ACTION: ${{ github.event.action }}
+          TITLE: ${{ github.event.issue.title }}
         run: |
           if [ "$ACTION" = opened ]; then
-            gh issue edit "$NUMBER" --add-label "$ISSUE_LABEL"
+            label="$ISSUE_LABEL"
+            [[ "$TITLE" != *' from the database' ]] || label="$SAMPLER_LABEL"
+            gh issue edit "$NUMBER" --add-label "$label"
           fi
           permission="$(gh api "repos/$GH_REPO/collaborators/$SENDER/permission" --jq .permission 2>/dev/null || echo none)"
           case "$permission" in
@@ -98,7 +117,7 @@ jobs:
   request:
     name: request
     needs: permission
-    if: needs.permission.outputs.allowed == '1'
+    if: needs.permission.outputs.allowed == '1' && !endsWith(github.event.issue.title, ' from the database')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -240,3 +259,85 @@ jobs:
         run: |
           gh workflow run site.yml --ref "$GITHUB_REF_NAME"
           gh issue close "$NUMBER" --reason completed --comment "Removed the check of \`$APP\` $VERSION, $REMOVED_DIRS version directories, from the data branch. It is no longer measured again unless a new request asks for it; the site shows the change after its build in $GITHUB_SERVER_URL/$GH_REPO/actions/workflows/site.yml."
+
+  remove:
+    name: remove
+    needs: permission
+    if: needs.permission.outputs.allowed == '1' && endsWith(github.event.issue.title, ' from the database')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: sampler
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Read the request
+        env:
+          TITLE: ${{ github.event.issue.title }}
+        run: |
+          if [[ ! "$TITLE" =~ ^Remove\ ([a-z0-9-]+(\.[a-z0-9-]+)+)/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)\ from\ the\ database$ ]]; then
+            gh issue close "$NUMBER" --reason "not planned" --comment "The title names no repository, as \`Remove <host>/<owner>/<repo> from the database\`."
+            exit 1
+          fi
+          {
+            echo "HOST=${BASH_REMATCH[1]}"
+            echo "OWNER=${BASH_REMATCH[3]}"
+            echo "REPO=${BASH_REMATCH[4]}"
+          } >> "$GITHUB_ENV"
+
+      - name: Restore the database
+        run: |
+          state="$RUNNER_TEMP/remove"
+          mkdir -p "$state"
+          echo "STATE=$state" >> "$GITHUB_ENV"
+          gh release download "$DB_TAG" -p "$DB_ASSET" -D "$state"
+          zstd -d -q "$state/$DB_ASSET" -o "$state/downloads.sqlite"
+          rm -f "$state/$DB_ASSET"
+
+      # The hosts resolve names without case, so every spelling of the
+      # repository goes. The title pattern leaves no quote in the names. The
+      # ETags go with the rows: one would answer 304 for data that is gone.
+      - name: Remove the repository
+        run: |
+          db="$STATE/downloads.sqlite"
+          w="host = '$HOST' AND lower(owner) = lower('$OWNER') AND lower(repo) = lower('$REPO')"
+          if [ "$(sqlite3 "$db" "SELECT count(*) FROM repos WHERE $w AND unreachable = 1 AND removed IS NULL")" = 0 ]; then
+            gh issue close "$NUMBER" --reason "not planned" --comment "The database holds no repository \`$HOST/$OWNER/$REPO\` that the sampler counts as unreachable."
+            exit 1
+          fi
+          if [ "$HOST" = github.com ]; then path="repos/$OWNER/$REPO"; else path="https://$HOST/api/v1/repos/$OWNER/$REPO"; fi
+          path="${path,,}"
+          counts="$(sqlite3 -bail "$db" <<SQL
+          BEGIN;
+          SELECT (SELECT count(*) FROM samples WHERE $w) || ' ' || (SELECT count(*) FROM releases WHERE $w) || ' ' || (SELECT count(*) FROM repo_stats WHERE $w);
+          DELETE FROM samples WHERE $w;
+          DELETE FROM releases WHERE $w;
+          DELETE FROM repo_stats WHERE $w;
+          DELETE FROM etags WHERE lower(path) = '$path' OR substr(lower(path), 1, length('$path') + 1) = '$path/';
+          UPDATE repos SET removed = $(date -u +%s) WHERE $w;
+          COMMIT;
+          VACUUM;
+          SQL
+          )"
+          read -r samples releases stats <<<"$counts"
+          echo "REMOVED_ROWS=$samples samples of its download counters, $releases releases and $stats snapshots of its stars, forks and watchers" >> "$GITHUB_ENV"
+
+      # As in sampler.yml: replacing the asset in place would delete the only
+      # copy before the new one is complete.
+      - name: Upload the database
+        run: |
+          next="$DB_ASSET.next"
+          zstd -19 -T0 -q "$STATE/downloads.sqlite" -o "$STATE/$next"
+          gh release upload "$DB_TAG" "$STATE/$next" --clobber
+          assets="$(gh api "repos/$GH_REPO/releases/tags/$DB_TAG" --jq '.assets[] | "\(.id) \(.name)"')"
+          old="$(awk -v n="$DB_ASSET" '$2 == n { print $1 }' <<<"$assets")"
+          new="$(awk -v n="$next" '$2 == n { print $1 }' <<<"$assets")"
+          test -n "$new"
+          test -z "$old" || gh api -X DELETE "repos/$GH_REPO/releases/assets/$old"
+          gh api -X PATCH "repos/$GH_REPO/releases/assets/$new" -f name="$DB_ASSET" --silent
+
+      - name: Report the removal
+        run: |
+          gh workflow run site.yml --ref "$GITHUB_REF_NAME"
+          gh issue close "$NUMBER" --reason completed --comment "Removed \`$HOST/$OWNER/$REPO\` from the database, $REMOVED_ROWS. The sampler does not ask it again; the site shows the change after its build in $GITHUB_SERVER_URL/$GH_REPO/actions/workflows/site.yml."

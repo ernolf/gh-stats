@@ -69,7 +69,8 @@ repository under its current name, plus
              the tag; and mismatch, 1 when the App Store lists the release as
              stable but its host flags it as a pre-release or its tag names one
   projects   the project every repository belongs to that the sampler still
-             samples or the catalogue lists, and when its sampling began:
+             samples or the catalogue lists, when its sampling began and, for
+             one the sampler counts as unreachable, the run of its first 404:
              repositories the catalogue lists for one app, and
              repositories of one name under two owners the catalogue lists for
              one app under that name, form one project; a repository on
@@ -331,6 +332,10 @@ DELETE FROM repo_stats WHERE (host, owner, repo) IN (SELECT host, owner, repo FR
 CREATE TEMP TABLE targeted AS
 SELECT $host_k || lower(coalesce(name, owner || '/' || repo)) AS k
   FROM repos WHERE seen = (SELECT max(ts) FROM runs);
+-- An unreachable repository answers 404, so it has no current name.
+CREATE TEMP TABLE unreachable AS
+SELECT $host_k || lower(owner || '/' || repo) AS k, since
+  FROM repos WHERE unreachable = 1;
 DROP TABLE repos;
 
 ALTER TABLE releases ADD COLUMN vkey TEXT;
@@ -436,11 +441,13 @@ CREATE TABLE projects (
   repo    TEXT NOT NULL,
   project TEXT NOT NULL,
   first   INTEGER,
+  since   INTEGER,
   PRIMARY KEY (host, owner, repo)
 ) WITHOUT ROWID;
 INSERT INTO projects
 SELECT n.host, n.owner, n.repo, c.project,
-       (SELECT min(ts) FROM samples s WHERE s.host = n.host AND s.owner = n.owner AND s.repo = n.repo)
+       (SELECT min(ts) FROM samples s WHERE s.host = n.host AND s.owner = n.owner AND s.repo = n.repo),
+       (SELECT u.since FROM unreachable u WHERE u.k = n.k)
   FROM nodes n JOIN components c ON c.k = n.k;
 CREATE INDEX projects_project ON projects (project);
 
