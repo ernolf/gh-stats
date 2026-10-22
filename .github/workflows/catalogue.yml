@@ -24,10 +24,11 @@
 # each app, and that of each of the MEASURE_LINES release lines before its
 # newest, as gh-nc-appslist lists them, when no complete run in the data branch
 # names its repository and version: a run is complete while it holds every
-# result its summary.json lists. A version the measurement already gave up
-# on, listed in its open issue, is not sent again, nor one whose check a request
-# removed, and while a measurement runs none is sent, since its versions have no
-# result yet.
+# result its summary.json lists. A version with an incomplete run is sent as
+# well, whether gh-nc-appslist lists it or not. A version the measurement
+# already gave up on, listed in its open issue, is not sent again, nor one
+# whose check a request removed, and while a measurement runs none is sent,
+# since its versions have no result yet.
 #
 # The data branch keeps no history. Every write replaces it with a single
 # commit of the new tree, after gh-stats-data-prune thinned the measurement
@@ -176,7 +177,9 @@ jobs:
             # says nothing about the app on its own. A run counts only while it
             # holds every file its summary.json lists, as is or as <name>.gz;
             # one that lost a report, as the large ones gh-stats-data-prune
-            # once removed, is measured again, so all its checks show.
+            # once removed, is measured again, so all its checks show. That
+            # holds for any version, also one gh-nc-appslist does not list.
+            : > "$STATE/incomplete"
             if [ -d "$DATA/apps" ]; then
               find "$DATA/apps" -name summary.json -exec jq -r '
                 [ (if (.repo_host // "github.com") == "github.com" then "" else .repo_host + "/" end)
@@ -184,7 +187,10 @@ jobs:
                   (input_filename | rtrimstr("/summary.json")), (.files // [])[] ] | join("\t")' {} + \
                 | while IFS=$'\t' read -r -a run; do
                     for file in "${run[@]:2}"; do
-                      [ -e "${run[1]}/$file" ] || [ -e "${run[1]}/$file.gz" ] || continue 2
+                      if ! [ -e "${run[1]}/$file" ] && ! [ -e "${run[1]}/$file.gz" ]; then
+                        printf '%s\n' "${run[0]}" >> "$STATE/incomplete"
+                        continue 2
+                      fi
                     done
                     printf '%s\n' "${run[0]}"
                   done
@@ -202,8 +208,9 @@ jobs:
               bin/gh-nc-appslist -v "$STATE/new" -o - | sed '/^#/d'
             fi
           } | tr '[:upper:]' '[:lower:]' | LC_ALL=C sort -u > "$STATE/known"
-          bin/gh-nc-appslist -L "$LINES" -o - | sed '/^#/d' \
-            | awk 'FILENAME == ARGV[1] { known[$0]; next } !(tolower($0) in known)' "$STATE/known" - \
+          { bin/gh-nc-appslist -L "$LINES" -o - | sed '/^#/d'; cat "$STATE/incomplete"; } \
+            | awk 'FILENAME == ARGV[1] { known[$0]; next } { k = tolower($0) } !(k in known) && !(k in sent) { sent[k]; print }' \
+              "$STATE/known" - \
             > "$STATE/unmeasured"
           echo "UNMEASURED=$(wc -l < "$STATE/unmeasured")" >> "$GITHUB_ENV"
 
