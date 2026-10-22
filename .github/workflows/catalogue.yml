@@ -24,11 +24,12 @@
 # each app, and that of each of the MEASURE_LINES release lines before its
 # newest, as gh-nc-appslist lists them, when no complete run in the data branch
 # names its repository and version: a run is complete while it holds every
-# result its summary.json lists. A version with an incomplete run is sent as
-# well, whether gh-nc-appslist lists it or not. A version the measurement
-# already gave up on, listed in its open issue, is not sent again, nor one
-# whose check a request removed, and while a measurement runs none is sent,
-# since its versions have no result yet.
+# result its summary.json lists and none of the findings STALE_FINDINGS names,
+# the findings an analyser no longer reports. A version with an incomplete run
+# is sent as well, whether gh-nc-appslist lists it or not. A version the
+# measurement already gave up on, listed in its open issue, is not sent again,
+# nor one whose check a request removed, and while a measurement runs none is
+# sent, since its versions have no result yet.
 #
 # The data branch keeps no history. Every write replaces it with a single
 # commit of the new tree, after gh-stats-data-prune thinned the measurement
@@ -71,6 +72,10 @@ env:
   # are removed.
   MEASURE_LINES: ${{ vars.MEASURE_LINES }}
   MEASURE_PRUNE_LINES: ${{ vars.MEASURE_PRUNE_LINES }}
+  # Findings an analyser no longer reports, as <tool>:<finding id> separated
+  # by spaces, for example bundle-report:split-not-effective. A run that still
+  # carries one is measured again, so the site stops showing it.
+  STALE_FINDINGS: ${{ vars.STALE_FINDINGS }}
   # The lists request.yml keeps, as gh-stats-data-prune --keep reads them.
   PINNED: requests/pinned.txt
   REMOVED: requests/removed.txt
@@ -102,6 +107,12 @@ jobs:
             echo "::error::MEASURE_LINES is $lines, it takes 0 to 4"
             exit 1
           fi
+          for stale in $STALE_FINDINGS; do
+            if ! [[ "$stale" =~ ^[a-z0-9-]+:[a-z0-9-]+$ ]]; then
+              echo "::error::STALE_FINDINGS holds $stale, it takes <tool>:<finding id>"
+              exit 1
+            fi
+          done
           prune=--in-place
           [ "$MEASURE_PRUNE_LINES" != true ] || prune+=" --lines $lines"
           {
@@ -177,8 +188,10 @@ jobs:
             # says nothing about the app on its own. A run counts only while it
             # holds every file its summary.json lists, as is or as <name>.gz;
             # one that lost a report, as the large ones gh-stats-data-prune
-            # once removed, is measured again, so all its checks show. That
-            # holds for any version, also one gh-nc-appslist does not list.
+            # once removed, is measured again, so all its checks show. So is
+            # one that carries a stale finding, which only a new run of the
+            # analyser removes. That holds for any version, also one
+            # gh-nc-appslist does not list.
             : > "$STATE/incomplete"
             if [ -d "$DATA/apps" ]; then
               find "$DATA/apps" -name summary.json -exec jq -r '
@@ -188,6 +201,14 @@ jobs:
                 | while IFS=$'\t' read -r -a run; do
                     for file in "${run[@]:2}"; do
                       if ! [ -e "${run[1]}/$file" ] && ! [ -e "${run[1]}/$file.gz" ]; then
+                        printf '%s\n' "${run[0]}" >> "$STATE/incomplete"
+                        continue 2
+                      fi
+                    done
+                    for stale in $STALE_FINDINGS; do
+                      report="${run[1]}/${stale%%:*}.json"
+                      if { cat "$report" 2>/dev/null || gzip -dc "$report.gz" 2>/dev/null; } \
+                        | jq -n -e --arg id "${stale#*:}" '[inputs | .findings[]?.id] | any(. == $id)' >/dev/null; then
                         printf '%s\n' "${run[0]}" >> "$STATE/incomplete"
                         continue 2
                       fi
