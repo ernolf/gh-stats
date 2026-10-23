@@ -870,7 +870,7 @@ function specList(json) {
 	return JSON.parse(json).map((s) => (s.spec && s.spec !== '*' ? `${s.id} ${s.spec}` : s.id)).join(', ')
 }
 
-// A version as request.yml accepts it: a stable release, numbers only.
+// A version as gh-stats-request.yml accepts it: a stable release, numbers only.
 const STABLE = /^[0-9]+(\.[0-9]+)*$/
 
 function compareVersions(a, b) {
@@ -885,7 +885,7 @@ function compareVersions(a, b) {
 	return 0
 }
 
-// The site is static, so a request is a new issue with the title request.yml
+// The site is static, so a request is a new issue with the title gh-stats-request.yml
 // reads; submitting it is what asks for the request.
 function requestLink(text, title, help, label = 'appsdiag') {
 	const body = `${help}\n\nSubmitting this issue asks for it. A request of a user without write access to this repository waits until a maintainer approves it.`

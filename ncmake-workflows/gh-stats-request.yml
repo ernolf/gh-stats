@@ -4,7 +4,7 @@
 # Acts on the issues the buttons of an app page open. The site is static, so a
 # button can only prefill a new issue:
 #
-#   Measure <app-id> <version>                sends the version to measure.yml
+#   Measure <app-id> <version>                sends the version to gh-stats-measure.yml
 #                                             and pins it
 #   Remove the check of <app-id> <version>    removes its results from the data
 #                                             branch and lifts its pin
@@ -27,7 +27,7 @@
 #
 # The data branch holds both lists, one "[<host>/]<owner>/<repo> <version>" per
 # line in lower case: a pinned version keeps all its results whatever
-# MEASURE_LINES says, and a removed one is not sent again by catalogue.yml as a
+# MEASURE_LINES says, and a removed one is not sent again by gh-stats-catalogue.yml as a
 # version without a result, until a new request measures it. The newest stable
 # version of a repository always keeps its result.
 #
@@ -245,7 +245,7 @@ jobs:
           done
           exit 1
 
-      # measure.yml comments on the issue with a link to its run and closes it.
+      # gh-stats-measure.yml comments on the issue with a link to its run and closes it.
       - name: Send the version to the measurement
         if: env.KIND == 'measure'
         run: |
@@ -257,7 +257,7 @@ jobs:
       - name: Report the removal
         if: env.KIND == 'remove'
         run: |
-          gh workflow run site.yml --ref "$GITHUB_REF_NAME"
+          gh workflow run gh-stats-site.yml --ref "$GITHUB_REF_NAME"
           gh issue close "$NUMBER" --reason completed --comment "Removed the check of \`$APP\` $VERSION, $REMOVED_DIRS version directories, from the data branch. It is no longer measured again unless a new request asks for it; the site shows the change after its build in $GITHUB_SERVER_URL/$GH_REPO/actions/workflows/site.yml."
 
   remove:
@@ -323,7 +323,7 @@ jobs:
           read -r samples releases stats <<<"$counts"
           echo "REMOVED_ROWS=$samples samples of its download counters, $releases releases and $stats snapshots of its stars, forks and watchers" >> "$GITHUB_ENV"
 
-      # As in sampler.yml: replacing the asset in place would delete the only
+      # As in gh-stats-sampler.yml: replacing the asset in place would delete the only
       # copy before the new one is complete.
       - name: Upload the database
         run: |
@@ -339,5 +339,5 @@ jobs:
 
       - name: Report the removal
         run: |
-          gh workflow run site.yml --ref "$GITHUB_REF_NAME"
+          gh workflow run gh-stats-site.yml --ref "$GITHUB_REF_NAME"
           gh issue close "$NUMBER" --reason completed --comment "Removed \`$HOST/$OWNER/$REPO\` from the database, $REMOVED_ROWS. The sampler does not ask it again; the site shows the change after its build in $GITHUB_SERVER_URL/$GH_REPO/actions/workflows/site.yml."
