@@ -22,7 +22,7 @@
 # only when the remaining budget covers it, so two runs per hour fit. The
 # release assets themselves are written with GITHUB_TOKEN.
 #
-# Every run dispatches catalogue.yml, which extracts apps.json into the data
+# Every run dispatches gh-stats-catalogue.yml, which extracts apps.json into the data
 # branch and sends its new and its never measured versions to the measurement.
 # appapi_apps.json takes no part in that: an ExApp is not built, so it is never
 # measured.
@@ -31,7 +31,7 @@
 # external cron dispatches it instead, for example with a /etc/cron.d entry
 # whose retry repeats a failed dispatch:
 #
-#   17,47 * * * * root retry gh workflow run sampler.yml -R ernolf/gh-stats >/dev/null 2>&1
+#   17,47 * * * * root retry gh workflow run gh-stats-sampler.yml -R ernolf/gh-stats >/dev/null 2>&1
 
 name: Sample download counters
 
@@ -122,7 +122,7 @@ jobs:
       - name: Extract the catalogue
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run catalogue.yml --ref "$GITHUB_REF_NAME"
+        run: gh workflow run gh-stats-catalogue.yml --ref "$GITHUB_REF_NAME"
 
       - name: Restore the database
         id: restore
@@ -172,4 +172,4 @@ jobs:
         if: ${{ !cancelled() && steps.upload.outcome == 'success' }}
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run site.yml --ref "$GITHUB_REF_NAME"
+        run: gh workflow run gh-stats-site.yml --ref "$GITHUB_REF_NAME"

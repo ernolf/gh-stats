@@ -33,7 +33,7 @@
 #
 # The data branch keeps no history. Every write replaces it with a single
 # commit of the new tree, after gh-stats-data-prune thinned the measurement
-# results as measure.yml describes, so what was removed leaves the repository
+# results as gh-stats-measure.yml describes, so what was removed leaves the repository
 # too. Dispatched by hand, the workflow also thins the results without a new
 # catalogue.
 
@@ -64,7 +64,7 @@ env:
   EXTRACT: catalogue/releases.jsonl
   EVENT_TYPE: measure
   EVENT_VERSIONS: 256
-  # The issue in which measure.yml lists the versions it gave up on.
+  # The issue in which gh-stats-measure.yml lists the versions it gave up on.
   ISSUE_TITLE: App versions without a result
   ISSUE_LABEL: appsdiag
   # Release lines before the newest that are measured as well, 0 to 4; unset
@@ -76,7 +76,7 @@ env:
   # by spaces, for example bundle-report:split-not-effective. A run that still
   # carries one is measured again, so the site stops showing it.
   STALE_FINDINGS: ${{ vars.STALE_FINDINGS }}
-  # The lists request.yml keeps, as gh-stats-data-prune --keep reads them.
+  # The lists gh-stats-request.yml keeps, as gh-stats-data-prune --keep reads them.
   PINNED: requests/pinned.txt
   REMOVED: requests/removed.txt
 
@@ -174,7 +174,7 @@ jobs:
           APPSTORE_TARGETS: bin/gh-nc-appstore-targets
         run: |
           : > "$STATE/unmeasured"
-          busy="$(gh run list -w measure.yml -L 100 --json status --jq 'map(select(.status != "completed")) | length')"
+          busy="$(gh run list -w gh-stats-measure.yml -L 100 --json status --jq 'map(select(.status != "completed")) | length')"
           if [ "$busy" -gt 0 ]; then
             echo "::notice::A measurement runs, the versions without a result wait for the next run"
             echo "UNMEASURED=0" >> "$GITHUB_ENV"
@@ -184,7 +184,7 @@ jobs:
           # "[<host>/]<owner>/<repo> <version>" in lower case, as gh-nc-appslist
           # names a version and gh-nc-appsdiag is asked for it.
           {
-            # Every result, whatever its status: measure.yml repeats a run that
+            # Every result, whatever its status: gh-stats-measure.yml repeats a run that
             # says nothing about the app on its own. A run counts only while it
             # holds every file its summary.json lists, as is or as <name>.gz;
             # one that lost a report, as the large ones gh-stats-data-prune
@@ -281,7 +281,7 @@ jobs:
               done
           echo "::notice::Sent $NEW new versions"
 
-      # In one event: measure.yml passes on what one run cannot hold, so the
+      # In one event: gh-stats-measure.yml passes on what one run cannot hold, so the
       # runs follow one another.
       - name: Send the versions without a result to the measurement
         if: env.UNMEASURED != '0'

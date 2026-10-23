@@ -4,7 +4,7 @@
 # https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 version: 2
 updates:
-  # The libraries the site ships: site.yml reads their versions and
+  # The libraries the site ships: gh-stats-site.yml reads their versions and
   # integrities from site/package-lock.json.
   - package-ecosystem: npm
     directory: "/site"
@@ -23,19 +23,14 @@ updates:
         patterns:
           - "*"
 
-  # The actions of the workflows that ncmake does not manage. The ones it
-  # manages, listed in .github/workflows/.ncmake-workflows.json, stay out: a
-  # change by Dependabot would make ncmake flag them as locally modified and
-  # stop updating them. dependabot-excludes.yml checks that this list matches.
+  # The actions of the repository's own workflows (ncmake-workflows/). With a
+  # directory other than "/", Dependabot reads only the YAML files of that
+  # directory, so it never opens .github/workflows: those workflows are managed
+  # by ncmake, and a change by Dependabot would make ncmake flag them as locally
+  # modified. The templates arrive through the workflow updater, the own
+  # workflows through make workflows-update.
   - package-ecosystem: github-actions
-    directory: "/"
-    exclude-paths:
-      - ".github/workflows/block-unconventional-commits.yml"
-      - ".github/workflows/branch-cleanup.yml"
-      - ".github/workflows/lint-shell.yml"
-      - ".github/workflows/lint-web.yml"
-      - ".github/workflows/reuse.yml"
-      - ".github/workflows/workflow-updater.yml"
+    directory: "/ncmake-workflows"
     schedule:
       interval: weekly
     commit-message:

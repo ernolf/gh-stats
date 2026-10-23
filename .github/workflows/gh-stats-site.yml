@@ -1,0 +1,188 @@
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# Builds the site and deploys it to GitHub Pages. The site has no server side:
+# the browser loads the site database whole and queries it with sql.js, so the
+# deployment carries the pages under site/, the database gh-stats-site-db builds
+# from the latest sampler database and catalogue and the measurement results on
+# the data branch, sql.js itself, uPlot for the charts, and marked and DOMPurify
+# for the app descriptions. Nothing of it is committed.
+#
+# The sampler workflow dispatches this one after every upload of its database,
+# so a new measurement shows on the site with the next upload.
+#
+# Every build puts the database under a directory of its own, named by the run,
+# and config.json points to it: Pages lets browsers cache a file for 10 minutes,
+# and a fixed name could then mix a cached config with another database.
+# config.json also names the versions of the libraries, which the page lists
+# under "Built with".
+#
+# The libraries are shipped with the site, so visitors load nothing from a
+# third-party host. site/package-lock.json names the version of each and the
+# integrity the npm registry lists for its tarball; Dependabot keeps it up to
+# date, and the build checks every tarball against it.
+
+name: Build the site
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only the newest build matters; a queued one is replaced by a newer one, but a
+# deployment that has started is never cancelled.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  GH_REPO: ${{ github.repository }}
+  CATALOGUE_TAG: catalogue
+  DB_TAG: sampler-db
+  DB_ASSET: downloads.sqlite.zst
+  DATA_BRANCH: data
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Read the library versions
+        run: |
+          for lib in SQLJS:sql.js UPLOT:uplot MARKED:marked DOMPURIFY:dompurify; do
+            jq -r -e --arg var "${lib%%:*}" --arg pkg "node_modules/${lib#*:}" '
+              .packages[$pkg] // error("\($pkg) is not in the lock file")
+              | "\($var)_VERSION=\(.version)\n\($var)_INTEGRITY=\(.integrity)"' site/package-lock.json >> "$GITHUB_ENV"
+          done
+
+      # Only the JSON results are checked out. reuse.json lists every file of
+      # a checkout and is by far the largest; the REUSE verdict is the exit
+      # code summary.json records.
+      - name: Checkout the measurement results
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.DATA_BRANCH }}
+          path: data
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            apps/**/*.json
+            apps/**/*.json.gz
+            !apps/**/reuse.json
+            !apps/**/reuse.json.gz
+
+      - name: Fetch the sampler database and the catalogue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          state="$RUNNER_TEMP/gh-stats"
+          mkdir -p "$state"
+          echo "STATE=$state" >> "$GITHUB_ENV"
+          gh release download "$DB_TAG" -p "$DB_ASSET" -D "$state"
+          zstd -d -q "$state/$DB_ASSET" -o "$state/downloads.sqlite"
+          gh release download "$CATALOGUE_TAG" -p apps.json -p appapi_apps.json -D "$state"
+
+      - name: Build the site database
+        run: |
+          out="$RUNNER_TEMP/_site"
+          cp -r site "$out"
+          rm "$out/package.json" "$out/package-lock.json"
+          db="db/$GITHUB_RUN_ID/gh-stats.sqlite"
+          mkdir -p "$out/${db%/*}"
+          GH_STATS_DB="$STATE/downloads.sqlite" APPSTORE_CACHE="$STATE/apps.json" \
+            bin/gh-stats-site-db -o "$out/$db" -r data/apps
+          jq -n --arg db "$db" --argjson bytes "$(stat -c %s "$out/$db")" \
+            --arg results "https://github.com/$GH_REPO/tree/$DATA_BRANCH/apps" \
+            --arg issues "https://github.com/$GH_REPO/issues/new" \
+            --arg sqljs "$SQLJS_VERSION" --arg uplot "$UPLOT_VERSION" \
+            --arg marked "$MARKED_VERSION" --arg dompurify "$DOMPURIFY_VERSION" \
+            '{db: $db, bytes: $bytes, results: $results, issues: $issues, lib: {"sql.js": $sqljs, uPlot: $uplot, marked: $marked, DOMPurify: $dompurify}}' > "$out/config.json"
+          echo "SITE=$out" >> "$GITHUB_ENV"
+
+      - name: Add sql.js
+        run: |
+          tgz="$RUNNER_TEMP/sql.js.tgz"
+          curl -fsSL -o "$tgz" "https://registry.npmjs.org/sql.js/-/sql.js-$SQLJS_VERSION.tgz"
+          got="sha512-$(openssl dgst -sha512 -binary "$tgz" | base64 -w0)"
+          if [ "$got" != "$SQLJS_INTEGRITY" ]; then
+            echo "::error::sql.js $SQLJS_VERSION does not match its integrity: $got"
+            exit 1
+          fi
+          mkdir -p "$SITE/lib/sql.js"
+          tar -xzf "$tgz" -C "$SITE/lib/sql.js" --strip-components=1 \
+            package/LICENSE package/dist/sql-wasm.js package/dist/sql-wasm.wasm
+          mv "$SITE/lib/sql.js/dist/"* "$SITE/lib/sql.js/"
+          rmdir "$SITE/lib/sql.js/dist"
+
+      - name: Add uPlot
+        run: |
+          tgz="$RUNNER_TEMP/uplot.tgz"
+          curl -fsSL -o "$tgz" "https://registry.npmjs.org/uplot/-/uplot-$UPLOT_VERSION.tgz"
+          got="sha512-$(openssl dgst -sha512 -binary "$tgz" | base64 -w0)"
+          if [ "$got" != "$UPLOT_INTEGRITY" ]; then
+            echo "::error::uPlot $UPLOT_VERSION does not match its integrity: $got"
+            exit 1
+          fi
+          mkdir -p "$SITE/lib/uplot"
+          tar -xzf "$tgz" -C "$SITE/lib/uplot" --strip-components=1 \
+            package/LICENSE package/dist/uPlot.iife.min.js package/dist/uPlot.min.css
+          mv "$SITE/lib/uplot/dist/"* "$SITE/lib/uplot/"
+          rmdir "$SITE/lib/uplot/dist"
+
+      - name: Add marked
+        run: |
+          tgz="$RUNNER_TEMP/marked.tgz"
+          curl -fsSL -o "$tgz" "https://registry.npmjs.org/marked/-/marked-$MARKED_VERSION.tgz"
+          got="sha512-$(openssl dgst -sha512 -binary "$tgz" | base64 -w0)"
+          if [ "$got" != "$MARKED_INTEGRITY" ]; then
+            echo "::error::marked $MARKED_VERSION does not match its integrity: $got"
+            exit 1
+          fi
+          mkdir -p "$SITE/lib/marked"
+          tar -xzf "$tgz" -C "$SITE/lib/marked" --strip-components=1 \
+            package/LICENSE package/lib/marked.umd.js
+          mv "$SITE/lib/marked/lib/"* "$SITE/lib/marked/"
+          rmdir "$SITE/lib/marked/lib"
+
+      # DOMPurify is dual-licensed and ships a text for each licence.
+      - name: Add DOMPurify
+        run: |
+          tgz="$RUNNER_TEMP/dompurify.tgz"
+          curl -fsSL -o "$tgz" "https://registry.npmjs.org/dompurify/-/dompurify-$DOMPURIFY_VERSION.tgz"
+          got="sha512-$(openssl dgst -sha512 -binary "$tgz" | base64 -w0)"
+          if [ "$got" != "$DOMPURIFY_INTEGRITY" ]; then
+            echo "::error::DOMPurify $DOMPURIFY_VERSION does not match its integrity: $got"
+            exit 1
+          fi
+          mkdir -p "$SITE/lib/dompurify"
+          tar -xzf "$tgz" -C "$SITE/lib/dompurify" --strip-components=1 \
+            package/LICENSE package/LICENSE-MPL package/dist/purify.min.js
+          mv "$SITE/lib/dompurify/dist/"* "$SITE/lib/dompurify/"
+          rmdir "$SITE/lib/dompurify/dist"
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: ${{ env.SITE }}
+
+  deploy:
+    name: deploy
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
