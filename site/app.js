@@ -660,13 +660,10 @@ function initOverview() {
 	const sinceRange = document.getElementById('since-range')
 	const sinceHelp = document.getElementById('since-help')
 	const sinceHelpToggle = document.getElementById('since-help-toggle')
-	const ncFilter = document.getElementById('nc-filter')
+	const appFilters = document.getElementById('app-filters')
 	const ncMin = document.getElementById('nc-min')
 	const ncMax = document.getElementById('nc-max')
-	const sidebar = document.getElementById('categories')
-	const names = categories()
-	// The id of the chosen category, empty for all apps.
-	let category = ''
+	const category = document.getElementById('category')
 	let sortKey = 'total'
 	let sortDesc = true
 
@@ -707,7 +704,7 @@ function initOverview() {
 			tbody.remove()
 		}
 		// The projects of the Other tab carry no category.
-		const c = tab === 'other' ? '' : category
+		const c = tab === 'other' ? '' : category.value
 		const frag = document.createDocumentFragment()
 		for (const p of projects) {
 			const older = p.lines.filter(counts)
@@ -734,8 +731,7 @@ function initOverview() {
 		tab = next
 		table.dataset.tab = tab
 		nameHead.textContent = { apps: 'App', exapps: 'ExApp', other: 'Project' }[tab]
-		ncFilter.hidden = tab === 'other'
-		sidebar.hidden = tab === 'other' || !names.size
+		appFilters.hidden = tab === 'other'
 		for (const b of tabs) {
 			b.setAttribute('aria-pressed', String(b.dataset.tab === tab))
 		}
@@ -745,20 +741,11 @@ function initOverview() {
 		b.addEventListener('click', () => showTab(b.dataset.tab))
 	}
 
-	// A catalogue built without the names of the categories has no sidebar.
-	const categoryButtons = [['', 'All apps'], ...names].map(([id, name]) => {
-		const b = el('button', { type: 'button', 'aria-pressed': String(id === category) }, name)
-		b.addEventListener('click', () => {
-			category = id
-			for (const x of categoryButtons) {
-				x.setAttribute('aria-pressed', String(x === b))
-			}
-			render()
-		})
-		return b
-	})
-	sidebar.firstElementChild.append(...categoryButtons.map((b) => el('li', {}, b)))
-	sidebar.hidden = !names.size
+	// A catalogue built without the names of the categories has no choice of them.
+	const names = categories()
+	category.append(...[...names].map(([id, name]) => el('option', { value: id }, name)))
+	category.hidden = !names.size
+	category.addEventListener('change', render)
 
 	for (const th of document.querySelectorAll('th[data-sort]')) {
 		th.tabIndex = 0
