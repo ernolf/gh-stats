@@ -17,6 +17,7 @@ let results
 let issues
 let measured
 let measuredLines
+let measuredShipped
 let shipped
 // The line rows of each project and the project of each app, for the app pages.
 const projectLines = new Map()
@@ -193,7 +194,7 @@ function categories() {
 	return new Map(query('SELECT id, name FROM categories ORDER BY name COLLATE NOCASE').map((r) => [r.id, r.name]))
 }
 
-const MEASUREMENT = `m.dir, m.app_id, m.version, m.tag, m.tarball, m.signed, m.diff,
+const MEASUREMENT = `m.dir, m.app_id, m.version, m.server, m.tag, m.tarball, m.signed, m.diff,
 	(SELECT count(*) FROM findings f WHERE f.dir = m.dir AND f.level = 'warn') AS warn`
 
 // The measurements of each release, keyed by project and tag; a repository that
@@ -201,7 +202,9 @@ const MEASUREMENT = `m.dir, m.app_id, m.version, m.tag, m.tarball, m.signed, m.d
 // the repository it measured and to those of the repositories the catalogue
 // links for its app, which may be others. The measurements and apps owner and
 // repo columns compare without case and stand on the left. Each carries the
-// version key and pre-release flag of its release in the project.
+// version key and pre-release flag of its release in the project. The run of a
+// server release measures the app as that release ships it, not a release of
+// the project, even where it names the tag of one.
 function measurementsByRelease() {
 	const rows = query(`
 		SELECT p.project, ${MEASUREMENT},
@@ -215,7 +218,7 @@ function measurementsByRelease() {
 		       UNION
 		       SELECT m.dir, j.project FROM measurements m JOIN apps a ON a.id = m.app_id
 		         JOIN projects j ON a.host = j.host AND a.owner = j.owner AND a.repo = j.repo) p ON p.dir = m.dir
-		 WHERE m.tag IS NOT NULL ORDER BY m.subdir, m.app_id`)
+		 WHERE m.tag IS NOT NULL AND m.server IS NULL ORDER BY m.subdir, m.app_id`)
 	return Map.groupBy(rows, (r) => `${r.project}\n${r.tag}`)
 }
 
@@ -237,10 +240,18 @@ function measurementsByLine(byRelease) {
 	return lines
 }
 
-// The measurements of one app, keyed by the version its info.xml declares.
+// The measurements of one app, keyed by the version its info.xml declares, as
+// the App Store ships it.
 function measurementsByVersion(id) {
-	return Map.groupBy(query(`SELECT ${MEASUREMENT} FROM measurements m WHERE m.app_id = $id`, { $id: id }),
+	return Map.groupBy(query(`SELECT ${MEASUREMENT} FROM measurements m WHERE m.app_id = $id AND m.server IS NULL`, { $id: id }),
 		(r) => r.version)
+}
+
+// The measurements of the shipped apps, keyed by app id and the tag of the
+// server release, or master, as the shipped table names it.
+function measurementsByServer() {
+	return Map.groupBy(query(`SELECT ${MEASUREMENT} FROM measurements m WHERE m.server IS NOT NULL`),
+		(r) => `${r.app_id}\n${r.server}`)
 }
 
 function findingsOf(dir) {
@@ -513,17 +524,19 @@ function finding(f) {
 		el('span', { class: 'level' }, f.level ?? ''), ' ', el('code', {}, f.id ?? ''), el('pre', {}, f.text))
 }
 
-// The release diff compares the tarball the App Store ships with the tree the
-// build stages, by kind of difference and class of file.
+// The release diff compares the tarball the App Store ships, or the directory
+// of the app in the server archive, with the tree the build stages, by kind of
+// difference and class of file.
 function diffText(m) {
+	const archive = m.server ? `apps/${m.app_id}/ of the server archive ${m.tarball}` : `Release tarball ${m.tarball}`
 	if (m.diff === null) {
-		return m.tarball ? `Release tarball ${m.tarball} not compared.` : 'No release tarball.'
+		return m.tarball ? `${archive} not compared.` : m.server ? 'No server archive.' : 'No release tarball.'
 	}
 	const kinds = Object.entries(JSON.parse(m.diff)).map(([kind, classes]) => {
 		const n = Object.values(classes).reduce((a, b) => a + b, 0)
 		return `${kind} ${n} (${Object.entries(classes).map(([c, k]) => `${c} ${k}`).join(', ')})`
 	})
-	return `Release tarball ${m.tarball}${m.signed ? ', signed' : ''}: ${kinds.join(', ') || 'no entries'}.`
+	return `${archive}${m.signed ? ', signed' : ''}: ${kinds.join(', ') || 'no entries'}.`
 }
 
 // Warnings in full, grouped by the tool that found them, the tools with
@@ -654,15 +667,17 @@ function olderToggle(p) {
 }
 
 // A shipped app has a line for each server release whose archive ships it, the
-// newest stable major on its row and the others below. Nobody downloads the
-// archives from a host gh-stats samples, so the download columns stay empty and
-// there is nothing to chart or compare.
+// newest stable major on its row and the others below, each with the checks of
+// the app as that release ships it. Nobody downloads the archives from a host
+// gh-stats samples, so the download columns stay empty and there is nothing to
+// chart or compare.
 function shippedRow(releases) {
 	const main = releases.find((s) => s.ref !== 'master') ?? releases[0]
 	const line = (s, first) => {
-		const [checks, checksRow] = checksCell(undefined, 10)
+		const runs = measuredShipped.get(`${s.id}\n${s.ref}`)
+		const [checks, checksRow] = checksCell(runs, 10)
 		const r = {
-			published: s.published, nc: `>=${s.major} <=${s.major}`, checks: checksRow,
+			published: s.published, nc: `>=${s.major} <=${s.major}`, warn: warnings(runs), checks: checksRow,
 			compare: el('tr', { class: 'compare', hidden: '' }), compareChecks: el('tr', { class: 'checks', hidden: '' }),
 		}
 		r.tr = el('tr', {}, el('td', { class: 'pick' }), first,
@@ -678,7 +693,7 @@ function shippedRow(releases) {
 	const row = line(main, head)
 	const p = {
 		tab: 'shipped', name: main.name, tag: main.version, published: main.published, nc: row.nc,
-		total: null, d1: null, d7: null, d30: null, warn: null,
+		total: null, d1: null, d7: null, d30: null, warn: row.warn,
 		lines: releases.filter((s) => s !== main)
 			.map((s) => line(s, el('td', { class: 'line-label' }, s.ref === 'master' ? 'master' : `Nextcloud ${s.major}`))),
 		search: `${main.name} ${main.id} ${main.repo}`.toLowerCase(), categories: new Set(JSON.parse(main.categories ?? '[]')),
@@ -694,6 +709,7 @@ function initOverview() {
 	initCharts()
 	measured = measurementsByRelease()
 	measuredLines = measurementsByLine(measured)
+	measuredShipped = measurementsByServer()
 	shipped = shippedSince()
 	const repos = Map.groupBy(projectRepos(), (r) => r.project)
 	const apps = Map.groupBy(projectApps(), (r) => r.project)
@@ -815,7 +831,8 @@ function initOverview() {
 		save()
 	}
 
-	// Only the apps are built and measured, so only their tab has the checks.
+	// Only the apps and the shipped apps are built and measured, so only their
+	// tabs have the checks.
 	const showTab = (next) => {
 		if (next === tab) {
 			return
@@ -1215,12 +1232,17 @@ function appReleases(id, requests) {
 
 function appShipped(releases) {
 	return el('table', {},
-		el('thead', {}, el('tr', {}, ...['Nextcloud', 'Published', 'App version', 'Source'].map((h) => el('th', {}, h)))),
-		el('tbody', {}, ...releases.map((s) => el('tr', {},
-			el('td', {}, serverLink(s)),
-			el('td', {}, s.published === null ? '' : date(s.published)),
-			el('td', {}, s.version),
-			el('td', {}, el('a', { href: shippedSource(s) }, s.path ? `${s.repo}/${s.path}` : s.repo))))))
+		el('thead', {}, el('tr', {}, ...['Nextcloud', 'Published', 'App version', 'Source'].map((h) => el('th', {}, h)),
+			el('th', { title: 'warnings of the measurement of the app as the server release ships it' }, 'Checks'))),
+		...releases.map((s) => {
+			const [checks, checksRow] = checksCell(measuredShipped.get(`${s.id}\n${s.ref}`), 4)
+			return el('tbody', {}, el('tr', {},
+				el('td', {}, serverLink(s)),
+				el('td', {}, s.published === null ? '' : date(s.published)),
+				el('td', {}, s.version),
+				el('td', {}, el('a', { href: shippedSource(s) }, s.path ? `${s.repo}/${s.path}` : s.repo)),
+				checks), checksRow)
+		}))
 }
 
 function factList(facts) {
