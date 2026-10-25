@@ -166,6 +166,12 @@ function catalogueApps() {
 		 ORDER BY d.id`)
 }
 
+// The ranges of every catalogue release, which name every Nextcloud major an
+// app has required so far.
+function catalogueSpecs() {
+	return query('SELECT DISTINCT platform FROM app_releases').map((r) => r.platform)
+}
+
 const MEASUREMENT = `m.dir, m.app_id, m.version, m.tag, m.tarball, m.signed, m.diff,
 	(SELECT count(*) FROM findings f WHERE f.dir = m.dir AND f.level = 'warn') AS warn`
 
@@ -342,11 +348,13 @@ function sinceStep(t) {
 }
 
 // The catalogue writes the range as ">=32 <=34".
+const NC_SPEC = /^>=\s*([\d.]+)(?:\s+<=\s*([\d.]+))?$/
+
 function ncRange(spec) {
 	if (!spec) {
 		return ''
 	}
-	const m = /^>=\s*([\d.]+)(?:\s+<=\s*([\d.]+))?$/.exec(spec.trim())
+	const m = NC_SPEC.exec(spec.trim())
 	if (!m) {
 		return spec
 	}
@@ -354,6 +362,13 @@ function ncRange(spec) {
 		return `${m[1]}+`
 	}
 	return m[1] === m[2] ? m[1] : `${m[1]}–${m[2]}`
+}
+
+// The first and last major of a range, compared by major as the App Store
+// does: <=33 covers every 33.x, a range without an upper bound every later major.
+function ncMajors(spec) {
+	const m = spec ? NC_SPEC.exec(spec.trim()) : null
+	return m && [parseInt(m[1]), m[2] === undefined ? Infinity : parseInt(m[2])]
 }
 
 function el(tag, attrs = {}, ...children) {
@@ -569,7 +584,7 @@ function catalogueRow(a) {
 	const released = a.version !== null
 	const p = {
 		tab: !released ? 'other' : a.exapp ? 'exapps' : 'apps',
-		name: a.name, tag: a.version, published: a.published,
+		name: a.name, tag: a.version, published: a.published, nc: a.platform,
 		total: null, d1: null, d7: null, d30: null, lines: [],
 		search: `${a.name} ${a.id}`.toLowerCase(),
 	}
@@ -639,6 +654,9 @@ function initOverview() {
 	const sinceRange = document.getElementById('since-range')
 	const sinceHelp = document.getElementById('since-help')
 	const sinceHelpToggle = document.getElementById('since-help-toggle')
+	const ncFilter = document.getElementById('nc-filter')
+	const ncMin = document.getElementById('nc-min')
+	const ncMax = document.getElementById('nc-max')
 	let sortKey = 'total'
 	let sortDesc = true
 
@@ -651,6 +669,20 @@ function initOverview() {
 		// A line counts by the release it shows; a project stays while any of
 		// its lines does, with the row of its newest line.
 		const from = t ?? 0
+		// One side left at any takes the major of the other. The Other tab has
+		// no Nextcloud versions to compare.
+		const lo = Number(ncMin.value || ncMax.value)
+		const hi = Number(ncMax.value || ncMin.value)
+		const counts = (r) => {
+			if (r.published < from) {
+				return false
+			}
+			if (!lo || tab === 'other') {
+				return true
+			}
+			const m = ncMajors(r.nc)
+			return m !== null && m[0] <= lo && m[1] >= hi
+		}
 		// Empty periods sort last in either direction.
 		projects.sort((a, b) => {
 			const x = a[sortKey]
@@ -666,8 +698,8 @@ function initOverview() {
 		}
 		const frag = document.createDocumentFragment()
 		for (const p of projects) {
-			const older = p.lines.filter((r) => r.published >= from)
-			if (p.tab !== tab || (f && !p.search.includes(f)) || (p.published < from && !older.length)) {
+			const older = p.lines.filter(counts)
+			if (p.tab !== tab || (f && !p.search.includes(f)) || (!counts(p) && !older.length)) {
 				continue
 			}
 			p.older.replaceChildren(...older.flatMap((r) => [r.tr, r.checks, r.compare, r.compareChecks]))
@@ -690,6 +722,7 @@ function initOverview() {
 		tab = next
 		table.dataset.tab = tab
 		nameHead.textContent = { apps: 'App', exapps: 'ExApp', other: 'Project' }[tab]
+		ncFilter.hidden = tab === 'other'
 		for (const b of tabs) {
 			b.setAttribute('aria-pressed', String(b.dataset.tab === tab))
 		}
@@ -734,6 +767,26 @@ function initOverview() {
 	})
 	sinceRange.addEventListener('input', () => {
 		since.value = SINCE_STEPS[Number(sinceRange.value)] ?? ''
+		render()
+	})
+	// The selects offer the majors from the lowest to the highest min-version:
+	// an upper bound may name a major far beyond any release, such as <=99.
+	const firsts = catalogueSpecs().map(ncMajors).filter(Boolean).map((m) => m[0])
+	for (let v = Math.min(...firsts); v <= Math.max(...firsts); v++) {
+		ncMin.append(el('option', { value: v }, String(v)))
+		ncMax.append(el('option', { value: v }, String(v)))
+	}
+	// The pair never contradicts itself: the other select follows along.
+	ncMin.addEventListener('change', () => {
+		if (ncMax.value && Number(ncMin.value) > Number(ncMax.value)) {
+			ncMax.value = ncMin.value
+		}
+		render()
+	})
+	ncMax.addEventListener('change', () => {
+		if (ncMin.value && Number(ncMax.value) < Number(ncMin.value)) {
+			ncMin.value = ncMax.value
+		}
 		render()
 	})
 	sinceHelpToggle.addEventListener('click', () => {
