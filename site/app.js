@@ -664,8 +664,22 @@ function initOverview() {
 	const ncMin = document.getElementById('nc-min')
 	const ncMax = document.getElementById('nc-max')
 	const category = document.getElementById('category')
+	const reset = document.getElementById('reset')
 	let sortKey = 'total'
 	let sortDesc = true
+
+	// The tab and the order are kept with the controls, each only while it
+	// differs from the start.
+	const save = () => {
+		const s = controlSettings()
+		if (tab !== 'apps') {
+			s.tab = tab
+		}
+		if (sortKey !== 'total' || !sortDesc) {
+			s.sort = { key: sortKey, desc: sortDesc }
+		}
+		writeSettings(s)
+	}
 
 	const render = () => {
 		const f = filter.value.trim().toLowerCase()
@@ -720,6 +734,7 @@ function initOverview() {
 		for (const th of document.querySelectorAll('th[data-sort]')) {
 			th.setAttribute('aria-sort', th.dataset.sort === sortKey ? (sortDesc ? 'descending' : 'ascending') : 'none')
 		}
+		save()
 	}
 
 	// Only the apps are built and measured, so only their tab has the checks.
@@ -765,8 +780,7 @@ function initOverview() {
 		})
 	}
 	// The field and the slider set each other. Text that is neither a date nor
-	// a period leaves the slider where it is; the browser may have restored the
-	// field before the page was built.
+	// a period leaves the slider where it is.
 	const syncRange = () => {
 		const t = sinceTime(since.value)
 		if (t !== null) {
@@ -774,7 +788,6 @@ function initOverview() {
 		}
 	}
 	sinceRange.max = SINCE_STEPS.length
-	syncRange()
 	filter.addEventListener('input', render)
 	since.addEventListener('input', () => {
 		syncRange()
@@ -808,9 +821,101 @@ function initOverview() {
 		sinceHelp.hidden = !sinceHelp.hidden
 		sinceHelpToggle.setAttribute('aria-expanded', String(!sinceHelp.hidden))
 	})
+
+	// Restored after the selects have their options, so a stored choice can be
+	// checked against them. A stored tab or order the page no longer has
+	// leaves the start.
+	const restore = (s) => {
+		restoreControls(s)
+		syncRange()
+		const keys = [...document.querySelectorAll('th[data-sort]')].map((th) => th.dataset.sort)
+		const sorted = keys.includes(s.sort?.key) && typeof s.sort.desc === 'boolean'
+		sortKey = sorted ? s.sort.key : 'total'
+		sortDesc = sorted ? s.sort.desc : true
+		showTab([...tabs].some((b) => b.dataset.tab === s.tab) ? s.tab : 'apps')
+		drawCharts()
+	}
+	for (const id of CHART_SETTINGS) {
+		document.getElementById(id).addEventListener('change', save)
+	}
+	// The defaults keep nothing, so the render after a reset removes the key.
+	reset.addEventListener('click', () => {
+		restore({})
+		render()
+	})
+	restore(readSettings())
 	render()
 	addEventListener('hashchange', route)
 	route()
+}
+
+// == Settings ==
+
+// The controls of the start page outlast a reload: the browser keeps what
+// differs from the defaults under one key. Without storage, in a private
+// window or with the site data blocked, the page starts from the defaults.
+const SETTINGS_KEY = 'gh-stats.settings'
+const OVERVIEW_SETTINGS = ['filter', 'since', 'category', 'nc-min', 'nc-max']
+const CHART_SETTINGS = ['scope', 'split', 'share-figure', 'measure', 'bucket', 'range', 'style', 'log']
+
+// The defaults are those the page is written with.
+function controlDefault(c) {
+	if (c.type === 'checkbox') {
+		return c.defaultChecked
+	}
+	if (c.tagName === 'SELECT') {
+		return ([...c.options].find((o) => o.defaultSelected) ?? c.options[0]).value
+	}
+	return c.defaultValue
+}
+
+function controlSettings() {
+	const s = {}
+	for (const id of [...OVERVIEW_SETTINGS, ...CHART_SETTINGS]) {
+		const c = document.getElementById(id)
+		const v = c.type === 'checkbox' ? c.checked : c.value
+		if (v !== controlDefault(c)) {
+			s[id] = v
+		}
+	}
+	return s
+}
+
+// A value the page no longer offers, such as a category the catalogue has
+// dropped, leaves the default.
+function restoreControls(s) {
+	for (const id of [...OVERVIEW_SETTINGS, ...CHART_SETTINGS]) {
+		const c = document.getElementById(id)
+		const v = s[id]
+		if (c.type === 'checkbox') {
+			c.checked = typeof v === 'boolean' ? v : c.defaultChecked
+		} else if (c.tagName === 'SELECT') {
+			c.value = [...c.options].some((o) => o.value === v) ? v : controlDefault(c)
+		} else {
+			c.value = typeof v === 'string' ? v : c.defaultValue
+		}
+	}
+}
+
+function readSettings() {
+	try {
+		const s = JSON.parse(localStorage.getItem(SETTINGS_KEY))
+		return s && typeof s === 'object' ? s : {}
+	} catch {
+		return {}
+	}
+}
+
+function writeSettings(s) {
+	try {
+		if (Object.keys(s).length) {
+			localStorage.setItem(SETTINGS_KEY, JSON.stringify(s))
+		} else {
+			localStorage.removeItem(SETTINGS_KEY)
+		}
+	} catch {
+		// Without storage the settings last as long as the page.
+	}
 }
 
 // == App page ==

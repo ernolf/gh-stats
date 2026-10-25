@@ -28,6 +28,7 @@ export default [
 				initSqlJs: 'readonly',
 				marked: 'readonly',
 				DOMPurify: 'readonly',
+				drawCharts: 'readonly',
 				initCharts: 'readonly',
 				pickRow: 'readonly',
 				swapPicks: 'readonly',
