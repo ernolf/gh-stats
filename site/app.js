@@ -740,8 +740,7 @@ function initOverview() {
 	const sinceHelp = document.getElementById('since-help')
 	const sinceHelpToggle = document.getElementById('since-help-toggle')
 	const appFilters = document.getElementById('app-filters')
-	const ncMin = document.getElementById('nc-min')
-	const ncMax = document.getElementById('nc-max')
+	const nc = document.getElementById('nc')
 	const category = document.getElementById('category')
 	const reset = document.getElementById('reset')
 	let sortKey = 'total'
@@ -769,19 +768,17 @@ function initOverview() {
 		// A line counts by the release it shows; a project stays while any of
 		// its lines does, with the row of its newest line.
 		const from = t ?? 0
-		// One side left at any takes the major of the other. The Other tab has
-		// no Nextcloud versions to compare.
-		const lo = Number(ncMin.value || ncMax.value)
-		const hi = Number(ncMax.value || ncMin.value)
+		// The Other tab has no Nextcloud versions to compare.
+		const major = Number(nc.value)
 		const counts = (r) => {
 			if (r.published < from) {
 				return false
 			}
-			if (!lo || tab === 'other') {
+			if (!major || tab === 'other') {
 				return true
 			}
 			const m = ncMajors(r.nc)
-			return m !== null && m[0] <= lo && m[1] >= hi
+			return m !== null && m[0] <= major && m[1] >= major
 		}
 		// Empty periods sort last in either direction.
 		projects.sort((a, b) => {
@@ -877,26 +874,13 @@ function initOverview() {
 		since.value = SINCE_STEPS[Number(sinceRange.value)] ?? ''
 		render()
 	})
-	// The selects offer the majors from the lowest to the highest min-version:
+	// The select offers the majors from the lowest to the highest min-version:
 	// an upper bound may name a major far beyond any release, such as <=99.
 	const firsts = catalogueSpecs().map(ncMajors).filter(Boolean).map((m) => m[0])
 	for (let v = Math.min(...firsts); v <= Math.max(...firsts); v++) {
-		ncMin.append(el('option', { value: v }, String(v)))
-		ncMax.append(el('option', { value: v }, String(v)))
+		nc.append(el('option', { value: v }, String(v)))
 	}
-	// The pair never contradicts itself: the other select follows along.
-	ncMin.addEventListener('change', () => {
-		if (ncMax.value && Number(ncMin.value) > Number(ncMax.value)) {
-			ncMax.value = ncMin.value
-		}
-		render()
-	})
-	ncMax.addEventListener('change', () => {
-		if (ncMin.value && Number(ncMax.value) < Number(ncMin.value)) {
-			ncMin.value = ncMax.value
-		}
-		render()
-	})
+	nc.addEventListener('change', render)
 	sinceHelpToggle.addEventListener('click', () => {
 		sinceHelp.hidden = !sinceHelp.hidden
 		sinceHelpToggle.setAttribute('aria-expanded', String(!sinceHelp.hidden))
@@ -953,7 +937,7 @@ function initScrolling() {
 // differs from the defaults under one key. Without storage, in a private
 // window or with the site data blocked, the page starts from the defaults.
 const SETTINGS_KEY = 'gh-stats.settings'
-const OVERVIEW_SETTINGS = ['filter', 'since', 'category', 'nc-min', 'nc-max']
+const OVERVIEW_SETTINGS = ['filter', 'since', 'category', 'nc']
 const CHART_SETTINGS = ['scope', 'split', 'share-figure', 'measure', 'bucket', 'range', 'style', 'log']
 
 // The defaults are those the page is written with.
@@ -998,7 +982,15 @@ function restoreControls(s) {
 function readSettings() {
 	try {
 		const s = JSON.parse(localStorage.getItem(SETTINGS_KEY))
-		return s && typeof s === 'object' ? s : {}
+		if (!s || typeof s !== 'object') {
+			return {}
+		}
+		// One Nextcloud major replaced the pair from and to, of which it takes
+		// the lower side, or the upper one alone.
+		if (!('nc' in s) && (s['nc-min'] || s['nc-max'])) {
+			s.nc = s['nc-min'] || s['nc-max']
+		}
+		return s
 	} catch {
 		return {}
 	}
