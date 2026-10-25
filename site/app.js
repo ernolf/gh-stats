@@ -734,6 +734,7 @@ function initOverview() {
 	// Each tab keeps its own ticks, so the charts show the rows of the tab shown.
 	const ticks = new Map()
 	const filter = document.getElementById('filter')
+	const invert = document.getElementById('invert')
 	const since = document.getElementById('since')
 	const sinceDate = document.getElementById('since-date')
 	const sinceRange = document.getElementById('since-range')
@@ -798,7 +799,7 @@ function initOverview() {
 		const frag = document.createDocumentFragment()
 		for (const p of projects) {
 			const older = p.lines.filter(counts)
-			if (p.tab !== tab || (f && !p.search.includes(f)) || (c && !p.categories.has(c)) || (!counts(p) && !older.length)) {
+			if (p.tab !== tab || (f && p.search.includes(f) === invert.checked) || (c && !p.categories.has(c)) || (!counts(p) && !older.length)) {
 				continue
 			}
 			p.older.replaceChildren(...older.flatMap((r) => [r.tr, r.checks, r.compare, r.compareChecks]))
@@ -866,6 +867,7 @@ function initOverview() {
 	}
 	sinceRange.max = SINCE_STEPS.length
 	filter.addEventListener('input', render)
+	invert.addEventListener('change', render)
 	since.addEventListener('input', () => {
 		syncRange()
 		render()
@@ -937,7 +939,7 @@ function initScrolling() {
 // differs from the defaults under one key. Without storage, in a private
 // window or with the site data blocked, the page starts from the defaults.
 const SETTINGS_KEY = 'gh-stats.settings'
-const OVERVIEW_SETTINGS = ['filter', 'since', 'category', 'nc']
+const OVERVIEW_SETTINGS = ['filter', 'invert', 'since', 'category', 'nc']
 const CHART_SETTINGS = ['scope', 'split', 'share-figure', 'measure', 'bucket', 'range', 'style', 'log']
 
 // The defaults are those the page is written with.
