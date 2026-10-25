@@ -18,7 +18,8 @@
 # The *evaluation* is identical for everyone; only how the catalogue is obtained
 # differs, selected by APPSTORE_SOURCE:
 #   download - fetch https://apps.nextcloud.com/api/v1/apps.json and
-#              appapi_apps.json (ETag-cached).
+#              appapi_apps.json (ETag-cached), and categories.json beside them,
+#              which only the site reads.
 #   appdata  - read a Nextcloud instance's own copy under
 #              datadir/appdata_<instanceid>/appstore/apps.json, and the
 #              appapi_apps.json next to it, which only the AppAPI app writes.
@@ -60,6 +61,8 @@ APPSTORE_URL="${APPSTORE_URL:-https://apps.nextcloud.com/api/v1/apps.json}"
 APPSTORE_CACHE="${APPSTORE_CACHE:-/var/lib/gh-stats/apps.json}"
 APPSTORE_APPAPI_URL="${APPSTORE_APPAPI_URL:-${APPSTORE_URL%/*}/appapi_apps.json}"
 APPSTORE_APPAPI_CACHE="${APPSTORE_APPAPI_CACHE:-$(dirname "$APPSTORE_CACHE")/appapi_apps.json}"
+APPSTORE_CATEGORIES_URL="${APPSTORE_CATEGORIES_URL:-${APPSTORE_URL%/*}/categories.json}"
+APPSTORE_CATEGORIES_CACHE="${APPSTORE_CATEGORIES_CACHE:-$(dirname "$APPSTORE_CACHE")/categories.json}"
 APPSTORE_INCLUDE_ENTERPRISE="${APPSTORE_INCLUDE_ENTERPRISE:-true}"
 
 # -- appdata source -- explicit file, or derive it from a working occ command.
@@ -121,9 +124,13 @@ fetch_cached() {
 	esac
 }
 
+# The category names are no part of the evaluation, and the targets do not
+# depend on them: a first fetch that fails costs the site its names, not the
+# run.
 acquire_download() {
 	fetch_cached "$APPSTORE_URL" "$APPSTORE_CACHE"
 	fetch_cached "$APPSTORE_APPAPI_URL" "$APPSTORE_APPAPI_CACHE"
+	( fetch_cached "$APPSTORE_CATEGORIES_URL" "$APPSTORE_CATEGORIES_CACHE" >/dev/null ) || warn "no categories at $APPSTORE_CATEGORIES_CACHE"
 }
 
 # Read a Nextcloud instance's own copy. Either take the explicit file, or derive

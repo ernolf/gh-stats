@@ -148,7 +148,7 @@ function projectRepos() {
 // they stand on the left so their collation applies.
 function projectApps() {
 	return query(`
-		SELECT DISTINCT j.project, a.id, a.name, d.exapp FROM apps a
+		SELECT DISTINCT j.project, a.id, a.name, d.exapp, d.categories FROM apps a
 		  JOIN projects j ON a.host = j.host AND a.owner = j.owner AND a.repo = j.repo
 		  JOIN app_details d ON d.id = a.id
 		 ORDER BY j.project, a.name`)
@@ -159,7 +159,7 @@ function projectApps() {
 // comes without.
 function catalogueApps() {
 	return query(`
-		SELECT d.id, d.exapp, coalesce((SELECT t.name FROM app_texts t WHERE t.id = d.id AND t.lang = 'en'), d.id) AS name,
+		SELECT d.id, d.exapp, d.categories, coalesce((SELECT t.name FROM app_texts t WHERE t.id = d.id AND t.lang = 'en'), d.id) AS name,
 		       r.version, CAST(strftime('%s', r.created) AS INTEGER) AS published, r.platform
 		  FROM app_details d LEFT JOIN app_releases r ON r.id = d.id AND r.version = (
 		       SELECT x.version FROM app_releases x WHERE x.id = d.id ORDER BY x.stable DESC, x.created DESC LIMIT 1)
@@ -170,6 +170,11 @@ function catalogueApps() {
 // app has required so far.
 function catalogueSpecs() {
 	return query('SELECT DISTINCT platform FROM app_releases').map((r) => r.platform)
+}
+
+// The App Store categories by name, as its sidebar lists them.
+function categories() {
+	return new Map(query('SELECT id, name FROM categories ORDER BY name COLLATE NOCASE').map((r) => [r.id, r.name]))
 }
 
 const MEASUREMENT = `m.dir, m.app_id, m.version, m.tag, m.tarball, m.signed, m.diff,
@@ -586,7 +591,7 @@ function catalogueRow(a) {
 		tab: !released ? 'other' : a.exapp ? 'exapps' : 'apps',
 		name: a.name, tag: a.version, published: a.published, nc: a.platform,
 		total: null, d1: null, d7: null, d30: null, lines: [],
-		search: `${a.name} ${a.id}`.toLowerCase(),
+		search: `${a.name} ${a.id}`.toLowerCase(), categories: new Set(JSON.parse(a.categories)),
 	}
 	const runs = p.tab === 'apps' ? measurementsByVersion(a.id).get(a.version) : undefined
 	p.warn = warnings(runs)
@@ -622,6 +627,7 @@ function initOverview() {
 		}
 		projectLines.set(project, lines)
 		p.search = `${p.name} ${members.map(slugOf).join(' ')}`.toLowerCase()
+		p.categories = new Set(own.flatMap((a) => JSON.parse(a.categories)))
 
 		// Each app links its page; a project that is no App Store app has none.
 		const links = own.flatMap((a, i) => [i ? ', ' : '', el('a', { href: `#app/${encodeURIComponent(a.id)}` }, a.name)])
@@ -657,6 +663,10 @@ function initOverview() {
 	const ncFilter = document.getElementById('nc-filter')
 	const ncMin = document.getElementById('nc-min')
 	const ncMax = document.getElementById('nc-max')
+	const sidebar = document.getElementById('categories')
+	const names = categories()
+	// The id of the chosen category, empty for all apps.
+	let category = ''
 	let sortKey = 'total'
 	let sortDesc = true
 
@@ -696,10 +706,12 @@ function initOverview() {
 		for (const tbody of table.querySelectorAll('tbody')) {
 			tbody.remove()
 		}
+		// The projects of the Other tab carry no category.
+		const c = tab === 'other' ? '' : category
 		const frag = document.createDocumentFragment()
 		for (const p of projects) {
 			const older = p.lines.filter(counts)
-			if (p.tab !== tab || (f && !p.search.includes(f)) || (!counts(p) && !older.length)) {
+			if (p.tab !== tab || (f && !p.search.includes(f)) || (c && !p.categories.has(c)) || (!counts(p) && !older.length)) {
 				continue
 			}
 			p.older.replaceChildren(...older.flatMap((r) => [r.tr, r.checks, r.compare, r.compareChecks]))
@@ -723,6 +735,7 @@ function initOverview() {
 		table.dataset.tab = tab
 		nameHead.textContent = { apps: 'App', exapps: 'ExApp', other: 'Project' }[tab]
 		ncFilter.hidden = tab === 'other'
+		sidebar.hidden = tab === 'other' || !names.size
 		for (const b of tabs) {
 			b.setAttribute('aria-pressed', String(b.dataset.tab === tab))
 		}
@@ -731,6 +744,21 @@ function initOverview() {
 	for (const b of tabs) {
 		b.addEventListener('click', () => showTab(b.dataset.tab))
 	}
+
+	// A catalogue built without the names of the categories has no sidebar.
+	const categoryButtons = [['', 'All apps'], ...names].map(([id, name]) => {
+		const b = el('button', { type: 'button', 'aria-pressed': String(id === category) }, name)
+		b.addEventListener('click', () => {
+			category = id
+			for (const x of categoryButtons) {
+				x.setAttribute('aria-pressed', String(x === b))
+			}
+			render()
+		})
+		return b
+	})
+	sidebar.firstElementChild.append(...categoryButtons.map((b) => el('li', {}, b)))
+	sidebar.hidden = !names.size
 
 	for (const th of document.querySelectorAll('th[data-sort]')) {
 		th.tabIndex = 0
@@ -1040,9 +1068,10 @@ function appPage(id, lines) {
 		webLink(d.admin_docs, 'Admin documentation'),
 		webLink(d.developer_docs, 'Developer documentation'),
 	].filter(Boolean)
+	const names = categories()
 	const facts = [
 		['App id', el('code', {}, id)],
-		['Categories', JSON.parse(d.categories).join(', ')],
+		['Categories', JSON.parse(d.categories).map((c) => names.get(c) ?? c).join(', ')],
 		['Authors', ...authors],
 		['Rating', rating(d.rating_overall, d.rating_num_overall)],
 		['Recent rating', rating(d.rating_recent, d.rating_num_recent)],
