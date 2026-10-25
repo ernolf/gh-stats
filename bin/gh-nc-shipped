@@ -1,0 +1,389 @@
+#!/usr/bin/env -S LC_CTYPE=C.UTF-8 LC_MESSAGES=C bash
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# gh-nc-shipped - list the apps the Nextcloud server ships, with the version of
+# each in the release archive of every maintained server major, of the newest
+# end-of-life major and in the daily archive of master. The archive is a zip
+# with its directory at the end, so ranges read the directory,
+# core/shipped.json, version.php and the appinfo/info.xml of every shipped app
+# without downloading the archive. The result replaces its previous copy, from
+# which an archive with an unchanged ETag is taken over instead of being read
+# again.
+
+# == Config ==
+# Optional site config shared with gh-stats and gh-release-sampler. If
+# /etc/gh-stats/gh-stats.env exists it is sourced here, so its assignments feed
+# the ${VAR:-default} reads below. Precedence is built-in default <
+# gh-stats.env < environment. Point GH_STATS_ENV at another path to use a
+# different file.
+GH_STATS_ENV="${GH_STATS_ENV:-/etc/gh-stats/gh-stats.env}"
+# shellcheck disable=SC1090 # the site config is a run-time path
+if [ -r "$GH_STATS_ENV" ]; then
+	_env_snapshot="$(export -p)"
+	set -a; . "$GH_STATS_ENV"; set +a
+	eval "$_env_snapshot"
+	unset _env_snapshot
+fi
+
+STATE_DIR="${GH_STATS_DIR:-/var/lib/gh-stats}"
+SHIPPED_FILE="${SHIPPED_FILE:-${STATE_DIR}/shipped.json}"
+
+GITHUB_URL="${GITHUB_URL:-https://github.com}"
+GITHUB_RAW_URL="${GITHUB_RAW_URL:-https://raw.githubusercontent.com}"
+SERVER_REPO="${SERVER_REPO:-nextcloud/server}"
+# The owner under which a shipped app with a repository of its own lives.
+SERVER_APPS_OWNER="${SERVER_APPS_OWNER:-${SERVER_REPO%%/*}}"
+SERVER_SCHEDULE_URL="${SERVER_SCHEDULE_URL:-${GITHUB_RAW_URL}/wiki/${SERVER_REPO}/Maintenance-and-Release-Schedule.md}"
+SERVER_DOWNLOAD_URL="${SERVER_DOWNLOAD_URL:-https://download.nextcloud.com/server}"
+SERVER_RELEASES_URL="${SERVER_DOWNLOAD_URL}/releases"
+SERVER_MASTER_ARCHIVE="${SERVER_DOWNLOAD_URL}/daily/latest-master.zip"
+# The directory every path of the archive starts with.
+ARCHIVE_ROOT="nextcloud"
+# How often a request that times out or fails transiently is repeated.
+RETRIES=10
+
+JQ="${JQ_BIN:-jq}"
+GIT="${GIT_BIN:-git}"
+
+set -euo pipefail
+# A repository that does not exist or is private must fail, not ask for a login.
+export GIT_TERMINAL_PROMPT=0
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+warn() { echo "WARNING: $*" >&2; }
+
+usage() {
+	cat <<'EOF'
+Usage: gh-nc-shipped [-f <file>]
+
+Writes the apps the Nextcloud server ships to <file>, as JSON:
+
+  {
+    "releases": [
+      {"major": 36, "version": "36.0.0 dev", "ref": "master",
+       "archive": "https://download.nextcloud.com/server/daily/latest-master.zip",
+       "etag": "...", "published": "2026-10-24T23:30:00Z",
+       "apps": [{"id": "activity", "name": "Activity", "version": "...",
+                 "repo": "nextcloud/activity", "path": "", "ref": "master"}, ...]},
+      {"major": 35, "version": "35.0.2", "ref": "v35.0.2", ...},
+      ...
+    ],
+    "since": {"activity": 9, ...},
+    "initial": {"9": ["activity", ...], ...}
+  }
+
+The releases are the newest patch of every major the server's maintenance
+schedule lists as supported, of the newest major it lists as end of life, and
+master from its daily archive. Each archive's core/shipped.json names the apps
+it ships, its version.php the server version, and the appinfo/info.xml of each
+app its name and version.
+
+An app of the server tree has the server repository with the path apps/<id> at
+the tag of the release, or at master. An app with a repository of its own under
+the owner of the server has that repository at the tag of the server release,
+or at its default branch for master. An app whose source is in neither is left
+out.
+
+since is the lowest server major whose first release, M.0.0, or one of the
+archives read lists the app. initial keeps the shipped.json of every M.0.0, an
+empty list where the tag has none, so each one is fetched only once.
+
+An archive whose URL and ETag are those of the previous <file> is taken over
+from it unread. One that is not there yet keeps its previous entry.
+
+Options:
+  -f, --file <file>  the file to read and replace (default: $GH_STATS_DIR/shipped.json)
+  -h, --help         this text
+
+Environment (or /etc/gh-stats/gh-stats.env):
+  SHIPPED_FILE           as -f
+  GH_STATS_DIR           state directory (default: /var/lib/gh-stats)
+  SERVER_REPO            the server repository (default: nextcloud/server)
+  SERVER_APPS_OWNER      the owner of the apps with a repository of their own
+                         (default: the owner of SERVER_REPO)
+  SERVER_SCHEDULE_URL    the maintenance schedule (default: the page
+                         Maintenance-and-Release-Schedule of the server wiki)
+  SERVER_DOWNLOAD_URL    the download base, with releases/ and daily/ below it
+                         (default: https://download.nextcloud.com/server)
+EOF
+}
+
+while [ $# -gt 0 ]; do
+	case "$1" in
+		-h|--help) usage; exit 0 ;;
+		-f|--file) [ $# -ge 2 ] || die "$1 needs a file"; SHIPPED_FILE="$2"; shift ;;
+		*) echo "unknown argument: $1" >&2; exit 1 ;;
+	esac
+	shift
+done
+
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+
+prev='{}'
+[ ! -r "$SHIPPED_FILE" ] || prev="$("$JQ" -c . "$SHIPPED_FILE")"
+
+# == Zip reading ==
+# The bytes of a file as one string of lowercase hex pairs.
+hex() { od -An -v -tx1 "$1" | tr -d ' \n'; }
+
+# le <hex> <offset> <bytes>: the little-endian number at that byte offset.
+le() {
+	local v=0 i
+	for ((i = $2 + $3 - 1; i >= $2; i--)); do v=$((v * 256 + 16#${1:i*2:2})); done
+	echo "$v"
+}
+
+# fetch <url> <etag> <first> <last> <file>: bytes first to last of an archive.
+# If-Match refuses them once the archive is another build than the ETag names,
+# so a rebuilt master cannot mix two builds; --max-filesize stops a server that
+# ignores the range from sending the whole archive.
+fetch() {
+	local n=$(($4 - $3 + 1))
+	curl -fsS --retry "$RETRIES" --max-time 120 --max-filesize "$n" -r "$3-$4" -H "If-Match: $2" -o "$5" "$1"
+	[ "$(stat -c %s "$5")" = "$n" ] || die "$1: $n bytes asked from $3, $(stat -c %s "$5") received"
+}
+
+# header <name> <file>: the value of the last such header in a curl -I dump,
+# which with redirects holds one block per response.
+header() {
+	tr -d '\r' < "$2" | awk -v k="$1" 'tolower(substr($0, 1, length(k) + 1)) == k ":" { v = substr($0, length(k) + 2); sub(/^ +/, "", v) } END { print v }'
+}
+
+# The central directory entries of the files this script reads, one line each:
+# name, compression method, compressed size, offset of the local header, and
+# the CRC-32 and uncompressed size as the little-endian hex the gzip trailer
+# takes. The directory is read as a stream of bytes, so it is never held whole.
+directory() {
+	od -An -v -tx1 "$1" | awk -v root="$ARCHIVE_ROOT" '
+		BEGIN {
+			for (i = 0; i < 16; i++) d[substr("0123456789abcdef", i + 1, 1)] = i
+			for (i = 32; i < 127; i++) c[sprintf("%02x", i)] = sprintf("%c", i)
+			info = "^" root "/apps/[^/]+/appinfo/info\\.xml$"
+		}
+		function le(o, n,   v, j) {
+			v = 0
+			for (j = o + n - 1; j >= o; j--) v = v * 256 + d[substr(h[j], 1, 1)] * 16 + d[substr(h[j], 2, 1)]
+			return v
+		}
+		{
+			for (f = 1; f <= NF; f++) {
+				if (phase == 0) {
+					h[got++] = $f
+					if (got < 46) continue
+					if (h[0] h[1] h[2] h[3] != "504b0102") { bad = 1; exit }
+					namelen = le(28, 2); skip = le(30, 2) + le(32, 2)
+					name = ""; got = 0; phase = 1
+				} else if (phase == 1) {
+					name = name (($f in c) ? c[$f] : "?")
+					if (++got < namelen) continue
+					if (name == root "/version.php" || name == root "/core/shipped.json" || name ~ info)
+						printf "%s %d %.0f %.0f %s %s\n", name, le(10, 2), le(20, 4), le(42, 4), h[16] h[17] h[18] h[19], h[24] h[25] h[26] h[27]
+					got = 0; phase = skip ? 2 : 0
+				} else if (++got == skip) {
+					got = 0; phase = 0
+				}
+			}
+		}
+		END { if (bad) { print "not a zip central directory" > "/dev/stderr"; exit 1 } }'
+}
+
+# extract <url> <etag> <directory line> <file>: one file of the archive.
+# Deflated data becomes a gzip stream with a fixed header and the CRC-32 and
+# size of the directory as its trailer, so gzip inflates it and checks it.
+extract() {
+	local name method csize off crc isize lh start t i
+	read -r name method csize off crc isize <<<"$3"
+	fetch "$1" "$2" "$off" $((off + 29)) "$tmp/local"
+	lh="$(hex "$tmp/local")"
+	[ "${lh:0:8}" = 504b0304 ] || die "$1: no local header for $name"
+	start=$((off + 30 + $(le "$lh" 26 2) + $(le "$lh" 28 2)))
+	if [ "$csize" = 0 ]; then
+		: > "$4"
+		return
+	fi
+	case "$method" in
+		0) fetch "$1" "$2" "$start" $((start + csize - 1)) "$4" ;;
+		8)
+			fetch "$1" "$2" "$start" $((start + csize - 1)) "$tmp/deflated"
+			{
+				printf '\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\x03'
+				cat "$tmp/deflated"
+				t="$crc$isize"
+				for ((i = 0; i < ${#t}; i += 2)); do
+					printf '%b' "\\x${t:i:2}"
+				done
+			} | gzip -dc > "$4"
+			;;
+		*) die "$1: $name has compression method $method" ;;
+	esac
+}
+
+# The text of the first element of that name without attributes, so the
+# untranslated <name> and not one of its <name lang="...">.
+element() {
+	sed -n "s:.*<$1>\([^<]*\)</$1>.*:\1:p" "$2" | sed -n "s/&lt;/</g; s/&gt;/>/g; s/&quot;/\"/g; s/&apos;/'/g; s/&amp;/\&/g; p; q"
+}
+
+# git ls-remote, repeated up to RETRIES times as every curl request: a single
+# connection that times out must not end a run of several hundred requests.
+remote() {
+	local i
+	for ((i = 0; i <= RETRIES; i++)); do
+		"$GIT" ls-remote "$@" && return
+	done
+	return 1
+}
+
+# == Archive ==
+# Whether an archive is there; its headers stay in $tmp/head for archive.
+available() { curl -fsSIL --retry "$RETRIES" --max-time 60 -o "$tmp/head" "$1" 2>/dev/null; }
+
+# archive <url> <ref>: the release entry of the archive available just looked
+# up, from the previous file while its ETag is unchanged.
+archive() {
+	local url="$1" ref="$2" etag modified size first t eocd entries cdsize cdoff server major id line version name repo path aref probe code
+	etag="$(header etag "$tmp/head")"
+	modified="$(header last-modified "$tmp/head")"
+	size="$(header content-length "$tmp/head")"
+	[ -n "$etag" ] || die "$url: no ETag"
+	[[ "$size" =~ ^[0-9]+$ ]] || die "$url: no size"
+	if "$JQ" -e --arg u "$url" --arg e "$etag" '.releases[]? | select(.archive == $u and .etag == $e)' <<<"$prev" > "$tmp/entry"; then
+		"$JQ" -c . "$tmp/entry"
+		return 0
+	fi
+
+	# The end record is 22 bytes and a comment of at most 65535; its
+	# signature is the last one in the tail.
+	first=$((size > 65557 ? size - 65557 : 0))
+	fetch "$url" "$etag" "$first" $((size - 1)) "$tmp/tail"
+	t="$(hex "$tmp/tail")"
+	case "$t" in *504b0506*) ;; *) die "$url: no end of central directory" ;; esac
+	eocd="${t%504b0506*}"
+	(( ${#eocd} % 2 == 0 )) || die "$url: misaligned end of central directory"
+	eocd=$((${#eocd} / 2))
+	entries="$(le "$t" $((eocd + 10)) 2)"
+	cdsize="$(le "$t" $((eocd + 12)) 4)"
+	cdoff="$(le "$t" $((eocd + 16)) 4)"
+	[ "$entries" != 65535 ] && [ "$cdoff" != 4294967295 ] || die "$url: a zip64 archive"
+	fetch "$url" "$etag" "$cdoff" $((cdoff + cdsize - 1)) "$tmp/cd"
+	directory "$tmp/cd" > "$tmp/dir"
+
+	line="$(awk -v n="$ARCHIVE_ROOT/version.php" '$1 == n' "$tmp/dir")"
+	[ -n "$line" ] || die "$url: no version.php"
+	extract "$url" "$etag" "$line" "$tmp/version.php"
+	server="$(sed -n "s/^\$OC_VersionString = '\(.*\)';.*/\1/p" "$tmp/version.php")"
+	major="${server%%.*}"
+	[[ "$major" =~ ^[0-9]+$ ]] || die "$url: no server version in version.php"
+	line="$(awk -v n="$ARCHIVE_ROOT/core/shipped.json" '$1 == n' "$tmp/dir")"
+	[ -n "$line" ] || die "$url: no core/shipped.json"
+	extract "$url" "$etag" "$line" "$tmp/shipped.json"
+
+	: > "$tmp/apps"
+	for id in $("$JQ" -r '.shippedApps[]' "$tmp/shipped.json"); do
+		line="$(awk -v n="$ARCHIVE_ROOT/apps/$id/appinfo/info.xml" '$1 == n' "$tmp/dir")"
+		[ -n "$line" ] || continue
+		extract "$url" "$etag" "$line" "$tmp/info.xml"
+		version="$(element version "$tmp/info.xml")"
+		name="$(element name "$tmp/info.xml")"
+		probe="$GITHUB_RAW_URL/$SERVER_REPO/$ref/apps/$id/appinfo/info.xml"
+		code="$(curl -sSI --retry "$RETRIES" --max-time 60 -o /dev/null -w '%{http_code}' "$probe")" || die "$probe: no answer"
+		case "$code" in
+		200)
+			repo="$SERVER_REPO" path="apps/$id" aref="$ref"
+			;;
+		404)
+			repo="$SERVER_APPS_OWNER/$id" path=""
+			# A lookup that fails would drop the app from a release whose
+			# archive later runs take over unread, so only a repository that
+			# is absent or private may leave it out.
+			if [ "$ref" = master ]; then
+				aref="$(remote --symref "$GITHUB_URL/$repo" HEAD 2>/dev/null \
+					| awk '$1 == "ref:" && $3 == "HEAD" { sub(/^refs\/heads\//, "", $2); print $2 }')" || aref="-"
+			else
+				aref="$(remote --tags --refs "$GITHUB_URL/$repo" "refs/tags/$ref" 2>/dev/null \
+					| awk '{ sub(/^refs\/tags\//, "", $2); print $2 }')" || aref="-"
+			fi
+			if [ "$aref" = - ]; then
+				code="$(curl -sS --retry "$RETRIES" --max-time 60 -o /dev/null -w '%{http_code}' "$GITHUB_URL/$repo")" \
+					|| die "$GITHUB_URL/$repo: no answer"
+				[ "$code" = 404 ] || die "$repo: git ls-remote failed (HTTP $code)"
+				continue
+			fi
+			# Only an app whose source is public gets a line.
+			[ -n "$aref" ] || continue
+			;;
+		*) die "$probe: HTTP $code" ;;
+		esac
+		"$JQ" -n -c --arg id "$id" --arg name "$name" --arg version "$version" \
+			--arg repo "$repo" --arg path "$path" --arg ref "$aref" \
+			'{id: $id, name: (if $name == "" then $id else $name end), version: $version, repo: $repo, path: $path, ref: $ref}' >> "$tmp/apps"
+	done
+
+	"$JQ" -n -c --argjson major "$major" --arg version "$server" --arg ref "$ref" \
+		--arg archive "$url" --arg etag "$etag" \
+		--arg published "$([ -z "$modified" ] || date -u -d "$modified" +%Y-%m-%dT%H:%M:%SZ)" \
+		--slurpfile apps "$tmp/apps" \
+		'{major: $major, version: $version, ref: $ref, archive: $archive, etag: $etag,
+		  published: (if $published == "" then null else $published end), apps: $apps}'
+}
+
+# == Releases ==
+schedule="$(curl -fsS --retry "$RETRIES" --max-time 60 "$SERVER_SCHEDULE_URL")" || die "no maintenance schedule at $SERVER_SCHEDULE_URL"
+majors="$(sed -n '/^## Currently supported versions/,/^## /s/^| \*\*\([0-9]*\)\*\*.*/\1/p' <<<"$schedule")"
+[ -n "$majors" ] || die "no supported major in $SERVER_SCHEDULE_URL"
+eol="$(sed -n '/^## EOL Versions/,/^## /s/^| \*\*\([0-9]*\)\*\*.*/\1/p' <<<"$schedule" | sort -n | tail -n 1)"
+[ -n "$eol" ] || die "no end-of-life major in $SERVER_SCHEDULE_URL"
+majors="$majors $eol"
+tags="$(remote --tags --refs "$GITHUB_URL/$SERVER_REPO" 'v*' \
+	| sed -n 's:.*refs/tags/v\([0-9]*\.[0-9]*\.[0-9]*\)$:\1:p' | sort -V)"
+[ -n "$tags" ] || die "no release tags in $GITHUB_URL/$SERVER_REPO"
+
+: > "$tmp/releases"
+for major in $majors; do
+	version="$(awk -F. -v m="$major" '$1 == m' <<<"$tags" | tail -n 1)"
+	if [ -z "$version" ]; then
+		warn "no release of the major $major"
+		continue
+	fi
+	url="$SERVER_RELEASES_URL/nextcloud-$version.zip"
+	if available "$url"; then
+		archive "$url" "v$version" >> "$tmp/releases"
+	else
+		# A tag can come before its archive; the major keeps its previous release.
+		warn "no archive at $url"
+		"$JQ" -c --argjson m "$major" '.releases[]? | select(.major == $m and .ref != "master")' <<<"$prev" >> "$tmp/releases"
+	fi
+done
+if available "$SERVER_MASTER_ARCHIVE"; then
+	archive "$SERVER_MASTER_ARCHIVE" master >> "$tmp/releases"
+else
+	warn "no archive at $SERVER_MASTER_ARCHIVE"
+	"$JQ" -c --arg u "$SERVER_MASTER_ARCHIVE" '.releases[]? | select(.archive == $u)' <<<"$prev" >> "$tmp/releases"
+fi
+
+# == Initial lists ==
+initial="$("$JQ" -c '.initial // {}' <<<"$prev")"
+while read -r major; do
+	"$JQ" -e --arg m "$major" 'has($m)' <<<"$initial" >/dev/null && continue
+	url="$GITHUB_RAW_URL/$SERVER_REPO/v$major.0.0/core/shipped.json"
+	code="$(curl -sS --retry "$RETRIES" --max-time 60 -o "$tmp/initial" -w '%{http_code}' "$url")" || die "$url: no answer"
+	case "$code" in
+		200) list="$("$JQ" -c '.shippedApps' "$tmp/initial")" ;;
+		404) list='[]' ;;
+		*) die "$url: HTTP $code" ;;
+	esac
+	initial="$("$JQ" -c --arg m "$major" --argjson l "$list" '.[$m] = $l' <<<"$initial")"
+done < <(sed -n 's/^\([0-9]*\)\.0\.0$/\1/p' <<<"$tags")
+
+"$JQ" -n --argjson initial "$initial" --slurpfile releases "$tmp/releases" '
+	($releases | unique_by(.archive) | sort_by(-.major, .ref != "master")) as $r
+	| {releases: $r,
+	   since: ([($initial | to_entries[] | (.key | tonumber) as $m | .value[] | {id: ., m: $m}),
+	            ($r[] | .major as $m | .apps[] | {id, m: $m})]
+	           | group_by(.id) | map({key: .[0].id, value: (map(.m) | min)})
+	           | map(select(.key as $id | any($r[].apps[]; .id == $id))) | from_entries),
+	   initial: $initial}' > "$SHIPPED_FILE.new"
+mv "$SHIPPED_FILE.new" "$SHIPPED_FILE"
+echo "shipped apps written to $SHIPPED_FILE ($("$JQ" -r '"\(.releases | length) releases, \(.since | length) apps"' "$SHIPPED_FILE"))"

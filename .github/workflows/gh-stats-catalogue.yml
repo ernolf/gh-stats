@@ -36,6 +36,11 @@
 # results as gh-stats-measure.yml describes, so what was removed leaves the repository
 # too. Dispatched by hand, the workflow also thins the results without a new
 # catalogue.
+#
+# Last, gh-nc-shipped lists the apps the server ships, from the archives of its
+# maintained majors and of master, and keeps them as shipped.json in the
+# release catalogue. An archive whose ETag is unchanged is taken over from the
+# previous shipped.json, so a run without a new server release reads none.
 
 name: Extract the catalogue
 
@@ -290,3 +295,12 @@ jobs:
             '{event_type: $type, client_payload: {apps: [inputs | select(length > 0)]}}' "$STATE/unmeasured" \
             | gh api --method POST "repos/$GH_REPO/dispatches" --input -
           echo "::notice::Sent $UNMEASURED versions without a result"
+
+      - name: Keep the shipped apps
+        run: |
+          gh release download "$CATALOGUE_TAG" -p shipped.json -D "$STATE" \
+            || echo "::warning::No shipped apps yet, reading every archive"
+          cp "$STATE/shipped.json" "$STATE/shipped.json.before" 2>/dev/null || true
+          SHIPPED_FILE="$STATE/shipped.json" bin/gh-nc-shipped
+          cmp -s "$STATE/shipped.json" "$STATE/shipped.json.before" \
+            || gh release upload "$CATALOGUE_TAG" "$STATE/shipped.json" --clobber

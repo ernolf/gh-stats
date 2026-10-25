@@ -8,7 +8,8 @@
 # without a journal and vacuumed into contiguous pages. What the sampler alone
 # needs is dropped; what the browser cannot derive cheaply is added: the apps of
 # the App Store catalogue, the ordinary ones of apps.json and the AppAPI apps
-# (ExApps) of appapi_apps.json, and the Nextcloud versions of its releases, the
+# (ExApps) of appapi_apps.json, the apps the server ships, as gh-nc-shipped
+# lists them, and the Nextcloud versions of the catalogue releases, the
 # version key and strict pre-release flag of gh-stats on every release, the
 # projects the repositories form, one summary row per project and release line
 # for the start page, the measurement results of the data branch, and what the
@@ -35,6 +36,7 @@ DB="${GH_STATS_DB:-${STATE_DIR}/downloads.sqlite}"
 APPSTORE_CACHE="${APPSTORE_CACHE:-${STATE_DIR}/apps.json}"
 APPSTORE_APPAPI_CACHE="${APPSTORE_APPAPI_CACHE:-$(dirname "$APPSTORE_CACHE")/appapi_apps.json}"
 APPSTORE_CATEGORIES_CACHE="${APPSTORE_CATEGORIES_CACHE:-$(dirname "$APPSTORE_CACHE")/categories.json}"
+SHIPPED_CACHE="${SHIPPED_CACHE:-$(dirname "$APPSTORE_CACHE")/shipped.json}"
 SQLITE="${SQLITE_BIN:-/usr/bin/sqlite3}"
 # The asset extensions gh-stats counts by default; the summary counts the same.
 ASSETS="zip tar.bz2 tar.gz tar.xz tgz"
@@ -102,6 +104,11 @@ repository under its current name, plus
              from as a pre-release or its tag names one
   categories  the English name of every App Store category, which
              app_details.categories lists by id; empty without categories.json
+  shipped    every app the server ships, by server release: the server
+             version, its major, its tag or master, the date of its archive,
+             and the app id, name and version, the repository, path and ref
+             its source is at; empty without shipped.json
+  shipped_since  the server major each shipped app is shipped since
 
 Downloads are the summed counters of the assets gh-stats counts by default
 (zip, tar.bz2, tar.gz, tar.xz, tgz). A line whose releases have none of them is
@@ -122,6 +129,8 @@ Environment (or /etc/gh-stats/gh-stats.env):
   APPSTORE_APPAPI_CACHE  the AppAPI catalogue appapi_apps.json (default: next
                   to apps.json)
   APPSTORE_CATEGORIES_CACHE  the App Store categories categories.json, optional
+                  (default: next to apps.json)
+  SHIPPED_CACHE   the shipped apps shipped.json of gh-nc-shipped, optional
                   (default: next to apps.json)
   SQLITE_BIN      sqlite3 (default: /usr/bin/sqlite3)
 EOF
@@ -281,6 +290,16 @@ if [ -r "$APPSTORE_CATEGORIES_CACHE" ]; then
 	categories_sql="$(jq -r "$sql_defs"'
 		.[] | "INSERT OR IGNORE INTO categories VALUES (\(.id | q), \(.translations.en.name // .id | q));"
 	' "$APPSTORE_CATEGORIES_CACHE")"
+fi
+# The catalogue workflow keeps the shipped apps; without them the Shipped Apps
+# tab is empty.
+shipped_sql=''
+if [ -r "$SHIPPED_CACHE" ]; then
+	shipped_sql="$(jq -r "$sql_defs"'
+		(.releases[] | . as $r | .apps[]
+		 | "INSERT OR IGNORE INTO shipped VALUES (\($r.version | q), \($r.major), \($r.ref | q), \($r.published | v), \(.id | q), \(.name | q), \(.version | q), \(.repo | q), \(.path | q), \(.ref | q));"),
+		(.since | to_entries[] | "INSERT OR IGNORE INTO shipped_since VALUES (\(.key | q), \(.value));")
+	' "$SHIPPED_CACHE")"
 fi
 
 # -bail stops at the first error; the half-written copy is removed then.
@@ -656,9 +675,30 @@ CREATE TABLE categories (
   id   TEXT NOT NULL PRIMARY KEY,
   name TEXT NOT NULL
 ) WITHOUT ROWID;
+-- The apps the server ships, by the server release whose archive
+-- gh-nc-shipped read; ref is its tag or master, app_ref the tag or branch of
+-- the app's source.
+CREATE TABLE shipped (
+  server    TEXT    NOT NULL,
+  major     INTEGER NOT NULL,
+  ref       TEXT    NOT NULL,
+  published TEXT,
+  id        TEXT    NOT NULL,
+  name      TEXT    NOT NULL,
+  version   TEXT    NOT NULL,
+  repo      TEXT    NOT NULL,
+  path      TEXT    NOT NULL,
+  app_ref   TEXT    NOT NULL,
+  PRIMARY KEY (ref, id)
+) WITHOUT ROWID;
+CREATE TABLE shipped_since (
+  id    TEXT    NOT NULL PRIMARY KEY,
+  major INTEGER NOT NULL
+) WITHOUT ROWID;
 BEGIN;
 $catalogue_sql
 $categories_sql
+$shipped_sql
 COMMIT;
 ALTER TABLE app_releases ADD COLUMN stable INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE app_releases ADD COLUMN mismatch INTEGER NOT NULL DEFAULT 0;
@@ -677,7 +717,8 @@ UNION ALL SELECT 'measurements', count(*) FROM measurements
 UNION ALL SELECT 'findings', count(*) FROM findings
 UNION ALL SELECT 'app_details', count(*) FROM app_details
 UNION ALL SELECT 'app_releases', count(*) FROM app_releases
-UNION ALL SELECT 'categories', count(*) FROM categories;
+UNION ALL SELECT 'categories', count(*) FROM categories
+UNION ALL SELECT 'shipped', count(DISTINCT id) FROM shipped;
 SQL
 trap - ERR
 echo "site database written to $out ($(stat -c %s "$out") bytes)"
