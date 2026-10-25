@@ -27,7 +27,9 @@
 # the results in one commit, so the matrix never pushes. The data branch gets
 # summary.json, the analyser results and the release diff, a file above 1 MiB
 # compressed as <name>.gz; console.log and the app's own build files stay in
-# the artifact.
+# the artifact. Beside apps/ it keeps tools.json, the versions of Podman and
+# ncmake the newest results were measured with, which the site lists under
+# "Built with".
 #
 # The data branch keeps no history. Every write replaces it with a single
 # commit of the new tree, after gh-stats-data-prune thinned the history, so
@@ -195,8 +197,10 @@ jobs:
             fi
           done < <(cat "$NC_APPSDIAG_RESULT_FILE" 2>/dev/null)
           mkdir -p "$RUNNER_TEMP/outcome"
-          jq -n -c --arg app "$APP" --arg failed "$failed" \
-            '{app: $app, failed: (if $failed == "" then null else $failed end)}' > "$RUNNER_TEMP/outcome/outcome.json"
+          # ncmake runs its containers with podman, which it prefers wherever
+          # podman is installed.
+          jq -n -c --arg app "$APP" --arg failed "$failed" --arg podman "$(podman --version | awk '{ print $3 }')" \
+            '{app: $app, failed: (if $failed == "" then null else $failed end), podman: (if $podman == "" then null else $podman end)}' > "$RUNNER_TEMP/outcome/outcome.json"
 
       - name: Keep the run directory
         if: always()
@@ -290,6 +294,10 @@ jobs:
       - name: Commit the results
         run: |
           logs="$RUNNER_TEMP/logs"
+          podman="$(find "$RUNNER_TEMP/outcomes" -name outcome.json -exec cat {} + 2>/dev/null \
+            | jq -r -s 'map(.podman // empty) | first // empty')"
+          ncmake="$(find "$logs" -name summary.json -exec cat {} + 2>/dev/null \
+            | jq -r -s 'map(.ncmake.ref // empty) | first // empty')"
           for try in 1 2 3 4 5; do
             if [ "$try" -gt 1 ]; then
               sleep $((try * 10))
@@ -318,7 +326,11 @@ jobs:
             [ ! -f "$DATA/$PINNED" ] || keep=(--keep "$DATA/$PINNED")
             # shellcheck disable=SC2086 # PRUNE holds the options
             bin/gh-stats-data-prune $PRUNE "${keep[@]}" "$DATA/apps"
-            git -C "$DATA" add -A apps
+            # A version this run does not know keeps the one before.
+            old="$(cat "$DATA/tools.json" 2>/dev/null || echo '{}')"
+            jq -n --argjson old "$old" --arg podman "$podman" --arg ncmake "$ncmake" \
+              '$old + ({Podman: $podman, ncmake: $ncmake} | with_entries(select(.value != "")))' > "$DATA/tools.json"
+            git -C "$DATA" add -A apps tools.json
             commit="$(git -C "$DATA" commit-tree "$(git -C "$DATA" write-tree)" -m "measure: $n runs")"
             if git -C "$DATA" push -q --force-with-lease="refs/heads/$DATA_BRANCH:$base" \
                 origin "$commit:refs/heads/$DATA_BRANCH"; then

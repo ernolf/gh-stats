@@ -11,7 +11,9 @@
 #               unchanged file costs one conditional request, and
 #               categories.json, the names of the App Store categories, which
 #               only the site reads
-#   sampler-db  downloads.sqlite.zst, the sampler database
+#   sampler-db  downloads.sqlite.zst, the sampler database, and tools.json,
+#               the versions of the tools the last run sampled with, which
+#               the site lists under "Built with"
 #
 # The database is never started empty: without its asset the run stops, since a
 # fresh database would replace the whole history. The first asset is seeded
@@ -141,6 +143,7 @@ jobs:
           fi
           zstd -d -q "$STATE/$DB_ASSET" -o "$GH_STATS_DIR/downloads.sqlite"
           rm -f "$STATE/$DB_ASSET"
+          gh release download "$DB_TAG" -p tools.json -O "$STATE/tools.json.before" || true
 
       - name: Sample
         env:
@@ -172,6 +175,26 @@ jobs:
           test -n "$new"
           test -z "$old" || gh api -X DELETE "repos/$GH_REPO/releases/assets/$old"
           gh api -X PATCH "repos/$GH_REPO/releases/assets/$new" -f name="$DB_ASSET" --silent
+
+      # Uploaded only when a version changed. The OpenSSL is the one curl is
+      # linked against.
+      - name: Keep the tool versions
+        if: ${{ !cancelled() && steps.upload.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          jq -n \
+            --arg gh "$(gh --version | awk 'NR == 1 { print $3 }')" \
+            --arg curl "$(curl --version | awk 'NR == 1 { print $2 }')" \
+            --arg openssl "$(curl --version | sed -n '1s:.* OpenSSL/\([^ ]*\).*:\1:p')" \
+            --arg jq "$(jq --version | sed 's/^jq-//')" \
+            --arg sqlite3 "$(sqlite3 --version | awk '{ print $1 }')" \
+            --arg zstd "$(zstd -V | sed -n 's/.* v\([0-9.]*\).*/\1/p')" \
+            --arg git "$(git --version | awk '{ print $3 }')" \
+            '{"GitHub CLI": $gh, curl: $curl, OpenSSL: $openssl, jq: $jq, sqlite3: $sqlite3, zstd: $zstd, git: $git}
+             | with_entries(select(.value != ""))' > "$STATE/tools.json"
+          cmp -s "$STATE/tools.json" "$STATE/tools.json.before" \
+            || gh release upload "$DB_TAG" "$STATE/tools.json" --clobber
 
       # Of the events GITHUB_TOKEN causes, only a dispatch starts another workflow.
       - name: Rebuild the site
