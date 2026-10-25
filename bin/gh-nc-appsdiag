@@ -20,6 +20,8 @@
 # measured again later. Which version that is can be said on the command line.
 # A repository whose app is not at its root, or that holds several apps, is measured
 # once per app, each in a run of its own in the app's directory.
+# An app the Nextcloud server ships is measured with -s at the commit a server
+# release was built from, against apps/<id>/ of its archive.
 
 # == Config ==
 # Optional site config shared with gh-stats and gh-release-sampler. If
@@ -100,6 +102,10 @@ SQLITE="${SQLITE_BIN:-/usr/bin/sqlite3}"
 
 # Set by -a for every app of a batch: no question is put, each takes its default.
 AUTO="${NC_APPSDIAG_AUTO:-0}"
+# Set by -s, and passed on to every app of a batch and every app below the root.
+SERVER_REF="${NC_APPSDIAG_SERVER:-}"
+# Unpacks an app from a server release archive, beside this script by default.
+SHIPPED="${SHIPPED_BIN:-$(dirname "$(readlink -f "$0")")/gh-nc-shipped}"
 
 set -euo pipefail
 
@@ -125,7 +131,8 @@ warn() {
 usage() {
 	cat <<'EOF'
 Usage: gh-nc-appsdiag <url|[host/]owner/repo>[:<dir>] [version]
-       gh-nc-appsdiag -a [-l <file>] [<url|[host/]owner/repo>[:<dir>] [version]] ...
+       gh-nc-appsdiag -s <server-version|master> <url|owner/repo>[:<dir>]
+       gh-nc-appsdiag -a [-s <server-version|master>] [-l <file>] [<url|[host/]owner/repo>[:<dir>] [version]] ...
 
 A repository on GitHub is named by its URL or as owner/repo, one on a Forgejo
 or Gitea host by its URL or as host/owner/repo.
@@ -158,15 +165,28 @@ repository, from a local clone of the checkout; :<dir> on the command line
 measures one of them directly. The tag is the repository's, the version, the App
 Store release and the results are the app's.
 
+With -s the app is one the Nextcloud server ships, measured as a server release
+ships it: nextcloud/server:apps/<id> for an app of the server tree, the app's
+own repository for one that has its own. The checkout is the server release
+tag, v35.0.2 for 35.0.2, in either repository, or for master the default
+branch, without its history; no tag is offered and no version can be given.
+make dist stages the app as for any other, and what it stages is held against
+apps/<id>/ of the archive of that server release, or of the daily archive of
+master, which gh-nc-shipped unpacks. The run directory is named after the
+server release, server-35.0.2 or server-master, in place of the app version,
+and summary.json names it as server.
+
 Everything one run produces goes into one directory, for an app below the root
 with its app id after the repo (or its directory, while the id is unknown), for
 a repository on a Forgejo or Gitea host below a directory of that host:
 
   <logs>/[<host>/]<owner>/<repo>/<version>/<timestamp>/
   <logs>/[<host>/]<owner>/<repo>/<app-id>/<version>/<timestamp>/
+  <logs>/<owner>/<repo>[/<app-id>]/server-<server-version>/<timestamp>/
       console.log         the full output of the run
       summary.json        app, its repository host (repo_host) and directory,
-                          version, head, ncmake ref, the machine (host),
+                          version, the server release (server) with -s,
+                          head, ncmake ref, the machine (host),
                           the build file make read before the stub and its
                           kind, every target with exit code and duration
                           (and, for a reuse that never linted, why it has no
@@ -206,11 +226,14 @@ to <logs>/batch-<timestamp>.json with the run directory of each app.
 
   -a, --auto         answer every question with its default
   -l, --list <file>  read the apps from <file> (implies -a)
+  -s, --server <server-version|master>
+                     measure the apps as that server release ships them
   -h, --help         this text
 
 Environment (or /etc/gh-stats/gh-stats.env):
   NC_APPSDIAG_AUTO           1 answers every question with its default, as -a
                              does for a single app
+  NC_APPSDIAG_SERVER         the server release, as -s
   NC_APPSDIAG_DIR            base directory (default: $HOME/Projekte/appstorestats)
   NC_APPSDIAG_CHECKOUTS      where the apps are cloned
   NC_APPSDIAG_LOGS           where the logs and results are written
@@ -228,6 +251,7 @@ Environment (or /etc/gh-stats/gh-stats.env):
   APPSTORE_APPDATA_FILE      the catalogue of the appdata source
   APPSTORE_EBTB_DB           the nc-apps database of the ebtb source
   APPLIST_RELEASE_REPOS      the release repositories, as in gh-nc-appslist
+  SHIPPED_BIN                gh-nc-shipped (default: the one beside this script)
   RUNTIME                    the container runtime ncmake uses (default: podman,
                              else docker)
 EOF
@@ -241,11 +265,18 @@ while [ $# -gt 0 ]; do
 		-h|--help) usage; exit 0 ;;
 		-a|--auto) batch=1 ;;
 		-l|--list) [ $# -ge 2 ] || die "$1 needs a file"; list="$2"; batch=1; shift ;;
+		-s|--server) [ $# -ge 2 ] || die "$1 needs a server version"; SERVER_REF="$2"; shift ;;
 		-*) echo "${MARK}unknown option: $1" >&2; exit 1 ;;
 		*)  pos+=("$1") ;;
 	esac
 	shift
 done
+# The ref as gh-nc-shipped names a server release: its tag, or master.
+if [ -n "$SERVER_REF" ] && [ "$SERVER_REF" != master ]; then
+	[[ "$SERVER_REF" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "not a server release: $SERVER_REF"
+	SERVER_REF="v${SERVER_REF#v}"
+fi
+export NC_APPSDIAG_SERVER="$SERVER_REF"
 
 # == Batch ==
 # Every app runs in a process of its own with NC_APPSDIAG_AUTO set, so the single
@@ -390,6 +421,8 @@ slug="$owner/$repo"
 [ "$repo_host" = github.com ] || slug="$repo_host/$slug"
 # The second argument, if there is one, is the version to measure.
 want_version="${pos[1]:-}"
+# A server release decides the commit, so it leaves no version to ask for.
+[ -z "$SERVER_REF" ] || [ -z "$want_version" ] || die "-s $SERVER_REF and the version $want_version exclude each other"
 
 mkdir -p "$CHECKOUT_DIR" "$LOG_DIR"
 # git works on the checkout, everything else on the app in it. An app below the
@@ -468,11 +501,14 @@ ask_target() {
 # twice gets two timestamps side by side and measuring 6.0.0 after 6.1.0 does not
 # touch what 6.1.0 wrote. An app below the root has its app id between repo and
 # version, its directory until the inventory has read the id, so the apps of one
-# repository never share a version directory. Called once the inventory has read
+# repository never share a version directory. With -s the server release takes
+# the place of the version: an app keeps its version over several of them, and
+# each ships it from another commit. Called once the inventory has read
 # the version, or by the exit trap with the requested one when the run ended
 # before the inventory.
 promote_run_dir() {
 	local v="${1:-${app_version:-unversioned}}" old="$RUN_DIR" key=""
+	[ -z "$SERVER_REF" ] || v="server-${SERVER_REF#v}"
 	v="${v//\//-}"
 	[ -z "$subdir" ] || key="/${app_id:-${subdir//\//-}}"
 	RUN_DIR="$LOG_DIR/$slug$key/$v/$STAMP"
@@ -995,18 +1031,28 @@ release_diff() {
 	mkdir -p "$dir/shipped"
 	log ""
 	log "== release: $app_id $app_version"
-	if ! tgz="$(fetch_tarball "$dir")"; then
+	if [ -n "$SERVER_REF" ]; then
+		# The archive holds the whole server; what it ships of the app is unpacked
+		# alone, so it has no size of its own to record.
+		if ! tgz="$("$SHIPPED" -x "${SERVER_REF#v}" "$app_id" "$dir/shipped" 2> >(tee -a "$LOG" >&2))"; then
+			warn "cannot unpack apps/$app_id/ of the server archive of $SERVER_REF"
+			return 0
+		fi
+		rel_tarball="${tgz##*/}"
+		log "   shipped apps/$app_id/ of $rel_tarball"
+	elif ! tgz="$(fetch_tarball "$dir")"; then
 		if [ "$repo_host" = github.com ]; then
 			log "   no tarball for this version on the App Store, in $owner/$repo or in nextcloud-releases/$repo"
 		else
 			log "   no tarball for this version on the App Store"
 		fi
 		return 0
+	else
+		rel_tarball="$(basename "$tgz")"
+		rel_bytes="$(stat -c %s "$tgz")"
+		log "   shipped $rel_tarball, $rel_bytes B"
+		tar xzf "$tgz" -C "$dir/shipped" || { warn "cannot unpack $tgz"; return 0; }
 	fi
-	rel_tarball="$(basename "$tgz")"
-	rel_bytes="$(stat -c %s "$tgz")"
-	log "   shipped $rel_tarball, $rel_bytes B"
-	tar xzf "$tgz" -C "$dir/shipped" || { warn "cannot unpack $tgz"; return 0; }
 	shipped="$dir/shipped/$app_id"
 	[ -d "$shipped" ] || shipped="$(find "$dir/shipped" -mindepth 1 -maxdepth 1 -type d | head -1)"
 	staged="$APP_DIR/build/stage/$app_id"
@@ -1124,7 +1170,7 @@ write_summary_json() {
 	[ -s "$RUN_DIR/release/diff.json" ] && diff="$("$JQ" -c '{signed, counts}' "$RUN_DIR/release/diff.json")" || true
 	printf '%s\n' "${results[@]}" | "$JQ" -R -s \
 		--arg repo_host "$repo_host" --arg owner "$owner" --arg repo "$repo" --arg subdir "$subdir" --arg app_id "$app_id" --arg version "$app_version" \
-		--arg want "$want_version" --arg stamp "$STAMP" --arg started "$STARTED" \
+		--arg want "$want_version" --arg server "$SERVER_REF" --arg stamp "$STAMP" --arg started "$STARTED" \
 		--arg finished "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg status "$status" --argjson code "$code" --arg reason "$end_reason" \
 		--arg head "$head" --arg tag "$head_tag" --arg stub "$STUB_URL" \
 		--arg ncmain "$ncmake_main" --arg ncdiffers "$ncmake_differs" --argjson ncchecked "$ncmake_checked" \
@@ -1135,7 +1181,7 @@ write_summary_json() {
 		def num($s): if $s == "" then null else ($s | tonumber) end;
 		{tool: "gh-nc-appsdiag", schema: 1,
 		 repo_host: $repo_host, owner: $owner, repo: $repo, subdir: nul($subdir), app_id: nul($app_id), version: nul($version),
-		 requested_version: nul($want), stamp: $stamp, started: $started, finished: $finished,
+		 requested_version: nul($want), server: nul($server), stamp: $stamp, started: $started, finished: $finished,
 		 status: $status, exit: $code, reason: nul($reason),
 		 head: (if $head == "" then null else ($head | split("\t") | {sha: .[0], date: .[1], subject: (.[2:] | join("\t")), tag: nul($tag)}) end),
 		 ncmake: {ref: (if $ncchecked == 1 and $ncdiffers == "" then nul($ncmain) else null end),
@@ -1198,7 +1244,7 @@ trap 'on_exit "$?"' EXIT
 # A run ended from outside, as by the time limit of a CI job, says so in its
 # summary.json rather than leaving a bare exit code.
 trap 'end_reason="terminated by SIGTERM"; exit 143' TERM
-log "== gh-nc-appsdiag $slug${subdir:+:$subdir}"
+log "== gh-nc-appsdiag $slug${subdir:+:$subdir}${SERVER_REF:+ as server $SERVER_REF ships it}"
 if [ -d "$CHECKOUT" ]; then
 	ask_yes "   checkout exists - remove it and clone again?" && rm -rf "$CHECKOUT"
 fi
@@ -1209,11 +1255,19 @@ if [ ! -d "$CHECKOUT" ] && [ -n "${NC_APPSDIAG_CLONE_FROM:-}" ]; then
 		|| die "cannot clone $NC_APPSDIAG_CLONE_FROM"
 	"$GIT" -C "$CHECKOUT" remote set-url origin "https://$repo_host/$owner/$repo.git"
 elif [ ! -d "$CHECKOUT" ]; then
-	"$GIT" clone "https://$repo_host/$owner/$repo.git" "$CHECKOUT" 2>&1 | tee_plain "$LOG" \
-		|| die "cannot clone https://$repo_host/$owner/$repo"
+	# A server release is measured at one commit and nothing else, so the history
+	# stays on the host; of the server repository it is most of the clone.
+	clone_args=()
+	if [ -n "$SERVER_REF" ]; then
+		clone_args+=(--depth 1)
+		[ "$SERVER_REF" = master ] || clone_args+=(--branch "$SERVER_REF")
+	fi
+	"$GIT" clone "${clone_args[@]}" "https://$repo_host/$owner/$repo.git" "$CHECKOUT" 2>&1 | tee_plain "$LOG" \
+		|| die "cannot clone https://$repo_host/$owner/$repo${SERVER_REF:+ at $SERVER_REF}"
 fi
 [ -d "$CHECKOUT/.git" ] || die "no checkout at $CHECKOUT"
 log "   head  $("$GIT" -C "$CHECKOUT" log -1 --format='%h %ad %s' --date=short)"
+[ -z "$SERVER_REF" ] || [ "$SERVER_REF" = master ] || head_tag="$SERVER_REF"
 init_submodules
 
 # A version on the command line is checked out before anything is read, so the
@@ -1239,7 +1293,7 @@ if [ -n "$want_version" ] && [ -n "$app_version" ] && [ "$app_version" != "$want
 	warn "the tag of $want_version carries version $app_version in appinfo/info.xml"
 fi
 
-if [ -n "$app_version" ]; then
+if [ -n "$app_version" ] && [ -z "$SERVER_REF" ]; then
 	log ""
 	log "== release tag"
 	if cache="$(appstore_catalogue)"; then
