@@ -14,8 +14,10 @@
 # Every build puts the database under a directory of its own, named by the run,
 # and config.json points to it: Pages lets browsers cache a file for 10 minutes,
 # and a fixed name could then mix a cached config with another database.
-# config.json also names the versions of the libraries, which the page lists
-# under "Built with".
+# config.json also names the versions of the libraries, and of the tools the
+# sampler and the measurement ran with, which the page lists under "Built
+# with": the sampler keeps its own as tools.json in the release sampler-db,
+# the measurement those of Podman and ncmake as tools.json in the data branch.
 #
 # The libraries are shipped with the site, so visitors load nothing from a
 # third-party host. site/package-lock.json names the version of each and the
@@ -64,9 +66,9 @@ jobs:
               | "\($var)_VERSION=\(.version)\n\($var)_INTEGRITY=\(.integrity)"' site/package-lock.json >> "$GITHUB_ENV"
           done
 
-      # Only the JSON results are checked out. reuse.json lists every file of
-      # a checkout and is by far the largest; the REUSE verdict is the exit
-      # code summary.json records.
+      # Only the JSON results and the tool versions are checked out.
+      # reuse.json lists every file of a checkout and is by far the largest;
+      # the REUSE verdict is the exit code summary.json records.
       - name: Checkout the measurement results
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -75,6 +77,7 @@ jobs:
           persist-credentials: false
           sparse-checkout-cone-mode: false
           sparse-checkout: |
+            /tools.json
             apps/**/*.json
             apps/**/*.json.gz
             !apps/**/reuse.json
@@ -93,6 +96,8 @@ jobs:
           # Without the names the site shows the category ids.
           gh release download "$CATALOGUE_TAG" -p categories.json -D "$state" \
             || echo "::warning::No category names in the catalogue"
+          gh release download "$DB_TAG" -p tools.json -D "$state" \
+            || echo "::warning::No versions of the sampler tools"
 
       - name: Build the site database
         run: |
@@ -103,12 +108,18 @@ jobs:
           mkdir -p "$out/${db%/*}"
           GH_STATS_DB="$STATE/downloads.sqlite" APPSTORE_CACHE="$STATE/apps.json" \
             bin/gh-stats-site-db -o "$out/$db" -r data/apps
+          sampled="$(cat "$STATE/tools.json" 2>/dev/null || echo '{}')"
+          measured="$(cat data/tools.json 2>/dev/null || echo '{}')"
+          # ncmake has no release it runs from; its commit stands in.
           jq -n --arg db "$db" --argjson bytes "$(stat -c %s "$out/$db")" \
             --arg results "https://github.com/$GH_REPO/tree/$DATA_BRANCH/apps" \
             --arg issues "https://github.com/$GH_REPO/issues/new" \
             --arg sqljs "$SQLJS_VERSION" --arg uplot "$UPLOT_VERSION" \
             --arg marked "$MARKED_VERSION" --arg dompurify "$DOMPURIFY_VERSION" \
-            '{db: $db, bytes: $bytes, results: $results, issues: $issues, lib: {"sql.js": $sqljs, uPlot: $uplot, marked: $marked, DOMPurify: $dompurify}}' > "$out/config.json"
+            --argjson sampled "$sampled" --argjson measured "$measured" \
+            '{db: $db, bytes: $bytes, results: $results, issues: $issues,
+              lib: ({"sql.js": $sqljs, uPlot: $uplot, marked: $marked, DOMPurify: $dompurify}
+                    + $sampled + ($measured | if .ncmake then .ncmake |= .[0:7] else . end))}' > "$out/config.json"
           echo "SITE=$out" >> "$GITHUB_ENV"
 
       - name: Add sql.js
