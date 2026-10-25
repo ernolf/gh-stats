@@ -34,6 +34,7 @@ STATE_DIR="${GH_STATS_DIR:-/var/lib/gh-stats}"
 DB="${GH_STATS_DB:-${STATE_DIR}/downloads.sqlite}"
 APPSTORE_CACHE="${APPSTORE_CACHE:-${STATE_DIR}/apps.json}"
 APPSTORE_APPAPI_CACHE="${APPSTORE_APPAPI_CACHE:-$(dirname "$APPSTORE_CACHE")/appapi_apps.json}"
+APPSTORE_CATEGORIES_CACHE="${APPSTORE_CATEGORIES_CACHE:-$(dirname "$APPSTORE_CACHE")/categories.json}"
 SQLITE="${SQLITE_BIN:-/usr/bin/sqlite3}"
 # The asset extensions gh-stats counts by default; the summary counts the same.
 ASSETS="zip tar.bz2 tar.gz tar.xz tgz"
@@ -99,6 +100,8 @@ repository under its current name, plus
              stable, 1 when the App Store lists it as stable, and mismatch, 1
              when it is stable but the host flags the release it is downloaded
              from as a pre-release or its tag names one
+  categories  the English name of every App Store category, which
+             app_details.categories lists by id; empty without categories.json
 
 Downloads are the summed counters of the assets gh-stats counts by default
 (zip, tar.bz2, tar.gz, tar.xz, tgz). A line whose releases have none of them is
@@ -118,6 +121,8 @@ Environment (or /etc/gh-stats/gh-stats.env):
   APPSTORE_CACHE  the App Store catalogue apps.json (default: $GH_STATS_DIR/apps.json)
   APPSTORE_APPAPI_CACHE  the AppAPI catalogue appapi_apps.json (default: next
                   to apps.json)
+  APPSTORE_CATEGORIES_CACHE  the App Store categories categories.json, optional
+                  (default: next to apps.json)
   SQLITE_BIN      sqlite3 (default: /usr/bin/sqlite3)
 EOF
 }
@@ -269,6 +274,14 @@ catalogue_sql="$(jq -r "$sql_defs"'
 	  (.releases[]?
 	  | "INSERT OR IGNORE INTO app_releases VALUES (\($id | q), \(.version | q), \(.created | t), \(.isNightly | v), \(.licenses // [] | tojson | q), \(.rawPlatformVersionSpec | t), \(.rawPhpVersionSpec | t), \(.databases // [] | specs), \(.phpExtensions // [] | specs));")
 ' "$catalogue")"
+# The sampler fetches the names apart from the catalogue and carries on without
+# them, so their absence leaves the table empty instead of the site unbuilt.
+categories_sql=''
+if [ -r "$APPSTORE_CATEGORIES_CACHE" ]; then
+	categories_sql="$(jq -r "$sql_defs"'
+		.[] | "INSERT OR IGNORE INTO categories VALUES (\(.id | q), \(.translations.en.name // .id | q));"
+	' "$APPSTORE_CATEGORIES_CACHE")"
+fi
 
 # -bail stops at the first error; the half-written copy is removed then.
 trap 'rm -f "$out"' ERR
@@ -639,8 +652,13 @@ CREATE TABLE app_releases (
   php_extensions TEXT NOT NULL,
   PRIMARY KEY (id, version)
 ) WITHOUT ROWID;
+CREATE TABLE categories (
+  id   TEXT NOT NULL PRIMARY KEY,
+  name TEXT NOT NULL
+) WITHOUT ROWID;
 BEGIN;
 $catalogue_sql
+$categories_sql
 COMMIT;
 ALTER TABLE app_releases ADD COLUMN stable INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE app_releases ADD COLUMN mismatch INTEGER NOT NULL DEFAULT 0;
@@ -658,7 +676,8 @@ UNION ALL SELECT 'summary', count(*) FROM summary
 UNION ALL SELECT 'measurements', count(*) FROM measurements
 UNION ALL SELECT 'findings', count(*) FROM findings
 UNION ALL SELECT 'app_details', count(*) FROM app_details
-UNION ALL SELECT 'app_releases', count(*) FROM app_releases;
+UNION ALL SELECT 'app_releases', count(*) FROM app_releases
+UNION ALL SELECT 'categories', count(*) FROM categories;
 SQL
 trap - ERR
 echo "site database written to $out ($(stat -c %s "$out") bytes)"

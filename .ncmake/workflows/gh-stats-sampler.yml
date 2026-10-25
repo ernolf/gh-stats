@@ -8,7 +8,9 @@
 #   catalogue   apps.json and appapi_apps.json, the two files of the App Store
 #               catalogue, the second with the AppAPI apps (ExApps), each with
 #               the ETag of its last answer in a .etag beside it, so an
-#               unchanged file costs one conditional request
+#               unchanged file costs one conditional request, and
+#               categories.json, the names of the App Store categories, which
+#               only the site reads
 #   sampler-db  downloads.sqlite.zst, the sampler database
 #
 # The database is never started empty: without its asset the run stops, since a
@@ -94,7 +96,11 @@ jobs:
             # Without a cache the catalogue is fetched in full, which is one request per file.
             echo "::warning::No cached catalogue, fetching it in full"
           fi
-          for f in apps.json appapi_apps.json; do
+          # Apart from the catalogue, so a release without the names yet still
+          # restores the two files the targets come from.
+          gh release download "$CATALOGUE_TAG" -p categories.json -p categories.json.etag -D "$STATE/catalogue" \
+            || echo "::warning::No cached categories, fetching them in full"
+          for f in apps.json appapi_apps.json categories.json; do
             cp "$STATE/catalogue/$f.etag" "$STATE/$f.etag.before" 2>/dev/null || true
           done
 
@@ -110,7 +116,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          for f in apps.json appapi_apps.json; do
+          for f in apps.json appapi_apps.json categories.json; do
             etag="$STATE/catalogue/$f.etag"
             test -r "$etag" || continue
             cmp -s "$etag" "$STATE/$f.etag.before" && continue
