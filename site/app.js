@@ -17,6 +17,7 @@ let results
 let issues
 let measured
 let measuredLines
+let shipped
 // The line rows of each project and the project of each app, for the app pages.
 const projectLines = new Map()
 let appProjects
@@ -170,6 +171,21 @@ function catalogueApps() {
 // app has required so far.
 function catalogueSpecs() {
 	return query('SELECT DISTINCT platform FROM app_releases').map((r) => r.platform)
+}
+
+// The apps the server ships, by the server release whose archive ships them,
+// the newest major first; with an id only those of that app.
+function shippedApps(id = null) {
+	return query(`
+		SELECT s.id, s.name, s.server, s.major, s.ref, s.version, s.repo, s.path, s.app_ref,
+		       CAST(strftime('%s', s.published) AS INTEGER) AS published, d.categories
+		  FROM shipped s LEFT JOIN app_details d ON d.id = s.id
+		 WHERE $id IS NULL OR s.id = $id ORDER BY s.id, s.major DESC`, { $id: id })
+}
+
+// The Nextcloud major each shipped app is shipped since.
+function shippedSince() {
+	return new Map(query('SELECT id, major FROM shipped_since').map((r) => [r.id, r.major]))
 }
 
 // The App Store categories by name, as its sidebar lists them.
@@ -407,6 +423,23 @@ function unreachableMark(r) {
 	return r.since === null ? [] : [el('span', { class: 'unreachable', title: UNREACHABLE_TEXT }, `unreachable since ${date(r.since)}`)]
 }
 
+const SERVER_REPO = 'nextcloud/server'
+const SHIPPED_TEXT = 'the first Nextcloud major whose core/shipped.json lists the app; the file exists since Nextcloud 9'
+
+function shippedMark(id) {
+	return shipped.has(id) ? [el('span', { class: 'shipped', title: SHIPPED_TEXT }, `shipped since Nextcloud ${shipped.get(id)}`)] : []
+}
+
+// An app of the server tree has its directory there, any other its own
+// repository, each at the tag or branch of the server release.
+function shippedSource(s) {
+	return `https://github.com/${s.repo}/tree/${encodeURIComponent(s.app_ref)}${s.path ? `/${s.path}` : ''}`
+}
+
+function serverLink(s) {
+	return el('a', { href: `https://github.com/${SERVER_REPO}/tree/${encodeURIComponent(s.ref)}` }, s.server)
+}
+
 function releaseLink(fig) {
 	return el('a', { href: `${repoUrl(fig)}/releases/tag/${encodeURIComponent(fig.tag)}` }, fig.tag)
 }
@@ -599,7 +632,7 @@ function catalogueRow(a) {
 	const empty = released ? { class: 'num na', title: 'gh-stats samples no GitHub, Forgejo or Gitea release of this app' } : { class: 'num' }
 	p.main = el('tbody', {}, el('tr', {},
 		el('td', { class: 'pick' }),
-		el('td', {}, el('span', { class: 'name' }, el('a', { href: `#app/${encodeURIComponent(a.id)}` }, a.name))),
+		el('td', {}, el('span', { class: 'name' }, el('a', { href: `#app/${encodeURIComponent(a.id)}` }, a.name)), ...shippedMark(a.id)),
 		el('td', { class: 'tag' }, a.version ?? ''),
 		el('td', {}, ncRange(a.platform)),
 		el('td', {}, a.published === null ? '' : date(a.published)),
@@ -610,10 +643,58 @@ function catalogueRow(a) {
 	return p
 }
 
+// The button opens and closes the lines below the row of a project.
+function olderToggle(p) {
+	const toggle = el('button', { type: 'button', class: 'toggle', 'aria-expanded': 'false' })
+	toggle.addEventListener('click', () => {
+		p.older.hidden = !p.older.hidden
+		toggle.setAttribute('aria-expanded', String(!p.older.hidden))
+	})
+	return toggle
+}
+
+// A shipped app has a line for each server release whose archive ships it, the
+// newest stable major on its row and the others below. Nobody downloads the
+// archives from a host gh-stats samples, so the download columns stay empty and
+// there is nothing to chart or compare.
+function shippedRow(releases) {
+	const main = releases.find((s) => s.ref !== 'master') ?? releases[0]
+	const line = (s, first) => {
+		const [checks, checksRow] = checksCell(undefined, 10)
+		const r = {
+			published: s.published, nc: `>=${s.major} <=${s.major}`, checks: checksRow,
+			compare: el('tr', { class: 'compare', hidden: '' }), compareChecks: el('tr', { class: 'checks', hidden: '' }),
+		}
+		r.tr = el('tr', {}, el('td', { class: 'pick' }), first,
+			el('td', { class: 'tag' }, el('a', { href: shippedSource(s) }, s.version)),
+			el('td', {}, serverLink(s)),
+			el('td', {}, s.published === null ? '' : date(s.published)),
+			...['total', ...PERIODS].map(() => el('td', { class: 'num na', title: 'gh-stats samples no host the server archives are downloaded from' })),
+			checks, el('td'))
+		return r
+	}
+	const head = el('td', {}, el('span', { class: 'name' }, el('a', { href: `#app/${encodeURIComponent(main.id)}` }, main.name)),
+		el('a', { class: 'slug', href: `https://github.com/${main.repo}` }, main.repo), ...shippedMark(main.id))
+	const row = line(main, head)
+	const p = {
+		tab: 'shipped', name: main.name, tag: main.version, published: main.published, nc: row.nc,
+		total: null, d1: null, d7: null, d30: null, warn: null,
+		lines: releases.filter((s) => s !== main)
+			.map((s) => line(s, el('td', { class: 'line-label' }, s.ref === 'master' ? 'master' : `Nextcloud ${s.major}`))),
+		search: `${main.name} ${main.id} ${main.repo}`.toLowerCase(), categories: new Set(JSON.parse(main.categories ?? '[]')),
+	}
+	p.main = el('tbody', {}, row.tr, row.checks)
+	p.older = el('tbody', { class: 'older', hidden: '' })
+	p.toggle = olderToggle(p)
+	head.append(p.toggle)
+	return p
+}
+
 function initOverview() {
 	initCharts()
 	measured = measurementsByRelease()
 	measuredLines = measurementsByLine(measured)
+	shipped = shippedSince()
 	const repos = Map.groupBy(projectRepos(), (r) => r.project)
 	const apps = Map.groupBy(projectApps(), (r) => r.project)
 	appProjects = new Map([...apps.values()].flat().map((a) => [a.id, a.project]))
@@ -632,21 +713,19 @@ function initOverview() {
 		// Each app links its page; a project that is no App Store app has none.
 		const links = own.flatMap((a, i) => [i ? ', ' : '', el('a', { href: `#app/${encodeURIComponent(a.id)}` }, a.name)])
 		const head = el('td', {}, el('span', { class: 'name' }, ...(links.length ? links : [p.name])),
-			...members.flatMap((r) => [el('a', { class: 'slug', href: repoUrl(r) }, slugOf(r)), ...unreachableMark(r)]))
+			...members.flatMap((r) => [el('a', { class: 'slug', href: repoUrl(r) }, slugOf(r)), ...unreachableMark(r)]),
+			...own.flatMap((a) => shippedMark(a.id)))
 		p.main = el('tbody', {}, ...lineRows(main, head))
 		p.warn = main.warn
 		p.older = el('tbody', { class: 'older', hidden: '' },
 			...older.flatMap((r) => lineRows(r, el('td', { class: 'line-label' }, `line ${lineLabel(r.line)}`))))
-		p.toggle = el('button', { type: 'button', class: 'toggle', 'aria-expanded': 'false' })
-		p.toggle.addEventListener('click', () => {
-			p.older.hidden = !p.older.hidden
-			p.toggle.setAttribute('aria-expanded', String(!p.older.hidden))
-		})
+		p.toggle = olderToggle(p)
 		head.append(p.toggle)
 		return p
 	})
 	const shown = new Set(projects.flatMap((p) => (apps.get(p.project) ?? []).map((a) => a.id)))
 	projects.push(...catalogueApps().filter((a) => !shown.has(a.id)).map(catalogueRow))
+	projects.push(...[...Map.groupBy(shippedApps(), (s) => s.id).values()].map(shippedRow))
 
 	const table = document.querySelector('#overview table')
 	const tabs = document.querySelectorAll('#tabs button')
@@ -727,7 +806,8 @@ function initOverview() {
 			}
 			p.older.replaceChildren(...older.flatMap((r) => [r.tr, r.checks, r.compare, r.compareChecks]))
 			p.toggle.hidden = !older.length
-			p.toggle.textContent = `${older.length} older line${older.length > 1 ? 's' : ''}`
+			// The lines of a shipped app include master, which is newer.
+			p.toggle.textContent = `${older.length} ${p.tab === 'shipped' ? 'other' : 'older'} line${older.length > 1 ? 's' : ''}`
 			frag.append(p.main, p.older)
 		}
 		table.append(frag)
@@ -745,7 +825,7 @@ function initOverview() {
 		ticks.set(tab, swapPicks(ticks.get(next) ?? []))
 		tab = next
 		table.dataset.tab = tab
-		nameHead.textContent = { apps: 'App', exapps: 'ExApp', other: 'Project' }[tab]
+		nameHead.textContent = { apps: 'App', exapps: 'ExApp', shipped: 'App', other: 'Project' }[tab]
 		appFilters.hidden = tab === 'other'
 		for (const b of tabs) {
 			b.setAttribute('aria-pressed', String(b.dataset.tab === tab))
@@ -1121,6 +1201,20 @@ function appReleases(id, requests) {
 		}))
 }
 
+function appShipped(releases) {
+	return el('table', {},
+		el('thead', {}, el('tr', {}, ...['Nextcloud', 'Published', 'App version', 'Source'].map((h) => el('th', {}, h)))),
+		el('tbody', {}, ...releases.map((s) => el('tr', {},
+			el('td', {}, serverLink(s)),
+			el('td', {}, s.published === null ? '' : date(s.published)),
+			el('td', {}, s.version),
+			el('td', {}, el('a', { href: shippedSource(s) }, s.path ? `${s.repo}/${s.path}` : s.repo))))))
+}
+
+function factList(facts) {
+	return el('dl', { class: 'facts' }, ...facts.flatMap(([k, ...v]) => [el('dt', {}, k), el('dd', {}, ...v)]))
+}
+
 function appLines(lines) {
 	return el('table', {},
 		el('thead', {}, el('tr', {}, ...['Line', 'Release', 'Nextcloud', 'Published'].map((h) => el('th', {}, h)),
@@ -1133,11 +1227,19 @@ function appLines(lines) {
 }
 
 // What the App Store shows of the app, in the browser's language where the
-// app has it, and below it the downloads gh-stats sampled.
+// app has it, the server releases that ship it, and below it the downloads
+// gh-stats sampled. A shipped app the App Store does not list has the page of
+// its server releases alone.
 function appPage(id, lines) {
 	const d = query('SELECT * FROM app_details WHERE id = $id', { $id: id })[0]
+	const ships = shippedApps(id)
+	const shippedFact = shipped.has(id) ? [['Shipped', el('span', { title: SHIPPED_TEXT }, `since Nextcloud ${shipped.get(id)}`)]] : []
+	const shippedPart = ships.length ? [el('h3', {}, 'Shipped with Nextcloud'), el('div', { class: 'scroll' }, appShipped(ships))] : []
 	if (!d) {
-		return [el('h2', {}, id), el('p', {}, 'The App Store catalogue has no app of this id.')]
+		return ships.length
+			? [el('div', {}, el('h2', {}, ships[0].name), factList([['App id', el('code', {}, id)], ...shippedFact]),
+				el('p', { class: 'hint' }, 'The App Store catalogue has no app of this id.'), ...shippedPart)]
+			: [el('h2', {}, id), el('p', {}, 'The App Store catalogue has no app of this id.')]
 	}
 	const texts = new Map(query('SELECT lang, name, summary, description FROM app_texts WHERE id = $id', { $id: id })
 		.map((r) => [r.lang, r]))
@@ -1169,6 +1271,7 @@ function appPage(id, lines) {
 		['Recent rating', rating(d.rating_recent, d.rating_num_recent)],
 		['Added', (d.created ?? '').slice(0, 10)],
 		['Last changed', (d.last_modified ?? '').slice(0, 10)],
+		...shippedFact,
 		...(appProjects.has(id) ? [['Repositories', ...appRepos(appProjects.get(id))]] : []),
 	]
 	const shots = JSON.parse(d.screenshots)
@@ -1176,7 +1279,7 @@ function appPage(id, lines) {
 		el('h2', { lang: name.lang }, name.value || id),
 		el('p', { class: 'summary', lang: summary.lang, dir: 'auto' }, summary.value),
 		el('ul', { class: 'app-links' }, ...links.map((a) => el('li', {}, a))),
-		el('dl', { class: 'facts' }, ...facts.flatMap(([k, ...v]) => [el('dt', {}, k), el('dd', {}, ...v)])))
+		factList(facts))
 	const images = el('p', { class: 'hint' }, el('button', { type: 'button', class: 'quiet' }, 'Load images'),
 		' Images come from the hosts the authors name and load only on request.')
 	images.firstChild.addEventListener('click', () => {
@@ -1190,6 +1293,7 @@ function appPage(id, lines) {
 			? [el('h3', {}, 'Screenshots'),
 				el('ul', { class: 'shots' }, ...shots.map((u, i) => el('li', {}, imageHolder(u, `Screenshot ${i + 1}`, true))))]
 			: []),
+		...shippedPart,
 		el('h3', {}, 'Releases in the App Store'),
 		el('div', { class: 'scroll' }, appReleases(id, !d.exapp)),
 		el('h3', {}, 'Downloads'),
