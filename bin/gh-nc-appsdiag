@@ -155,7 +155,10 @@ that version is checked out before anything is read, so an older release can be
 measured as it was shipped. The tag is the one the App Store download of that
 version names. For a version the store does not ship it is v<version> or
 <version>, else the one tag whose version from its first digit on is this one,
-as in v.<version> or <component>-v<version>.
+as in v.<version> or <component>-v<version>. The run directory, the App Store
+release and the tarball compared are those of the version asked for, or of the
+tag picked, also where appinfo/info.xml declares another: an app that sets its
+version only when it builds a release declares the same one in every tag.
 
 A repository without appinfo/info.xml at its root is searched for the apps below
 it, at any depth: every tracked appinfo/info.xml that declares a <nextcloud>
@@ -185,8 +188,9 @@ a repository on a Forgejo or Gitea host below a directory of that host:
   <logs>/<owner>/<repo>[/<app-id>]/server-<server-version>/<timestamp>/
       console.log         the full output of the run
       summary.json        app, its repository host (repo_host) and directory,
-                          version, the server release (server) with -s,
-                          head, ncmake ref, the machine (host),
+                          the version info.xml declares, the one asked for
+                          (requested_version), the server release (server)
+                          with -s, head, ncmake ref, the machine (host),
                           the build file make read before the stub and its
                           kind, every target with exit code and duration
                           (and, for a reuse that never linted, why it has no
@@ -430,13 +434,15 @@ mkdir -p "$CHECKOUT_DIR" "$LOG_DIR"
 CHECKOUT="$CHECKOUT_DIR/$repo${subdir:+@${subdir//\//-}}"
 APP_DIR="$CHECKOUT${subdir:+/$subdir}"
 STAMP="$(date -u +%Y%m%d-%H%M%S)"
-# The run directory is named after the version, and only info.xml knows that one,
-# so the log starts under a name saying it has no home yet and promote_run_dir
-# moves it in. A run that ends before that is moved in by the exit trap.
+# The run directory is named after the version of the release, which without a
+# version on the command line only the tag picked or info.xml tells, so the log
+# starts under a name saying it has no home yet and promote_run_dir moves it in.
+# A run that ends before that is moved in by the exit trap.
 LOG="$LOG_DIR/.pending-${repo}${subdir:+@${subdir//\//-}}-${STAMP}.log"
 RUN_DIR=""
 app_id=""
 app_version=""
+tag_version=""
 results=()
 # What summary.json reports besides the targets, filled in where it is learnt.
 STARTED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -497,6 +503,15 @@ ask_target() {
 }
 
 # == Result layout ==
+# The version of the release a run measures: the one asked for, else that of the
+# tag picked, else the one info.xml declares. An app that sets its version only
+# when it builds a release keeps a placeholder in info.xml, the same in every
+# tag, so its releases are told apart, looked up in the App Store and compared
+# by the version they were asked for or picked as.
+measured_version() {
+	printf '%s\n' "${want_version:-${tag_version:-$app_version}}"
+}
+
 # One directory per run, keyed by owner, repo and version, so a version measured
 # twice gets two timestamps side by side and measuring 6.0.0 after 6.1.0 does not
 # touch what 6.1.0 wrote. An app below the root has its app id between repo and
@@ -507,7 +522,8 @@ ask_target() {
 # the version, or by the exit trap with the requested one when the run ended
 # before the inventory.
 promote_run_dir() {
-	local v="${1:-${app_version:-unversioned}}" old="$RUN_DIR" key=""
+	local v="${1:-$(measured_version)}" old="$RUN_DIR" key=""
+	v="${v:-unversioned}"
 	[ -z "$SERVER_REF" ] || v="server-${SERVER_REF#v}"
 	v="${v//\//-}"
 	[ -z "$subdir" ] || key="/${app_id:-${subdir//\//-}}"
@@ -860,7 +876,7 @@ appstore_catalogue() {
 # release; the release is what was shipped, so the nightly counts only for a
 # version the store has as nightly alone.
 release_url() {
-	{ "$JQ" -r --arg id "$app_id" --arg v "$app_version" '(if type == "object" then .data else . end) | map(select(.id == $id))[0]
+	{ "$JQ" -r --arg id "$app_id" --arg v "$(measured_version)" '(if type == "object" then .data else . end) | map(select(.id == $id))[0]
 		| [.releases[]? | select(.version == $v)] as $all | ($all | map(select(.isNightly != true))) as $stable
 		| (if ($stable | length) > 0 then $stable else $all end)[].download' "$1" 2>/dev/null || true; } | head -1
 }
@@ -996,6 +1012,7 @@ pick_tag() {
 	esac
 	[ "$n" -ge 1 ] && [ "$n" -le "$i" ] || { warn "there is no $n in this list"; return 1; }
 	chosen="$(printf '%s\n' "$tags" | sed -n "${n}p")"
+	tag_version="${chosen#"${chosen%%[0-9]*}"}"
 	checkout_tag "$chosen"
 }
 
@@ -1015,7 +1032,7 @@ fetch_tarball() {
 	fi
 	[ "$repo_host" = github.com ] || return 1
 	for r in "$owner/$repo" "nextcloud-releases/$repo"; do
-		"$GH" release download "v$app_version" --repo "$r" --pattern "$pattern" --dir "$dest" >/dev/null 2>&1 || continue
+		"$GH" release download "v$(measured_version)" --repo "$r" --pattern "$pattern" --dir "$dest" >/dev/null 2>&1 || continue
 		f="$(find "$dest" -maxdepth 1 -name "$pattern" | head -1)"
 		[ -n "$f" ] && { printf '%s\n' "$f"; return 0; }
 	done
@@ -1030,7 +1047,7 @@ release_diff() {
 	dir="$RUN_DIR/release"
 	mkdir -p "$dir/shipped"
 	log ""
-	log "== release: $app_id $app_version"
+	log "== release: $app_id $(measured_version)"
 	if [ -n "$SERVER_REF" ]; then
 		# The archive holds the whole server; what it ships of the app is unpacked
 		# alone, so it has no size of its own to record.
@@ -1300,9 +1317,9 @@ if [ -n "$app_version" ] && [ -z "$SERVER_REF" ]; then
 		url="$(release_url "$cache")"
 		if [ -n "$url" ] && [ "$url" != null ]; then
 			url="${url%%[?#]*}"
-			log "   the App Store ships $app_id $app_version as ${url##*/}"
+			log "   the App Store ships $app_id $(measured_version) as ${url##*/}"
 		else
-			log "   the App Store does not ship $app_id $app_version; its newest are $(release_versions "$cache")"
+			log "   the App Store does not ship $app_id $(measured_version); its newest are $(release_versions "$cache")"
 		fi
 		# Whatever the branch says, the choice is between the tags, so the list comes
 		# up either way. A tag read another version than the branch did, so the

@@ -240,8 +240,8 @@ function measurementsByLine(byRelease) {
 	return lines
 }
 
-// The measurements of one app, keyed by the version its info.xml declares, as
-// the App Store ships it.
+// The measurements of one app, keyed by the version of the release they
+// measured, as the App Store ships it.
 function measurementsByVersion(id) {
 	return Map.groupBy(query(`SELECT ${MEASUREMENT} FROM measurements m WHERE m.app_id = $id AND m.server IS NULL`, { $id: id }),
 		(r) => r.version)

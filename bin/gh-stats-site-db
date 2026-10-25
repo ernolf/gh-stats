@@ -85,7 +85,8 @@ repository under its current name, plus
              7 days and 30 days, summed over the repositories of the project
   measurements  the newest run of every app version measured by
              gh-nc-appsdiag, from the summary.json of the run directories
-             below <dir>: its directory, repository host, app, version, the
+             below <dir>: its directory, repository host, app, the version
+             it was asked for, else the one its info.xml declares, the
              server release of a shipped app measured as the server ships it,
              tag, status, the shipped tarball and the counts of the release
              diff
@@ -245,7 +246,7 @@ if [ -n "$results" ]; then
 	results_sql="$(find "$results" -name summary.json -print0 | xargs -0 -r jq -r --arg root "$results/" "$sql_defs"'
 		(input_filename | ltrimstr($root) | rtrimstr("/summary.json")) as $dir
 		| (.files // []) as $files
-		| "INSERT INTO measurements VALUES (\($dir | q), \(.repo_host // "github.com" | v), \(.owner | v), \(.repo | v), \(.subdir | v), \(.app_id | v), \(.version | v), \(.server | v), \(.head.tag | v), \(.stamp | v), \(.status | v), \(.reason | v), \(.release.tarball | v), \(.release.signed | v), \(.release.counts | if . == null then null else tojson end | v));",
+		| "INSERT INTO measurements VALUES (\($dir | q), \(.repo_host // "github.com" | v), \(.owner | v), \(.repo | v), \(.subdir | v), \(.app_id | v), \(.requested_version // .version | v), \(.server | v), \(.head.tag | v), \(.stamp | v), \(.status | v), \(.reason | v), \(.release.tarball | v), \(.release.signed | v), \(.release.counts | if . == null then null else tojson end | v));",
 		  (.targets[]? | .name as $n
 		  | "INSERT INTO targets VALUES (\($dir | q), \($n | v), \(.exit | v), \(.json_skipped | v), \($files | any(. == $n + ".json") | v));")
 	')"
@@ -567,9 +568,12 @@ SELECT p.project, p.line, h.host, h.owner, h.repo, p.tag, p.published,
   LEFT JOIN pivot v ON v.project = p.project AND v.line = p.line
   CROSS JOIN now;
 
--- A version measured again keeps only its newest run. A shipped app keeps its
--- version over several server releases, so the run of one server release never
--- replaces that of another, nor the run of the same version from the App Store.
+-- The version is the one the run was asked for, the version of the App Store
+-- release, since an app that sets its version only when it builds a release
+-- declares the same one in the info.xml of every tag. A version measured again
+-- keeps only its newest run. A shipped app keeps its version over several
+-- server releases, so the run of one server release never replaces that of
+-- another, nor the run of the same version from the App Store.
 -- Each target that left no result of its own becomes a finding, so a release
 -- with a failed build or an aborted run never looks clean. A REUSE lint carries
 -- no findings; its exit code tells whether the checkout is compliant.
