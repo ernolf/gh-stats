@@ -929,6 +929,24 @@ function initOverview() {
 	route()
 }
 
+// == Scrolling ==
+
+// The column headings stick below the bar, so they follow its height, which
+// changes when the filters wrap or the help of Released since opens. Back to
+// top shows once the page header is out of view.
+function initScrolling() {
+	const overview = document.getElementById('overview')
+	const bar = document.getElementById('listing-bar')
+	new ResizeObserver(() => {
+		overview.style.setProperty('--bar-height', `${bar.offsetHeight}px`)
+	}).observe(bar)
+	const toTop = document.getElementById('to-top')
+	new IntersectionObserver(([entry]) => {
+		toTop.hidden = entry.isIntersecting
+	}).observe(document.querySelector('header'))
+	toTop.addEventListener('click', () => scrollTo(0, 0))
+}
+
 // == Settings ==
 
 // The controls of the start page outlast a reload: the browser keeps what
@@ -1306,4 +1324,5 @@ function appPage(id, lines) {
 	return [page]
 }
 
+initScrolling()
 load()
