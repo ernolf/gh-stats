@@ -178,7 +178,7 @@ function catalogueSpecs() {
 // the newest major first; with an id only those of that app.
 function shippedApps(id = null) {
 	return query(`
-		SELECT s.id, s.name, s.server, s.major, s.ref, s.version, s.repo, s.path, s.app_ref,
+		SELECT s.id, s.name, s.server, s.major, s.ref, s.version, s.repo, s.path, s.app_ref, s.enabled,
 		       CAST(strftime('%s', s.published) AS INTEGER) AS published, d.categories
 		  FROM shipped s LEFT JOIN app_details d ON d.id = s.id
 		 WHERE $id IS NULL OR s.id = $id ORDER BY s.id, s.major DESC`, { $id: id })
@@ -441,6 +441,21 @@ function shippedMark(id) {
 	return shipped.has(id) ? [el('span', { class: 'shipped', title: SHIPPED_TEXT }, `shipped since Nextcloud ${shipped.get(id)}`)] : []
 }
 
+// What the core/shipped.json of a server release says of an app: always
+// enabled, part of the server, or one that can be disabled, which a new
+// installation enables or not.
+const ENABLED = {
+	always: ['always enabled', 'the server release enables the app always; it cannot be disabled'],
+	default: ['enabled by default', 'a new installation of the server release enables the app; it can be disabled'],
+	optional: ['disabled by default', 'a new installation of the server release leaves the app disabled; it can be enabled'],
+}
+// The choices of the filter that are not a single value.
+const ENABLED_FILTER = { switchable: ['default', 'optional'] }
+
+function enabledMark(s) {
+	return s.enabled ? [el('span', { class: 'enabled', title: ENABLED[s.enabled][1] }, ENABLED[s.enabled][0])] : []
+}
+
 // An app of the server tree has its directory there, any other its own
 // repository, each at the tag or branch of the server release.
 function shippedSource(s) {
@@ -689,10 +704,10 @@ function shippedRow(releases) {
 		return r
 	}
 	const head = el('td', {}, el('span', { class: 'name' }, el('a', { href: `#app/${encodeURIComponent(main.id)}` }, main.name)),
-		el('a', { class: 'slug', href: `https://github.com/${main.repo}` }, main.repo), ...shippedMark(main.id))
+		el('a', { class: 'slug', href: `https://github.com/${main.repo}` }, main.repo), ...shippedMark(main.id), ...enabledMark(main))
 	const row = line(main, head)
 	const p = {
-		tab: 'shipped', name: main.name, tag: main.version, published: main.published, nc: row.nc,
+		tab: 'shipped', name: main.name, tag: main.version, published: main.published, nc: row.nc, enabled: main.enabled,
 		total: null, d1: null, d7: null, d30: null, warn: row.warn,
 		lines: releases.filter((s) => s !== main)
 			.map((s) => line(s, el('td', { class: 'line-label' }, s.ref === 'master' ? 'master' : `Nextcloud ${s.major}`))),
@@ -759,6 +774,7 @@ function initOverview() {
 	const appFilters = document.getElementById('app-filters')
 	const nc = document.getElementById('nc')
 	const category = document.getElementById('category')
+	const enabled = document.getElementById('enabled')
 	const reset = document.getElementById('reset')
 	let sortKey = 'total'
 	let sortDesc = true
@@ -812,10 +828,12 @@ function initOverview() {
 		}
 		// The projects of the Other tab carry no category.
 		const c = tab === 'other' ? '' : category.value
+		// Only a shipped app is enabled or not by the server.
+		const e = tab === 'shipped' && enabled.value ? ENABLED_FILTER[enabled.value] ?? [enabled.value] : null
 		const frag = document.createDocumentFragment()
 		for (const p of projects) {
 			const older = p.lines.filter(counts)
-			if (p.tab !== tab || (f && p.search.includes(f) === invert.checked) || (c && !p.categories.has(c)) || (!counts(p) && !older.length)) {
+			if (p.tab !== tab || (f && p.search.includes(f) === invert.checked) || (c && !p.categories.has(c)) || (e && !e.includes(p.enabled)) || (!counts(p) && !older.length)) {
 				continue
 			}
 			p.older.replaceChildren(...older.flatMap((r) => [r.tr, r.checks, r.compare, r.compareChecks]))
@@ -842,6 +860,7 @@ function initOverview() {
 		table.dataset.tab = tab
 		nameHead.textContent = { apps: 'App', exapps: 'ExApp', shipped: 'App', other: 'Project' }[tab]
 		appFilters.hidden = tab === 'other'
+		enabled.hidden = tab !== 'shipped'
 		for (const b of tabs) {
 			b.setAttribute('aria-pressed', String(b.dataset.tab === tab))
 		}
@@ -856,6 +875,7 @@ function initOverview() {
 	category.append(...[...names].map(([id, name]) => el('option', { value: id }, name)))
 	category.hidden = !names.size
 	category.addEventListener('change', render)
+	enabled.addEventListener('change', render)
 
 	for (const th of document.querySelectorAll('th[data-sort]')) {
 		th.tabIndex = 0
@@ -956,7 +976,7 @@ function initScrolling() {
 // differs from the defaults under one key. Without storage, in a private
 // window or with the site data blocked, the page starts from the defaults.
 const SETTINGS_KEY = 'gh-stats.settings'
-const OVERVIEW_SETTINGS = ['filter', 'invert', 'since', 'category', 'nc']
+const OVERVIEW_SETTINGS = ['filter', 'invert', 'since', 'category', 'enabled', 'nc']
 const CHART_SETTINGS = ['scope', 'split', 'share-figure', 'measure', 'bucket', 'range', 'style', 'log']
 
 // The defaults are those the page is written with.
@@ -1232,7 +1252,7 @@ function appReleases(id, requests) {
 
 function appShipped(releases) {
 	return el('table', {},
-		el('thead', {}, el('tr', {}, ...['Nextcloud', 'Published', 'App version', 'Source'].map((h) => el('th', {}, h)),
+		el('thead', {}, el('tr', {}, ...['Nextcloud', 'Published', 'App version', 'Enabled', 'Source'].map((h) => el('th', {}, h)),
 			el('th', { title: 'warnings of the measurement of the app as the server release ships it' }, 'Checks'))),
 		...releases.map((s) => {
 			const [checks, checksRow] = checksCell(measuredShipped.get(`${s.id}\n${s.ref}`), 4)
@@ -1240,6 +1260,7 @@ function appShipped(releases) {
 				el('td', {}, serverLink(s)),
 				el('td', {}, s.published === null ? '' : date(s.published)),
 				el('td', {}, s.version),
+				el('td', {}, ...enabledMark(s)),
 				el('td', {}, el('a', { href: shippedSource(s) }, s.path ? `${s.repo}/${s.path}` : s.repo)),
 				checks), checksRow)
 		}))
