@@ -187,6 +187,37 @@ function shippedApps(id = null) {
 			|| compareVersions(b.ref.slice(1), a.ref.slice(1)))
 }
 
+// The apps that are neither in the catalogue nor shipped by the server and
+// publish no release tarball, which gh-stats measures from a build of its own;
+// with an id only that app.
+function unlistedApps(id = null) {
+	return query(`
+		SELECT id, name, version, platform, host, repo, path, tags, CAST(strftime('%s', pushed) AS INTEGER) AS pushed
+		  FROM unlisted WHERE NOT tarball AND ($id IS NULL OR id = $id) ORDER BY id`, { $id: id })
+}
+
+// The version a tag names, read from its first digit on, as gh-nc-appsdiag
+// reads it; empty for a tag without a digit.
+function tagVersion(tag) {
+	return tag.replace(/^[^0-9]*/, '')
+}
+
+// The version gh-stats-catalogue.yml measures an unlisted app as: that of its
+// newest tag with a version, or, without any tag, the one its default branch
+// declares. null where its tags name no version, which leaves it unmeasured.
+function unlistedVersion(u) {
+	const tags = JSON.parse(u.tags)
+	return tags.length ? tags.map(tagVersion).find(Boolean) ?? null : u.version
+}
+
+// The repository of an unlisted app, its directory below the root appended.
+function unlistedSource(u) {
+	const slug = u.host === 'github.com' ? u.repo : `${u.host}/${u.repo}`
+	return el('a', { class: 'slug', href: `https://${u.host}/${u.repo}` }, u.path ? `${slug}/${u.path}` : slug)
+}
+
+const UNLISTED_TEXT = 'no release of its repository carries a tarball, so gh-stats builds the app from its newest tag, or from the default branch where it has none, and measures that build'
+
 // The Nextcloud major each shipped app is shipped since.
 function shippedSince() {
 	return new Map(query('SELECT id, major FROM shipped_since').map((r) => [r.id, r.major]))
@@ -726,6 +757,40 @@ function catalogueRow(a) {
 	return p
 }
 
+// An app outside the App Store and the server has the row of its newest tag,
+// or of its default branch. Nobody downloads it from a release gh-stats
+// samples, so its download columns stay empty and say why.
+function unlistedRow(u) {
+	const version = unlistedVersion(u)
+	const p = {
+		tab: 'apps', name: u.name, tag: version, published: null, nc: u.platform,
+		total: null, d1: null, d7: null, d30: null, lines: [],
+		search: `${u.name} ${u.id} ${u.repo}`.toLowerCase(), categories: new Set(),
+	}
+	const runs = version === null ? undefined : measurementsByVersion(u.id).get(version)
+	p.warn = warnings(runs)
+	const [checks, checksRow] = checksCell(runs, 10)
+	if (!runs) {
+		const [why, title] = version === null
+			? ['no versioned tag', 'no tag of its repository names a version, so the app is not measured']
+			: ['no release tarball', UNLISTED_TEXT]
+		checks.title = title
+		checks.append(el('span', { class: 'check-why' }, why))
+	}
+	const empty = { class: 'num na', title: UNLISTED_TEXT }
+	p.main = el('tbody', {}, el('tr', {},
+		el('td', { class: 'pick' }),
+		el('td', {}, el('span', { class: 'name' }, el('a', { href: `#app/${encodeURIComponent(u.id)}` }, u.name)), unlistedSource(u)),
+		el('td', { class: 'tag' }, version ?? '', ...restrictionMark(runs ?? [])),
+		el('td', {}, ncRange(u.platform)),
+		el('td'),
+		...['total', ...PERIODS].map(() => el('td', empty)),
+		checks, el('td')), checksRow)
+	p.older = el('tbody', { class: 'older', hidden: '' })
+	p.toggle = el('button', { type: 'button', class: 'toggle', hidden: '' })
+	return p
+}
+
 // The button opens and closes the lines below the row of a project.
 function olderToggle(p) {
 	const toggle = el('button', { type: 'button', class: 'toggle', 'aria-expanded': 'false' })
@@ -818,6 +883,7 @@ function initOverview() {
 	})
 	const shown = new Set(projects.flatMap((p) => (apps.get(p.project) ?? []).map((a) => a.id)))
 	projects.push(...catalogueApps().filter((a) => !shown.has(a.id)).map(catalogueRow))
+	projects.push(...unlistedApps().map(unlistedRow))
 	projects.push(...[...Map.groupBy(shippedApps().filter((s) => s.latest), (s) => s.id).values()].map(shippedRow))
 
 	const table = document.querySelector('#overview table')
@@ -1356,6 +1422,59 @@ function appShipped(releases) {
 		}))
 }
 
+// The newest tag keeps its check, so it has no button to remove it. The
+// request names the version of the tag, as gh-stats-request.yml looks it up.
+function unlistedRequestCell(id, version, runs, newest) {
+	const links = []
+	if (STABLE.test(version)) {
+		links.push(requestLink(runs ? 'recheck' : 'check', `Measure ${id} ${version}`,
+			`Builds ${id} from the tag of ${version}, measures it ${runs ? 'again ' : ''}and keeps its result.`))
+		if (runs && version !== newest) {
+			links.push(' ', requestLink('remove check', `Remove the check of ${id} ${version}`,
+				`Removes the results of ${id} ${version} and keeps the version from being measured again.`))
+		}
+	}
+	return el('td', { class: 'request-col' }, ...links)
+}
+
+// The tags gh-nc-unlisted keeps, newest first, or the default branch of a
+// repository without tags, which only the daily run measures.
+function appTags(u) {
+	const runs = measurementsByVersion(u.id)
+	const tags = JSON.parse(u.tags)
+	const asks = Boolean(issues) && tags.length > 0
+	const newest = tags.map(tagVersion).find(Boolean)
+	const rows = tags.length ? tags.map((t) => [t, tagVersion(t)]) : [['default branch', u.version ?? '']]
+	return el('table', {},
+		el('thead', {}, el('tr', {}, ...['Tag', 'Version'].map((h) => el('th', {}, h)),
+			el('th', { title: 'warnings of the measurement of the build' }, 'Checks'),
+			...(asks ? [el('th', { title: 'opens a prefilled issue that asks for the measurement' }, 'Request')] : []))),
+		...rows.map(([tag, version]) => {
+			const [checks, checksRow] = checksCell(version ? runs.get(version) : undefined, asks ? 3 : 2)
+			return el('tbody', {}, el('tr', {},
+				el('td', {}, tag),
+				el('td', {}, version, ...restrictionMark(runs.get(version) ?? [])),
+				checks,
+				...(asks ? [unlistedRequestCell(u.id, version, runs.get(version), newest)] : [])), checksRow)
+		}))
+}
+
+// An app outside the App Store and the server has the page of its repository
+// and its tags.
+function unlistedPage(u) {
+	return [el('div', {}, el('h2', {}, u.name),
+		factList([
+			['App id', el('code', {}, u.id)],
+			['Repository', unlistedSource(u)],
+			['Nextcloud', ncRange(u.platform)],
+			['Default branch', u.version ?? ''],
+			['Last pushed', u.pushed === null ? '' : date(u.pushed)],
+		]),
+		el('p', { class: 'hint' }, 'The App Store catalogue has no app of this id, and the server ships none. No release of its repository carries a tarball, so gh-stats builds the app from the tag it measures, or from the default branch where the repository has no tag: the tarball measured is a build of gh-stats, not one of the maintainer.'),
+		el('h3', {}, 'Tags'),
+		el('div', { class: 'scroll' }, appTags(u)))]
+}
+
 function factList(facts) {
 	return el('dl', { class: 'facts' }, ...facts.flatMap(([k, ...v]) => [el('dt', {}, k), el('dd', {}, ...v)]))
 }
@@ -1374,10 +1493,14 @@ function appLines(lines) {
 // What the App Store shows of the app, in the browser's language where the
 // app has it, the server releases that ship it, and below it the downloads
 // gh-stats sampled. A shipped app the App Store does not list has the page of
-// its server releases alone.
+// its server releases alone, an app outside both that of its tags.
 function appPage(id, lines) {
 	const d = query('SELECT * FROM app_details WHERE id = $id', { $id: id })[0]
 	const ships = shippedApps(id)
+	const unlisted = d || ships.length ? undefined : unlistedApps(id)[0]
+	if (unlisted) {
+		return unlistedPage(unlisted)
+	}
 	const shippedFact = shipped.has(id) ? [['Shipped', el('span', { title: SHIPPED_TEXT }, `since Nextcloud ${shipped.get(id)}`)]] : []
 	const shippedPart = ships.length ? [el('h3', {}, 'Shipped with Nextcloud'), el('div', { class: 'scroll' }, appShipped(ships))] : []
 	if (!d) {

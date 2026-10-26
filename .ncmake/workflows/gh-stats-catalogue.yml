@@ -31,6 +31,15 @@
 # nor one whose check a request removed, and while a measurement runs none is
 # sent, since its versions have no result yet.
 #
+# The same holds for the apps that are neither in the catalogue nor shipped by
+# the server and publish no release tarball, as the unlisted.json of the
+# catalogue lists them: each is sent with the version of its newest tag, read
+# from the first digit on, so gh-nc-appsdiag builds it from that tag, or, with
+# no tag, without a version, so it builds the default branch, when no complete
+# run names its repository, its directory below the root and that version, for
+# the default branch the version its info.xml declares. One whose tags carry no
+# digit is not sent. An older tag is measured on request only.
+#
 # The same holds for the apps the server ships, each as a server release ships
 # it: shipped.json names the repository and directory of every app in each
 # server archive gh-nc-shipped reads, and the app is sent with the newest
@@ -125,6 +134,8 @@ jobs:
         run: |
           gh release download "$CATALOGUE_TAG" -p shipped.json -D "$STATE" \
             || echo "::warning::No shipped apps yet, reading every archive"
+          gh release download "$CATALOGUE_TAG" -p unlisted.json -D "$STATE" \
+            || echo "::warning::No unlisted apps yet"
 
       - name: Read the settings
         run: |
@@ -209,7 +220,10 @@ jobs:
           export APPSTORE_APPDATA_FILE="$STATE/apps.json"
           # "[<host>/]<owner>/<repo> <version>" in lower case, as gh-nc-appslist
           # names a version and gh-nc-appsdiag is asked for it, and for a shipped
-          # app "-s <server release> [<host>/]<owner>/<repo>[:<directory>]".
+          # app "-s <server release> [<host>/]<owner>/<repo>[:<directory>]". A run
+          # of an app below the root is known under "[<host>/]<owner>/<repo>:<directory> <version>"
+          # as well, as an unlisted app is sent; a run without that key has "-"
+          # in its place, since read -a joins empty fields.
           {
             # Every result, whatever its status: gh-stats-measure.yml repeats a run that
             # says nothing about the app on its own. A run counts only while it
@@ -229,28 +243,31 @@ jobs:
             if [ -d "$DATA/apps" ]; then
               find "$DATA/apps" -name summary.json -exec jq -r --arg master "$master" '
                 select(.server != "master" or $master == "" or (.server_build // "") >= $master)
-                | [ (if .server then "-s " + .server + " " else "" end)
-                  + (if (.repo_host // "github.com") == "github.com" then "" else .repo_host + "/" end)
-                  + .owner + "/" + .repo
-                  + (if .server then (if .subdir then ":" + .subdir else "" end)
-                     else " " + (.requested_version // .version // "") end),
-                  (input_filename | rtrimstr("/summary.json")), (.files // [])[] ] | join("\t")' {} + \
+                | ((if (.repo_host // "github.com") == "github.com" then "" else .repo_host + "/" end)
+                   + .owner + "/" + .repo) as $repo
+                | (" " + (.requested_version // .version // "")) as $version
+                | [ (if .server then "-s " + .server + " " + $repo + (if .subdir then ":" + .subdir else "" end)
+                     else $repo + $version end),
+                    (if .server or (.subdir | not) then "-" else $repo + ":" + .subdir + $version end),
+                    (input_filename | rtrimstr("/summary.json")), (.files // [])[] ] | join("\t")' {} + \
                 | while IFS=$'\t' read -r -a run; do
-                    for file in "${run[@]:2}"; do
-                      if ! [ -e "${run[1]}/$file" ] && ! [ -e "${run[1]}/$file.gz" ]; then
-                        printf '%s\n' "${run[0]}" >> "$STATE/incomplete"
+                    keys=("${run[0]}")
+                    [ "${run[1]}" = - ] || keys+=("${run[1]}")
+                    for file in "${run[@]:3}"; do
+                      if ! [ -e "${run[2]}/$file" ] && ! [ -e "${run[2]}/$file.gz" ]; then
+                        printf '%s\n' "${keys[@]}" >> "$STATE/incomplete"
                         continue 2
                       fi
                     done
                     for stale in $STALE_FINDINGS; do
-                      report="${run[1]}/${stale%%:*}.json"
+                      report="${run[2]}/${stale%%:*}.json"
                       if { cat "$report" 2>/dev/null || gzip -dc "$report.gz" 2>/dev/null; } \
                         | jq -n -e --arg id "${stale#*:}" '[inputs | .findings[]?.id] | any(. == $id)' >/dev/null; then
-                        printf '%s\n' "${run[0]}" >> "$STATE/incomplete"
+                        printf '%s\n' "${keys[@]}" >> "$STATE/incomplete"
                         continue 2
                       fi
                     done
-                    printf '%s\n' "${run[0]}"
+                    printf '%s\n' "${keys[@]}"
                   done
             fi
             number="$(gh issue list --state open --label "$ISSUE_LABEL" --json number,title \
@@ -270,9 +287,18 @@ jobs:
             bin/gh-nc-appslist -L "$LINES" -o - | sed '/^#/d'
             [ ! -s "$STATE/shipped.json" ] || jq -r '.releases[] | select(.latest) | .ref as $ref
               | .apps[] | select(.enabled != "always") | "-s \($ref) \(.repo)" + (if (.path // "") != "" then ":" + .path else "" end)' "$STATE/shipped.json"
+            # "<key>\t<line>" where the line differs from the key it is known
+            # under: the default branch is measured as the version it declares.
+            [ ! -s "$STATE/unlisted.json" ] || jq -r '.apps[] | select(.tarball == false)
+              | ((if .host == "github.com" then "" else .host + "/" end) + .repo
+                 + (if .path != "" then ":" + .path else "" end)) as $app
+              | if (.tags // []) == [] then "\($app) \(.version // "")\t\($app)"
+                else first(.tags[] | sub("^[^0-9]*"; "") | select(. != "")) as $v | "\($app) \($v)" end' "$STATE/unlisted.json"
             cat "$STATE/incomplete"
           } \
-            | awk 'FILENAME == ARGV[1] { known[$0]; next } { k = tolower($0) } !(k in known) && !(k in sent) { sent[k]; print }' \
+            | awk -F '\t' 'FILENAME == ARGV[1] { known[$0]; next }
+                { k = tolower($1); line = NF > 1 ? $2 : $1 }
+                !(k in known) && !(k in sent) { sent[k]; print line }' \
               "$STATE/known" - \
             > "$STATE/unmeasured"
           echo "UNMEASURED=$(wc -l < "$STATE/unmeasured")" >> "$GITHUB_ENV"

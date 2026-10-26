@@ -32,8 +32,9 @@ the data branch:
     directory server-<release> of a shipped app measured as a server release
     ships it
   - with --keep, a version <file> names stays, whatever its line; <file> holds
-    one "[<host>/]<owner>/<repo> <version>" per line, as gh-nc-appslist writes
-    them, compared without case, # starts a comment
+    one "[<host>/]<owner>/<repo>[:<directory>] <version>" per line, as
+    gh-nc-appslist writes them, compared without case, # starts a comment; a
+    directory keeps the version of every app below the root of the repository
 
 The newest run of a version keeps every file it holds. An app is the directory
 that holds the version directories. One without a stable version keeps all its
@@ -95,8 +96,9 @@ done
 # the stable versions of an app newest first. The first of them is the newest
 # of the app, and each new major.minor below it starts the next line. With
 # --lines, a stable version beyond the lines is removed. A kept version still
-# counts for its line. The file of --keep names a repository; an app below the
-# repository root lies one directory deeper. A host has a dot and an owner on
+# counts for its line. The file of --keep names a repository, the directory
+# after a colon left out; an app below the repository root lies one directory
+# deeper, under its id, which the directory does not tell. A host has a dot and an owner on
 # GitHub none, so a repository on a host never looks like an app below the root
 # of one on GitHub.
 gone=()
@@ -110,7 +112,7 @@ gone=()
 			if (keep != "")
 				while ((getline l < keep) > 0) {
 					sub(/#.*/, "", l)
-					if (split(l, w, " ") == 2) kept[tolower(w[1]) " " w[2]]
+					if (split(l, w, " ") == 2) { sub(/:.*/, "", w[1]); kept[tolower(w[1]) " " w[2]] }
 				}
 		}
 		function stable(v) { return v ~ /^[0-9]+(\.[0-9]+)*$/ }

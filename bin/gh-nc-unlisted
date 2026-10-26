@@ -43,6 +43,8 @@ UNLISTED_JOBS="${UNLISTED_JOBS:-8}"
 # Of the releases of a repository with an app, how many are looked at for a
 # tarball.
 UNLISTED_RELEASES="${UNLISTED_RELEASES:-10}"
+# Of the tags of a repository with an app, how many are kept, the newest first.
+UNLISTED_TAGS="${UNLISTED_TAGS:-20}"
 # How often a request that times out or fails transiently is repeated.
 RETRIES=3
 
@@ -69,12 +71,12 @@ shipped by the server to <file>, as JSON:
     "apps": [{"id": "files_gcs", "name": "...", "version": "...",
               "nextcloud": {"min": "30", "max": "32"},
               "host": "github.com", "repo": "nextcloud/files_gcs", "path": "",
-              "tag": "v1.0.0", "tarball": true,
+              "tag": "v1.0.0", "tags": ["v1.0.0", "v0.9.1"], "tarball": true,
               "pushed": "2026-05-04T10:12:00Z"}, ...],
     "repos": {"nextcloud/files_gcs": {"host": "github.com",
               "repo": "nextcloud/files_gcs", "created": "...", "pushed": "...",
               "apps": [{"path": "", "id": "files_gcs", ...}],
-              "tag": "v1.0.0", "tarball": true}, ...}
+              "tag": "v1.0.0", "tags": ["v1.0.0", "v0.9.1"], "tarball": true}, ...}
   }
 
 The owners are every owner the catalogue (apps.json and appapi_apps.json)
@@ -87,12 +89,15 @@ UNLISTED_INCLUDE names, whatever it is; those UNLISTED_EXCLUDE names are left
 out. Of each, the tree of the default branch is fetched without its blobs and
 every tracked appinfo/info.xml, at the root or below it, that declares a
 <nextcloud> dependency makes an app. Of a repository with an app, the newest
-tag and whether one of its newest UNLISTED_RELEASES releases carries a
-.tar.gz or .tgz asset are kept as well.
+tag, the newest UNLISTED_TAGS tags, newest first, and whether one of its newest
+UNLISTED_RELEASES releases carries a .tar.gz or .tgz asset are kept as well.
+The tags are ordered by their name without a leading v, as sort -V orders it,
+with an -alpha, -beta or -rc version before its release.
 
 repos holds every repository read, with or without an app, under
 [<host>/]<owner>/<repo> in lower case. One whose pushed time is unchanged is
-taken over from the previous <file> unread. A run reads at most
+taken over from the previous <file> unread, unless it has an app and its entry
+no tags. A run reads at most
 UNLISTED_MAX_READS repositories, the most recently pushed first, and leaves the
 rest to the next run. The repositories of an owner whose listing fails are
 taken over, those of an owner that no longer exists are dropped.
@@ -124,6 +129,7 @@ Environment (or /etc/gh-stats/gh-stats.env):
   UNLISTED_MAX_READS     the repositories a run reads (default: 3000)
   UNLISTED_JOBS          the listings and reads that run at once (default: 8)
   UNLISTED_RELEASES      the releases looked at for a tarball (default: 10)
+  UNLISTED_TAGS          the tags kept of a repository with an app (default: 20)
 EOF
 }
 
@@ -139,6 +145,7 @@ done
 [[ "$UNLISTED_MAX_READS" =~ ^[0-9]+$ ]] || die "UNLISTED_MAX_READS is $UNLISTED_MAX_READS, it takes a number"
 [[ "$UNLISTED_JOBS" =~ ^[1-9][0-9]*$ ]] || die "UNLISTED_JOBS is $UNLISTED_JOBS, it takes a number above 0"
 [[ "$UNLISTED_RELEASES" =~ ^[1-9][0-9]*$ ]] || die "UNLISTED_RELEASES is $UNLISTED_RELEASES, it takes a number above 0"
+[[ "$UNLISTED_TAGS" =~ ^[1-9][0-9]*$ ]] || die "UNLISTED_TAGS is $UNLISTED_TAGS, it takes a number above 0"
 [ -r "$APPSTORE_CACHE" ] || die "no catalogue at $APPSTORE_CACHE"
 [ -r "$APPSTORE_APPAPI_CACHE" ] || die "no AppAPI catalogue at $APPSTORE_APPAPI_CACHE"
 
@@ -262,9 +269,10 @@ element() {
 }
 
 # read_repo <n> <key> <host> <owner/repo>: the apps of the repository into
-# read/<n>.json as {key, apps, tag, tarball}; nothing when it could not be read.
+# read/<n>.json as {key, apps, tag, tags, tarball}; nothing when it could not be
+# read.
 read_repo() {
-	local n="$1" key="$2" host="$3" slug="$4" dir="$tmp/clone/$1" f path nc tag tarball i
+	local n="$1" key="$2" host="$3" slug="$4" dir="$tmp/clone/$1" f path nc tags tarball i
 	local url="https://$host/$slug.git"
 	for ((i = 0; i <= RETRIES; i++)); do
 		rm -rf "$dir"
@@ -290,11 +298,12 @@ read_repo() {
 			 | select(.id != "")' >> "$dir.apps"
 	done < <("$GIT" -C "$dir" ls-tree -r -z --name-only HEAD | grep -z -E '(^|/)appinfo/info\.xml$' || true)
 	rm -rf "$dir"
-	tag="" tarball=false
+	tags="" tarball=false
 	if [ -s "$dir.apps" ]; then
-		tag="$("$GIT" ls-remote --tags --refs "$url" 2>/dev/null \
-			| awk '{ t = $2; sub(/^refs\/tags\//, "", t); k = t; sub(/^[vV]/, "", k); print k "\t" t }' \
-			| sort -V -k1,1 | tail -n 1 | cut -f2)" || tag=""
+		# awk instead of head reads to the end, so sort never meets a closed pipe.
+		tags="$("$GIT" ls-remote --tags --refs "$url" 2>/dev/null \
+			| awk '{ t = $2; sub(/^refs\/tags\//, "", t); k = t; sub(/^[vV]/, "", k); gsub(/-(alpha|beta|rc)/, "~&", k); print k "\t" t }' \
+			| sort -V -r -k1,1 | awk -F '\t' -v n="$UNLISTED_TAGS" 'NR <= n { print $2 }')" || tags=""
 		if [ "$host" = github.com ]; then
 			"$GH" api "repos/$slug/releases?per_page=$UNLISTED_RELEASES" --jq '.[].assets[].name' > "$dir.rel" 2>/dev/null || :
 		else
@@ -303,13 +312,14 @@ read_repo() {
 		fi
 		! grep -q -E '\.(tar\.gz|tgz)$' "$dir.rel" || tarball=true
 	fi
-	"$JQ" -n -c --arg key "$key" --slurpfile apps "$dir.apps" --arg tag "$tag" --argjson tarball "$tarball" \
-		'{key: $key, apps: $apps, tag: (if $tag == "" then null else $tag end), tarball: $tarball}' > "$tmp/read/$n.json"
+	"$JQ" -n -c --arg key "$key" --slurpfile apps "$dir.apps" --arg tags "$tags" --argjson tarball "$tarball" \
+		'($tags | split("\n") | map(select(. != ""))) as $t
+		 | {key: $key, apps: $apps, tag: $t[0], tags: $t, tarball: $tarball}' > "$tmp/read/$n.json"
 	rm -f "$dir.err" "$dir.apps" "$dir.xml" "$dir.rel"
 }
 
 # shellcheck disable=SC2090 # UTC_JQ is a jq definition, never split as words
-export tmp JQ GIT GH RETRIES UNLISTED_RELEASES UTC_JQ
+export tmp JQ GIT GH RETRIES UNLISTED_RELEASES UNLISTED_TAGS UTC_JQ
 export -f warn list element read_repo
 
 awk '{ printf "%d\0%s\0%s\0", NR, $1, $2 }' "$tmp/owners" \
@@ -342,7 +352,8 @@ awk '{ print NR "\t" tolower(($1 == "github.com" ? "" : $1 "/") $2) }' "$tmp/own
 # Every repository to consider: those of the listings that are no fork, no
 # mirror, not archived, not empty and not private, every included one that is
 # not empty and not private, none that UNLISTED_EXCLUDE names. Then the ones
-# whose pushed time the previous file holds are taken over, and of the rest
+# whose pushed time the previous file holds are taken over, unless they have
+# an app and no tags, and of the rest
 # the most recently pushed UNLISTED_MAX_READS are read.
 find "$tmp/list" -name 'i*.json' -exec cat {} + > "$tmp/included.json"
 find "$tmp/list" -name '[0-9]*.json' -exec cat {} + > "$tmp/listed.json"
@@ -352,7 +363,9 @@ find "$tmp/list" -name '[0-9]*.json' -exec cat {} + > "$tmp/listed.json"
 	| map(select(.key as $k | any($excluded[]; . as $x | $k == $x or ($k | startswith($x + "/"))) | not))
 	| unique_by(.key) | .[]' > "$tmp/repos"
 "$JQ" -r --slurpfile prev "$prev" '
-	select(($prev[0].repos[.key].pushed // null) != .pushed) | [.pushed, .key, .host, .repo] | @tsv' "$tmp/repos" \
+	$prev[0].repos[.key] as $o
+	| select(($o.pushed // null) != .pushed or (($o.apps // []) != [] and ($o | has("tags") | not)))
+	| [.pushed, .key, .host, .repo] | @tsv' "$tmp/repos" \
 	| sort -r | cut -f2- > "$tmp/stale"
 head -n "$UNLISTED_MAX_READS" "$tmp/stale" | awk -F '\t' '{ printf "%d\0%s\0%s\0%s\0", NR, $1, $2, $3 }' \
 	| xargs -0 -r -n 4 -P "$UNLISTED_JOBS" bash -c 'read_repo "$@"' _
@@ -377,7 +390,7 @@ left="$(($(wc -l < "$tmp/stale") - UNLISTED_MAX_READS))"
 	   + [$old | to_entries[] | select(.key as $k | any($f[]; . as $o | $k | startswith($o + "/")))]
 	   | unique_by(.key) | from_entries) as $all
 	| [$all[] | . as $r | .apps[] | {id, name, version, nextcloud, host: $r.host, repo: $r.repo, path,
-	                                tag: $r.tag, tarball: $r.tarball, pushed: $r.pushed, created: $r.created}
+	                                tag: $r.tag, tags: $r.tags, tarball: $r.tarball, pushed: $r.pushed, created: $r.created}
 	   | select(.id | ascii_downcase | IN($known[], $excluded[]) | not)]
 	| group_by(.id | ascii_downcase) | map(min_by(.created, .host, .repo, .path) | del(.created)) | sort_by(.id | ascii_downcase)
 	| {scanned: $scanned, apps: ., repos: $all}' "$APPSTORE_CACHE" "$APPSTORE_APPAPI_CACHE" > "$UNLISTED_FILE.new"
