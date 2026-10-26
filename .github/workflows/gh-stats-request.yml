@@ -21,7 +21,9 @@
 # Closing the issue rejects it.
 #
 # The title is read as the event carries it, reaches the script through env
-# only and must match a strict pattern. The version must be one the catalogue
+# only and must match a strict pattern. An issue whose title does not, such as
+# a work issue that starts with one of these words, is left as it is: no label,
+# no comment, no close. The version must be one the catalogue
 # ships as a stable release, as gh-nc-appslist lists it, which also names the
 # repository that is measured.
 #
@@ -86,19 +88,44 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     outputs:
+      kind: ${{ steps.title.outputs.kind }}
+      app: ${{ steps.title.outputs.app }}
+      version: ${{ steps.title.outputs.version }}
+      host: ${{ steps.title.outputs.host }}
+      owner: ${{ steps.title.outputs.owner }}
+      repo: ${{ steps.title.outputs.repo }}
       allowed: ${{ steps.sender.outputs.allowed }}
     steps:
+      # The expressions of if: have no regular expressions, so the condition of
+      # the job only narrows the titles down and the exact form is matched here,
+      # before anything is done to the issue.
+      - name: Match the title
+        id: title
+        env:
+          TITLE: ${{ github.event.issue.title }}
+        run: |
+          if [[ "$TITLE" =~ ^Measure\ ([a-z0-9_]+)\ ([0-9]+(\.[0-9]+)*)$ ]]; then
+            printf '%s\n' kind=measure "app=${BASH_REMATCH[1]}" "version=${BASH_REMATCH[2]}" >> "$GITHUB_OUTPUT"
+          elif [[ "$TITLE" =~ ^Remove\ the\ check\ of\ ([a-z0-9_]+)\ ([0-9]+(\.[0-9]+)*)$ ]]; then
+            printf '%s\n' kind=remove "app=${BASH_REMATCH[1]}" "version=${BASH_REMATCH[2]}" >> "$GITHUB_OUTPUT"
+          elif [[ "$TITLE" =~ ^Remove\ ([a-z0-9-]+(\.[a-z0-9-]+)+)/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)\ from\ the\ database$ ]]; then
+            printf '%s\n' kind=database "host=${BASH_REMATCH[1]}" "owner=${BASH_REMATCH[3]}" "repo=${BASH_REMATCH[4]}" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::The title has the form of no request, the issue stays as it is"
+          fi
+
       # A user who is no collaborator may get 404 instead of none.
       - name: Check the permission of the sender
         id: sender
+        if: steps.title.outputs.kind != ''
         env:
           SENDER: ${{ github.event.sender.login }}
           ACTION: ${{ github.event.action }}
-          TITLE: ${{ github.event.issue.title }}
+          KIND: ${{ steps.title.outputs.kind }}
         run: |
           if [ "$ACTION" = opened ]; then
             label="$ISSUE_LABEL"
-            [[ "$TITLE" != *' from the database' ]] || label="$SAMPLER_LABEL"
+            [ "$KIND" != database ] || label="$SAMPLER_LABEL"
             gh issue edit "$NUMBER" --add-label "$label"
           fi
           permission="$(gh api "repos/$GH_REPO/collaborators/$SENDER/permission" --jq .permission 2>/dev/null || echo none)"
@@ -117,34 +144,19 @@ jobs:
   request:
     name: request
     needs: permission
-    if: needs.permission.outputs.allowed == '1' && !endsWith(github.event.issue.title, ' from the database')
+    if: needs.permission.outputs.allowed == '1' && needs.permission.outputs.kind != 'database'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
       GH_TOKEN: ${{ github.token }}
+      KIND: ${{ needs.permission.outputs.kind }}
+      APP: ${{ needs.permission.outputs.app }}
+      VERSION: ${{ needs.permission.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
-      - name: Read the request
-        env:
-          TITLE: ${{ github.event.issue.title }}
-        run: |
-          if [[ "$TITLE" =~ ^Measure\ ([a-z0-9_]+)\ ([0-9]+(\.[0-9]+)*)$ ]]; then
-            kind=measure
-          elif [[ "$TITLE" =~ ^Remove\ the\ check\ of\ ([a-z0-9_]+)\ ([0-9]+(\.[0-9]+)*)$ ]]; then
-            kind=remove
-          else
-            gh issue close "$NUMBER" --reason "not planned" --comment "The title names no app id and stable version, as \`Measure <app-id> <version>\` or \`Remove the check of <app-id> <version>\`."
-            exit 1
-          fi
-          {
-            echo "KIND=$kind"
-            echo "APP=${BASH_REMATCH[1]}"
-            echo "VERSION=${BASH_REMATCH[2]}"
-          } >> "$GITHUB_ENV"
 
       - name: Find the version in the catalogue
         env:
@@ -263,7 +275,7 @@ jobs:
   remove:
     name: remove
     needs: permission
-    if: needs.permission.outputs.allowed == '1' && endsWith(github.event.issue.title, ' from the database')
+    if: needs.permission.outputs.allowed == '1' && needs.permission.outputs.kind == 'database'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     concurrency:
@@ -271,21 +283,10 @@ jobs:
       cancel-in-progress: false
     env:
       GH_TOKEN: ${{ github.token }}
+      HOST: ${{ needs.permission.outputs.host }}
+      OWNER: ${{ needs.permission.outputs.owner }}
+      REPO: ${{ needs.permission.outputs.repo }}
     steps:
-      - name: Read the request
-        env:
-          TITLE: ${{ github.event.issue.title }}
-        run: |
-          if [[ ! "$TITLE" =~ ^Remove\ ([a-z0-9-]+(\.[a-z0-9-]+)+)/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)\ from\ the\ database$ ]]; then
-            gh issue close "$NUMBER" --reason "not planned" --comment "The title names no repository, as \`Remove <host>/<owner>/<repo> from the database\`."
-            exit 1
-          fi
-          {
-            echo "HOST=${BASH_REMATCH[1]}"
-            echo "OWNER=${BASH_REMATCH[3]}"
-            echo "REPO=${BASH_REMATCH[4]}"
-          } >> "$GITHUB_ENV"
-
       - name: Restore the database
         run: |
           state="$RUNNER_TEMP/remove"
