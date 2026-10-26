@@ -1,0 +1,442 @@
+#!/usr/bin/env -S LC_CTYPE=C.UTF-8 LC_MESSAGES=C bash
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# gh-stats-db - restore and store the gh-release-sampler database that the
+# workflows keep as an asset of a release of this repository. A run restores it
+# into a file, works on that file, and stores it only when it is intact and has
+# lost nothing the step did not remove on purpose.
+# A store writes the database to the backup release first and the main release
+# second, so at no point does one release hold the only copy. In the main
+# release it is uploaded under a second name, checked by downloading it back,
+# and swapped in by renames: the old asset becomes .prev before the new one
+# takes the name, and .prev is deleted only after that. Each call that changes a
+# release is followed by a read of the release, so a call that failed after it
+# took effect is not repeated, and one that did not is.
+# Restore takes the main asset, else .next, else .prev, else the newest backup,
+# and only one that decompresses and passes the integrity check.
+# The tool takes no lock; a store belongs under the concurrency group of the
+# sampler.
+
+# == Config ==
+# Optional site config shared with gh-stats and gh-release-sampler. If
+# /etc/gh-stats/gh-stats.env exists it is sourced here, so its assignments feed
+# the ${VAR:-default} reads below. Precedence is built-in default <
+# gh-stats.env < environment. Point GH_STATS_ENV at another path to use a
+# different file.
+GH_STATS_ENV="${GH_STATS_ENV:-/etc/gh-stats/gh-stats.env}"
+# shellcheck disable=SC1090 # the site config is a run-time path
+if [ -r "$GH_STATS_ENV" ]; then
+	_env_snapshot="$(export -p)"
+	set -a; . "$GH_STATS_ENV"; set +a
+	eval "$_env_snapshot"
+	unset _env_snapshot
+fi
+
+TAG="${SAMPLER_DB_TAG:-sampler-db}"
+ASSET="${SAMPLER_DB_ASSET:-downloads.sqlite.zst}"
+BACKUP_TAG="${SAMPLER_DB_BACKUP_TAG:-sampler-db-backup}"
+# The newest backups that always stay, and the days for which the newest backup
+# of each UTC day stays besides them.
+BACKUPS="${SAMPLER_DB_BACKUPS:-48}"
+BACKUP_DAYS="${SAMPLER_DB_BACKUP_DAYS:-30}"
+# How often a call to GitHub is tried, and the seconds after which one is
+# given up, so a call that hangs ends the run instead of the job timeout.
+ATTEMPTS="${SAMPLER_DB_ATTEMPTS:-5}"
+CALL_TIMEOUT="${SAMPLER_DB_CALL_TIMEOUT:-300}"
+GH="${GH_BIN:-gh}"
+SQLITE="${SQLITE_BIN:-/usr/bin/sqlite3}"
+ZSTD="${ZSTD_BIN:-zstd}"
+
+set -euo pipefail
+
+usage() {
+	cat <<'EOF'
+Usage: gh-stats-db restore <file>
+       gh-stats-db store [-t <table>]... [-r <table>]... <file>
+
+restore writes the database to <file>. It takes the first of these that
+decompresses and passes PRAGMA integrity_check: the asset SAMPLER_DB_ASSET of
+the release SAMPLER_DB_TAG, the same with .next, then with .prev, then the
+backups in SAMPLER_DB_BACKUP_TAG, newest first. Every one but the first is taken
+with a warning; with none left it fails. It changes no release, so it needs only
+read access. Beside <file> it keeps <file>.restore/, which store needs.
+
+store writes <file> back. Nothing is written unless the database passes the
+integrity check, decompresses from its upload to the same bytes, its newest run
+is not older than that of the restored copy, and no table holds fewer rows than
+the restored copy. A table the step thins (-t) keeps every series it had
+instead, one the step removes rows from (-r) is not compared.
+The database is written as a backup first, then to the main release, each
+checked by downloading it back. Then the backups are thinned to the newest
+SAMPLER_DB_BACKUPS and the newest of each UTC day for SAMPLER_DB_BACKUP_DAYS
+days.
+
+  -t, --thinned <table>  the step thins <table>: it may hold fewer rows, but no
+                         fewer series
+  -r, --removed <table>  the step removes rows from <table> on purpose
+  -h, --help             this text
+
+The tables are samples, releases, repo_stats, runs, etags and repos.
+
+Environment (or /etc/gh-stats/gh-stats.env):
+  GH_REPO                  the repository that holds the releases (required)
+  SAMPLER_DB_TAG           the release of the database (default: sampler-db)
+  SAMPLER_DB_ASSET         its asset (default: downloads.sqlite.zst)
+  SAMPLER_DB_BACKUP_TAG    the release of the backups (default: sampler-db-backup)
+  SAMPLER_DB_BACKUPS       newest backups that stay (default: 48)
+  SAMPLER_DB_BACKUP_DAYS   days with one backup each besides them (default: 30)
+  SAMPLER_DB_ATTEMPTS      tries of a call to GitHub (default: 5)
+  SAMPLER_DB_CALL_TIMEOUT  seconds before a call is given up (default: 300)
+  GH_BIN                   the GitHub CLI (default: gh)
+  SQLITE_BIN               sqlite3 (default: /usr/bin/sqlite3)
+  ZSTD_BIN                 zstd (default: zstd)
+EOF
+}
+
+# On a runner, warnings and errors become annotations of the run.
+die() {
+	if [ -n "${GITHUB_ACTIONS:-}" ]; then echo "::error::$*"; else echo "ERROR: $*" >&2; fi
+	exit 1
+}
+warn() {
+	if [ -n "${GITHUB_ACTIONS:-}" ]; then echo "::warning::$*"; else echo "WARNING: $*" >&2; fi
+}
+
+TABLES="samples releases repo_stats runs etags repos"
+
+# A backup is named by the time it was written, downloads-20261026T031500Z.sqlite.zst
+# for downloads.sqlite.zst, so the names sort by age.
+BACKUP_PREFIX="${ASSET%%.*}-"
+BACKUP_SUFFIX=".${ASSET#*.}"
+backup_name() { echo "$BACKUP_PREFIX$1$BACKUP_SUFFIX"; }
+backup_stamp() {
+	local s="${1#"$BACKUP_PREFIX"}"
+	s="${s%"$BACKUP_SUFFIX"}"
+	[[ "$s" =~ ^[0-9]{8}T[0-9]{6}Z$ ]] && [ "$1" = "$(backup_name "$s")" ] && echo "$s"
+}
+
+# == GitHub ==
+# No call reads the input, which in a loop is the list the loop reads.
+call() { timeout "$CALL_TIMEOUT" "$GH" "$@" </dev/null; }
+
+# Repeats a call that only reads, writing its output to <out> only once it
+# succeeded.
+read_retry() {
+	local out="$1" i
+	shift
+	for ((i = 1; ; i++)); do
+		call "$@" >"$out.part" && mv "$out.part" "$out" && return 0
+		[ "$i" -lt "$ATTEMPTS" ] || { rm -f "$out.part"; return 1; }
+		sleep $((i * 10))
+	done
+}
+
+# Prints the id of the release <tag>, nothing when there is none; fails when
+# the releases cannot be read.
+release_id() {
+	read_retry "$work/releases" api --paginate "repos/$GH_REPO/releases?per_page=100" \
+		--jq ".[] | select(.tag_name == \"$1\") | .id" || return 1
+	head -n 1 "$work/releases"
+}
+
+# Prints id, name, size and state of each asset of the release <tag>, separated
+# by tabs. Fails with 2 when the release does not exist, with 1 when it cannot
+# be read.
+assets() {
+	local tag="$1" rel
+	if [ -s "$work/release.$tag" ]; then
+		rel="$(<"$work/release.$tag")"
+	else
+		rel="$(release_id "$tag")" || return 1
+		[ -n "$rel" ] || return 2
+		echo "$rel" >"$work/release.$tag"
+	fi
+	read_retry "$work/assets" api --paginate "repos/$GH_REPO/releases/$rel/assets?per_page=100" \
+		--jq '.[] | [.id, .name, .size, .state] | @tsv' || return 1
+	cat "$work/assets"
+}
+
+# The id of the asset <name> in a listing of assets, in whatever state.
+id_of() { awk -F '\t' -v n="$1" '$2 == n { print $1 }' <<<"$2"; }
+
+fetch() { call api -H 'Accept: application/octet-stream' "repos/$GH_REPO/releases/assets/$1" >"$2"; }
+
+# Uploads <file> to the release <tag> under its own name and sets PUT_ID to
+# the id of the asset once it is complete and downloads to the same bytes.
+put() {
+	local tag="$1" file="$2" name="${2##*/}" size listing id i
+	PUT_ID=''
+	size="$(stat -c %s "$file")"
+	for ((i = 1; i <= ATTEMPTS; i++)); do
+		call release upload "$tag" "$file" --clobber \
+			|| warn "uploading $name to $tag failed, checking the release"
+		if listing="$(assets "$tag")"; then
+			id="$(awk -F '\t' -v n="$name" -v s="$size" '$2 == n && $3 == s && $4 == "uploaded" { print $1 }' <<<"$listing")"
+			if [ -n "$id" ] && fetch "$id" "$work/check" && cmp -s "$file" "$work/check"; then
+				rm -f "$work/check"
+				PUT_ID="$id"
+				return 0
+			fi
+		fi
+		warn "$name is not complete in $tag after attempt $i of $ATTEMPTS"
+		[ "$i" -eq "$ATTEMPTS" ] || sleep $((i * 10))
+	done
+	return 1
+}
+
+# == Database ==
+# Rows and series of each table, and the newest run. A series is what the
+# pruning keeps one row of at least: a counter of samples, a repository of
+# repo_stats, and for runs whether there is one at all.
+counts() {
+	"$SQLITE" -bail -separator ' ' "$1" <<'SQL'
+SELECT 'samples', count(*), (SELECT count(*) FROM (SELECT DISTINCT host, owner, repo, tag, asset FROM samples)) FROM samples
+UNION ALL SELECT 'releases', count(*), count(*) FROM releases
+UNION ALL SELECT 'repo_stats', count(*), (SELECT count(*) FROM (SELECT DISTINCT host, owner, repo FROM repo_stats)) FROM repo_stats
+UNION ALL SELECT 'runs', count(*), min(count(*), 1) FROM runs
+UNION ALL SELECT 'etags', count(*), count(*) FROM etags
+UNION ALL SELECT 'repos', count(*), count(*) FROM repos
+UNION ALL SELECT 'newest', coalesce(max(ts), 0), 0 FROM runs;
+SQL
+}
+
+intact() { [ "$("$SQLITE" -bail "$1" 'PRAGMA integrity_check' 2>/dev/null)" = ok ]; }
+
+newest_of() { awk '$1 == "newest" { print $2 }' "$1"; }
+
+# == restore ==
+restore() {
+	local listing rc=0 tag id name size state
+	: >"$work/candidates"
+	for tag in "$TAG" "$BACKUP_TAG"; do
+		listing="$(assets "$tag")" || rc=$?
+		if [ "$rc" -eq 2 ]; then
+			warn "there is no release $tag"
+		elif [ "$rc" -ne 0 ]; then
+			warn "cannot read the release $tag"
+		elif [ "$tag" = "$TAG" ]; then
+			for name in "$ASSET" "$ASSET.next" "$ASSET.prev"; do
+				awk -F '\t' -v t="$tag" -v n="$name" '$2 == n && $4 == "uploaded" { print t "\t" $1 "\t" $2 }' \
+					<<<"$listing" >>"$work/candidates"
+			done
+			[ -n "$(id_of "$ASSET" "$listing")" ] || warn "there is no $ASSET in the release $tag"
+		else
+			while IFS=$'\t' read -r id name size state; do
+				[ "$state" = uploaded ] && backup_stamp "$name" >/dev/null && printf '%s\t%s\t%s\n' "$tag" "$id" "$name"
+			done <<<"$listing" | sort -t $'\t' -k 3,3r >>"$work/candidates"
+		fi
+		rc=0
+	done
+
+	while IFS=$'\t' read -r tag id name; do
+		if ! fetch "$id" "$work/restored.zst"; then
+			warn "cannot download $name from $tag"
+		elif ! "$ZSTD" -d -q -f "$work/restored.zst" -o "$file"; then
+			warn "$name in $tag does not decompress"
+		elif ! intact "$file"; then
+			warn "$name in $tag fails the integrity check"
+		elif ! counts "$file" >"$work/restored"; then
+			warn "$name in $tag lacks a table"
+		else
+			printf '%s\t%s\t%s\n' "$tag" "$id" "$name" >"$work/source"
+			[ "$tag" = "$TAG" ] && [ "$name" = "$ASSET" ] \
+				|| warn "restored $name from the release $tag instead of $ASSET from $TAG"
+			echo "restored $name from $tag, newest run $(date -u -d "@$(newest_of "$work/restored")" '+%F %H:%M') UTC"
+			return 0
+		fi
+		rm -f "$file"
+	done <"$work/candidates"
+	die "no intact database in the releases $TAG and $BACKUP_TAG"
+}
+
+# == store ==
+check() {
+	local t rows series a_rows a_series
+	local -A after
+	while read -r t rows series; do after[$t]="$rows $series"; done <"$work/stored"
+	while read -r t rows series; do
+		read -r a_rows a_series <<<"${after[$t]:-}"
+		[ -n "$a_rows" ] || die "$t is missing from $file"
+		if [ "$t" = newest ]; then
+			[ "$a_rows" -ge "$rows" ] || die "the newest run of $file is older than that of the restored copy"
+		elif [[ " $removed " == *" $t "* ]]; then
+			continue
+		elif [[ " $thinned " == *" $t "* ]]; then
+			[ "$a_series" -ge "$series" ] || die "$t holds $a_series series, the restored copy $series"
+		else
+			[ "$a_rows" -ge "$rows" ] || die "$t holds $a_rows rows, the restored copy $rows"
+		fi
+	done <"$work/restored"
+}
+
+# Creates the backup release when there is none yet.
+backup_release() {
+	local rel i
+	for ((i = 0; ; i++)); do
+		if rel="$(release_id "$BACKUP_TAG")"; then
+			[ -z "$rel" ] || return 0
+			[ "$i" -lt "$ATTEMPTS" ] || return 1
+			call release create "$BACKUP_TAG" --prerelease --title "Sampler database backups" \
+				--notes "Backups of the sampler database, written by each write of the release $TAG." \
+				|| warn "creating the release $BACKUP_TAG failed, checking the releases"
+		else
+			[ "$i" -lt "$ATTEMPTS" ] || return 1
+		fi
+		sleep $((i * 10 + 10))
+	done
+}
+
+# A run that restored .next or .prev because the main asset was gone gives it
+# the name back before anything else is uploaded.
+promote() {
+	local tag id name listing i
+	IFS=$'\t' read -r tag id name <"$work/source"
+	[ "$tag" = "$TAG" ] && [ "$name" != "$ASSET" ] || return 0
+	for ((i = 0; ; i++)); do
+		if listing="$(assets "$TAG")"; then
+			[ -z "$(id_of "$ASSET" "$listing")" ] || return 0
+			[ "$(id_of "$name" "$listing")" = "$id" ] || return 0
+			[ "$i" -lt "$ATTEMPTS" ] || break
+			warn "renaming $name back to $ASSET"
+			call api -X PATCH "repos/$GH_REPO/releases/assets/$id" -f name="$ASSET" --silent \
+				|| warn "renaming $name failed, checking the release"
+		else
+			[ "$i" -lt "$ATTEMPTS" ] || break
+		fi
+		sleep $((i * 10 + 10))
+	done
+	warn "$ASSET is still missing from $TAG"
+}
+
+# Makes the asset <id>, uploaded as .next, the main asset. Each turn reads the
+# release and takes the one step its state calls for.
+swap() {
+	local new="$1" listing main next prev step i
+	for ((i = 1; i <= 3 * ATTEMPTS; i++)); do
+		if listing="$(assets "$TAG")"; then
+			main="$(id_of "$ASSET" "$listing")"
+			next="$(id_of "$ASSET.next" "$listing")"
+			prev="$(id_of "$ASSET.prev" "$listing")"
+			if [ "$main" = "$new" ]; then
+				[ -n "$prev" ] || return 0
+				step=(api -X DELETE "repos/$GH_REPO/releases/assets/$prev")
+			elif [ "$next" != "$new" ]; then
+				die "$ASSET.next in $TAG is no longer the one this run uploaded"
+			elif [ -n "$main" ] && [ -n "$prev" ]; then
+				# Left by an earlier run; the main asset and the new one are both complete.
+				step=(api -X DELETE "repos/$GH_REPO/releases/assets/$prev")
+			elif [ -n "$main" ]; then
+				step=(api -X PATCH "repos/$GH_REPO/releases/assets/$main" -f name="$ASSET.prev" --silent)
+			else
+				step=(api -X PATCH "repos/$GH_REPO/releases/assets/$new" -f name="$ASSET" --silent)
+			fi
+			call "${step[@]}" >/dev/null || {
+				warn "${step[2]} of asset ${step[3]##*/} failed, checking the release"
+				sleep $((i * 10))
+			}
+		else
+			sleep $((i * 10))
+		fi
+	done
+	die "the swap in $TAG did not finish; the database is complete as $ASSET.next and in $BACKUP_TAG"
+}
+
+# Keeps the newest BACKUPS backups and the newest of each UTC day for
+# BACKUP_DAYS days. Runs only after a new backup was written and checked.
+rotate() {
+	local listing cutoff kept=0 last='' id name size state stamp day
+	listing="$(assets "$BACKUP_TAG")" || { warn "cannot read $BACKUP_TAG, no backup deleted"; return 0; }
+	cutoff="$(date -u -d "-$BACKUP_DAYS days" +%Y%m%d)"
+	while IFS=$'\t' read -r id name size state; do
+		stamp="$(backup_stamp "$name")" || continue
+		day="${stamp%%T*}"
+		if [ "$state" = uploaded ] && { [ "$kept" -lt "$BACKUPS" ] || { [ "$day" -ge "$cutoff" ] && [ "$day" != "$last" ]; }; }; then
+			kept=$((kept + 1))
+			last="$day"
+			continue
+		fi
+		call api -X DELETE "repos/$GH_REPO/releases/assets/$id" >/dev/null || warn "cannot delete the backup $name"
+	done < <(sort -t $'\t' -k 2,2r <<<"$listing")
+}
+
+# Whether a listing of assets holds a backup.
+has_backup() {
+	local name
+	while IFS=$'\t' read -r _ name _ _; do
+		backup_stamp "$name" >/dev/null && return 0
+	done <<<"$1"
+	return 1
+}
+
+store() {
+	local stamp backup listing first
+	[ -s "$work/restored" ] && [ -s "$work/source" ] || die "$file was not restored by gh-stats-db restore"
+	intact "$file" || die "$file fails the integrity check, nothing written"
+	counts "$file" >"$work/stored" || die "$file lacks a table, nothing written"
+	check
+
+	stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+	backup="$work/$(backup_name "$stamp")"
+	"$ZSTD" -19 -T0 -q -f "$file" -o "$backup"
+	"$ZSTD" -d -q -c "$backup" | cmp -s - "$file" || die "the compressed $file does not decompress to the same database, nothing written"
+
+	backup_release || die "cannot create the release $BACKUP_TAG, nothing written"
+	# The first backup is preceded by the copy it replaces, which no backup
+	# holds yet.
+	listing="$(assets "$BACKUP_TAG")" || die "cannot read the release $BACKUP_TAG, nothing written"
+	if ! has_backup "$listing"; then
+		first="$work/$(backup_name "$(date -u -d "@$(newest_of "$work/restored")" +%Y%m%dT%H%M%SZ)")"
+		cp "$work/restored.zst" "$first"
+		put "$BACKUP_TAG" "$first" || die "cannot back up the restored copy to $BACKUP_TAG, nothing written"
+	fi
+	put "$BACKUP_TAG" "$backup" || die "cannot write the backup to $BACKUP_TAG, $TAG unchanged"
+	echo "backed up as ${backup##*/} in $BACKUP_TAG"
+
+	promote
+	cp "$backup" "$work/$ASSET.next"
+	put "$TAG" "$work/$ASSET.next" || die "cannot upload $ASSET.next to $TAG; the database is in $BACKUP_TAG"
+	swap "$PUT_ID"
+	echo "stored as $ASSET in $TAG"
+	rotate
+}
+
+cmd="${1:-}"
+[ $# -eq 0 ] || shift
+thinned='' removed='' file=''
+while [ $# -gt 0 ]; do
+	case "$1" in
+		-h|--help) usage; exit 0 ;;
+		-t|--thinned|-r|--removed)
+			[ $# -ge 2 ] || die "$1 needs a table"
+			[[ " $TABLES " == *" $2 "* ]] || die "no table $2"
+			[ "$cmd" = store ] || die "$1 only applies to store"
+			case "$1" in -t|--thinned) thinned+=" $2" ;; *) removed+=" $2" ;; esac
+			shift ;;
+		-*) echo "unknown argument: $1" >&2; exit 1 ;;
+		*) [ -z "$file" ] || die "one file only"; file="$1" ;;
+	esac
+	shift
+done
+
+case "$cmd" in
+	-h|--help) usage; exit 0 ;;
+	restore|store) ;;
+	*) usage >&2; exit 1 ;;
+esac
+[ -n "$file" ] || die "$cmd needs a file"
+[ -n "${GH_REPO:-}" ] || die "GH_REPO is not set"
+for v in BACKUPS BACKUP_DAYS ATTEMPTS CALL_TIMEOUT; do
+	[[ "${!v}" =~ ^[0-9]+$ ]] || die "$v is not a number: ${!v}"
+done
+[ "$BACKUPS" -ge 1 ] || die "SAMPLER_DB_BACKUPS must keep at least the newest backup"
+[ "$ATTEMPTS" -ge 1 ] || die "SAMPLER_DB_ATTEMPTS must be at least 1"
+work="$file.restore"
+if [ "$cmd" = restore ]; then
+	rm -rf "$work"
+	mkdir -p "$work"
+	restore
+else
+	[ -f "$file" ] || die "no database at $file"
+	store
+fi

@@ -15,9 +15,13 @@
 #               the versions of the tools the last run sampled with, which
 #               the site lists under "Built with"
 #
-# The database is never started empty: without its asset the run stops, since a
-# fresh database would replace the whole history. The first asset is seeded
-# once from an existing database with gh-stats-prune -o.
+# bin/gh-stats-db restores and stores the database, here and in
+# gh-stats-request.yml and gh-stats-site.yml. It stores only an intact database
+# that has lost nothing the run did not thin, writes it to the release
+# sampler-db-backup before sampler-db, and keeps generations of backups there.
+# The database is never started empty: without an intact copy in either release
+# the run stops, since a fresh database would replace the whole history. The
+# first asset is seeded once from an existing database with gh-stats-prune -o.
 #
 # The sampler runs with SAMPLER_TOKEN, a personal access token without scopes:
 # GITHUB_TOKEN is limited to 1,000 requests per hour and repository, which does
@@ -56,8 +60,8 @@ concurrency:
 env:
   GH_REPO: ${{ github.repository }}
   CATALOGUE_TAG: catalogue
-  DB_TAG: sampler-db
-  DB_ASSET: downloads.sqlite.zst
+  SAMPLER_DB_TAG: sampler-db
+  SAMPLER_DB_ASSET: downloads.sqlite.zst
   # Hand-curated targets besides the App Store ones, separated by spaces: owners
   # or [host/]owner/repo slugs, as in targets.json.
   SAMPLER_TARGETS: ernolf/NcDavTray
@@ -137,13 +141,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if ! gh release download "$DB_TAG" -p "$DB_ASSET" -D "$STATE"; then
-            echo "::error::No $DB_ASSET in the release $DB_TAG; seed it from an existing database first"
-            exit 1
-          fi
-          zstd -d -q "$STATE/$DB_ASSET" -o "$GH_STATS_DIR/downloads.sqlite"
-          rm -f "$STATE/$DB_ASSET"
-          gh release download "$DB_TAG" -p tools.json -O "$STATE/tools.json.before" || true
+          bin/gh-stats-db restore "$GH_STATS_DIR/downloads.sqlite"
+          gh release download "$SAMPLER_DB_TAG" -p tools.json -O "$STATE/tools.json.before" || true
 
       - name: Sample
         env:
@@ -164,17 +163,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           bin/gh-stats-prune --in-place
-          next="$DB_ASSET.next"
-          zstd -19 -T0 -q "$GH_STATS_DIR/downloads.sqlite" -o "$STATE/$next"
-          # Upload under a second name and swap afterwards: replacing the asset
-          # in place would delete the only copy before the new one is complete.
-          gh release upload "$DB_TAG" "$STATE/$next" --clobber
-          assets="$(gh api "repos/$GH_REPO/releases/tags/$DB_TAG" --jq '.assets[] | "\(.id) \(.name)"')"
-          old="$(awk -v n="$DB_ASSET" '$2 == n { print $1 }' <<<"$assets")"
-          new="$(awk -v n="$next" '$2 == n { print $1 }' <<<"$assets")"
-          test -n "$new"
-          test -z "$old" || gh api -X DELETE "repos/$GH_REPO/releases/assets/$old"
-          gh api -X PATCH "repos/$GH_REPO/releases/assets/$new" -f name="$DB_ASSET" --silent
+          bin/gh-stats-db store -t samples -t repo_stats -t runs "$GH_STATS_DIR/downloads.sqlite"
 
       # Uploaded only when a version changed. The OpenSSL is the one curl is
       # linked against.
@@ -194,7 +183,7 @@ jobs:
             '{"GitHub CLI": $gh, curl: $curl, OpenSSL: $openssl, jq: $jq, sqlite3: $sqlite3, zstd: $zstd, git: $git}
              | with_entries(select(.value != ""))' > "$STATE/tools.json"
           cmp -s "$STATE/tools.json" "$STATE/tools.json.before" \
-            || gh release upload "$DB_TAG" "$STATE/tools.json" --clobber
+            || gh release upload "$SAMPLER_DB_TAG" "$STATE/tools.json" --clobber
 
       # Of the events GITHUB_TOKEN causes, only a dispatch starts another workflow.
       - name: Rebuild the site

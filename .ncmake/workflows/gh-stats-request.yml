@@ -75,8 +75,8 @@ env:
   ISSUE_LABEL: appsdiag
   SAMPLER_LABEL: sampler
   APPROVED_LABEL: approved
-  DB_TAG: sampler-db
-  DB_ASSET: downloads.sqlite.zst
+  SAMPLER_DB_TAG: sampler-db
+  SAMPLER_DB_ASSET: downloads.sqlite.zst
   PINNED: requests/pinned.txt
   REMOVED: requests/removed.txt
   NUMBER: ${{ github.event.issue.number }}
@@ -338,14 +338,17 @@ jobs:
       OWNER: ${{ needs.permission.outputs.owner }}
       REPO: ${{ needs.permission.outputs.repo }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
       - name: Restore the database
         run: |
           state="$RUNNER_TEMP/remove"
           mkdir -p "$state"
           echo "STATE=$state" >> "$GITHUB_ENV"
-          gh release download "$DB_TAG" -p "$DB_ASSET" -D "$state"
-          zstd -d -q "$state/$DB_ASSET" -o "$state/downloads.sqlite"
-          rm -f "$state/$DB_ASSET"
+          bin/gh-stats-db restore "$state/downloads.sqlite"
 
       # The hosts resolve names without case, so every spelling of the
       # repository goes. The title pattern leaves no quote in the names. The
@@ -375,19 +378,9 @@ jobs:
           read -r samples releases stats <<<"$counts"
           echo "REMOVED_ROWS=$samples samples of its download counters, $releases releases and $stats snapshots of its stars, forks and watchers" >> "$GITHUB_ENV"
 
-      # As in gh-stats-sampler.yml: replacing the asset in place would delete the only
-      # copy before the new one is complete.
+      # The tables the removal deletes from are the ones that may hold fewer rows.
       - name: Upload the database
-        run: |
-          next="$DB_ASSET.next"
-          zstd -19 -T0 -q "$STATE/downloads.sqlite" -o "$STATE/$next"
-          gh release upload "$DB_TAG" "$STATE/$next" --clobber
-          assets="$(gh api "repos/$GH_REPO/releases/tags/$DB_TAG" --jq '.assets[] | "\(.id) \(.name)"')"
-          old="$(awk -v n="$DB_ASSET" '$2 == n { print $1 }' <<<"$assets")"
-          new="$(awk -v n="$next" '$2 == n { print $1 }' <<<"$assets")"
-          test -n "$new"
-          test -z "$old" || gh api -X DELETE "repos/$GH_REPO/releases/assets/$old"
-          gh api -X PATCH "repos/$GH_REPO/releases/assets/$new" -f name="$DB_ASSET" --silent
+        run: bin/gh-stats-db store -r samples -r releases -r repo_stats -r etags "$STATE/downloads.sqlite"
 
       - name: Report the removal
         run: |
