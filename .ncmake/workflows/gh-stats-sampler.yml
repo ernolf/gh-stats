@@ -62,9 +62,11 @@ env:
   CATALOGUE_TAG: catalogue
   SAMPLER_DB_TAG: sampler-db
   SAMPLER_DB_ASSET: downloads.sqlite.zst
-  # Hand-curated targets besides the App Store ones, separated by spaces: owners
-  # or [host/]owner/repo slugs, as in targets.json.
-  SAMPLER_TARGETS: ernolf/NcDavTray
+  # The hand-curated targets besides the App Store ones come from the Actions
+  # variable SAMPLER_TARGETS: owners or [host/]owner/repo slugs, as in
+  # targets.json, separated by spaces or line breaks. Without it, only the App
+  # Store targets are sampled.
+  SAMPLER_TARGETS: ${{ vars.SAMPLER_TARGETS }}
 
 jobs:
   sample:
@@ -88,7 +90,7 @@ jobs:
             echo "GH_STATS_TARGETS_DIR=$state/targets.d"
           } >> "$GITHUB_ENV"
           jq -n --arg t "$SAMPLER_TARGETS" \
-            '{targets: ($t | split(" ") | map(select(. != "")))}' > "$state/targets.json"
+            '{targets: ([$t | splits("\\s+")] | map(select(. != "")))}' > "$state/targets.json"
 
       - name: Restore the App Store catalogue
         env:
