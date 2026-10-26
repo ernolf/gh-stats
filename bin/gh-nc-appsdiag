@@ -94,6 +94,9 @@ APPSTORE_EBTB_DB="${APPSTORE_EBTB_DB:-}"
 # the same variable gh-nc-appslist maps such an app with.
 APPLIST_RELEASE_REPOS="${APPLIST_RELEASE_REPOS:-nextcloud-releases christianlupus-nextcloud/cookbook-releases}"
 
+# The app types the server never restricts to groups, its
+# AppManager::$protectedAppTypes.
+PROTECTED_APP_TYPES="filesystem prelogin authentication logging prevent_group_restriction"
 GIT="${GIT_BIN:-/usr/bin/git}"
 GH="${GH_BIN:-/usr/bin/gh}"
 JQ="${JQ_BIN:-/usr/bin/jq}"
@@ -189,7 +192,9 @@ a repository on a Forgejo or Gitea host below a directory of that host:
       console.log         the full output of the run
       summary.json        app, its repository host (repo_host) and directory,
                           the version info.xml declares, the one asked for
-                          (requested_version), the server release (server)
+                          (requested_version), whether the server can
+                          restrict the app to groups by its <types> in
+                          info.xml (restrictable), the server release (server)
                           with -s, head, ncmake ref, the machine (host),
                           the build file make read before the stub and its
                           kind, every target with exit code and duration
@@ -442,6 +447,7 @@ LOG="$LOG_DIR/.pending-${repo}${subdir:+@${subdir//\//-}}-${STAMP}.log"
 RUN_DIR=""
 app_id=""
 app_version=""
+app_restrictable=""
 tag_version=""
 results=()
 # What summary.json reports besides the targets, filled in where it is learnt.
@@ -580,6 +586,7 @@ inventory() {
 	if [ -f "$x" ]; then
 		app_id="$(sed -n 's:.*<id>\(.*\)</id>.*:\1:p' "$x" | head -1)"
 		app_version="$(sed -n 's:.*<version>\(.*\)</version>.*:\1:p' "$x" | head -1)"
+		app_restrictable="$(restrictable "$x")"
 		log "   app   id=$app_id version=$app_version" \
 		    "nextcloud $(grep -o '<nextcloud [^>]*>' "$x" | grep -o '[a-z]*-version="[^"]*"' | tr '\n' ' ')"
 	else
@@ -589,6 +596,29 @@ inventory() {
 		log "   npm   scripts: $("$JQ" -r '(.scripts // {}) | keys | join(" ")' "$APP_DIR/package.json")"
 		log "   npm   engines: $("$JQ" -rc '.engines // "not stated"' "$APP_DIR/package.json")"
 	fi
+}
+
+# restrictable <info.xml>: false when the <types> of the app hold one of
+# PROTECTED_APP_TYPES, so the server cannot restrict it to groups, else true.
+restrictable() {
+	awk -v p="$PROTECTED_APP_TYPES" '
+		BEGIN { n = split(p, a, " "); for (i = 1; i <= n; i++) t[a[i]] = 1 }
+		{ s = s " " $0 }
+		END {
+			# A comment may name a type without declaring it.
+			while ((i = index(s, "<!--")) > 0 && (j = index(substr(s, i + 4), "-->")) > 0) {
+				s = substr(s, 1, i - 1) substr(s, i + j + 6)
+			}
+			r = "true"
+			if (match(s, /<types>.*<\/types>/)) {
+				s = substr(s, RSTART + 7, RLENGTH - 15)
+				while (match(s, /<[a-z_]+/)) {
+					if (substr(s, RSTART + 1, RLENGTH - 1) in t) r = "false"
+					s = substr(s, RSTART + RLENGTH)
+				}
+			}
+			print r
+		}' "$1"
 }
 
 # The build file make reads in the app as it comes, before the stub: the first of
@@ -1186,7 +1216,7 @@ write_summary_json() {
 	diff=null
 	[ -s "$RUN_DIR/release/diff.json" ] && diff="$("$JQ" -c '{signed, counts}' "$RUN_DIR/release/diff.json")" || true
 	printf '%s\n' "${results[@]}" | "$JQ" -R -s \
-		--arg repo_host "$repo_host" --arg owner "$owner" --arg repo "$repo" --arg subdir "$subdir" --arg app_id "$app_id" --arg version "$app_version" \
+		--arg repo_host "$repo_host" --arg owner "$owner" --arg repo "$repo" --arg subdir "$subdir" --arg app_id "$app_id" --arg version "$app_version" --arg restrictable "$app_restrictable" \
 		--arg want "$want_version" --arg server "$SERVER_REF" --arg stamp "$STAMP" --arg started "$STARTED" \
 		--arg finished "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg status "$status" --argjson code "$code" --arg reason "$end_reason" \
 		--arg head "$head" --arg tag "$head_tag" --arg stub "$STUB_URL" \
@@ -1198,7 +1228,8 @@ write_summary_json() {
 		def num($s): if $s == "" then null else ($s | tonumber) end;
 		{tool: "gh-nc-appsdiag", schema: 1,
 		 repo_host: $repo_host, owner: $owner, repo: $repo, subdir: nul($subdir), app_id: nul($app_id), version: nul($version),
-		 requested_version: nul($want), server: nul($server), stamp: $stamp, started: $started, finished: $finished,
+		 requested_version: nul($want), restrictable: (if $restrictable == "" then null else $restrictable == "true" end),
+		 server: nul($server), stamp: $stamp, started: $started, finished: $finished,
 		 status: $status, exit: $code, reason: nul($reason),
 		 head: (if $head == "" then null else ($head | split("\t") | {sha: .[0], date: .[1], subject: (.[2:] | join("\t")), tag: nul($tag)}) end),
 		 ncmake: {ref: (if $ncchecked == 1 and $ncdiffers == "" then nul($ncmain) else null end),

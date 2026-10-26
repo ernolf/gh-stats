@@ -248,7 +248,7 @@ if [ -n "$results" ]; then
 	results_sql="$(find "$results" -name summary.json -print0 | xargs -0 -r jq -r --arg root "$results/" "$sql_defs"'
 		(input_filename | ltrimstr($root) | rtrimstr("/summary.json")) as $dir
 		| (.files // []) as $files
-		| "INSERT INTO measurements VALUES (\($dir | q), \(.repo_host // "github.com" | v), \(.owner | v), \(.repo | v), \(.subdir | v), \(.app_id | v), \(.requested_version // .version | v), \(.server | v), \(.head.tag | v), \(.stamp | v), \(.status | v), \(.reason | v), \(.release.tarball | v), \(.release.signed | v), \(.release.counts | if . == null then null else tojson end | v));",
+		| "INSERT INTO measurements VALUES (\($dir | q), \(.repo_host // "github.com" | v), \(.owner | v), \(.repo | v), \(.subdir | v), \(.app_id | v), \(.requested_version // .version | v), \(.restrictable | v), \(.server | v), \(.head.tag | v), \(.stamp | v), \(.status | v), \(.reason | v), \(.release.tarball | v), \(.release.signed | v), \(.release.counts | if . == null then null else tojson end | v));",
 		  (.targets[]? | .name as $n
 		  | "INSERT INTO targets VALUES (\($dir | q), \($n | v), \(.exit | v), \(.json_skipped | v), \($files | any(. == $n + ".json") | v));")
 	')"
@@ -303,7 +303,7 @@ shipped_sql=''
 if [ -r "$SHIPPED_CACHE" ]; then
 	shipped_sql="$(jq -r "$sql_defs"'
 		(.releases[] | . as $r | .apps[]
-		 | "INSERT OR IGNORE INTO shipped VALUES (\($r.version | q), \($r.major), \($r.ref | q), \($r.published | v), \(if $r.latest == false then 0 else 1 end), \(.id | q), \(.name | q), \(.version | q), \(.repo | q), \(.path | q), \(.ref | q), \(.enabled | v));"),
+		 | "INSERT OR IGNORE INTO shipped VALUES (\($r.version | q), \($r.major), \($r.ref | q), \($r.published | v), \(if $r.latest == false then 0 else 1 end), \(.id | q), \(.name | q), \(.version | q), \(.repo | q), \(.path | q), \(.ref | q), \(.enabled | v), \(.restrictable | v));"),
 		(.since | to_entries[] | "INSERT OR IGNORE INTO shipped_since VALUES (\(.key | q), \(.value));")
 	' "$SHIPPED_CACHE")"
 fi
@@ -588,6 +588,7 @@ CREATE TABLE measurements (
   subdir  TEXT,
   app_id  TEXT,
   version TEXT,
+  restrictable INTEGER,
   server  TEXT,
   tag     TEXT,
   stamp   TEXT NOT NULL,
@@ -693,7 +694,9 @@ CREATE TABLE categories (
 -- release of its major and for master, app_ref the tag or branch of the app's
 -- source. enabled is always for an app that cannot be disabled,
 -- default for one a new installation enables, optional for any other, NULL
--- where the core/shipped.json of the release does not tell.
+-- where the core/shipped.json of the release does not tell. restrictable is 0
+-- for an app the server cannot restrict to groups, by the <types> of its
+-- info.xml.
 CREATE TABLE shipped (
   server    TEXT    NOT NULL,
   major     INTEGER NOT NULL,
@@ -707,6 +710,7 @@ CREATE TABLE shipped (
   path      TEXT    NOT NULL,
   app_ref   TEXT    NOT NULL,
   enabled   TEXT,
+  restrictable INTEGER,
   PRIMARY KEY (ref, id)
 ) WITHOUT ROWID;
 CREATE TABLE shipped_since (
