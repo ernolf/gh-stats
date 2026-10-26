@@ -1268,18 +1268,16 @@ function appReleases(id, requests) {
 		}))
 }
 
-// The newest release of each major keeps its check unless the release enables
-// the app always, so it has no button to remove it; master is not measured.
+// The newest release of each major and master keep their check unless they
+// enable the app always, so they have no button to remove it.
 function shippedRequestCell(s, runs) {
 	const links = []
-	if (s.ref !== 'master') {
-		const as = `${s.id} as Nextcloud ${s.server} ships it`
-		links.push(requestLink(runs ? 'recheck' : 'check', `Measure ${as}`,
-			`Measures ${as} ${runs ? 'again, with a new build, ' : ''}and keeps its result.`))
-		if (runs && !(s.latest && s.enabled !== 'always')) {
-			links.push(' ', requestLink('remove check', `Remove the check of ${as}`,
-				`Removes the results of ${as} and keeps it from being measured again.`))
-		}
+	const as = `${s.id} as Nextcloud ${s.ref === 'master' ? 'master' : s.server} ships it`
+	links.push(requestLink(runs ? 'recheck' : 'check', `Measure ${as}`,
+		`Measures ${as} ${runs ? 'again, with a new build, ' : ''}and keeps its result.`))
+	if (runs && !(s.latest && s.enabled !== 'always')) {
+		links.push(' ', requestLink('remove check', `Remove the check of ${as}`,
+			`Removes the results of ${as} and keeps it from being measured again.`))
 	}
 	return el('td', { class: 'request-col' }, ...links)
 }

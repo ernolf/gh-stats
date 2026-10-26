@@ -76,6 +76,7 @@ Writes the apps the Nextcloud server ships to <file>, as JSON:
       {"major": 36, "version": "36.0.0 dev", "ref": "master",
        "archive": "https://download.nextcloud.com/server/daily/latest-master.zip",
        "etag": "...", "published": "2026-10-24T23:30:00Z", "latest": true,
+       "build": "2026-10-24T23:30:00+00:00 <server commit>",
        "apps": [{"id": "activity", "name": "Activity", "version": "...",
                  "repo": "nextcloud/activity", "path": "", "ref": "master",
                  "enabled": "default", "restrictable": true}, ...]},
@@ -92,8 +93,9 @@ schedule lists as supported and of the newest major it lists as end of life,
 and master from its daily archive. latest is true for the newest release of
 each of these majors and for master. A release stays once its major has left
 the schedule, with latest false. Each archive's core/shipped.json names the
-apps it ships, its version.php the server version, and the appinfo/info.xml of
-each app its name and version.
+apps it ships, its version.php the server version and, as build, the $OC_Build
+of the archive: the time it was built and the server commit it was built from.
+The appinfo/info.xml of each app names its name and version.
 
 enabled is always for an app the core/shipped.json of the archive lists under
 alwaysEnabled, which cannot be disabled, default for one it lists under
@@ -116,12 +118,13 @@ keeps the shipped.json of every M.0.0, an empty list where the tag has none, so
 each one is fetched only once.
 
 A release whose archive the previous <file> holds is taken over from it
-unread, master only while its ETag is unchanged, unless an app of its entry has
-no enabled or restrictable yet. The newest release of each major and master are read whatever
-the count; an older release only while the run has read fewer than
-SHIPPED_MAX_READS archives, the newest first, so the rest is left to the next
-run. A major whose newest tag has no archive yet has the release before it as
-its newest, and master without an archive keeps its previous entry.
+unread, master only while its ETag is unchanged, unless the entry has no build
+yet or an app of it no enabled or restrictable. The newest release of each
+major and master are read whatever the count; an older release only while the
+run has read fewer than SHIPPED_MAX_READS archives, the newest first, so the
+rest is left to the next run. A major whose newest tag has no archive yet has
+the release before it as its newest, and master without an archive keeps its
+previous entry.
 
 -x unpacks apps/<app-id>/ of the archive of that server release, 35.0.2 or
 v35.0.2, or of the daily archive of master, into <dir>/<app-id>/ and prints the
@@ -334,10 +337,11 @@ remote() {
 
 # == Archive ==
 # previous <url> [<etag>]: the entry of that archive in the previous file, with
-# that ETag if one is given, while each of its apps has enabled and restrictable.
+# that ETag if one is given, while it has a build and each of its apps has
+# enabled and restrictable.
 previous() {
 	"$JQ" -e -c --arg u "$1" --arg e "${2:-}" \
-		'.releases[]? | select(.archive == $u and ($e == "" or .etag == $e) and all(.apps[]; has("enabled") and has("restrictable")))' <<<"$prev"
+		'.releases[]? | select(.archive == $u and ($e == "" or .etag == $e) and has("build") and all(.apps[]; has("enabled") and has("restrictable")))' <<<"$prev"
 }
 
 # Whether an archive is there; its headers stay in $tmp/head for archive.
@@ -374,10 +378,11 @@ central() {
 }
 
 # archive <url> <ref>: the release entry of the archive available just looked
-# up, from the previous file while its ETag is unchanged and each of its apps
-# has enabled and restrictable. Each archive read counts in reads.
+# up, from the previous file while its ETag is unchanged, it has a build and
+# each of its apps has enabled and restrictable. Each archive read counts in
+# reads.
 archive() {
-	local url="$1" ref="$2" etag modified size cdoff server major id line version name repo path aref probe code enabled restricts
+	local url="$1" ref="$2" etag modified size cdoff server major build id line version name repo path aref probe code enabled restricts
 	heads "$url"
 	if previous "$url" "$etag" > "$tmp/entry"; then
 		cat "$tmp/entry"
@@ -394,6 +399,7 @@ archive() {
 	server="$(sed -n "s/^\$OC_VersionString = '\(.*\)';.*/\1/p" "$tmp/version.php")"
 	major="${server%%.*}"
 	[[ "$major" =~ ^[0-9]+$ ]] || die "$url: no server version in version.php"
+	build="$(sed -n "s/^\$OC_Build = '\(.*\)';.*/\1/p" "$tmp/version.php")"
 	line="$(awk -v n="$ARCHIVE_ROOT/core/shipped.json" '$1 == n' "$tmp/dir")"
 	[ -n "$line" ] || die "$url: no core/shipped.json"
 	extract "$url" "$etag" "$line" "$tmp/shipped.json"
@@ -445,11 +451,12 @@ archive() {
 	done
 
 	"$JQ" -n -c --argjson major "$major" --arg version "$server" --arg ref "$ref" \
-		--arg archive "$url" --arg etag "$etag" \
+		--arg archive "$url" --arg etag "$etag" --arg build "$build" \
 		--arg published "$([ -z "$modified" ] || date -u -d "$modified" +%Y-%m-%dT%H:%M:%SZ)" \
 		--slurpfile apps "$tmp/apps" \
 		'{major: $major, version: $version, ref: $ref, archive: $archive, etag: $etag,
-		  published: (if $published == "" then null else $published end), apps: $apps}'
+		  published: (if $published == "" then null else $published end),
+		  build: (if $build == "" then null else $build end), apps: $apps}'
 }
 
 # == Extraction ==
