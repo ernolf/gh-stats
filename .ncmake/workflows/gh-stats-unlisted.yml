@@ -1,0 +1,83 @@
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# Lists the Nextcloud apps that are neither in the App Store catalogue nor
+# shipped by the server and keeps them as unlisted.json in the release
+# catalogue. bin/gh-nc-unlisted finds them in the repositories of every owner
+# the catalogue and shipped.json name, on GitHub and on the Forgejo and Gitea
+# hosts among them, together with the owners and repositories UNLISTED_INCLUDE
+# names and without those UNLISTED_EXCLUDE names.
+#
+# The catalogue workflow dispatches this one when gh-nc-shipped finds a new
+# daily build of master, so it runs once a day. Each run starts from the
+# unlisted.json the previous one kept, so a repository not pushed since is
+# taken over unread; the first run, and one after many pushes, reads at most
+# UNLISTED_MAX_READS repositories and leaves the rest to the next.
+#
+# The listings run with GITHUB_TOKEN, which is limited to 1,000 requests per
+# hour and repository. The clones need no token. Every run reports how much of
+# the limits of the token it used.
+
+name: List the unlisted apps
+
+on:
+  workflow_dispatch:
+
+permissions:
+  # Uploads unlisted.json to the release.
+  contents: write
+
+# No two listings run at once; the second would read what the first reads.
+concurrency:
+  group: unlisted
+  cancel-in-progress: false
+
+env:
+  GH_REPO: ${{ github.repository }}
+  CATALOGUE_TAG: catalogue
+  # More owners or repositories to scan, and owners, repositories or app ids
+  # (id:<app-id>) to leave out, separated by spaces or line breaks, as
+  # gh-nc-unlisted reads them.
+  UNLISTED_INCLUDE: ${{ vars.UNLISTED_INCLUDE }}
+  UNLISTED_EXCLUDE: ${{ vars.UNLISTED_EXCLUDE }}
+
+jobs:
+  unlisted:
+    name: unlisted
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Fetch the catalogue
+        run: |
+          state="$RUNNER_TEMP/catalogue"
+          mkdir -p "$state"
+          echo "STATE=$state" >> "$GITHUB_ENV"
+          gh release download "$CATALOGUE_TAG" -p apps.json -p appapi_apps.json -D "$state"
+          gh release download "$CATALOGUE_TAG" -p shipped.json -D "$state" \
+            || echo "::warning::No shipped apps yet, only the catalogue is left out"
+          gh release download "$CATALOGUE_TAG" -p unlisted.json -D "$state" \
+            || echo "::warning::No unlisted apps yet, every repository is read"
+          gh api rate_limit --jq .resources > "$state/rate.before"
+
+      - name: List the unlisted apps
+        env:
+          GH_STATS_DIR: ${{ runner.temp }}/catalogue
+        run: bin/gh-nc-unlisted
+
+      - name: Keep the unlisted apps
+        run: gh release upload "$CATALOGUE_TAG" "$STATE/unlisted.json" --clobber
+
+      - name: Report the rate limits
+        if: always()
+        run: |
+          gh api rate_limit --jq .resources > "$STATE/rate.after"
+          jq -r -n --slurpfile before "$STATE/rate.before" --slurpfile after "$STATE/rate.after" '
+            ("core", "graphql") as $r | $before[0][$r] as $b | $after[0][$r] as $a
+            | "::notice::\($r): \(if $a.reset == $b.reset then $a.used - $b.used else $a.used end) of \($a.limit) used by this run, \($a.remaining) left until \($a.reset | todate)"'
