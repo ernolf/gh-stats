@@ -50,6 +50,9 @@ RETRIES=10
 # read to the next run; one takes about a minute. The newest release of each
 # major and master are read whatever the count.
 SHIPPED_MAX_READS="${SHIPPED_MAX_READS:-5}"
+# The app types the server never restricts to groups, its
+# AppManager::$protectedAppTypes.
+PROTECTED_APP_TYPES="filesystem prelogin authentication logging prevent_group_restriction"
 
 JQ="${JQ_BIN:-jq}"
 GIT="${GIT_BIN:-git}"
@@ -75,7 +78,7 @@ Writes the apps the Nextcloud server ships to <file>, as JSON:
        "etag": "...", "published": "2026-10-24T23:30:00Z", "latest": true,
        "apps": [{"id": "activity", "name": "Activity", "version": "...",
                  "repo": "nextcloud/activity", "path": "", "ref": "master",
-                 "enabled": "default"}, ...]},
+                 "enabled": "default", "restrictable": true}, ...]},
       {"major": 35, "version": "35.0.2", "ref": "v35.0.2", "latest": true, ...},
       {"major": 35, "version": "35.0.1", "ref": "v35.0.1", "latest": false, ...},
       ...
@@ -97,6 +100,10 @@ alwaysEnabled, which cannot be disabled, default for one it lists under
 defaultEnabled only, which a new installation enables, and optional for any
 other. It is null where that shipped.json lacks one of the two lists.
 
+restrictable is false for an app whose <types> in its appinfo/info.xml hold a
+type the server never restricts to groups: filesystem, prelogin,
+authentication, logging or prevent_group_restriction. It is true for any other.
+
 An app of the server tree has the server repository with the path apps/<id> at
 the tag of the release, or at master. An app with a repository of its own under
 the owner of the server has that repository at the tag of the server release,
@@ -110,7 +117,7 @@ each one is fetched only once.
 
 A release whose archive the previous <file> holds is taken over from it
 unread, master only while its ETag is unchanged, unless an app of its entry has
-no enabled yet. The newest release of each major and master are read whatever
+no enabled or restrictable yet. The newest release of each major and master are read whatever
 the count; an older release only while the run has read fewer than
 SHIPPED_MAX_READS archives, the newest first, so the rest is left to the next
 run. A major whose newest tag has no archive yet has the release before it as
@@ -290,6 +297,29 @@ element() {
 	sed -n "s:.*<$1>\([^<]*\)</$1>.*:\1:p" "$2" | sed -n "s/&lt;/</g; s/&gt;/>/g; s/&quot;/\"/g; s/&apos;/'/g; s/&amp;/\&/g; p; q"
 }
 
+# restrictable <info.xml>: false when the <types> of the app hold one of
+# PROTECTED_APP_TYPES, so the server cannot restrict it to groups, else true.
+restrictable() {
+	awk -v p="$PROTECTED_APP_TYPES" '
+		BEGIN { n = split(p, a, " "); for (i = 1; i <= n; i++) t[a[i]] = 1 }
+		{ s = s " " $0 }
+		END {
+			# A comment may name a type without declaring it.
+			while ((i = index(s, "<!--")) > 0 && (j = index(substr(s, i + 4), "-->")) > 0) {
+				s = substr(s, 1, i - 1) substr(s, i + j + 6)
+			}
+			r = "true"
+			if (match(s, /<types>.*<\/types>/)) {
+				s = substr(s, RSTART + 7, RLENGTH - 15)
+				while (match(s, /<[a-z_]+/)) {
+					if (substr(s, RSTART + 1, RLENGTH - 1) in t) r = "false"
+					s = substr(s, RSTART + RLENGTH)
+				}
+			}
+			print r
+		}' "$1"
+}
+
 # git ls-remote, repeated up to RETRIES times as every curl request: a single
 # connection that times out must not end a run of several hundred requests.
 remote() {
@@ -302,10 +332,10 @@ remote() {
 
 # == Archive ==
 # previous <url> [<etag>]: the entry of that archive in the previous file, with
-# that ETag if one is given, while each of its apps has enabled.
+# that ETag if one is given, while each of its apps has enabled and restrictable.
 previous() {
 	"$JQ" -e -c --arg u "$1" --arg e "${2:-}" \
-		'.releases[]? | select(.archive == $u and ($e == "" or .etag == $e) and all(.apps[]; has("enabled")))' <<<"$prev"
+		'.releases[]? | select(.archive == $u and ($e == "" or .etag == $e) and all(.apps[]; has("enabled") and has("restrictable")))' <<<"$prev"
 }
 
 # Whether an archive is there; its headers stay in $tmp/head for archive.
@@ -343,9 +373,9 @@ central() {
 
 # archive <url> <ref>: the release entry of the archive available just looked
 # up, from the previous file while its ETag is unchanged and each of its apps
-# has enabled. Each archive read counts in reads.
+# has enabled and restrictable. Each archive read counts in reads.
 archive() {
-	local url="$1" ref="$2" etag modified size cdoff server major id line version name repo path aref probe code enabled
+	local url="$1" ref="$2" etag modified size cdoff server major id line version name repo path aref probe code enabled restricts
 	heads "$url"
 	if previous "$url" "$etag" > "$tmp/entry"; then
 		cat "$tmp/entry"
@@ -373,6 +403,7 @@ archive() {
 		extract "$url" "$etag" "$line" "$tmp/info.xml"
 		version="$(element version "$tmp/info.xml")"
 		name="$(element name "$tmp/info.xml")"
+		restricts="$(restrictable "$tmp/info.xml")"
 		enabled="$("$JQ" -r --arg id "$id" 'if (.alwaysEnabled | type) != "array" or (.defaultEnabled | type) != "array" then ""
 			elif any(.alwaysEnabled[]; . == $id) then "always" elif any(.defaultEnabled[]; . == $id) then "default"
 			else "optional" end' "$tmp/shipped.json")"
@@ -406,9 +437,9 @@ archive() {
 		*) die "$probe: HTTP $code" ;;
 		esac
 		"$JQ" -n -c --arg id "$id" --arg name "$name" --arg version "$version" \
-			--arg repo "$repo" --arg path "$path" --arg ref "$aref" --arg enabled "$enabled" \
+			--arg repo "$repo" --arg path "$path" --arg ref "$aref" --arg enabled "$enabled" --argjson restrictable "$restricts" \
 			'{id: $id, name: (if $name == "" then $id else $name end), version: $version, repo: $repo, path: $path, ref: $ref,
-			  enabled: (if $enabled == "" then null else $enabled end)}' >> "$tmp/apps"
+			  enabled: (if $enabled == "" then null else $enabled end), restrictable: $restrictable}' >> "$tmp/apps"
 	done
 
 	"$JQ" -n -c --argjson major "$major" --arg version "$server" --arg ref "$ref" \

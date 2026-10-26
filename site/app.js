@@ -179,7 +179,7 @@ function catalogueSpecs() {
 // only those of that app.
 function shippedApps(id = null) {
 	return query(`
-		SELECT s.id, s.name, s.server, s.major, s.ref, s.latest, s.version, s.repo, s.path, s.app_ref, s.enabled,
+		SELECT s.id, s.name, s.server, s.major, s.ref, s.latest, s.version, s.repo, s.path, s.app_ref, s.enabled, s.restrictable,
 		       CAST(strftime('%s', s.published) AS INTEGER) AS published, d.categories
 		  FROM shipped s LEFT JOIN app_details d ON d.id = s.id
 		 WHERE $id IS NULL OR s.id = $id`, { $id: id })
@@ -197,7 +197,7 @@ function categories() {
 	return new Map(query('SELECT id, name FROM categories ORDER BY name COLLATE NOCASE').map((r) => [r.id, r.name]))
 }
 
-const MEASUREMENT = `m.dir, m.app_id, m.version, m.server, m.tag, m.tarball, m.signed, m.diff,
+const MEASUREMENT = `m.dir, m.app_id, m.version, m.restrictable, m.server, m.tag, m.tarball, m.signed, m.diff,
 	(SELECT count(*) FROM findings f WHERE f.dir = m.dir AND f.level = 'warn') AS warn`
 
 // The measurements of each release, keyed by project and tag; a repository that
@@ -459,6 +459,21 @@ function enabledMark(s) {
 	return s.enabled ? [el('span', { class: 'enabled', title: ENABLED[s.enabled][1] }, ENABLED[s.enabled][0])] : []
 }
 
+const RESTRICTION_TEXT = 'the server cannot restrict the app to groups: the <types> in its appinfo/info.xml hold filesystem, '
+	+ 'prelogin, authentication, logging or prevent_group_restriction'
+
+// Only an app that cannot be restricted to groups is marked; the info.xml of a
+// release is read when the release is measured or the server ships it. Of a
+// repository with several apps, the title names those it applies to.
+function restrictionMark(apps) {
+	const ids = apps.filter((a) => a.restrictable === 0).map((a) => a.app_id ?? a.id)
+	if (!ids.length) {
+		return []
+	}
+	const title = apps.length > 1 ? `${ids.join(', ')}: ${RESTRICTION_TEXT}` : RESTRICTION_TEXT
+	return [el('span', { class: 'restriction', title }, 'cannot be restricted to groups')]
+}
+
 // An app of the server tree has its directory there, any other its own
 // repository, each at the tag or branch of the server release.
 function shippedSource(s) {
@@ -477,9 +492,9 @@ function mismatchMark() {
 	return el('span', { class: 'mismatch', role: 'img', 'aria-label': MISMATCH_TEXT, title: MISMATCH_TEXT }, '⚠')
 }
 
-function releaseCells(fig) {
+function releaseCells(fig, runs = []) {
 	return [
-		el('td', { class: 'tag' }, releaseLink(fig), ...(fig.mismatch ? [mismatchMark()] : [])),
+		el('td', { class: 'tag' }, releaseLink(fig), ...(fig.mismatch ? [mismatchMark()] : []), ...restrictionMark(runs)),
 		el('td', {}, ncRange(fig.nc)),
 		el('td', {}, date(fig.published)),
 		...['total', ...PERIODS.map((d) => 'd' + d)].map((k) => fig[k] === null
@@ -529,7 +544,7 @@ function compareSelect(row) {
 		row.compareChecks = checksRow
 		if (select.value) {
 			row.compare.append(el('td'), el('td', { class: 'compare-label' }, 'compared with'),
-				...releaseCells(releaseFigures(row.project, select.value)), checks, el('td'))
+				...releaseCells(releaseFigures(row.project, select.value), measured.get(`${row.project}\n${select.value}`)), checks, el('td'))
 		}
 	})
 	return select
@@ -628,7 +643,7 @@ function lineRows(row, first) {
 	row.pick.addEventListener('change', () => pickRow(row, row.pick.checked))
 	const [checks, checksRow] = lineChecks(row, 10)
 	row.checks = checksRow
-	row.tr = el('tr', {}, el('td', { class: 'pick' }, row.pick), first, ...releaseCells(row), checks, el('td'))
+	row.tr = el('tr', {}, el('td', { class: 'pick' }, row.pick), first, ...releaseCells(row, measured.get(`${row.project}\n${row.tag}`)), checks, el('td'))
 	row.compare = el('tr', { class: 'compare', hidden: '' })
 	row.compareChecks = el('tr', { class: 'checks', hidden: '' })
 	row.tr.lastChild.append(compareSelect(row))
@@ -664,7 +679,7 @@ function catalogueRow(a) {
 	p.main = el('tbody', {}, el('tr', {},
 		el('td', { class: 'pick' }),
 		el('td', {}, el('span', { class: 'name' }, el('a', { href: `#app/${encodeURIComponent(a.id)}` }, a.name)), ...shippedMark(a.id)),
-		el('td', { class: 'tag' }, a.version ?? ''),
+		el('td', { class: 'tag' }, a.version ?? '', ...restrictionMark(runs ?? [])),
 		el('td', {}, ncRange(a.platform)),
 		el('td', {}, a.published === null ? '' : date(a.published)),
 		...['total', ...PERIODS].map(() => el('td', empty)),
@@ -699,7 +714,7 @@ function shippedRow(releases) {
 			compare: el('tr', { class: 'compare', hidden: '' }), compareChecks: el('tr', { class: 'checks', hidden: '' }),
 		}
 		r.tr = el('tr', {}, el('td', { class: 'pick' }), first,
-			el('td', { class: 'tag' }, el('a', { href: shippedSource(s) }, s.version)),
+			el('td', { class: 'tag' }, el('a', { href: shippedSource(s) }, s.version), ...restrictionMark([s])),
 			el('td', {}, serverLink(s)),
 			el('td', {}, s.published === null ? '' : date(s.published)),
 			...['total', ...PERIODS].map(() => el('td', { class: 'num na', title: 'gh-stats samples no host the server archives are downloaded from' })),
@@ -1240,7 +1255,7 @@ function appReleases(id, requests) {
 		...releases.map((r) => {
 			const [checks, checksRow] = checksCell(runs.get(r.version), asks ? 9 : 8)
 			return el('tbody', {}, el('tr', {},
-				el('td', {}, r.version),
+				el('td', {}, r.version, ...restrictionMark(runs.get(r.version) ?? [])),
 				el('td', {}, (r.created ?? '').slice(0, 10)),
 				el('td', {}, r.nightly ? 'nightly' : r.stable ? 'stable' : 'pre-release', ...(r.mismatch ? [mismatchMark()] : [])),
 				el('td', {}, ncRange(r.platform)),
@@ -1281,7 +1296,7 @@ function appShipped(releases) {
 			return el('tbody', {}, el('tr', {},
 				el('td', {}, serverLink(s)),
 				el('td', {}, s.published === null ? '' : date(s.published)),
-				el('td', {}, s.version),
+				el('td', {}, s.version, ...restrictionMark([s])),
 				el('td', {}, ...enabledMark(s)),
 				el('td', {}, el('a', { href: shippedSource(s) }, s.path ? `${s.repo}/${s.path}` : s.repo)),
 				checks,
@@ -1300,7 +1315,7 @@ function appLines(lines) {
 			el('th', { title: 'warnings of the measurement of the release shown' }, 'Checks'))),
 		...lines.map((r) => {
 			const [checks, checksRow] = lineChecks(r, 8)
-			return el('tbody', {}, el('tr', {}, el('td', {}, lineLabel(r.line)), ...releaseCells(r), checks), checksRow)
+			return el('tbody', {}, el('tr', {}, el('td', {}, lineLabel(r.line)), ...releaseCells(r, measured.get(`${r.project}\n${r.tag}`)), checks), checksRow)
 		}))
 }
 
