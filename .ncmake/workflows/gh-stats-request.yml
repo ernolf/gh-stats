@@ -11,7 +11,7 @@
 #   Measure <app-id> as Nextcloud <release> ships it
 #   Remove the check of <app-id> as Nextcloud <release> ships it
 #                                             the same for a shipped app, as the
-#                                             server release ships it
+#                                             server release, or master, ships it
 #   Remove <host>/<owner>/<repo> from the database
 #                                             removes a repository the sampler
 #                                             counts as unreachable from the
@@ -38,8 +38,9 @@
 # MEASURE_LINES says, and a removed one is not sent again by gh-stats-catalogue.yml as a
 # version without a result, until a new request measures it. The newest stable
 # version of a repository always keeps its result, and so does a shipped app as
-# the newest release of its server major ships it, unless the release enables
-# it always. A shipped app has the line "-s v<release> <owner>/<repo>[:<directory>]".
+# the newest release of its server major or master ships it, unless the release
+# enables it always. A shipped app has the line
+# "-s v<release> <owner>/<repo>[:<directory>]", for master "-s master ...".
 #
 # A removed repository leaves every table of the sampler database but keeps its
 # row in repos, marked as removed, so the sampler neither asks it again nor adds
@@ -113,9 +114,9 @@ jobs:
         env:
           TITLE: ${{ github.event.issue.title }}
         run: |
-          if [[ "$TITLE" =~ ^Measure\ ([a-z0-9_]+)\ as\ Nextcloud\ ([0-9]+\.[0-9]+\.[0-9]+)\ ships\ it$ ]]; then
+          if [[ "$TITLE" =~ ^Measure\ ([a-z0-9_]+)\ as\ Nextcloud\ ([0-9]+\.[0-9]+\.[0-9]+|master)\ ships\ it$ ]]; then
             printf '%s\n' kind=measure "app=${BASH_REMATCH[1]}" "server=${BASH_REMATCH[2]}" >> "$GITHUB_OUTPUT"
-          elif [[ "$TITLE" =~ ^Remove\ the\ check\ of\ ([a-z0-9_]+)\ as\ Nextcloud\ ([0-9]+\.[0-9]+\.[0-9]+)\ ships\ it$ ]]; then
+          elif [[ "$TITLE" =~ ^Remove\ the\ check\ of\ ([a-z0-9_]+)\ as\ Nextcloud\ ([0-9]+\.[0-9]+\.[0-9]+|master)\ ships\ it$ ]]; then
             printf '%s\n' kind=remove "app=${BASH_REMATCH[1]}" "server=${BASH_REMATCH[2]}" >> "$GITHUB_OUTPUT"
           elif [[ "$TITLE" =~ ^Measure\ ([a-z0-9_]+)\ ([0-9]+(\.[0-9]+)*)$ ]]; then
             printf '%s\n' kind=measure "app=${BASH_REMATCH[1]}" "version=${BASH_REMATCH[2]}" >> "$GITHUB_OUTPUT"
@@ -182,15 +183,17 @@ jobs:
           echo "STATE=$state" >> "$GITHUB_ENV"
           if [ -n "$SERVER" ]; then
             echo "WHICH=as Nextcloud $SERVER ships it" >> "$GITHUB_ENV"
+            ref="v$SERVER"
+            [ "$SERVER" != master ] || ref=master
             gh release download "$CATALOGUE_TAG" -p shipped.json -D "$state"
-            jq -c --arg ref "v$SERVER" --arg id "$APP" \
+            jq -c --arg ref "$ref" --arg id "$APP" \
               '.releases[] | select(.ref == $ref) | .latest as $latest | .apps[] | select(.id == $id) | . + {latest: $latest}' \
               "$state/shipped.json" > "$state/app.json"
             if [ ! -s "$state/app.json" ]; then
               gh issue close "$NUMBER" --reason "not planned" --comment "The catalogue lists no app \`$APP\` in the archive of Nextcloud $SERVER."
               exit 1
             fi
-            jq -r --arg ref "v$SERVER" '"-s \($ref) \(.repo)" + (if .path != "" then ":" + .path else "" end)' "$state/app.json" \
+            jq -r --arg ref "$ref" '"-s \($ref) \(.repo)" + (if .path != "" then ":" + .path else "" end)' "$state/app.json" \
               | tr '[:upper:]' '[:lower:]' > "$state/lines"
             # The directory of its runs below apps/ of the data branch, as
             # gh-nc-appsdiag names it: an app below the root of its repository
@@ -198,7 +201,11 @@ jobs:
             jq -r '.repo + (if .path != "" then "/" + .id else "" end)' "$state/app.json" \
               | tr '[:upper:]' '[:lower:]' > "$state/key"
             if [ "$KIND" = remove ] && jq -e '.latest and .enabled != "always"' "$state/app.json" >/dev/null; then
-              gh issue close "$NUMBER" --reason "not planned" --comment "$SERVER is the newest release of Nextcloud ${SERVER%%.*}, the check of \`$APP\` as it ships it stays."
+              if [ "$SERVER" = master ]; then
+                gh issue close "$NUMBER" --reason "not planned" --comment "Each build of master is measured, the check of \`$APP\` as it ships it stays."
+              else
+                gh issue close "$NUMBER" --reason "not planned" --comment "$SERVER is the newest release of Nextcloud ${SERVER%%.*}, the check of \`$APP\` as it ships it stays."
+              fi
               exit 1
             fi
             exit 0
