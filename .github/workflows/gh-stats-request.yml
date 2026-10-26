@@ -31,16 +31,18 @@
 # ships as a stable release, as gh-nc-appslist lists it, which also names the
 # repository that is measured. A shipped app must be one the shipped.json of the
 # catalogue lists for that server release, which names its repository and
-# directory.
+# directory. A server release is also a pre-release, 36.0.0rc1, matched without
+# regard to case.
 #
 # The data branch holds both lists, one "[<host>/]<owner>/<repo> <version>" per
 # line in lower case: a pinned version keeps all its results whatever
 # MEASURE_LINES says, and a removed one is not sent again by gh-stats-catalogue.yml as a
 # version without a result, until a new request measures it. The newest stable
 # version of a repository always keeps its result, and so does a shipped app as
-# the newest release of its server major or master ships it, unless the release
-# enables it always. A shipped app has the line
-# "-s v<release> <owner>/<repo>[:<directory>]", for master "-s master ...".
+# the newest release of its server major, the newest pre-release of a major
+# without a release, or master ships it, unless the release enables it always.
+# A shipped app has the line "-s v<release> <owner>/<repo>[:<directory>]", for
+# master "-s master ...".
 #
 # A removed repository leaves every table of the sampler database but keeps its
 # row in repos, marked as removed, so the sampler neither asks it again nor adds
@@ -114,9 +116,9 @@ jobs:
         env:
           TITLE: ${{ github.event.issue.title }}
         run: |
-          if [[ "$TITLE" =~ ^Measure\ ([a-z0-9_]+)\ as\ Nextcloud\ ([0-9]+\.[0-9]+\.[0-9]+|master)\ ships\ it$ ]]; then
+          if [[ "$TITLE" =~ ^Measure\ ([a-z0-9_]+)\ as\ Nextcloud\ ([0-9]+\.[0-9]+\.[0-9]+([A-Za-z]+[0-9]*)?|master)\ ships\ it$ ]]; then
             printf '%s\n' kind=measure "app=${BASH_REMATCH[1]}" "server=${BASH_REMATCH[2]}" >> "$GITHUB_OUTPUT"
-          elif [[ "$TITLE" =~ ^Remove\ the\ check\ of\ ([a-z0-9_]+)\ as\ Nextcloud\ ([0-9]+\.[0-9]+\.[0-9]+|master)\ ships\ it$ ]]; then
+          elif [[ "$TITLE" =~ ^Remove\ the\ check\ of\ ([a-z0-9_]+)\ as\ Nextcloud\ ([0-9]+\.[0-9]+\.[0-9]+([A-Za-z]+[0-9]*)?|master)\ ships\ it$ ]]; then
             printf '%s\n' kind=remove "app=${BASH_REMATCH[1]}" "server=${BASH_REMATCH[2]}" >> "$GITHUB_OUTPUT"
           elif [[ "$TITLE" =~ ^Measure\ ([a-z0-9_]+)\ ([0-9]+(\.[0-9]+)*)$ ]]; then
             printf '%s\n' kind=measure "app=${BASH_REMATCH[1]}" "version=${BASH_REMATCH[2]}" >> "$GITHUB_OUTPUT"
@@ -187,7 +189,7 @@ jobs:
             [ "$SERVER" != master ] || ref=master
             gh release download "$CATALOGUE_TAG" -p shipped.json -D "$state"
             jq -c --arg ref "$ref" --arg id "$APP" \
-              '.releases[] | select(.ref == $ref) | .latest as $latest | .apps[] | select(.id == $id) | . + {latest: $latest}' \
+              '.releases[] | select((.ref | ascii_downcase) == ($ref | ascii_downcase)) | .latest as $latest | .apps[] | select(.id == $id) | . + {latest: $latest}' \
               "$state/shipped.json" > "$state/app.json"
             if [ ! -s "$state/app.json" ]; then
               gh issue close "$NUMBER" --reason "not planned" --comment "The catalogue lists no app \`$APP\` in the archive of Nextcloud $SERVER."
@@ -287,7 +289,7 @@ jobs:
                     rm -rf -- "$dir"
                     dirs=$((dirs + 1))
                   fi
-                done < <(find "$DATA/apps" -mindepth 3 -type d -name "server-$SERVER" -print0 2>/dev/null)
+                done < <(find "$DATA/apps" -mindepth 3 -type d -iname "server-$SERVER" -print0 2>/dev/null)
               else
                 while read -r repo version; do
                   while IFS= read -r -d '' dir; do

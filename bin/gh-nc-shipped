@@ -4,8 +4,9 @@
 #
 # gh-nc-shipped - list the apps the Nextcloud server ships, with the version of
 # each in the release archive of every release of the maintained server majors
-# and of the newest end-of-life major, and in the daily archive of master. The
-# archive is a zip with its directory at the end, so ranges read the directory,
+# and of the newest end-of-life major, in the archive of the newest pre-release
+# of a major not yet released, and in the daily archive of master. The archive
+# is a zip with its directory at the end, so ranges read the directory,
 # core/shipped.json, version.php and the appinfo/info.xml of every shipped app
 # without downloading the archive. The result replaces its previous copy, from
 # which a release already read and master with an unchanged ETag are taken over
@@ -41,6 +42,7 @@ SERVER_APPS_OWNER="${SERVER_APPS_OWNER:-${SERVER_REPO%%/*}}"
 SERVER_SCHEDULE_URL="${SERVER_SCHEDULE_URL:-${GITHUB_RAW_URL}/wiki/${SERVER_REPO}/Maintenance-and-Release-Schedule.md}"
 SERVER_DOWNLOAD_URL="${SERVER_DOWNLOAD_URL:-https://download.nextcloud.com/server}"
 SERVER_RELEASES_URL="${SERVER_DOWNLOAD_URL}/releases"
+SERVER_PRERELEASES_URL="${SERVER_DOWNLOAD_URL}/prereleases"
 SERVER_MASTER_ARCHIVE="${SERVER_DOWNLOAD_URL}/daily/latest-master.zip"
 # The directory every path of the archive starts with.
 ARCHIVE_ROOT="nextcloud"
@@ -90,12 +92,17 @@ Writes the apps the Nextcloud server ships to <file>, as JSON:
 
 The releases are every release of each major the server's maintenance
 schedule lists as supported and of the newest major it lists as end of life,
-and master from its daily archive. latest is true for the newest release of
-each of these majors and for master. A release stays once its major has left
-the schedule, with latest false. Each archive's core/shipped.json names the
-apps it ships, its version.php the server version and, as build, the $OC_Build
-of the archive: the time it was built and the server commit it was built from.
-The appinfo/info.xml of each app names its name and version.
+and master from its daily archive. A major newer than those, which the server
+tags before the schedule lists it, counts as well. While it has no release,
+such as 37.0.0, it has its newest pre-release, 37.0.0beta2 or 37.0.0rc1, from
+the archive under prereleases/, and no older one. The suffix is matched
+without case, since tags and archives spell it rc or RC. latest is true for the
+newest release of each of these majors and for master. A release stays once its
+major has left the schedule, with latest false; a pre-release stays only while
+it is the newest of a major not yet released. Each archive's core/shipped.json
+names the apps it ships, its version.php the server version and, as build, the
+$OC_Build of the archive: the time it was built and the server commit it was
+built from. The appinfo/info.xml of each app names its name and version.
 
 enabled is always for an app the core/shipped.json of the archive lists under
 alwaysEnabled, which cannot be disabled, default for one it lists under
@@ -127,10 +134,10 @@ the release before it as its newest, and master without an archive keeps its
 previous entry.
 
 -x unpacks apps/<app-id>/ of the archive of that server release, 35.0.2 or
-v35.0.2, or of the daily archive of master, into <dir>/<app-id>/ and prints the
-URL of the archive, then the $OC_Build of its version.php: the time the archive
-was built and the server commit it was built from. Nothing else is read or
-written.
+v35.0.2, also of a pre-release such as 37.0.0rc1, or of the daily archive of
+master, into <dir>/<app-id>/ and prints the URL of the archive, then the
+$OC_Build of its version.php: the time the archive was built and the server
+commit it was built from. Nothing else is read or written.
 
 Options:
   -f, --file <file>  the file to read and replace (default: $GH_STATS_DIR/shipped.json)
@@ -146,7 +153,8 @@ Environment (or /etc/gh-stats/gh-stats.env):
                          (default: the owner of SERVER_REPO)
   SERVER_SCHEDULE_URL    the maintenance schedule (default: the page
                          Maintenance-and-Release-Schedule of the server wiki)
-  SERVER_DOWNLOAD_URL    the download base, with releases/ and daily/ below it
+  SERVER_DOWNLOAD_URL    the download base, with releases/, prereleases/ and
+                         daily/ below it
                          (default: https://download.nextcloud.com/server)
   SHIPPED_MAX_READS      the archives a run reads before it leaves the older
                          releases to the next run (default: 5)
@@ -344,6 +352,30 @@ previous() {
 		'.releases[]? | select(.archive == $u and ($e == "" or .etag == $e) and has("build") and all(.apps[]; has("enabled") and has("restrictable")))' <<<"$prev"
 }
 
+# archive_url <version>: the archive of that server release into url. A
+# pre-release lies under prereleases/ with a suffix whose case may differ from
+# its tag, nextcloud-35.0.0RC2.zip for v35.0.0rc2, so its name is looked up in
+# the listing of that directory, read once per run. Without it there returns 1.
+prereleases=""
+archive_url() {
+	local name
+	if [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+		url="$SERVER_RELEASES_URL/nextcloud-$1.zip"
+		return 0
+	fi
+	[ -n "$prereleases" ] || prereleases="$(curl -fsS --retry "$RETRIES" --max-time 60 "$SERVER_PRERELEASES_URL/")" \
+		|| die "no listing at $SERVER_PRERELEASES_URL/"
+	name="$(awk -v n="nextcloud-$1.zip" '{
+		while (match($0, /href="nextcloud-[^"]*\.zip"/)) {
+			h = substr($0, RSTART + 6, RLENGTH - 7)
+			if (tolower(h) == tolower(n)) { print h; exit }
+			$0 = substr($0, RSTART + RLENGTH)
+		}
+	}' <<<"$prereleases")"
+	[ -n "$name" ] || return 1
+	url="$SERVER_PRERELEASES_URL/$name"
+}
+
 # Whether an archive is there; its headers stay in $tmp/head for archive.
 available() { curl -fsSIL --retry "$RETRIES" --max-time 60 -o "$tmp/head" "$1" 2>/dev/null; }
 
@@ -430,8 +462,10 @@ archive() {
 				aref="$(remote --symref "$GITHUB_URL/$repo" HEAD 2>/dev/null \
 					| awk '$1 == "ref:" && $3 == "HEAD" { sub(/^refs\/heads\//, "", $2); print $2 }')" || aref="-"
 			else
-				aref="$(remote --tags --refs "$GITHUB_URL/$repo" "refs/tags/$ref" 2>/dev/null \
-					| awk '{ sub(/^refs\/tags\//, "", $2); print $2 }')" || aref="-"
+				# The tag of the app may spell the suffix of a pre-release in
+				# another case than the server tag.
+				aref="$(remote --tags --refs "$GITHUB_URL/$repo" "refs/tags/v$major.*" 2>/dev/null \
+					| awk -v t="refs/tags/$ref" 'tolower($2) == tolower(t) && !n++ { sub(/^refs\/tags\//, "", $2); print $2 }')" || aref="-"
 			fi
 			if [ "$aref" = - ]; then
 				code="$(curl -sS --retry "$RETRIES" --max-time 60 -o /dev/null -w '%{http_code}' "$GITHUB_URL/$repo")" \
@@ -511,8 +545,8 @@ if [ -n "$x_server" ]; then
 	if [ "$x_server" = master ]; then
 		url="$SERVER_MASTER_ARCHIVE"
 	else
-		[[ "$x_server" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "not a server release: $x_server"
-		url="$SERVER_RELEASES_URL/nextcloud-$x_server.zip"
+		[[ "$x_server" =~ ^[0-9]+\.[0-9]+\.[0-9]+([A-Za-z]+[0-9]*)?$ ]] || die "not a server release: $x_server"
+		archive_url "$x_server" || die "no archive of $x_server in $SERVER_PRERELEASES_URL/"
 	fi
 	available "$url" || die "no archive at $url"
 	mkdir -p "$x_dir"
@@ -528,17 +562,26 @@ majors="$(sed -n '/^## Currently supported versions/,/^## /s/^| \*\*\([0-9]*\)\*
 [ -n "$majors" ] || die "no supported major in $SERVER_SCHEDULE_URL"
 eol="$(sed -n '/^## EOL Versions/,/^## /s/^| \*\*\([0-9]*\)\*\*.*/\1/p' <<<"$schedule" | sort -n | tail -n 1)"
 [ -n "$eol" ] || die "no end-of-life major in $SERVER_SCHEDULE_URL"
-majors="$majors $eol"
-tags="$(remote --tags --refs "$GITHUB_URL/$SERVER_REPO" 'v*' \
-	| sed -n 's:.*refs/tags/v\([0-9]*\.[0-9]*\.[0-9]*\)$:\1:p' | sort -V)"
+all_tags="$(remote --tags --refs "$GITHUB_URL/$SERVER_REPO" 'v*' \
+	| sed -n 's:.*refs/tags/v\([0-9]*\.[0-9]*\.[0-9]*\([A-Za-z][A-Za-z]*[0-9]*\)\{0,1\}\)$:\1:p')"
+tags="$(awk '/^[0-9]+\.[0-9]+\.[0-9]+$/' <<<"$all_tags" | sort -V)"
+pre_tags="$(awk '!/^[0-9]+\.[0-9]+\.[0-9]+$/' <<<"$all_tags")"
 [ -n "$tags" ] || die "no release tags in $GITHUB_URL/$SERVER_REPO"
+# The server tags a major before the schedule lists it, from its first beta.
+newest="$(sort -n <<<"$majors" | tail -n 1)"
+majors="$majors $eol $(awk -F. -v n="$newest" '$1 > n { print $1 }' <<<"$all_tags" | sort -un)"
 
 # release <version> [<max>]: the entry of that server release, taken over from
 # the previous file or read from its archive, read only while fewer than <max>
 # archives are read when <max> is given. kept is 1 when the entry is there.
 release() {
-	local url="$SERVER_RELEASES_URL/nextcloud-$1.zip"
+	local url
 	kept=1
+	if ! archive_url "$1"; then
+		warn "no archive of $1 in $SERVER_PRERELEASES_URL/"
+		kept=0
+		return
+	fi
 	previous "$url" >> "$tmp/releases" && return
 	if [ -n "${2:-}" ] && [ "$reads" -ge "$2" ]; then
 		kept=0 left=$((left + 1))
@@ -559,7 +602,18 @@ reads=0 left=0
 for major in $majors; do
 	mapfile -t versions < <(awk -F. -v m="$major" '$1 == m' <<<"$tags" | sort -rV)
 	if [ "${#versions[@]}" = 0 ]; then
-		warn "no release of the major $major"
+		# A major not yet released has its newest pre-release read, and no
+		# older one. The suffix sorts without case: alpha, beta, then rc.
+		mapfile -t versions < <(awk -F. -v m="$major" '$1 == m { print tolower($0) "\t" $0 }' <<<"$pre_tags" \
+			| sort -t $'\t' -k1,1rV | cut -f2)
+		if [ "${#versions[@]}" = 0 ]; then
+			warn "no release of the major $major"
+			continue
+		fi
+		for v in "${versions[@]}"; do
+			release "$v"
+			[ "$kept" = 0 ] || break
+		done
 		continue
 	fi
 	for ((i = 0; i < ${#versions[@]}; i++)); do
@@ -577,8 +631,9 @@ while read -r version; do
 	release "$version" "$SHIPPED_MAX_READS"
 done < <(sort -rV "$tmp/older")
 # Every entry of the previous file not read again stays, master without an
-# archive and the releases of a major that has left the schedule among them.
-"$JQ" -c '.releases[]?' <<<"$prev" >> "$tmp/releases"
+# archive and the releases of a major that has left the schedule among them; a
+# pre-release only when it was read again as the newest of its major.
+"$JQ" -c '.releases[]? | select(.ref == "master" or (.ref | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")))' <<<"$prev" >> "$tmp/releases"
 
 # == Initial lists ==
 initial="$("$JQ" -c '.initial // {}' <<<"$prev")"
@@ -597,7 +652,8 @@ done < <(sed -n 's/^\([0-9]*\)\.0\.0$/\1/p' <<<"$tags")
 # unique_by keeps the first entry of each archive, so one read in this run wins
 # over its previous one.
 "$JQ" -n --argjson initial "$initial" --argjson majors "$("$JQ" -s -c . <<<"$majors")" --slurpfile releases "$tmp/releases" '
-	def rank: if .ref == "master" then [] else .ref | ltrimstr("v") | split(".") | map(-tonumber) end;
+	def rank: if .ref == "master" then [] else .ref | capture("^v(?<v>[0-9]+\\.[0-9]+\\.[0-9]+)(?<p>.*)$")
+		| (.v | split(".") | map(-tonumber)) + [if .p == "" then 0 else 1 end] end;
 	($releases | unique_by(.archive)) as $all
 	| [$all[] | select(.ref != "master" and (.major as $m | any($majors[]; . == $m)))]
 	| [group_by(.major)[] | min_by(rank) | .archive] as $newest
