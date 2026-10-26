@@ -9,7 +9,8 @@
 # needs is dropped; what the browser cannot derive cheaply is added: the apps of
 # the App Store catalogue, the ordinary ones of apps.json and the AppAPI apps
 # (ExApps) of appapi_apps.json, the apps the server ships, as gh-nc-shipped
-# lists them, and the Nextcloud versions of the catalogue releases, the
+# lists them, the apps outside both, as gh-nc-unlisted lists them, and the
+# Nextcloud versions of the catalogue releases, the
 # version key and strict pre-release flag of gh-stats on every release, the
 # projects the repositories form, one summary row per project and release line
 # for the start page, the measurement results of the data branch, and what the
@@ -37,6 +38,7 @@ APPSTORE_CACHE="${APPSTORE_CACHE:-${STATE_DIR}/apps.json}"
 APPSTORE_APPAPI_CACHE="${APPSTORE_APPAPI_CACHE:-$(dirname "$APPSTORE_CACHE")/appapi_apps.json}"
 APPSTORE_CATEGORIES_CACHE="${APPSTORE_CATEGORIES_CACHE:-$(dirname "$APPSTORE_CACHE")/categories.json}"
 SHIPPED_CACHE="${SHIPPED_CACHE:-$(dirname "$APPSTORE_CACHE")/shipped.json}"
+UNLISTED_CACHE="${UNLISTED_CACHE:-$(dirname "$APPSTORE_CACHE")/unlisted.json}"
 SQLITE="${SQLITE_BIN:-/usr/bin/sqlite3}"
 # The asset extensions gh-stats counts by default; the summary counts the same.
 ASSETS="zip tar.bz2 tar.gz tar.xz tgz"
@@ -116,6 +118,12 @@ repository under its current name, plus
              by default or not, and the server release before it that ships
              the app with the version it ships; empty without shipped.json
   shipped_since  the server major each shipped app is shipped since
+  unlisted   every app that is neither in the catalogue nor shipped by the
+             server: its id, name and version on the default branch, the
+             Nextcloud versions it declares, its host, repository and path,
+             its newest tag, its newest tags as JSON, newest first, whether a
+             release carries a tarball and when it was pushed last; empty
+             without unlisted.json
 
 Downloads are the summed counters of the assets gh-stats counts by default
 (zip, tar.bz2, tar.gz, tar.xz, tgz). A line whose releases have none of them is
@@ -138,6 +146,8 @@ Environment (or /etc/gh-stats/gh-stats.env):
   APPSTORE_CATEGORIES_CACHE  the App Store categories categories.json, optional
                   (default: next to apps.json)
   SHIPPED_CACHE   the shipped apps shipped.json of gh-nc-shipped, optional
+                  (default: next to apps.json)
+  UNLISTED_CACHE  the unlisted apps unlisted.json of gh-nc-unlisted, optional
                   (default: next to apps.json)
   SQLITE_BIN      sqlite3 (default: /usr/bin/sqlite3)
 EOF
@@ -309,6 +319,16 @@ if [ -r "$SHIPPED_CACHE" ]; then
 		 | "INSERT OR IGNORE INTO shipped VALUES (\($r.version | q), \($r.major), \($r.ref | q), \($r.published | v), \(if $r.latest == false then 0 else 1 end), \(.id | q), \(.name | q), \(.version | q), \(.repo | q), \(.path | q), \(.ref | q), \(.enabled | v), \(.restrictable | v), \($ps | v), \($pv | v));"),
 		(.since | to_entries[] | "INSERT OR IGNORE INTO shipped_since VALUES (\(.key | q), \(.value));")
 	' "$SHIPPED_CACHE")"
+fi
+# The unlisted workflow keeps the apps outside the catalogue and the server;
+# without them the Apps tab lists none of them.
+unlisted_sql=''
+if [ -r "$UNLISTED_CACHE" ]; then
+	unlisted_sql="$(jq -r "$sql_defs"'
+		.apps[]
+		| (if .nextcloud.min then ">=" + (.nextcloud.min | tostring) + (if .nextcloud.max then " <=" + (.nextcloud.max | tostring) else "" end) else null end) as $nc
+		| "INSERT OR IGNORE INTO unlisted VALUES (\(.id | q), \(.name // .id | q), \(.version | v), \($nc | v), \(.host | q), \(.repo | q), \(.path // "" | q), \(.tag | v), \(.tags // [] | tojson | q), \(.tarball | v), \(.pushed | v));"
+	' "$UNLISTED_CACHE")"
 fi
 
 # -bail stops at the first error; the half-written copy is removed then.
@@ -725,10 +745,28 @@ CREATE TABLE shipped_since (
   id    TEXT    NOT NULL PRIMARY KEY,
   major INTEGER NOT NULL
 ) WITHOUT ROWID;
+-- The apps outside the catalogue and the server. platform is the range of
+-- Nextcloud versions in the form of a catalogue release, tags a JSON array of
+-- the newest tags, newest first, and tarball 1 when one of the newest
+-- releases carries a tarball, which leaves the app unmeasured.
+CREATE TABLE unlisted (
+  id       TEXT    NOT NULL PRIMARY KEY,
+  name     TEXT    NOT NULL,
+  version  TEXT,
+  platform TEXT,
+  host     TEXT    NOT NULL,
+  repo     TEXT    NOT NULL,
+  path     TEXT    NOT NULL,
+  tag      TEXT,
+  tags     TEXT    NOT NULL,
+  tarball  INTEGER NOT NULL,
+  pushed   TEXT
+) WITHOUT ROWID;
 BEGIN;
 $catalogue_sql
 $categories_sql
 $shipped_sql
+$unlisted_sql
 COMMIT;
 ALTER TABLE app_releases ADD COLUMN stable INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE app_releases ADD COLUMN mismatch INTEGER NOT NULL DEFAULT 0;
@@ -779,7 +817,8 @@ UNION ALL SELECT 'findings', count(*) FROM findings
 UNION ALL SELECT 'app_details', count(*) FROM app_details
 UNION ALL SELECT 'app_releases', count(*) FROM app_releases
 UNION ALL SELECT 'categories', count(*) FROM categories
-UNION ALL SELECT 'shipped', count(DISTINCT id) FROM shipped;
+UNION ALL SELECT 'shipped', count(DISTINCT id) FROM shipped
+UNION ALL SELECT 'unlisted', count(*) FROM unlisted;
 SQL
 trap - ERR
 echo "site database written to $out ($(stat -c %s "$out") bytes)"

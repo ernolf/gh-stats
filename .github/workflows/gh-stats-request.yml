@@ -29,16 +29,21 @@
 # a work issue that starts with one of these words, is left as it is: no label,
 # no comment, no close. The version must be one the catalogue
 # ships as a stable release, as gh-nc-appslist lists it, which also names the
-# repository that is measured. A shipped app must be one the shipped.json of the
+# repository that is measured. An app the catalogue does not hold must be one
+# the unlisted.json of the catalogue lists without a release tarball, with the
+# version of one of the tags it keeps, read from the first digit on; gh-stats
+# then builds the app from that tag. A shipped app must be one the shipped.json of the
 # catalogue lists for that server release, which names its repository and
 # directory. A server release is also a pre-release, 36.0.0rc1, matched without
 # regard to case.
 #
-# The data branch holds both lists, one "[<host>/]<owner>/<repo> <version>" per
-# line in lower case: a pinned version keeps all its results whatever
+# The data branch holds both lists, one "[<host>/]<owner>/<repo>[:<directory>] <version>"
+# per line in lower case, with the directory only for an unlisted app below the
+# root of its repository: a pinned version keeps all its results whatever
 # MEASURE_LINES says, and a removed one is not sent again by gh-stats-catalogue.yml as a
 # version without a result, until a new request measures it. The newest stable
-# version of a repository always keeps its result, and so does a shipped app as
+# version of a repository always keeps its result, as does the newest tag of an
+# unlisted app, and so does a shipped app as
 # the newest release of its server major, the newest pre-release of a major
 # without a release, or master ships it, unless the release enables it always.
 # A shipped app has the line "-s v<release> <owner>/<repo>[:<directory>]", for
@@ -219,8 +224,27 @@ jobs:
           bin/gh-nc-appslist -v "$state/versions" -o - | sed '/^#/d' | tr '[:upper:]' '[:lower:]' \
             | LC_ALL=C sort -u > "$state/lines"
           if [ ! -s "$state/lines" ]; then
-            gh issue close "$NUMBER" --reason "not planned" --comment "The catalogue ships no stable release $VERSION of \`$APP\` from a repository gh-stats measures."
-            exit 1
+            # An unlisted app is measured from its tag, as long as no release
+            # carries a tarball to measure instead.
+            gh release download "$CATALOGUE_TAG" -p unlisted.json -D "$state" 2>/dev/null || :
+            [ ! -s "$state/unlisted.json" ] || jq -r --arg id "$APP" --arg v "$VERSION" '
+              .apps[] | select((.id | ascii_downcase) == $id and .tarball == false)
+              | [.tags[]? | sub("^[^0-9]*"; "") | select(. != "")] as $vs
+              | select(any($vs[]; . == $v))
+              | (if .host == "github.com" then "" else .host + "/" end) + .repo
+                + (if .path != "" then ":" + .path else "" end) + " " + $v
+                + (if $vs[0] == $v then " newest" else "" end)' "$state/unlisted.json" \
+              | tr '[:upper:]' '[:lower:]' > "$state/unlisted"
+            if [ ! -s "$state/unlisted" ]; then
+              gh issue close "$NUMBER" --reason "not planned" --comment "The catalogue ships no stable release $VERSION of \`$APP\` from a repository gh-stats measures, and lists no app \`$APP\` outside the App Store with a tag of $VERSION and no release tarball."
+              exit 1
+            fi
+            if [ "$KIND" = remove ] && grep -q ' newest$' "$state/unlisted"; then
+              gh issue close "$NUMBER" --reason "not planned" --comment "$VERSION is the newest tag of \`$APP\`, its check stays."
+              exit 1
+            fi
+            cut -d ' ' -f 1,2 "$state/unlisted" > "$state/lines"
+            exit 0
           fi
           if [ "$KIND" = remove ]; then
             bin/gh-nc-appslist -o - | sed '/^#/d' | tr '[:upper:]' '[:lower:]' | LC_ALL=C sort -u > "$state/newest"
@@ -279,7 +303,8 @@ jobs:
               message="request: remove the check of $APP $WHICH"
               # The version directories of the repository, and of its apps below
               # the root, which lie one directory deeper. A shipped app has only
-              # its own: the server repository holds many apps.
+              # its own: the server repository holds many apps. So has an
+              # unlisted app below the root, whose line names its directory.
               if [ -n "$SERVER" ]; then
                 key="$(cat "$STATE/key")"
                 while IFS= read -r -d '' dir; do
@@ -296,7 +321,8 @@ jobs:
                     app="${dir%/*}"
                     app="${app#"$DATA/apps/"}"
                     app="${app,,}"
-                    if [ "$app" = "$repo" ] || [ "${app%/*}" = "$repo" ]; then
+                    if { [[ "$repo" == *:* ]] && [ "$app" = "${repo%%:*}/$APP" ]; } \
+                      || { [[ "$repo" != *:* ]] && { [ "$app" = "$repo" ] || [ "${app%/*}" = "$repo" ]; }; }; then
                       rm -rf -- "$dir"
                       dirs=$((dirs + 1))
                     fi
