@@ -111,8 +111,9 @@ repository under its current name, plus
              version, its major, its tag or master, the date of its archive,
              whether it is the newest release of its major or master, and the
              app id, name and version, the repository, path and ref
-             its source is at, and whether that release enables it always,
-             by default or not; empty without shipped.json
+             its source is at, whether that release enables it always,
+             by default or not, and the server release before it that ships
+             the app with the version it ships; empty without shipped.json
   shipped_since  the server major each shipped app is shipped since
 
 Downloads are the summed counters of the assets gh-stats counts by default
@@ -302,8 +303,9 @@ fi
 shipped_sql=''
 if [ -r "$SHIPPED_CACHE" ]; then
 	shipped_sql="$(jq -r "$sql_defs"'
-		(.releases[] | . as $r | .apps[]
-		 | "INSERT OR IGNORE INTO shipped VALUES (\($r.version | q), \($r.major), \($r.ref | q), \($r.published | v), \(if $r.latest == false then 0 else 1 end), \(.id | q), \(.name | q), \(.version | q), \(.repo | q), \(.path | q), \(.ref | q), \(.enabled | v), \(.restrictable | v));"),
+		(.releases as $rs | range($rs | length) as $i | $rs[$i] as $r | $r.apps[] | . as $a
+		 | (first($rs[$i + 1:][] | . as $p | $p.apps[] | select(.id == $a.id) | [$p.version, .version]) // [null, null]) as [$ps, $pv]
+		 | "INSERT OR IGNORE INTO shipped VALUES (\($r.version | q), \($r.major), \($r.ref | q), \($r.published | v), \(if $r.latest == false then 0 else 1 end), \(.id | q), \(.name | q), \(.version | q), \(.repo | q), \(.path | q), \(.ref | q), \(.enabled | v), \(.restrictable | v), \($ps | v), \($pv | v));"),
 		(.since | to_entries[] | "INSERT OR IGNORE INTO shipped_since VALUES (\(.key | q), \(.value));")
 	' "$SHIPPED_CACHE")"
 fi
@@ -696,7 +698,8 @@ CREATE TABLE categories (
 -- default for one a new installation enables, optional for any other, NULL
 -- where the core/shipped.json of the release does not tell. restrictable is 0
 -- for an app the server cannot restrict to groups, by the <types> of its
--- info.xml.
+-- info.xml. previous_server is the server release before it, in the order of
+-- shipped.json, that ships the app, and previous_version the version it ships.
 CREATE TABLE shipped (
   server    TEXT    NOT NULL,
   major     INTEGER NOT NULL,
@@ -711,6 +714,8 @@ CREATE TABLE shipped (
   app_ref   TEXT    NOT NULL,
   enabled   TEXT,
   restrictable INTEGER,
+  previous_server  TEXT,
+  previous_version TEXT,
   PRIMARY KEY (ref, id)
 ) WITHOUT ROWID;
 CREATE TABLE shipped_since (
@@ -728,6 +733,30 @@ UPDATE app_releases SET stable = coalesce(($store_stable), 0);
 UPDATE app_releases SET mismatch = 1 WHERE stable AND EXISTS (
   SELECT 1 FROM links l JOIN releases r ON l.host = r.host AND l.owner = r.owner AND l.repo = r.repo AND l.tag = r.tag
    WHERE l.id = app_releases.id AND l.version = app_releases.version AND (r.prerelease OR r.pre_tag));
+
+-- changelog-lint judges a release by what the App Store shows of it. A shipped
+-- app reaches its users with the server release, whose changes, those of the
+-- apps it ships included, are listed at https://nextcloud.com/changelog/. So
+-- a missing CHANGELOG.md, and any changelog of an app of the server tree, is
+-- a note. A missing section stays a warning only where the version is new
+-- with the server release: the release before it shipped another one or none.
+-- The first line of the finding names the file and stays.
+CREATE TEMP TABLE shipped_runs AS
+SELECT m.dir, m.owner = 'nextcloud' AND m.repo = 'server' AS tree, m.version, s.previous_server, s.previous_version
+  FROM measurements m LEFT JOIN shipped s ON s.ref = m.server AND s.id = m.app_id
+ WHERE m.server IS NOT NULL;
+UPDATE findings AS f SET
+  level = CASE WHEN r.tree OR f.id = 'changelog-missing' OR r.previous_version = r.version THEN 'info' ELSE 'warn' END,
+  text = substr(f.text, 1, instr(f.text || char(10), char(10)) - 1) || char(10) || CASE
+    WHEN r.tree OR f.id = 'changelog-missing'
+      THEN '  The app ships with the server, whose changes, those of its apps included, are listed at https://nextcloud.com/changelog/.'
+    WHEN r.previous_version = r.version
+      THEN '  Nextcloud ' || r.previous_server || ', the server release before, shipped ' || r.version || ' as well, so the app brings no new version.'
+    WHEN r.previous_version IS NOT NULL
+      THEN '  Nextcloud ' || r.previous_server || ', the server release before, shipped ' || r.previous_version || ', so the version is new with this one.'
+    ELSE '  No server release before this one ships the app, so the version is new with it.' END
+  FROM shipped_runs r
+ WHERE f.dir = r.dir AND f.tool = 'changelog-lint' AND f.level = 'warn' AND f.id IN ('changelog-missing', 'changelog-section');
 
 VACUUM;
 SELECT 'apps', count(*) FROM apps
