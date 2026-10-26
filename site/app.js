@@ -1076,10 +1076,10 @@ function initOverview() {
 		since.value = SINCE_STEPS[Number(sinceRange.value)] ?? ''
 		render()
 	})
-	// The select offers the majors from the lowest to the highest min-version:
+	// The select offers the majors from the highest to the lowest min-version:
 	// an upper bound may name a major far beyond any release, such as <=99.
 	const firsts = catalogueSpecs().map(ncMajors).filter(Boolean).map((m) => m[0])
-	for (let v = Math.min(...firsts); v <= Math.max(...firsts); v++) {
+	for (let v = Math.max(...firsts); v >= Math.min(...firsts); v--) {
 		nc.append(el('option', { value: v }, String(v)))
 	}
 	nc.addEventListener('change', render)
