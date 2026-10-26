@@ -480,8 +480,11 @@ function shippedSource(s) {
 	return `https://github.com/${s.repo}/tree/${encodeURIComponent(s.app_ref)}${s.path ? `/${s.path}` : ''}`
 }
 
+// version.php of master names a release not yet out, 36.0.0 dev, so master is
+// named by its major and the stage that follows.
 function serverLink(s) {
-	return el('a', { href: `https://github.com/${SERVER_REPO}/tree/${encodeURIComponent(s.ref)}` }, s.server)
+	return el('a', { href: `https://github.com/${SERVER_REPO}/tree/${encodeURIComponent(s.ref)}` },
+		s.ref === 'master' ? `master (Nextcloud ${s.server.replace(/^(\d+)\.\d+\.\d+/, '$1')})` : s.server)
 }
 
 function releaseLink(fig) {
@@ -700,12 +703,13 @@ function olderToggle(p) {
 }
 
 // A shipped app has a line for the newest release of each server major whose
-// archive ships it and for master, the newest stable major on its row and the
-// others below, each with the checks of the app as that release ships it.
+// archive ships it and for master, master on its row and the stable majors
+// below, each with the checks of the app as that release ships it. An app
+// master no longer ships has its newest stable major on the row.
 // Nobody downloads the archives from a host gh-stats samples, so the download
 // columns stay empty and there is nothing to chart or compare.
 function shippedRow(releases) {
-	const main = releases.find((s) => s.ref !== 'master') ?? releases[0]
+	const main = releases.find((s) => s.ref === 'master') ?? releases[0]
 	const line = (s, first) => {
 		const runs = measuredShipped.get(`${s.id}\n${s.ref}`)
 		const [checks, checksRow] = checksCell(runs, 10)
@@ -728,7 +732,7 @@ function shippedRow(releases) {
 		tab: 'shipped', name: main.name, tag: main.version, published: main.published, nc: row.nc, enabled: main.enabled,
 		total: null, d1: null, d7: null, d30: null, warn: row.warn,
 		lines: releases.filter((s) => s !== main)
-			.map((s) => line(s, el('td', { class: 'line-label' }, s.ref === 'master' ? 'master' : `Nextcloud ${s.major}`))),
+			.map((s) => line(s, el('td', { class: 'line-label' }, `Nextcloud ${s.major}`))),
 		search: `${main.name} ${main.id} ${main.repo}`.toLowerCase(), categories: new Set(JSON.parse(main.categories ?? '[]')),
 	}
 	p.main = el('tbody', {}, row.tr, row.checks)
@@ -856,8 +860,7 @@ function initOverview() {
 			}
 			p.older.replaceChildren(...older.flatMap((r) => [r.tr, r.checks, r.compare, r.compareChecks]))
 			p.toggle.hidden = !older.length
-			// The lines of a shipped app include master, which is newer.
-			p.toggle.textContent = `${older.length} ${p.tab === 'shipped' ? 'other' : 'older'} line${older.length > 1 ? 's' : ''}`
+			p.toggle.textContent = `${older.length} older line${older.length > 1 ? 's' : ''}`
 			frag.append(p.main, p.older)
 		}
 		table.append(frag)
