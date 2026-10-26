@@ -102,7 +102,8 @@ repository under its current name, plus
              the catalogue
   app_releases  every catalogue release with its date, nightly flag,
              licences, Nextcloud and PHP versions, databases and PHP extensions,
-             stable, 1 when the App Store lists it as stable, and mismatch, 1
+             the host of its download in lowercase, asset, 1 when the download
+             is a release asset of the kind the sampler counts, stable, 1 when the App Store lists it as stable, and mismatch, 1
              when it is stable but the host flags the release it is downloaded
              from as a pre-release or its tag names one
   categories  the English name of every App Store category, which
@@ -273,7 +274,7 @@ fi
 # App Store to see them. The authors' mail addresses stay out: the page shows
 # a name and a homepage, and a static page would hand the addresses to every
 # harvester.
-catalogue_sql="$(jq -r "$sql_defs"'
+catalogue_sql="$(jq -r "$sql_defs$release_url"'
 	def t: if . == "" then null else . end | v;
 	def proxy: "https://usercontent.apps.nextcloud.com/";
 	def unproxy: if startswith(proxy)
@@ -286,8 +287,8 @@ catalogue_sql="$(jq -r "$sql_defs"'
 	| "INSERT OR IGNORE INTO app_details VALUES (\($id | q), \(.categories // [] | tojson | q), \(.authors // [] | map({name, homepage}) | tojson | q), \(.website | t), \(.issueTracker | t), \(.discussion | t), \(.userDocs | t), \(.adminDocs | t), \(.developerDocs | t), \(.created | t), \(.lastModified | t), \(.ratingOverall | v), \(.ratingRecent | v), \(.ratingNumOverall | v), \(.ratingNumRecent | v), \([.screenshots[]?.url | unproxy | select(test("^https?://"))] | tojson | q), \(.exapp | v));",
 	  (.translations // {} | to_entries[]
 	  | "INSERT OR IGNORE INTO app_texts VALUES (\($id | q), \(.key | q), \(.value.name | t), \(.value.summary | t), \(.value.description | t));"),
-	  (.releases[]?
-	  | "INSERT OR IGNORE INTO app_releases VALUES (\($id | q), \(.version | q), \(.created | t), \(.isNightly | v), \(.licenses // [] | tojson | q), \(.rawPlatformVersionSpec | t), \(.rawPhpVersionSpec | t), \(.databases // [] | specs), \(.phpExtensions // [] | specs));")
+	  (.releases[]? | (.download // "" | split("/")) as $p
+	  | "INSERT OR IGNORE INTO app_releases VALUES (\($id | q), \(.version | q), \(.created | t), \(.isNightly | v), \(.licenses // [] | tojson | q), \(.rawPlatformVersionSpec | t), \(.rawPhpVersionSpec | t), \(.databases // [] | specs), \(.phpExtensions // [] | specs), \($p[2] | if . == null then . else ascii_downcase end | t), \($p | release_url | v));")
 ' "$catalogue")"
 # The sampler fetches the names apart from the catalogue and carries on without
 # them, so their absence leaves the table empty instead of the site unbuilt.
@@ -685,6 +686,8 @@ CREATE TABLE app_releases (
   php            TEXT,
   databases      TEXT NOT NULL,
   php_extensions TEXT NOT NULL,
+  host           TEXT,
+  asset          INTEGER NOT NULL,
   PRIMARY KEY (id, version)
 ) WITHOUT ROWID;
 CREATE TABLE categories (
