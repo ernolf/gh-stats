@@ -125,7 +125,9 @@ its newest, and master without an archive keeps its previous entry.
 
 -x unpacks apps/<app-id>/ of the archive of that server release, 35.0.2 or
 v35.0.2, or of the daily archive of master, into <dir>/<app-id>/ and prints the
-URL of the archive. Nothing else is read or written.
+URL of the archive, then the $OC_Build of its version.php: the time the archive
+was built and the server commit it was built from. Nothing else is read or
+written.
 
 Options:
   -f, --file <file>  the file to read and replace (default: $GH_STATS_DIR/shipped.json)
@@ -455,8 +457,10 @@ archive() {
 # of an app lie one after the other in the archive, so one range from its first
 # local header to the entry after its last one carries all of them, and each is
 # cut out of that locally; were they scattered, the range would only be longer.
+# The build of the archive goes into build, read under the same ETag, so it is
+# that of the files unpacked.
 unpack() {
-	local url="$1" id="$2" dest="$3" etag modified size cdoff first end method csize off crc isize hname s i name rel lh start n=0
+	local url="$1" id="$2" dest="$3" etag modified size cdoff first end method csize off crc isize hname s i name rel lh start line n=0
 	heads "$url"
 	central "$url"
 	directory "$tmp/cd" "$id" "$tmp/next" > "$tmp/dir"
@@ -489,6 +493,10 @@ unpack() {
 		n=$((n + 1))
 	done < "$tmp/dir"
 	echo "$n files of $ARCHIVE_ROOT/apps/$id/ unpacked to $dest/$id" >&2
+	line="$(directory "$tmp/cd" | awk -v n="$ARCHIVE_ROOT/version.php" '$1 == n')"
+	[ -n "$line" ] || die "$url: no version.php"
+	extract "$url" "$etag" "$line" "$tmp/version.php"
+	build="$(sed -n "s/^\$OC_Build = '\(.*\)';.*/\1/p" "$tmp/version.php")"
 }
 
 if [ -n "$x_server" ]; then
@@ -503,6 +511,7 @@ if [ -n "$x_server" ]; then
 	mkdir -p "$x_dir"
 	unpack "$url" "$x_id" "$x_dir"
 	echo "$url"
+	echo "$build"
 	exit 0
 fi
 
