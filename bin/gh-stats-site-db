@@ -120,8 +120,9 @@ repository under its current name, plus
   shipped_since  the server major each shipped app is shipped since
   unlisted   every app that is neither in the catalogue nor shipped by the
              server: its id, name and version on the default branch, the
-             Nextcloud versions it declares, its host, repository and path,
-             its newest tag, its newest tags as JSON, newest first, whether a
+             Nextcloud versions it declares, whether it is an ExApp or a
+             template or developer tool, its host, repository and path, its
+             newest tag, its newest tags as JSON, newest first, whether a
              release carries a tarball and when it was pushed last; empty
              without unlisted.json
 
@@ -321,13 +322,13 @@ if [ -r "$SHIPPED_CACHE" ]; then
 	' "$SHIPPED_CACHE")"
 fi
 # The unlisted workflow keeps the apps outside the catalogue and the server;
-# without them the Apps tab lists none of them.
+# without them the site lists none of them.
 unlisted_sql=''
 if [ -r "$UNLISTED_CACHE" ]; then
 	unlisted_sql="$(jq -r "$sql_defs"'
 		.apps[]
 		| (if .nextcloud.min then ">=" + (.nextcloud.min | tostring) + (if .nextcloud.max then " <=" + (.nextcloud.max | tostring) else "" end) else null end) as $nc
-		| "INSERT OR IGNORE INTO unlisted VALUES (\(.id | q), \(.name // .id | q), \(.version | v), \($nc | v), \(.host | q), \(.repo | q), \(.path // "" | q), \(.tag | v), \(.tags // [] | tojson | q), \(.tarball | v), \(.pushed | v));"
+		| "INSERT OR IGNORE INTO unlisted VALUES (\(.id | q), \(.name // .id | q), \(.version | v), \($nc | v), \(.exapp // false | v), \(.tool // false | v), \(.host | q), \(.repo | q), \(.path // "" | q), \(.tag | v), \(.tags // [] | tojson | q), \(.tarball | v), \(.pushed | v));"
 	' "$UNLISTED_CACHE")"
 fi
 
@@ -746,14 +747,17 @@ CREATE TABLE shipped_since (
   major INTEGER NOT NULL
 ) WITHOUT ROWID;
 -- The apps outside the catalogue and the server. platform is the range of
--- Nextcloud versions in the form of a catalogue release, tags a JSON array of
--- the newest tags, newest first, and tarball 1 when one of the newest
--- releases carries a tarball, which leaves the app unmeasured.
+-- Nextcloud versions in the form of a catalogue release, exapp 1 for an
+-- AppAPI app, which is not built, tool 1 for a template or developer tool, tags
+-- a JSON array of the newest tags, newest first, and tarball 1 when one of the
+-- newest releases carries a tarball, which leaves the app unmeasured.
 CREATE TABLE unlisted (
   id       TEXT    NOT NULL PRIMARY KEY,
   name     TEXT    NOT NULL,
   version  TEXT,
   platform TEXT,
+  exapp    INTEGER NOT NULL,
+  tool     INTEGER NOT NULL,
   host     TEXT    NOT NULL,
   repo     TEXT    NOT NULL,
   path     TEXT    NOT NULL,
