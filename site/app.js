@@ -192,8 +192,15 @@ function shippedApps(id = null) {
 // with an id only that app.
 function unlistedApps(id = null) {
 	return query(`
-		SELECT id, name, version, platform, host, repo, path, tags, CAST(strftime('%s', pushed) AS INTEGER) AS pushed
+		SELECT id, name, version, platform, exapp, tool, host, repo, path, tags, CAST(strftime('%s', pushed) AS INTEGER) AS pushed
 		  FROM unlisted WHERE NOT tarball AND ($id IS NULL OR id = $id) ORDER BY id`, { $id: id })
+}
+
+// The templates and developer tools, with or without a release tarball, keyed
+// by their repository as host/owner/repo in lower case.
+function unlistedTools() {
+	return Map.groupBy(query('SELECT id, name, exapp, host, repo, tarball FROM unlisted WHERE tool ORDER BY name'),
+		(u) => `${u.host}/${u.repo}`.toLowerCase())
 }
 
 // The version a tag names, read from its first digit on, as gh-nc-appsdiag
@@ -217,6 +224,11 @@ function unlistedSource(u) {
 }
 
 const UNLISTED_TEXT = 'no release of its repository carries a tarball, so gh-stats builds the app from its newest tag, or from the default branch where it has none, and measures that build'
+const EXAPP_TEXT = 'an AppAPI app, which runs in a container of its own; gh-stats does not build it, so it is not measured'
+
+function exappMark(u) {
+	return u.exapp ? [el('span', { class: 'exapp', title: EXAPP_TEXT }, 'ExApp')] : []
+}
 
 // The Nextcloud major each shipped app is shipped since.
 function shippedSince() {
@@ -759,28 +771,32 @@ function catalogueRow(a) {
 
 // An app outside the App Store and the server has the row of its newest tag,
 // or of its default branch. Nobody downloads it from a release gh-stats
-// samples, so its download columns stay empty and say why.
+// samples, so its download columns stay empty and say why. A template or
+// developer tool goes to their tab, an ExApp among them marked as such, any
+// other ExApp to the ExApps; no ExApp is measured.
 function unlistedRow(u) {
 	const version = unlistedVersion(u)
 	const p = {
-		tab: 'apps', name: u.name, tag: version, published: null, nc: u.platform,
+		tab: u.tool ? 'tools' : u.exapp ? 'exapps' : 'apps', name: u.name, tag: version, published: null, nc: u.platform,
 		total: null, d1: null, d7: null, d30: null, lines: [],
 		search: `${u.name} ${u.id} ${u.repo}`.toLowerCase(), categories: new Set(),
 	}
-	const runs = version === null ? undefined : measurementsByVersion(u.id).get(version)
+	const runs = version === null || u.exapp ? undefined : measurementsByVersion(u.id).get(version)
 	p.warn = warnings(runs)
 	const [checks, checksRow] = checksCell(runs, 10)
 	if (!runs) {
-		const [why, title] = version === null
-			? ['no versioned tag', 'no tag of its repository names a version, so the app is not measured']
-			: ['no release tarball', UNLISTED_TEXT]
+		const [why, title] = u.exapp
+			? ['ExApp', EXAPP_TEXT]
+			: version === null
+				? ['no versioned tag', 'no tag of its repository names a version, so the app is not measured']
+				: ['no release tarball', UNLISTED_TEXT]
 		checks.title = title
 		checks.append(el('span', { class: 'check-why' }, why))
 	}
-	const empty = { class: 'num na', title: UNLISTED_TEXT }
+	const empty = { class: 'num na', title: u.exapp ? 'no release of its repository carries a tarball' : UNLISTED_TEXT }
 	p.main = el('tbody', {}, el('tr', {},
 		el('td', { class: 'pick' }),
-		el('td', {}, el('span', { class: 'name' }, el('a', { href: `#app/${encodeURIComponent(u.id)}` }, u.name)), unlistedSource(u)),
+		el('td', {}, el('span', { class: 'name' }, el('a', { href: `#app/${encodeURIComponent(u.id)}` }, u.name)), unlistedSource(u), ...exappMark(u)),
 		el('td', { class: 'tag' }, version ?? '', ...restrictionMark(runs ?? [])),
 		el('td', {}, ncRange(u.platform)),
 		el('td'),
@@ -856,11 +872,19 @@ function initOverview() {
 	const repos = Map.groupBy(projectRepos(), (r) => r.project)
 	const apps = Map.groupBy(projectApps(), (r) => r.project)
 	appProjects = new Map([...apps.values()].flat().map((a) => [a.id, a.project]))
+	const tools = unlistedTools()
+	const toolIds = new Set()
 	const projects = [...Map.groupBy(summaryRows(), (r) => r.project)].map(([project, lines]) => {
 		const [main, ...older] = lines
 		const members = repos.get(project)
 		const own = apps.get(project) ?? []
-		const p = { project, tab: projectTab(own), name: own.map((a) => a.name).join(', ') || main.repo, ...main, lines: older }
+		// A project of a template or developer tool goes to their tab and takes
+		// the place of its row there.
+		const tooled = members.flatMap((r) => tools.get(`${r.host}/${r.owner}/${r.repo}`.toLowerCase()) ?? [])
+		for (const u of tooled) {
+			toolIds.add(u.id)
+		}
+		const p = { project, tab: tooled.length ? 'tools' : projectTab(own), name: [...own, ...tooled].map((a) => a.name).join(', ') || main.repo, ...main, lines: older }
 		for (const r of lines) {
 			r.name = p.name
 		}
@@ -868,11 +892,13 @@ function initOverview() {
 		p.search = `${p.name} ${members.map(slugOf).join(' ')}`.toLowerCase()
 		p.categories = new Set(own.flatMap((a) => JSON.parse(a.categories)))
 
-		// Each app links its page; a project that is no App Store app has none.
-		const links = own.flatMap((a, i) => [i ? ', ' : '', el('a', { href: `#app/${encodeURIComponent(a.id)}` }, a.name)])
+		// Each app links its page; a project that is no App Store app has none,
+		// unless it is a tool without a release tarball, whose tags have it.
+		const links = [...own, ...tooled].flatMap((a, i) => [i ? ', ' : '',
+			a.tarball ? a.name : el('a', { href: `#app/${encodeURIComponent(a.id)}` }, a.name)])
 		const head = el('td', {}, el('span', { class: 'name' }, ...(links.length ? links : [p.name])),
 			...members.flatMap((r) => [el('a', { class: 'slug', href: repoUrl(r) }, slugOf(r)), ...unreachableMark(r)]),
-			...own.flatMap((a) => shippedMark(a.id)))
+			...own.flatMap((a) => shippedMark(a.id)), ...tooled.flatMap(exappMark))
 		p.main = el('tbody', {}, ...lineRows(main, head))
 		p.warn = main.warn
 		p.older = el('tbody', { class: 'older', hidden: '' },
@@ -883,7 +909,7 @@ function initOverview() {
 	})
 	const shown = new Set(projects.flatMap((p) => (apps.get(p.project) ?? []).map((a) => a.id)))
 	projects.push(...catalogueApps().filter((a) => !shown.has(a.id)).map(catalogueRow))
-	projects.push(...unlistedApps().map(unlistedRow))
+	projects.push(...unlistedApps().filter((u) => !toolIds.has(u.id)).map(unlistedRow))
 	projects.push(...[...Map.groupBy(shippedApps().filter((s) => s.latest), (s) => s.id).values()].map(shippedRow))
 
 	const table = document.querySelector('#overview table')
@@ -959,8 +985,8 @@ function initOverview() {
 		for (const tbody of table.querySelectorAll('tbody')) {
 			tbody.remove()
 		}
-		// The projects of the Other tab carry no category.
-		const c = tab === 'other' ? '' : category.value
+		// The projects of the Other tab and the tools carry no category.
+		const c = tab === 'other' || tab === 'tools' ? '' : category.value
 		// Only a shipped app is enabled or not by the server.
 		const e = tab === 'shipped' && enabled.value ? ENABLED_FILTER[enabled.value] ?? [enabled.value] : null
 		const tree = tab === 'shipped' && source.value ? source.value === 'tree' : null
@@ -982,8 +1008,8 @@ function initOverview() {
 		save()
 	}
 
-	// Only the apps and the shipped apps are built and measured, so only their
-	// tabs have the checks.
+	// Only the apps, the shipped apps and the tools are built and measured, so
+	// only their tabs have the checks.
 	const showTab = (next) => {
 		if (next === tab) {
 			return
@@ -991,8 +1017,9 @@ function initOverview() {
 		ticks.set(tab, swapPicks(ticks.get(next) ?? []))
 		tab = next
 		table.dataset.tab = tab
-		nameHead.textContent = { apps: 'App', exapps: 'ExApp', shipped: 'App', other: 'Project' }[tab]
+		nameHead.textContent = { apps: 'App', exapps: 'ExApp', shipped: 'App', tools: 'Tool', other: 'Project' }[tab]
 		appFilters.hidden = tab === 'other'
+		category.hidden = !names.size || tab === 'tools'
 		enabled.hidden = tab !== 'shipped'
 		source.hidden = tab !== 'shipped'
 		enabledCodes.hidden = tab !== 'shipped'
@@ -1438,11 +1465,12 @@ function unlistedRequestCell(id, version, runs, newest) {
 }
 
 // The tags gh-nc-unlisted keeps, newest first, or the default branch of a
-// repository without tags, which only the daily run measures.
+// repository without tags, which only the daily run measures. An ExApp is not
+// measured, so it has no requests.
 function appTags(u) {
 	const runs = measurementsByVersion(u.id)
 	const tags = JSON.parse(u.tags)
-	const asks = Boolean(issues) && tags.length > 0
+	const asks = Boolean(issues) && tags.length > 0 && !u.exapp
 	const newest = tags.map(tagVersion).find(Boolean)
 	const rows = tags.length ? tags.map((t) => [t, tagVersion(t)]) : [['default branch', u.version ?? '']]
 	return el('table', {},
@@ -1462,15 +1490,19 @@ function appTags(u) {
 // An app outside the App Store and the server has the page of its repository
 // and its tags.
 function unlistedPage(u) {
+	const kind = [...(u.tool ? ['template or developer tool'] : []), ...(u.exapp ? [el('span', { title: EXAPP_TEXT }, 'ExApp')] : [])]
 	return [el('div', {}, el('h2', {}, u.name),
 		factList([
 			['App id', el('code', {}, u.id)],
+			...(kind.length ? [['Kind', ...kind.flatMap((k, i) => [i ? ', ' : '', k])]] : []),
 			['Repository', unlistedSource(u)],
 			['Nextcloud', ncRange(u.platform)],
 			['Default branch', u.version ?? ''],
 			['Last pushed', u.pushed === null ? '' : date(u.pushed)],
 		]),
-		el('p', { class: 'hint' }, 'The App Store catalogue has no app of this id, and the server ships none. No release of its repository carries a tarball, so gh-stats builds the app from the tag it measures, or from the default branch where the repository has no tag: the tarball measured is a build of gh-stats, not one of the maintainer.'),
+		el('p', { class: 'hint' }, u.exapp
+			? 'The App Store catalogue has no app of this id, and the server ships none. It is an ExApp, which gh-stats does not build, so it is not measured.'
+			: 'The App Store catalogue has no app of this id, and the server ships none. No release of its repository carries a tarball, so gh-stats builds the app from the tag it measures, or from the default branch where the repository has no tag: the tarball measured is a build of gh-stats, not one of the maintainer.'),
 		el('h3', {}, 'Tags'),
 		el('div', { class: 'scroll' }, appTags(u)))]
 }

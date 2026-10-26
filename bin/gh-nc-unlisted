@@ -7,8 +7,10 @@
 # the catalogue and shipped.json name on GitHub or on a Forgejo or Gitea host,
 # reads the tree of each one that is no fork, no mirror, not archived and not
 # empty, and keeps every tracked appinfo/info.xml that declares a <nextcloud>
-# dependency. The result replaces its previous copy, from which a repository not
-# pushed since is taken over instead of being read again.
+# dependency. The repositories UNLISTED_TOOLS names hold templates and
+# developer tools, whose apps are marked as such. The result replaces its
+# previous copy, from which a repository not pushed since is taken over instead
+# of being read again.
 
 # == Config ==
 # Optional site config shared with gh-stats and gh-release-sampler. If
@@ -35,6 +37,9 @@ SHIPPED_CACHE="${SHIPPED_CACHE:-$(dirname "$APPSTORE_CACHE")/shipped.json}"
 # leave out, separated by spaces or line breaks.
 UNLISTED_INCLUDE="${UNLISTED_INCLUDE:-}"
 UNLISTED_EXCLUDE="${UNLISTED_EXCLUDE:-}"
+# The repositories of templates and developer tools, separated by spaces or line
+# breaks; they are read as those of UNLISTED_INCLUDE are.
+UNLISTED_TOOLS="${UNLISTED_TOOLS:-}"
 # How many repositories a run reads before it leaves the rest to the next run;
 # one takes about two seconds. The most recently pushed are read first.
 UNLISTED_MAX_READS="${UNLISTED_MAX_READS:-3000}"
@@ -69,7 +74,7 @@ shipped by the server to <file>, as JSON:
   {
     "scanned": "2026-10-27T00:20:00Z",
     "apps": [{"id": "files_gcs", "name": "...", "version": "...",
-              "nextcloud": {"min": "30", "max": "32"},
+              "nextcloud": {"min": "30", "max": "32"}, "exapp": false, "tool": false,
               "host": "github.com", "repo": "nextcloud/files_gcs", "path": "",
               "tag": "v1.0.0", "tags": ["v1.0.0", "v0.9.1"], "tarball": true,
               "pushed": "2026-05-04T10:12:00Z"}, ...],
@@ -104,12 +109,15 @@ taken over, those of an owner that no longer exists are dropped.
 
 apps holds the apps of repos whose id is neither one of the catalogue nor one
 of shipped.json, nor named by UNLISTED_EXCLUDE; of several repositories with
-the same id the one created first counts. The time is UTC throughout.
+the same id the one created first counts. exapp marks an app whose info.xml
+declares <external-app>, an AppAPI app, tool one of a repository UNLISTED_TOOLS
+names, which is read as one UNLISTED_INCLUDE names. The time is UTC throughout.
 
 UNLISTED_INCLUDE and UNLISTED_EXCLUDE take owners and repositories as owner,
 owner/repo, host/owner or host/owner/repo, separated by spaces or line breaks;
 a first part with a dot is a host, without one the host is github.com.
-UNLISTED_EXCLUDE also takes app ids, as id:<app-id>.
+UNLISTED_EXCLUDE also takes app ids, as id:<app-id>. UNLISTED_TOOLS takes
+repositories only, in the same forms.
 
 Options:
   -f, --file <file>  the file to read and replace (default: $GH_STATS_DIR/unlisted.json)
@@ -126,6 +134,7 @@ Environment (or /etc/gh-stats/gh-stats.env):
                          (default: next to APPSTORE_CACHE)
   UNLISTED_INCLUDE       owners and repositories to scan as well
   UNLISTED_EXCLUDE       owners, repositories and app ids to leave out
+  UNLISTED_TOOLS         the repositories of templates and developer tools
   UNLISTED_MAX_READS     the repositories a run reads (default: 3000)
   UNLISTED_JOBS          the listings and reads that run at once (default: 8)
   UNLISTED_RELEASES      the releases looked at for a tarball (default: 10)
@@ -161,7 +170,7 @@ echo '{}' > "$shipped"
 [ ! -r "$SHIPPED_CACHE" ] || cp "$SHIPPED_CACHE" "$shipped"
 
 # == Settings ==
-# spec: one entry of UNLISTED_INCLUDE or UNLISTED_EXCLUDE as {host, owner, repo}
+# spec: one entry of UNLISTED_INCLUDE, UNLISTED_EXCLUDE or UNLISTED_TOOLS as {host, owner, repo}
 # or {id}, keyed as the repositories are, or null when it has another form.
 SPEC_JQ='
 	def spec:
@@ -174,12 +183,14 @@ SPEC_JQ='
 			  end
 		end;
 	[$v | splits("\\s+") | select(. != "") | {entry: ., spec: spec}]'
-for var in UNLISTED_INCLUDE UNLISTED_EXCLUDE; do
+for var in UNLISTED_INCLUDE UNLISTED_EXCLUDE UNLISTED_TOOLS; do
 	"$JQ" -n -c --arg v "${!var}" "$SPEC_JQ" > "$tmp/$var"
 	bad="$("$JQ" -r '[.[] | select(.spec == null) | .entry] | join(" ")' "$tmp/$var")"
 	[ -z "$bad" ] || die "$var holds $bad, it takes owner, owner/repo, host/owner or host/owner/repo"
 done
 "$JQ" -e 'all(.[]; .spec.id == null)' "$tmp/UNLISTED_INCLUDE" >/dev/null || die "UNLISTED_INCLUDE takes no app id"
+"$JQ" -e 'all(.[]; .spec.repo != null)' "$tmp/UNLISTED_TOOLS" >/dev/null || die "UNLISTED_TOOLS takes repositories only"
+tools="$("$JQ" -c '[.[].spec.key]' "$tmp/UNLISTED_TOOLS")"
 excluded="$("$JQ" -c '[.[].spec.key | strings]' "$tmp/UNLISTED_EXCLUDE")"
 excluded_ids="$("$JQ" -c '[.[].spec.id | strings | ascii_downcase]' "$tmp/UNLISTED_EXCLUDE")"
 
@@ -270,9 +281,9 @@ element() {
 
 # read_repo <n> <key> <host> <owner/repo>: the apps of the repository into
 # read/<n>.json as {key, apps, tag, tags, tarball}; nothing when it could not be
-# read.
+# read. An info.xml with <external-app> makes an ExApp.
 read_repo() {
-	local n="$1" key="$2" host="$3" slug="$4" dir="$tmp/clone/$1" f path nc tags tarball i
+	local n="$1" key="$2" host="$3" slug="$4" dir="$tmp/clone/$1" f path nc exapp tags tarball i
 	local url="https://$host/$slug.git"
 	for ((i = 0; i <= RETRIES; i++)); do
 		rm -rf "$dir"
@@ -290,11 +301,13 @@ read_repo() {
 		path="${f%appinfo/info.xml}"
 		path="${path%/}"
 		nc="$(tr '\r\n\t' '   ' < "$dir.xml" | sed -n 's:.*<nextcloud\([[:space:]][^>]*\)\{0,1\}/\{0,1\}>.*:\1:p')"
+		exapp=false
+		! grep -q '<external-app[[:space:]/>]' "$dir.xml" || exapp=true
 		"$JQ" -n -c --arg path "$path" --arg id "$(element id "$dir.xml")" --arg name "$(element name "$dir.xml")" \
 			--arg version "$(element version "$dir.xml")" \
 			--arg min "$(sed -n 's/.*min-version="\([^"]*\)".*/\1/p' <<<"$nc")" \
-			--arg max "$(sed -n 's/.*max-version="\([^"]*\)".*/\1/p' <<<"$nc")" \
-			'{path: $path, id: $id, name: $name, version: $version, nextcloud: {min: $min, max: $max}}
+			--arg max "$(sed -n 's/.*max-version="\([^"]*\)".*/\1/p' <<<"$nc")" --argjson exapp "$exapp" \
+			'{path: $path, id: $id, name: $name, version: $version, nextcloud: {min: $min, max: $max}, exapp: $exapp}
 			 | select(.id != "")' >> "$dir.apps"
 	done < <("$GIT" -C "$dir" ls-tree -r -z --name-only HEAD | grep -z -E '(^|/)appinfo/info\.xml$' || true)
 	rm -rf "$dir"
@@ -324,8 +337,8 @@ export -f warn list element read_repo
 
 awk '{ printf "%d\0%s\0%s\0", NR, $1, $2 }' "$tmp/owners" \
 	| xargs -0 -r -n 3 -P "$UNLISTED_JOBS" bash -c 'list "$@"' _
-# The included repositories, each listed on its own.
-"$JQ" -r '.[].spec | select(.repo) | "\(.host) \(.owner)/\(.repo)"' "$tmp/UNLISTED_INCLUDE" > "$tmp/included"
+# The included repositories and those of the tools, each listed on its own.
+"$JQ" -r '.[].spec | select(.repo) | "\(.host) \(.owner)/\(.repo)"' "$tmp/UNLISTED_INCLUDE" "$tmp/UNLISTED_TOOLS" > "$tmp/included"
 included_n=0
 while read -r host slug; do
 	n="i$((++included_n))"
@@ -353,7 +366,7 @@ awk '{ print NR "\t" tolower(($1 == "github.com" ? "" : $1 "/") $2) }' "$tmp/own
 # mirror, not archived, not empty and not private, every included one that is
 # not empty and not private, none that UNLISTED_EXCLUDE names. Then the ones
 # whose pushed time the previous file holds are taken over, unless they have
-# an app and no tags, and of the rest
+# an app and no tags or an app not yet marked as ExApp or not, and of the rest
 # the most recently pushed UNLISTED_MAX_READS are read.
 find "$tmp/list" -name 'i*.json' -exec cat {} + > "$tmp/included.json"
 find "$tmp/list" -name '[0-9]*.json' -exec cat {} + > "$tmp/listed.json"
@@ -364,7 +377,7 @@ find "$tmp/list" -name '[0-9]*.json' -exec cat {} + > "$tmp/listed.json"
 	| unique_by(.key) | .[]' > "$tmp/repos"
 "$JQ" -r --slurpfile prev "$prev" '
 	$prev[0].repos[.key] as $o
-	| select(($o.pushed // null) != .pushed or (($o.apps // []) != [] and ($o | has("tags") | not)))
+	| select(($o.pushed // null) != .pushed or (($o.apps // []) != [] and (($o | has("tags") | not) or any($o.apps[]; has("exapp") | not))))
 	| [.pushed, .key, .host, .repo] | @tsv' "$tmp/repos" \
 	| sort -r | cut -f2- > "$tmp/stale"
 head -n "$UNLISTED_MAX_READS" "$tmp/stale" | awk -F '\t' '{ printf "%d\0%s\0%s\0%s\0", NR, $1, $2, $3 }' \
@@ -380,7 +393,7 @@ left="$(($(wc -l < "$tmp/stale") - UNLISTED_MAX_READS))"
 # repository that was due but could not be read keeps its previous entry with
 # the pushed time it had, so the next run reads it again.
 "$JQ" -n --slurpfile prev "$prev" --slurpfile shipped "$shipped" --slurpfile repos "$tmp/repos" --slurpfile read "$tmp/read.json" \
-	--rawfile failed "$tmp/failed" --argjson excluded "$excluded_ids" --arg scanned "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '
+	--rawfile failed "$tmp/failed" --argjson excluded "$excluded_ids" --argjson tools "$tools" --arg scanned "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '
 	([inputs[] | .id] + [$shipped[0].releases[]?.apps[]?.id] | map(ascii_downcase)) as $known
 	| ($prev[0].repos // {}) as $old
 	| ($read | map({(.key): del(.key)}) | add // {}) as $fresh
@@ -389,7 +402,8 @@ left="$(($(wc -l < "$tmp/stale") - UNLISTED_MAX_READS))"
 	                else {key, value: $old[.key]} | select(.value) end]
 	   + [$old | to_entries[] | select(.key as $k | any($f[]; . as $o | $k | startswith($o + "/")))]
 	   | unique_by(.key) | from_entries) as $all
-	| [$all[] | . as $r | .apps[] | {id, name, version, nextcloud, host: $r.host, repo: $r.repo, path,
+	| [$all | to_entries[] | .key as $k | .value as $r | $r.apps[]
+	   | {id, name, version, nextcloud, exapp, tool: ($k | IN($tools[])), host: $r.host, repo: $r.repo, path,
 	                                tag: $r.tag, tags: $r.tags, tarball: $r.tarball, pushed: $r.pushed, created: $r.created}
 	   | select(.id | ascii_downcase | IN($known[], $excluded[]) | not)]
 	| group_by(.id | ascii_downcase) | map(min_by(.created, .host, .repo, .path) | del(.created)) | sort_by(.id | ascii_downcase)

@@ -38,7 +38,8 @@
 # no tag, without a version, so it builds the default branch, when no complete
 # run names its repository, its directory below the root and that version, for
 # the default branch the version its info.xml declares. One whose tags carry no
-# digit is not sent. An older tag is measured on request only.
+# digit is not sent, nor an ExApp, which is not built. An older tag is measured
+# on request only.
 #
 # The same holds for the apps the server ships, each as a server release ships
 # it: shipped.json names the repository and directory of every app in each
@@ -289,7 +290,7 @@ jobs:
               | .apps[] | select(.enabled != "always") | "-s \($ref) \(.repo)" + (if (.path // "") != "" then ":" + .path else "" end)' "$STATE/shipped.json"
             # "<key>\t<line>" where the line differs from the key it is known
             # under: the default branch is measured as the version it declares.
-            [ ! -s "$STATE/unlisted.json" ] || jq -r '.apps[] | select(.tarball == false)
+            [ ! -s "$STATE/unlisted.json" ] || jq -r '.apps[] | select(.tarball == false and .exapp != true)
               | ((if .host == "github.com" then "" else .host + "/" end) + .repo
                  + (if .path != "" then ":" + .path else "" end)) as $app
               | if (.tags // []) == [] then "\($app) \(.version // "")\t\($app)"

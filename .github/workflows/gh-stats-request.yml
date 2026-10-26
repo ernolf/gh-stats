@@ -30,8 +30,8 @@
 # no comment, no close. The version must be one the catalogue
 # ships as a stable release, as gh-nc-appslist lists it, which also names the
 # repository that is measured. An app the catalogue does not hold must be one
-# the unlisted.json of the catalogue lists without a release tarball, with the
-# version of one of the tags it keeps, read from the first digit on; gh-stats
+# the unlisted.json of the catalogue lists without a release tarball and not as
+# an ExApp, with the version of one of the tags it keeps, read from the first digit on; gh-stats
 # then builds the app from that tag. A shipped app must be one the shipped.json of the
 # catalogue lists for that server release, which names its repository and
 # directory. A server release is also a pre-release, 36.0.0rc1, matched without
@@ -228,7 +228,7 @@ jobs:
             # carries a tarball to measure instead.
             gh release download "$CATALOGUE_TAG" -p unlisted.json -D "$state" 2>/dev/null || :
             [ ! -s "$state/unlisted.json" ] || jq -r --arg id "$APP" --arg v "$VERSION" '
-              .apps[] | select((.id | ascii_downcase) == $id and .tarball == false)
+              .apps[] | select((.id | ascii_downcase) == $id and .tarball == false and .exapp != true)
               | [.tags[]? | sub("^[^0-9]*"; "") | select(. != "")] as $vs
               | select(any($vs[]; . == $v))
               | (if .host == "github.com" then "" else .host + "/" end) + .repo
@@ -236,7 +236,7 @@ jobs:
                 + (if $vs[0] == $v then " newest" else "" end)' "$state/unlisted.json" \
               | tr '[:upper:]' '[:lower:]' > "$state/unlisted"
             if [ ! -s "$state/unlisted" ]; then
-              gh issue close "$NUMBER" --reason "not planned" --comment "The catalogue ships no stable release $VERSION of \`$APP\` from a repository gh-stats measures, and lists no app \`$APP\` outside the App Store with a tag of $VERSION and no release tarball."
+              gh issue close "$NUMBER" --reason "not planned" --comment "The catalogue ships no stable release $VERSION of \`$APP\` from a repository gh-stats measures, and lists no app \`$APP\` outside the App Store with a tag of $VERSION and no release tarball that is no ExApp."
               exit 1
             fi
             if [ "$KIND" = remove ] && grep -q ' newest$' "$state/unlisted"; then
