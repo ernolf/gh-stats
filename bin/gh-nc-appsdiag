@@ -109,6 +109,12 @@ AUTO="${NC_APPSDIAG_AUTO:-0}"
 SERVER_REF="${NC_APPSDIAG_SERVER:-}"
 # Unpacks an app from a server release archive, beside this script by default.
 SHIPPED="${SHIPPED_BIN:-$(dirname "$(readlink -f "$0")")/gh-nc-shipped}"
+# The server repository, as for gh-nc-shipped: for master, an app of its tree is
+# checked out at the commit the daily archive names.
+SERVER_REPO="${SERVER_REPO:-nextcloud/server}"
+# For master, how many commits of an app with a repository of its own, newest
+# first, are held against the archive for the one it was built from.
+SERVER_BUILD_CANDIDATES="${SERVER_BUILD_CANDIDATES:-50}"
 
 set -euo pipefail
 
@@ -173,14 +179,20 @@ Store release and the results are the app's.
 
 With -s the app is one the Nextcloud server ships, measured as a server release
 ships it: nextcloud/server:apps/<id> for an app of the server tree, the app's
-own repository for one that has its own. The checkout is the server release
-tag, v35.0.2 for 35.0.2, in either repository, or for master the default
-branch, without its history; no tag is offered and no version can be given.
-make dist stages the app as for any other, and what it stages is held against
-apps/<id>/ of the archive of that server release, or of the daily archive of
-master, which gh-nc-shipped unpacks. The run directory is named after the
-server release, server-35.0.2 or server-master, in place of the app version,
-and summary.json names it as server.
+own repository for one that has its own. gh-nc-shipped unpacks apps/<id>/ of
+the archive of that server release, or of the daily archive of master, before
+anything is read. The checkout is the server release tag, v35.0.2 for 35.0.2,
+in either repository; no tag is offered and no version can be given. For master
+it is the commit the archive was built from: for an app of the server tree the
+server commit its version.php names, for an app with a repository of its own
+the newest first-parent commit of the default branch up to the time of that
+build whose files are those of the archive, wherever it tracks them. Of the
+newest SERVER_BUILD_CANDIDATES commits up to that time, the one with the fewest
+files that differ is taken if none matches, with a warning. make dist stages
+the app as for any other, and what it stages is held against the files
+unpacked. The run directory is named after the server release, server-35.0.2
+or server-master, in place of the app version, and summary.json names it as
+server.
 
 Everything one run produces goes into one directory, for an app below the root
 with its app id after the repo (or its directory, while the id is unknown), for
@@ -261,6 +273,9 @@ Environment (or /etc/gh-stats/gh-stats.env):
   APPSTORE_EBTB_DB           the nc-apps database of the ebtb source
   APPLIST_RELEASE_REPOS      the release repositories, as in gh-nc-appslist
   SHIPPED_BIN                gh-nc-shipped (default: the one beside this script)
+  SERVER_REPO                the server repository (default: nextcloud/server)
+  SERVER_BUILD_CANDIDATES    for master, the commits held against the archive
+                             (default: 50)
   RUNTIME                    the container runtime ncmake uses (default: podman,
                              else docker)
 EOF
@@ -445,6 +460,12 @@ STAMP="$(date -u +%Y%m%d-%H%M%S)"
 # A run that ends before that is moved in by the exit trap.
 LOG="$LOG_DIR/.pending-${repo}${subdir:+@${subdir//\//-}}-${STAMP}.log"
 RUN_DIR=""
+# With -s, apps/<id>/ of the server archive, unpacked before the checkout is
+# read and moved into the run directory by the release comparison.
+SHIPPED_TREE=""
+shipped_id=""
+server_archive=""
+server_build=""
 app_id=""
 app_version=""
 app_restrictable=""
@@ -880,6 +901,65 @@ fan_out() {
 	exit "$last"
 }
 
+# == Server release ==
+# apps/<id>/ of the server archive into SHIPPED_TREE, with the build of that
+# archive in server_build. A tag is the commit its archive was built from; for
+# master the build alone tells the commit, so without it the run ends.
+server_unpack() {
+	local x="$APP_DIR/appinfo/info.xml" id out
+	id="$(sed -n 's:.*<id>\(.*\)</id>.*:\1:p' "$x" | head -1)"
+	shipped_id="$id"
+	SHIPPED_TREE="$LOG_DIR/.pending-${repo}${subdir:+@${subdir//\//-}}-${STAMP}.shipped"
+	if ! out="$("$SHIPPED" -x "${SERVER_REF#v}" "$id" "$SHIPPED_TREE" 2> >(tee -a "$LOG" >&2))"; then
+		[ "$SERVER_REF" != master ] || die "cannot unpack apps/$id/ of the daily archive of master, so the commit it was built from is unknown"
+		warn "cannot unpack apps/$id/ of the server archive of $SERVER_REF"
+		rm -rf "$SHIPPED_TREE"
+		return 0
+	fi
+	server_archive="$(sed -n '1s:.*/::p' <<<"$out")"
+	server_build="$(sed -n 2p <<<"$out")"
+	log "   unpacked apps/$id/ of $server_archive${server_build:+, built $server_build}"
+}
+
+# For master, the checkout moves to the commit the daily archive was built from.
+# Its version.php names the server commit; an app with a repository of its own
+# was cloned at some point before the build finished, so of its first-parent
+# commits up to then the newest whose files are those of the archive, by blob
+# id wherever it tracks them, is that commit.
+build_checkout() {
+	local built="${server_build% *}" sha="${server_build##* }" blobs c counts tracked differ best="" fewest=""
+	[ -n "$server_build" ] && [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || die "the daily archive of master names no build commit: '$server_build'"
+	if [ "$owner/$repo" = "$SERVER_REPO" ]; then
+		"$GIT" -C "$CHECKOUT" fetch -q --depth 1 origin "$sha" 2>&1 | tee_plain "$LOG" \
+			|| die "cannot fetch $sha of $slug"
+		best="$sha" fewest=0
+	else
+		blobs="$LOG_DIR/.pending-${repo}-${STAMP}.blobs"
+		(cd "$SHIPPED_TREE/$shipped_id" && find . -type f -printf '%P\n' | sort > "$blobs.paths" \
+			&& "$GIT" hash-object --no-filters --stdin-paths < "$blobs.paths" > "$blobs.ids") \
+			&& paste "$blobs.ids" "$blobs.paths" > "$blobs" \
+			|| die "cannot hash the files unpacked from the daily archive of master"
+		while read -r c; do
+			counts="$("$GIT" -C "$CHECKOUT" -c core.quotePath=false ls-tree -r "$c" \
+				| awk -F'\t' 'NR == FNR { h[$2] = $1; next }
+					$2 in h { t++; n = split($1, f, " "); if (f[n] != h[$2]) d++ }
+					END { print t + 0, d + 0 }' "$blobs" -)"
+			read -r tracked differ <<<"$counts"
+			[ "$tracked" -gt 0 ] || continue
+			if [ -z "$fewest" ] || [ "$differ" -lt "$fewest" ]; then
+				best="$c" fewest="$differ"
+			fi
+			[ "$differ" -gt 0 ] || break
+		done < <("$GIT" -C "$CHECKOUT" rev-list --first-parent --max-count="$SERVER_BUILD_CANDIDATES" --before="$built" HEAD)
+		rm -f "$blobs" "$blobs.ids" "$blobs.paths"
+		[ -n "$best" ] || die "no commit of $slug up to $built tracks a file of apps/$shipped_id/ of the daily archive of master"
+		[ "$fewest" = 0 ] || warn "no commit of $slug up to $built matches the daily archive of master; $best differs in $fewest files"
+	fi
+	"$GIT" -C "$CHECKOUT" -c advice.detachedHead=false checkout -q "$best" 2>&1 | tee_plain "$LOG" \
+		|| die "cannot check out $best"
+	log "   build $server_build: $best"
+}
+
 # == Release ==
 # The catalogue is resolved on every read: nc-apps writes each refresh to a new
 # file, so a batch that runs for a day sees the releases a refresh brings meanwhile.
@@ -1081,12 +1161,14 @@ release_diff() {
 	if [ -n "$SERVER_REF" ]; then
 		# The archive holds the whole server; what it ships of the app is unpacked
 		# alone, so it has no size of its own to record.
-		if ! tgz="$("$SHIPPED" -x "${SERVER_REF#v}" "$app_id" "$dir/shipped" 2> >(tee -a "$LOG" >&2))"; then
-			warn "cannot unpack apps/$app_id/ of the server archive of $SERVER_REF"
+		if [ ! -d "$SHIPPED_TREE" ]; then
+			log "   nothing unpacked from the server archive of $SERVER_REF"
 			return 0
 		fi
-		rel_tarball="${tgz##*/}"
-		log "   shipped apps/$app_id/ of $rel_tarball"
+		rmdir "$dir/shipped"
+		mv "$SHIPPED_TREE" "$dir/shipped"
+		rel_tarball="$server_archive"
+		log "   shipped apps/$shipped_id/ of $rel_tarball${server_build:+, built $server_build}"
 	elif ! tgz="$(fetch_tarball "$dir")"; then
 		if [ "$repo_host" = github.com ]; then
 			log "   no tarball for this version on the App Store, in $owner/$repo or in nextcloud-releases/$repo"
@@ -1253,6 +1335,7 @@ write_summary_json() {
 # before the inventory gets its run directory here, and an aborted one does not
 # leave its checkout behind any more than a finished one does.
 on_exit() {
+	[ -z "$SHIPPED_TREE" ] || rm -rf "$SHIPPED_TREE"
 	if [ "$fanned" = 1 ]; then
 		rm -rf "$CHECKOUT"
 		rm -f "$LOG"
@@ -1302,18 +1385,35 @@ if [ ! -d "$CHECKOUT" ] && [ -n "${NC_APPSDIAG_CLONE_FROM:-}" ]; then
 	"$GIT" clone "$NC_APPSDIAG_CLONE_FROM" "$CHECKOUT" 2>&1 | tee_plain "$LOG" \
 		|| die "cannot clone $NC_APPSDIAG_CLONE_FROM"
 	"$GIT" -C "$CHECKOUT" remote set-url origin "https://$repo_host/$owner/$repo.git"
+	# A clone without the files of the history passes that on, so the files of
+	# another commit come from the host as well.
+	if clone_filter="$("$GIT" -C "$NC_APPSDIAG_CLONE_FROM" config remote.origin.partialclonefilter)"; then
+		"$GIT" -C "$CHECKOUT" config remote.origin.promisor true
+		"$GIT" -C "$CHECKOUT" config remote.origin.partialclonefilter "$clone_filter"
+	fi
 elif [ ! -d "$CHECKOUT" ]; then
 	# A server release is measured at one commit and nothing else, so the history
-	# stays on the host; of the server repository it is most of the clone.
+	# stays on the host; of the server repository it is most of the clone. Only
+	# for master of an app with a repository of its own the commit is yet to be
+	# found, which takes the commits and trees but no file of the history.
 	clone_args=()
-	if [ -n "$SERVER_REF" ]; then
+	if [ -n "$SERVER_REF" ] && [ "$SERVER_REF" != master ]; then
+		clone_args+=(--depth 1 --branch "$SERVER_REF")
+	elif [ "$SERVER_REF" = master ] && [ "$owner/$repo" = "$SERVER_REPO" ]; then
 		clone_args+=(--depth 1)
-		[ "$SERVER_REF" = master ] || clone_args+=(--branch "$SERVER_REF")
+	elif [ "$SERVER_REF" = master ]; then
+		clone_args+=(--filter=blob:none)
 	fi
 	"$GIT" clone "${clone_args[@]}" "https://$repo_host/$owner/$repo.git" "$CHECKOUT" 2>&1 | tee_plain "$LOG" \
 		|| die "cannot clone https://$repo_host/$owner/$repo${SERVER_REF:+ at $SERVER_REF}"
 fi
 [ -d "$CHECKOUT/.git" ] || die "no checkout at $CHECKOUT"
+# A repository with its apps below the root unpacks nothing here: each of them
+# does so in a run of its own.
+if [ -n "$SERVER_REF" ] && [ -f "$APP_DIR/appinfo/info.xml" ]; then
+	server_unpack
+	[ "$SERVER_REF" != master ] || build_checkout
+fi
 log "   head  $("$GIT" -C "$CHECKOUT" log -1 --format='%h %ad %s' --date=short)"
 [ -z "$SERVER_REF" ] || [ "$SERVER_REF" = master ] || head_tag="$SERVER_REF"
 init_submodules
