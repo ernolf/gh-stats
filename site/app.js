@@ -483,11 +483,11 @@ function shippedSource(s) {
 	return `https://github.com/${s.repo}/tree/${encodeURIComponent(s.app_ref)}${s.path ? `/${s.path}` : ''}`
 }
 
-// version.php of master names a release not yet out, 36.0.0 dev, so master is
-// named by its major and the stage that follows.
+// version.php of master names a release not yet out, such as 36.0.0 dev, and
+// the branch name tells it from the release of that version.
 function serverLink(s) {
 	return el('a', { href: `https://github.com/${SERVER_REPO}/tree/${encodeURIComponent(s.ref)}` },
-		s.ref === 'master' ? `master (Nextcloud ${s.server.replace(/^(\d+)\.\d+\.\d+/, '$1')})` : s.server)
+		s.ref === 'master' ? `master ${s.server}` : s.server)
 }
 
 function releaseLink(fig) {
@@ -737,7 +737,7 @@ function shippedRow(releases) {
 	const since = shipped.get(main.id) ?? null
 	const row = line(main, head, since)
 	const p = {
-		tab: 'shipped', name: main.name, tag: main.version, published: main.published, nc: row.nc, enabled: main.enabled,
+		tab: 'shipped', name: main.name, tag: main.version, published: main.published, nc: row.nc, enabled: main.enabled, tree: main.repo === SERVER_REPO,
 		total: null, d1: null, d7: null, d30: null, since, warn: row.warn,
 		lines: releases.filter((s) => s !== main)
 			.map((s) => line(s, el('td', { class: 'line-label' }, `Nextcloud ${s.major}`))),
@@ -805,9 +805,10 @@ function initOverview() {
 	const nc = document.getElementById('nc')
 	const category = document.getElementById('category')
 	const enabled = document.getElementById('enabled')
+	const source = document.getElementById('source')
 	const enabledCodes = document.getElementById('enabled-codes')
-	enabledCodes.append('Enabled: ', ...Object.entries(ENABLED_CODE).flatMap(([k, code], i) =>
-		[i ? ', ' : '', el('b', {}, code), ` ${ENABLED[k][0]}`]), '.')
+	enabledCodes.append(el('span', {}, 'Enabled: ', ...Object.entries(ENABLED_CODE).flatMap(([k, code], i) =>
+		[i ? ', ' : '', el('b', {}, code), ` ${ENABLED[k][0]}`])))
 	const reset = document.getElementById('reset')
 	let sortKey = 'total'
 	let sortDesc = true
@@ -864,10 +865,11 @@ function initOverview() {
 		const c = tab === 'other' ? '' : category.value
 		// Only a shipped app is enabled or not by the server.
 		const e = tab === 'shipped' && enabled.value ? ENABLED_FILTER[enabled.value] ?? [enabled.value] : null
+		const tree = tab === 'shipped' && source.value ? source.value === 'tree' : null
 		const frag = document.createDocumentFragment()
 		for (const p of projects) {
 			const older = p.lines.filter(counts)
-			if (p.tab !== tab || (f && p.search.includes(f) === invert.checked) || (c && !p.categories.has(c)) || (e && !e.includes(p.enabled)) || (!counts(p) && !older.length)) {
+			if (p.tab !== tab || (f && p.search.includes(f) === invert.checked) || (c && !p.categories.has(c)) || (e && !e.includes(p.enabled)) || (tree !== null && p.tree !== tree) || (!counts(p) && !older.length)) {
 				continue
 			}
 			p.older.replaceChildren(...older.flatMap((r) => [r.tr, r.checks, r.compare, r.compareChecks]))
@@ -894,6 +896,7 @@ function initOverview() {
 		nameHead.textContent = { apps: 'App', exapps: 'ExApp', shipped: 'App', other: 'Project' }[tab]
 		appFilters.hidden = tab === 'other'
 		enabled.hidden = tab !== 'shipped'
+		source.hidden = tab !== 'shipped'
 		enabledCodes.hidden = tab !== 'shipped'
 		for (const b of tabs) {
 			b.setAttribute('aria-pressed', String(b.dataset.tab === tab))
@@ -910,6 +913,7 @@ function initOverview() {
 	category.hidden = !names.size
 	category.addEventListener('change', render)
 	enabled.addEventListener('change', render)
+	source.addEventListener('change', render)
 
 	for (const th of document.querySelectorAll('th[data-sort]')) {
 		th.tabIndex = 0
@@ -1010,7 +1014,7 @@ function initScrolling() {
 // differs from the defaults under one key. Without storage, in a private
 // window or with the site data blocked, the page starts from the defaults.
 const SETTINGS_KEY = 'gh-stats.settings'
-const OVERVIEW_SETTINGS = ['filter', 'invert', 'since', 'category', 'enabled', 'nc']
+const OVERVIEW_SETTINGS = ['filter', 'invert', 'since', 'category', 'nc', 'enabled', 'source']
 const CHART_SETTINGS = ['scope', 'split', 'share-figure', 'measure', 'bucket', 'range', 'style', 'log']
 
 // The defaults are those the page is written with.
