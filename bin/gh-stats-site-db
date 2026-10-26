@@ -110,7 +110,8 @@ repository under its current name, plus
   shipped    every app the server ships, by server release: the server
              version, its major, its tag or master, the date of its archive,
              and the app id, name and version, the repository, path and ref
-             its source is at; empty without shipped.json
+             its source is at, and whether that release enables it always,
+             by default or not; empty without shipped.json
   shipped_since  the server major each shipped app is shipped since
 
 Downloads are the summed counters of the assets gh-stats counts by default
@@ -300,7 +301,7 @@ shipped_sql=''
 if [ -r "$SHIPPED_CACHE" ]; then
 	shipped_sql="$(jq -r "$sql_defs"'
 		(.releases[] | . as $r | .apps[]
-		 | "INSERT OR IGNORE INTO shipped VALUES (\($r.version | q), \($r.major), \($r.ref | q), \($r.published | v), \(.id | q), \(.name | q), \(.version | q), \(.repo | q), \(.path | q), \(.ref | q));"),
+		 | "INSERT OR IGNORE INTO shipped VALUES (\($r.version | q), \($r.major), \($r.ref | q), \($r.published | v), \(.id | q), \(.name | q), \(.version | q), \(.repo | q), \(.path | q), \(.ref | q), \(.enabled | v));"),
 		(.since | to_entries[] | "INSERT OR IGNORE INTO shipped_since VALUES (\(.key | q), \(.value));")
 	' "$SHIPPED_CACHE")"
 fi
@@ -687,7 +688,9 @@ CREATE TABLE categories (
 ) WITHOUT ROWID;
 -- The apps the server ships, by the server release whose archive
 -- gh-nc-shipped read; ref is its tag or master, app_ref the tag or branch of
--- the app's source.
+-- the app's source. enabled is always for an app that cannot be disabled,
+-- default for one a new installation enables, optional for any other, NULL
+-- where the core/shipped.json of the release does not tell.
 CREATE TABLE shipped (
   server    TEXT    NOT NULL,
   major     INTEGER NOT NULL,
@@ -699,6 +702,7 @@ CREATE TABLE shipped (
   repo      TEXT    NOT NULL,
   path      TEXT    NOT NULL,
   app_ref   TEXT    NOT NULL,
+  enabled   TEXT,
   PRIMARY KEY (ref, id)
 ) WITHOUT ROWID;
 CREATE TABLE shipped_since (
