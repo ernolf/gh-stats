@@ -175,13 +175,16 @@ function catalogueSpecs() {
 }
 
 // The apps the server ships, by the server release whose archive ships them,
-// the newest major first; with an id only those of that app.
+// the newest major first and in it master, then the newest release; with an id
+// only those of that app.
 function shippedApps(id = null) {
 	return query(`
-		SELECT s.id, s.name, s.server, s.major, s.ref, s.version, s.repo, s.path, s.app_ref, s.enabled,
+		SELECT s.id, s.name, s.server, s.major, s.ref, s.latest, s.version, s.repo, s.path, s.app_ref, s.enabled,
 		       CAST(strftime('%s', s.published) AS INTEGER) AS published, d.categories
 		  FROM shipped s LEFT JOIN app_details d ON d.id = s.id
-		 WHERE $id IS NULL OR s.id = $id ORDER BY s.id, s.major DESC`, { $id: id })
+		 WHERE $id IS NULL OR s.id = $id`, { $id: id })
+		.sort((a, b) => b.major - a.major || (b.ref === 'master') - (a.ref === 'master')
+			|| compareVersions(b.ref.slice(1), a.ref.slice(1)))
 }
 
 // The Nextcloud major each shipped app is shipped since.
@@ -681,11 +684,11 @@ function olderToggle(p) {
 	return toggle
 }
 
-// A shipped app has a line for each server release whose archive ships it, the
-// newest stable major on its row and the others below, each with the checks of
-// the app as that release ships it. Nobody downloads the archives from a host
-// gh-stats samples, so the download columns stay empty and there is nothing to
-// chart or compare.
+// A shipped app has a line for the newest release of each server major whose
+// archive ships it and for master, the newest stable major on its row and the
+// others below, each with the checks of the app as that release ships it.
+// Nobody downloads the archives from a host gh-stats samples, so the download
+// columns stay empty and there is nothing to chart or compare.
 function shippedRow(releases) {
 	const main = releases.find((s) => s.ref !== 'master') ?? releases[0]
 	const line = (s, first) => {
@@ -756,7 +759,7 @@ function initOverview() {
 	})
 	const shown = new Set(projects.flatMap((p) => (apps.get(p.project) ?? []).map((a) => a.id)))
 	projects.push(...catalogueApps().filter((a) => !shown.has(a.id)).map(catalogueRow))
-	projects.push(...[...Map.groupBy(shippedApps(), (s) => s.id).values()].map(shippedRow))
+	projects.push(...[...Map.groupBy(shippedApps().filter((s) => s.latest), (s) => s.id).values()].map(shippedRow))
 
 	const table = document.querySelector('#overview table')
 	const tabs = document.querySelectorAll('#tabs button')
@@ -1250,19 +1253,39 @@ function appReleases(id, requests) {
 		}))
 }
 
+// The newest release of each major keeps its check unless the release enables
+// the app always, so it has no button to remove it; master is not measured.
+function shippedRequestCell(s, runs) {
+	const links = []
+	if (s.ref !== 'master') {
+		const as = `${s.id} as Nextcloud ${s.server} ships it`
+		links.push(requestLink(runs ? 'recheck' : 'check', `Measure ${as}`,
+			`Measures ${as} ${runs ? 'again, with a new build, ' : ''}and keeps its result.`))
+		if (runs && !(s.latest && s.enabled !== 'always')) {
+			links.push(' ', requestLink('remove check', `Remove the check of ${as}`,
+				`Removes the results of ${as} and keeps it from being measured again.`))
+		}
+	}
+	return el('td', { class: 'request-col' }, ...links)
+}
+
 function appShipped(releases) {
+	const asks = Boolean(issues)
 	return el('table', {},
 		el('thead', {}, el('tr', {}, ...['Nextcloud', 'Published', 'App version', 'Enabled', 'Source'].map((h) => el('th', {}, h)),
-			el('th', { title: 'warnings of the measurement of the app as the server release ships it' }, 'Checks'))),
+			el('th', { title: 'warnings of the measurement of the app as the server release ships it' }, 'Checks'),
+			...(asks ? [el('th', { title: 'opens a prefilled issue that asks for the measurement' }, 'Request')] : []))),
 		...releases.map((s) => {
-			const [checks, checksRow] = checksCell(measuredShipped.get(`${s.id}\n${s.ref}`), 4)
+			const runs = measuredShipped.get(`${s.id}\n${s.ref}`)
+			const [checks, checksRow] = checksCell(runs, asks ? 6 : 5)
 			return el('tbody', {}, el('tr', {},
 				el('td', {}, serverLink(s)),
 				el('td', {}, s.published === null ? '' : date(s.published)),
 				el('td', {}, s.version),
 				el('td', {}, ...enabledMark(s)),
 				el('td', {}, el('a', { href: shippedSource(s) }, s.path ? `${s.repo}/${s.path}` : s.repo)),
-				checks), checksRow)
+				checks,
+				...(asks ? [shippedRequestCell(s, runs)] : [])), checksRow)
 		}))
 }
 

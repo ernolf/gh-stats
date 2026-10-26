@@ -33,12 +33,12 @@
 #
 # The same holds for the apps the server ships, each as a server release ships
 # it: shipped.json names the repository and directory of every app in each
-# server archive gh-nc-shipped reads, and the app is sent with the server
-# release when no complete run of that release names them. The archive of
-# master is not measured, nor an app the release enables always, which is part
-# of the server and measured on request only. The shipped.json read is the one
-# the previous run kept, so the apps of a new server release are sent by the
-# run after the one that found it.
+# server archive gh-nc-shipped reads, and the app is sent with the newest
+# release of its major when no complete run of that release names them. An
+# older release is measured on request only, as are the archive of master and
+# an app the release enables always, which is part of the server. The
+# shipped.json read is the one the previous run kept, so the apps of a new
+# server release are sent by the run after the one that found it.
 #
 # The data branch keeps no history. Every write replaces it with a single
 # commit of the new tree, after gh-stats-data-prune thinned the measurement
@@ -46,11 +46,12 @@
 # too. Dispatched by hand, the workflow also thins the results without a new
 # catalogue.
 #
-# Last, gh-nc-shipped lists the apps the server ships, from the archives of its
-# maintained majors and of master, and keeps them as shipped.json in the
-# release catalogue. An archive whose ETag is unchanged is taken over from the
-# shipped.json fetched at the start, so a run without a new server release
-# reads none.
+# Last, gh-nc-shipped lists the apps the server ships, from the archive of
+# every release of its maintained majors and of master, and keeps them as
+# shipped.json in the release catalogue. A release already read is taken over
+# from the shipped.json fetched at the start, master while its ETag is
+# unchanged, so a run without a new server release reads none but the older
+# releases not read yet, a few each run.
 
 name: Extract the catalogue
 
@@ -255,7 +256,7 @@ jobs:
           } | tr '[:upper:]' '[:lower:]' | LC_ALL=C sort -u > "$STATE/known"
           {
             bin/gh-nc-appslist -L "$LINES" -o - | sed '/^#/d'
-            [ ! -s "$STATE/shipped.json" ] || jq -r '.releases[] | select(.ref != "master") | .ref as $ref
+            [ ! -s "$STATE/shipped.json" ] || jq -r '.releases[] | select(.latest and .ref != "master") | .ref as $ref
               | .apps[] | select(.enabled != "always") | "-s \($ref) \(.repo)" + (if (.path // "") != "" then ":" + .path else "" end)' "$STATE/shipped.json"
             cat "$STATE/incomplete"
           } \
