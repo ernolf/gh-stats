@@ -757,6 +757,13 @@ UPDATE findings AS f SET
     ELSE '  No server release before this one ships the app, so the version is new with it.' END
   FROM shipped_runs r
  WHERE f.dir = r.dir AND f.tool = 'changelog-lint' AND f.level = 'warn' AND f.id IN ('changelog-missing', 'changelog-section');
+-- How the App Store shows a pre-release says nothing of a shipped app, and a
+-- section found is there as it is for a pre-release.
+DELETE FROM findings
+ WHERE tool = 'changelog-lint' AND id = 'changelog-prerelease' AND dir IN (SELECT dir FROM shipped_runs);
+UPDATE findings SET text = 'The section for ' || replace(substr(text, length('The App Store finds the section for ') + 1), ' in ', ' is there in ')
+ WHERE tool = 'changelog-lint' AND id = 'changelog-section' AND level = 'ok' AND dir IN (SELECT dir FROM shipped_runs)
+   AND text LIKE 'The App Store finds the section for %';
 
 VACUUM;
 SELECT 'apps', count(*) FROM apps
