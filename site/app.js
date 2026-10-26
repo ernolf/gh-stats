@@ -162,7 +162,7 @@ function projectApps() {
 function catalogueApps() {
 	return query(`
 		SELECT d.id, d.exapp, d.categories, coalesce((SELECT t.name FROM app_texts t WHERE t.id = d.id AND t.lang = 'en'), d.id) AS name,
-		       r.version, CAST(strftime('%s', r.created) AS INTEGER) AS published, r.platform
+		       r.version, CAST(strftime('%s', r.created) AS INTEGER) AS published, r.platform, r.stable, r.host, r.asset
 		  FROM app_details d LEFT JOIN app_releases r ON r.id = d.id AND r.version = (
 		       SELECT x.version FROM app_releases x WHERE x.id = d.id ORDER BY x.stable DESC, x.created DESC LIMIT 1)
 		 ORDER BY d.id`)
@@ -665,11 +665,34 @@ function projectTab(apps) {
 	return apps.every((a) => a.exapp) ? 'exapps' : 'apps'
 }
 
+// Why the downloads of a catalogue row stay empty, by the download of the
+// release it shows, as a label and a sentence. A release asset on GitHub is left
+// out only for its age, gh-nc-appstore-targets keeping a repository while its
+// newest release is recent; one on another host also while the host does not
+// answer as Forgejo or Gitea.
+function downloadReason(a) {
+	if (a.version === null) {
+		return ['no release', 'the App Store lists no release of this app']
+	}
+	if (a.host === null) {
+		return ['no download', 'the App Store names no download for this release']
+	}
+	if (a.host !== 'github.com') {
+		return [a.host, a.asset
+			? `downloaded from a release on ${a.host}, which gh-stats does not sample: the host does not answer as Forgejo or Gitea, or the newest release of the repository is too old`
+			: `downloaded from ${a.host}, not from a release on GitHub, Forgejo or Gitea`]
+	}
+	return a.asset
+		? ['too old', 'the newest release of its repository is too old for gh-stats to sample or measure']
+		: ['no release asset', 'downloaded from a file on GitHub that is no release asset']
+}
+
 // A catalogue app no project row shows has the row of what the App Store lists:
 // its releases are downloaded from elsewhere than a release of GitHub, Forgejo or
 // Gitea or not sampled, or it
 // has none. Its download columns stay empty, so there is nothing to chart or
-// compare.
+// compare, and say why; so does an unmeasured Checks cell, the measurement
+// taking stable releases only.
 function catalogueRow(a) {
 	const released = a.version !== null
 	const p = {
@@ -680,8 +703,16 @@ function catalogueRow(a) {
 	}
 	const runs = p.tab === 'apps' ? measurementsByVersion(a.id).get(a.version) : undefined
 	p.warn = warnings(runs)
+	const [label, reason] = downloadReason(a)
 	const [checks, checksRow] = checksCell(runs, 10)
-	const empty = released ? { class: 'num na', title: 'gh-stats samples no GitHub, Forgejo or Gitea release of this app' } : { class: 'num' }
+	if (!runs) {
+		const [why, title] = released && !a.stable
+			? ['no stable release', 'the App Store lists only nightlies or pre-releases of this app, and only stable releases are measured']
+			: [label, reason]
+		checks.title = title
+		checks.append(el('span', { class: 'check-why' }, why))
+	}
+	const empty = { class: released ? 'num na' : 'num', title: reason }
 	p.main = el('tbody', {}, el('tr', {},
 		el('td', { class: 'pick' }),
 		el('td', {}, el('span', { class: 'name' }, el('a', { href: `#app/${encodeURIComponent(a.id)}` }, a.name)), ...shippedMark(a.id)),
