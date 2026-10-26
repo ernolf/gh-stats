@@ -53,7 +53,9 @@
 # release catalogue. A release already read is taken over
 # from the shipped.json fetched at the start, master while its ETag is
 # unchanged, so a run without a new server release reads none but the older
-# releases not read yet, a few each run.
+# releases not read yet, a few each run. When the ETag of master changed, a new
+# daily build, the workflow dispatches gh-stats-unlisted.yml, so the apps that
+# are neither in the catalogue nor shipped are listed once a day.
 
 name: Extract the catalogue
 
@@ -63,8 +65,9 @@ on:
 permissions:
   # Pushes to the data branch and creates the repository_dispatch events.
   contents: write
-  # Sees whether a measurement runs.
-  actions: read
+  # Sees whether a measurement runs and starts the listing of the unlisted
+  # apps.
+  actions: write
   # Reads the versions the measurement gave up on.
   issues: read
 
@@ -332,7 +335,16 @@ jobs:
 
       - name: Keep the shipped apps
         run: |
+          master() { jq -r 'first(.releases[]? | select(.ref == "master") | .etag) // ""' "$1" 2>/dev/null || true; }
           cp "$STATE/shipped.json" "$STATE/shipped.json.before" 2>/dev/null || true
           SHIPPED_FILE="$STATE/shipped.json" bin/gh-nc-shipped
           cmp -s "$STATE/shipped.json" "$STATE/shipped.json.before" \
             || gh release upload "$CATALOGUE_TAG" "$STATE/shipped.json" --clobber
+          [ "$(master "$STATE/shipped.json")" = "$(master "$STATE/shipped.json.before")" ] \
+            || echo "MASTER_BUILD=1" >> "$GITHUB_ENV"
+
+      # Only after the upload, so the listing leaves out the apps of the new
+      # build.
+      - name: List the unlisted apps
+        if: env.MASTER_BUILD == '1'
+        run: gh workflow run gh-stats-unlisted.yml --ref "$GITHUB_REF_NAME"
