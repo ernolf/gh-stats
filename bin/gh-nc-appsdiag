@@ -181,18 +181,21 @@ With -s the app is one the Nextcloud server ships, measured as a server release
 ships it: nextcloud/server:apps/<id> for an app of the server tree, the app's
 own repository for one that has its own. gh-nc-shipped unpacks apps/<id>/ of
 the archive of that server release, or of the daily archive of master, before
-anything is read. The checkout is the server release tag, v35.0.2 for 35.0.2,
-in either repository; no tag is offered and no version can be given. For master
-it is the commit the archive was built from: for an app of the server tree the
-server commit its version.php names, for an app with a repository of its own
-the newest first-parent commit of the default branch up to the time of that
-build whose files are those of the archive, wherever it tracks them. Of the
-newest SERVER_BUILD_CANDIDATES commits up to that time, the one with the fewest
-files that differ is taken if none matches, with a warning. make dist stages
-the app as for any other, and what it stages is held against the files
-unpacked. The run directory is named after the server release, server-35.0.2
-or server-master, in place of the app version, and summary.json names it as
-server.
+anything is read. A pre-release counts as a release, 36.0.0rc1 as well as
+36.0.0beta2. The checkout is the server release tag, v35.0.2 for 35.0.2, in
+either repository; no tag is offered and no version can be given. The suffix
+of a pre-release is matched without case, since the server and an app's
+repository spell it rc or RC, not always alike, and the run takes the spelling
+of the server tag. For master it is the commit the archive was built from: for
+an app of the server tree the server commit its version.php names, for an app
+with a repository of its own the newest first-parent commit of the default
+branch up to the time of that build whose files are those of the archive,
+wherever it tracks them. Of the newest SERVER_BUILD_CANDIDATES commits up to
+that time, the one with the fewest files that differ is taken if none matches,
+with a warning. make dist stages the app as for any other, and what it stages
+is held against the files unpacked. The run directory is named after the
+server release, server-35.0.2 or server-master, in place of the app version,
+and summary.json names it as server.
 
 Everything one run produces goes into one directory, for an app below the root
 with its app id after the repo (or its directory, while the id is unknown), for
@@ -298,8 +301,16 @@ while [ $# -gt 0 ]; do
 done
 # The ref as gh-nc-shipped names a server release: its tag, or master.
 if [ -n "$SERVER_REF" ] && [ "$SERVER_REF" != master ]; then
-	[[ "$SERVER_REF" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "not a server release: $SERVER_REF"
+	[[ "$SERVER_REF" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+([A-Za-z]+[0-9]*)?$ ]] || die "not a server release: $SERVER_REF"
 	SERVER_REF="v${SERVER_REF#v}"
+	# A pre-release tag is spelt rc or RC, and a request hands it on in lower
+	# case. The run takes the spelling of the server tag, which is the ref
+	# shipped.json names the release by.
+	if [[ "${SERVER_REF#v}" == *[A-Za-z]* ]]; then
+		server_tag="$("$GIT" ls-remote --tags --refs "https://github.com/$SERVER_REPO.git" "refs/tags/v$(cut -d. -f1 <<<"${SERVER_REF#v}").*" 2>/dev/null \
+			| awk -v t="refs/tags/$SERVER_REF" 'tolower($2) == tolower(t) { print substr($2, 11); exit }')" || :
+		SERVER_REF="${server_tag:-$SERVER_REF}"
+	fi
 fi
 export NC_APPSDIAG_SERVER="$SERVER_REF"
 
@@ -1399,7 +1410,11 @@ elif [ ! -d "$CHECKOUT" ]; then
 	# found, which takes the commits and trees but no file of the history.
 	clone_args=()
 	if [ -n "$SERVER_REF" ] && [ "$SERVER_REF" != master ]; then
-		clone_args+=(--depth 1 --branch "$SERVER_REF")
+		# The server and an app's repository spell a pre-release tag rc or RC,
+		# not always alike, and --branch matches the case exactly.
+		server_tag="$("$GIT" ls-remote --tags --refs "https://$repo_host/$owner/$repo.git" "refs/tags/v$(cut -d. -f1 <<<"${SERVER_REF#v}").*" 2>/dev/null \
+			| awk -v t="refs/tags/$SERVER_REF" 'tolower($2) == tolower(t) { print substr($2, 11); exit }')" || :
+		clone_args+=(--depth 1 --branch "${server_tag:-$SERVER_REF}")
 	elif [ "$SERVER_REF" = master ] && [ "$owner/$repo" = "$SERVER_REPO" ]; then
 		clone_args+=(--depth 1)
 	elif [ "$SERVER_REF" = master ]; then
@@ -1416,7 +1431,7 @@ if [ -n "$SERVER_REF" ] && [ -f "$APP_DIR/appinfo/info.xml" ]; then
 	[ "$SERVER_REF" != master ] || build_checkout
 fi
 log "   head  $("$GIT" -C "$CHECKOUT" log -1 --format='%h %ad %s' --date=short)"
-[ -z "$SERVER_REF" ] || [ "$SERVER_REF" = master ] || head_tag="$SERVER_REF"
+[ -z "$SERVER_REF" ] || [ "$SERVER_REF" = master ] || head_tag="${server_tag:-$SERVER_REF}"
 init_submodules
 
 # A version on the command line is checked out before anything is read, so the

@@ -706,9 +706,10 @@ function olderToggle(p) {
 }
 
 // A shipped app has a line for the newest release of each server major whose
-// archive ships it and for master, master on its row and the stable majors
-// below, each with the checks of the app as that release ships it. An app
-// master no longer ships has its newest stable major on the row.
+// archive ships it, for the newest pre-release of a major without a release,
+// and for master, master on its row and the other majors below, each with the
+// checks of the app as that release ships it. An app master no longer ships
+// has its newest major on the row.
 // Nobody downloads the archives from a host gh-stats samples, so the tab has no
 // download columns and nothing to chart or compare. In their place each line
 // says how its server release ships the app, and the row since which major.
@@ -1288,11 +1289,13 @@ function appReleases(id, requests) {
 		}))
 }
 
-// The newest release of each major and master keep their check unless they
-// enable the app always, so they have no button to remove it.
+// The newest release of each major, the newest pre-release of a major without
+// a release, and master keep their check unless they enable the app always, so
+// they have no button to remove it. The request names a release by its tag:
+// version.php of a pre-release reads 35.0.0 RC1, which no request title takes.
 function shippedRequestCell(s, runs) {
 	const links = []
-	const as = `${s.id} as Nextcloud ${s.ref === 'master' ? 'master' : s.server} ships it`
+	const as = `${s.id} as Nextcloud ${s.ref === 'master' ? 'master' : s.ref.slice(1)} ships it`
 	links.push(requestLink(runs ? 'recheck' : 'check', `Measure ${as}`,
 		`Measures ${as} ${runs ? 'again, with a new build, ' : ''}and keeps its result.`))
 	if (runs && !(s.latest && s.enabled !== 'always')) {
