@@ -454,6 +454,9 @@ const ENABLED = {
 }
 // The choices of the filter that are not a single value.
 const ENABLED_FILTER = { switchable: ['default', 'optional'] }
+// The column Enabled of the tab Shipped Apps is narrow, so it gives a letter,
+// explained once above the table.
+const ENABLED_CODE = { always: 'A', default: 'E', optional: 'D' }
 
 function enabledMark(s) {
 	return s.enabled ? [el('span', { class: 'enabled', title: ENABLED[s.enabled][1] }, ENABLED[s.enabled][0])] : []
@@ -706,31 +709,36 @@ function olderToggle(p) {
 // archive ships it and for master, master on its row and the stable majors
 // below, each with the checks of the app as that release ships it. An app
 // master no longer ships has its newest stable major on the row.
-// Nobody downloads the archives from a host gh-stats samples, so the download
-// columns stay empty and there is nothing to chart or compare.
+// Nobody downloads the archives from a host gh-stats samples, so the tab has no
+// download columns and nothing to chart or compare. In their place each line
+// says how its server release ships the app, and the row since which major.
 function shippedRow(releases) {
 	const main = releases.find((s) => s.ref === 'master') ?? releases[0]
-	const line = (s, first) => {
+	const line = (s, first, since = null) => {
 		const runs = measuredShipped.get(`${s.id}\n${s.ref}`)
-		const [checks, checksRow] = checksCell(runs, 10)
+		const [checks, checksRow] = checksCell(runs, 9)
 		const r = {
 			published: s.published, nc: `>=${s.major} <=${s.major}`, warn: warnings(runs), checks: checksRow,
 			compare: el('tr', { class: 'compare', hidden: '' }), compareChecks: el('tr', { class: 'checks', hidden: '' }),
 		}
 		r.tr = el('tr', {}, el('td', { class: 'pick' }), first,
-			el('td', { class: 'tag' }, el('a', { href: shippedSource(s) }, s.version), ...restrictionMark([s])),
+			el('td', { class: 'tag' }, el('a', { href: shippedSource(s) }, s.version)),
 			el('td', {}, serverLink(s)),
 			el('td', {}, s.published === null ? '' : date(s.published)),
-			...['total', ...PERIODS].map(() => el('td', { class: 'num na', title: 'gh-stats samples no host the server archives are downloaded from' })),
-			checks, el('td'))
+			el('td', { class: 'num' }, since ?? ''),
+			s.enabled ? el('td', { class: 'mark', title: ENABLED[s.enabled][0] }, ENABLED_CODE[s.enabled]) : el('td'),
+			el('td', { class: 'mark' }, s.restrictable === 0 ? 'X' : ''),
+			el('td', { class: 'mark' }, s.repo === SERVER_REPO ? 'X' : ''),
+			checks)
 		return r
 	}
 	const head = el('td', {}, el('span', { class: 'name' }, el('a', { href: `#app/${encodeURIComponent(main.id)}` }, main.name)),
-		el('a', { class: 'slug', href: `https://github.com/${main.repo}` }, main.repo), ...shippedMark(main.id), ...enabledMark(main))
-	const row = line(main, head)
+		el('a', { class: 'slug', href: `https://github.com/${main.repo}` }, main.repo))
+	const since = shipped.get(main.id) ?? null
+	const row = line(main, head, since)
 	const p = {
 		tab: 'shipped', name: main.name, tag: main.version, published: main.published, nc: row.nc, enabled: main.enabled,
-		total: null, d1: null, d7: null, d30: null, warn: row.warn,
+		total: null, d1: null, d7: null, d30: null, since, warn: row.warn,
 		lines: releases.filter((s) => s !== main)
 			.map((s) => line(s, el('td', { class: 'line-label' }, `Nextcloud ${s.major}`))),
 		search: `${main.name} ${main.id} ${main.repo}`.toLowerCase(), categories: new Set(JSON.parse(main.categories ?? '[]')),
@@ -797,6 +805,9 @@ function initOverview() {
 	const nc = document.getElementById('nc')
 	const category = document.getElementById('category')
 	const enabled = document.getElementById('enabled')
+	const enabledCodes = document.getElementById('enabled-codes')
+	enabledCodes.append('Enabled: ', ...Object.entries(ENABLED_CODE).flatMap(([k, code], i) =>
+		[i ? ', ' : '', el('b', {}, code), ` ${ENABLED[k][0]}`]), '.')
 	const reset = document.getElementById('reset')
 	let sortKey = 'total'
 	let sortDesc = true
@@ -835,10 +846,11 @@ function initOverview() {
 			const m = ncMajors(r.nc)
 			return m !== null && m[0] <= major && m[1] >= major
 		}
-		// Empty periods sort last in either direction.
+		// Empty periods sort last in either direction, as do the rows of the
+		// other tabs, which lack the columns of the tab Shipped Apps.
 		projects.sort((a, b) => {
-			const x = a[sortKey]
-			const y = b[sortKey]
+			const x = a[sortKey] ?? null
+			const y = b[sortKey] ?? null
 			if (x === null || y === null) {
 				return (x === null) - (y === null)
 			}
@@ -882,6 +894,7 @@ function initOverview() {
 		nameHead.textContent = { apps: 'App', exapps: 'ExApp', shipped: 'App', other: 'Project' }[tab]
 		appFilters.hidden = tab === 'other'
 		enabled.hidden = tab !== 'shipped'
+		enabledCodes.hidden = tab !== 'shipped'
 		for (const b of tabs) {
 			b.setAttribute('aria-pressed', String(b.dataset.tab === tab))
 		}
