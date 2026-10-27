@@ -188,7 +188,7 @@ function shippedApps(id = null) {
 }
 
 // The apps that are neither in the catalogue nor shipped by the server and
-// publish no release tarball, which gh-stats measures from a build of its own;
+// publish no release tarball, which gh-stats measures from a build ncmake makes;
 // with an id only that app.
 function unlistedApps(id = null) {
 	return query(`
@@ -223,8 +223,8 @@ function unlistedSource(u) {
 	return el('a', { class: 'slug', href: `https://${u.host}/${u.repo}` }, u.path ? `${slug}/${u.path}` : slug)
 }
 
-const UNLISTED_TEXT = 'no release of its repository carries a tarball, so gh-stats builds the app from its newest tag, or from the default branch where it has none, and measures that build'
-const EXAPP_TEXT = 'an AppAPI app, which runs in a container of its own; gh-stats does not build it, so it is not measured'
+const UNLISTED_TEXT = 'no release of its repository carries a tarball, so ncmake builds the app from its newest tag, or from the default branch where it has none, and checks that build'
+const EXAPP_TEXT = 'an AppAPI app, which runs in a container of its own; ncmake does not build it, so it is not measured'
 
 function exappMark(u) {
 	return u.exapp ? [el('span', { class: 'exapp', title: EXAPP_TEXT }, 'ExApp')] : []
@@ -654,7 +654,7 @@ function checksCell(runs, span, version = null) {
 		type: 'button',
 		class: warn ? 'check-count warn' : 'check-count',
 		'aria-expanded': 'false',
-		title: `${warn} warning${warn === 1 ? '' : 's'} in ${runs.length} measurement${runs.length === 1 ? '' : 's'}${version ? ` of ${version}` : ''}`,
+		title: `${warn} warning${warn === 1 ? '' : 's'} of the ncmake analysers in ${runs.length} measurement${runs.length === 1 ? '' : 's'}${version ? ` of ${version}` : ''}`,
 	}, warn ? `⚠ ${warn}` : '✓')
 	button.addEventListener('click', () => {
 		if (!checks.hasChildNodes()) {
@@ -1364,7 +1364,7 @@ function requestCell(id, r, runs, newest) {
 	const links = []
 	if (r.stable && !r.nightly && STABLE.test(r.version)) {
 		links.push(requestLink(runs ? 'recheck' : 'check', `Measure ${id} ${r.version}`,
-			`Measures ${id} ${r.version} ${runs ? 'again, with a new build, ' : ''}and keeps its result.`))
+			`Builds and checks ${id} ${r.version} with ncmake${runs ? ' again' : ''} and keeps its result.`))
 		if (runs && r.version !== newest) {
 			links.push(' ', requestLink('remove check', `Remove the check of ${id} ${r.version}`,
 				`Removes the results of ${id} ${r.version} and keeps the version from being measured again.`))
@@ -1395,7 +1395,7 @@ function appReleases(id, requests) {
 		.map((r) => r.version).sort(compareVersions).at(-1)
 	return el('table', {},
 		el('thead', {}, el('tr', {}, ...['Version', 'Released', 'Channel', 'Nextcloud', 'PHP', 'Databases', 'PHP extensions', 'Licences']
-			.map((h) => el('th', {}, h)), el('th', { title: 'warnings of the measurement of the release' }, 'Checks'),
+			.map((h) => el('th', {}, h)), el('th', { title: 'warnings the ncmake analysers found in the release' }, 'Checks'),
 		...(asks ? [el('th', { title: 'opens a prefilled issue that asks for the measurement' }, 'Request')] : []))),
 		...releases.map((r) => {
 			const [checks, checksRow] = checksCell(runs.get(r.version), asks ? 9 : 8)
@@ -1421,7 +1421,7 @@ function shippedRequestCell(s, runs) {
 	const links = []
 	const as = `${s.id} as Nextcloud ${s.ref === 'master' ? 'master' : s.ref.slice(1)} ships it`
 	links.push(requestLink(runs ? 'recheck' : 'check', `Measure ${as}`,
-		`Measures ${as} ${runs ? 'again, with a new build, ' : ''}and keeps its result.`))
+		`Builds and checks ${as} with ncmake${runs ? ' again' : ''} and keeps its result.`))
 	if (runs && !(s.latest && s.enabled !== 'always')) {
 		links.push(' ', requestLink('remove check', `Remove the check of ${as}`,
 			`Removes the results of ${as} and keeps it from being measured again.`))
@@ -1433,7 +1433,7 @@ function appShipped(releases) {
 	const asks = Boolean(issues)
 	return el('table', {},
 		el('thead', {}, el('tr', {}, ...['Nextcloud', 'Published', 'App version', 'Enabled', 'Source'].map((h) => el('th', {}, h)),
-			el('th', { title: 'warnings of the measurement of the app as the server release ships it' }, 'Checks'),
+			el('th', { title: 'warnings the ncmake analysers found in the app as the server release ships it' }, 'Checks'),
 			...(asks ? [el('th', { title: 'opens a prefilled issue that asks for the measurement' }, 'Request')] : []))),
 		...releases.map((s) => {
 			const runs = measuredShipped.get(`${s.id}\n${s.ref}`)
@@ -1455,7 +1455,7 @@ function unlistedRequestCell(id, version, runs, newest) {
 	const links = []
 	if (STABLE.test(version)) {
 		links.push(requestLink(runs ? 'recheck' : 'check', `Measure ${id} ${version}`,
-			`Builds ${id} from the tag of ${version}, measures it ${runs ? 'again ' : ''}and keeps its result.`))
+			`Builds ${id} with ncmake from the tag of ${version}, checks it ${runs ? 'again ' : ''}and keeps its result.`))
 		if (runs && version !== newest) {
 			links.push(' ', requestLink('remove check', `Remove the check of ${id} ${version}`,
 				`Removes the results of ${id} ${version} and keeps the version from being measured again.`))
@@ -1475,7 +1475,7 @@ function appTags(u) {
 	const rows = tags.length ? tags.map((t) => [t, tagVersion(t)]) : [['default branch', u.version ?? '']]
 	return el('table', {},
 		el('thead', {}, el('tr', {}, ...['Tag', 'Version'].map((h) => el('th', {}, h)),
-			el('th', { title: 'warnings of the measurement of the build' }, 'Checks'),
+			el('th', { title: 'warnings the ncmake analysers found in the ncmake build' }, 'Checks'),
 			...(asks ? [el('th', { title: 'opens a prefilled issue that asks for the measurement' }, 'Request')] : []))),
 		...rows.map(([tag, version]) => {
 			const [checks, checksRow] = checksCell(version ? runs.get(version) : undefined, asks ? 3 : 2)
@@ -1501,8 +1501,8 @@ function unlistedPage(u) {
 			['Last pushed', u.pushed === null ? '' : date(u.pushed)],
 		]),
 		el('p', { class: 'hint' }, u.exapp
-			? 'The App Store catalogue has no app of this id, and the server ships none. It is an ExApp, which gh-stats does not build, so it is not measured.'
-			: 'The App Store catalogue has no app of this id, and the server ships none. No release of its repository carries a tarball, so gh-stats builds the app from the tag it measures, or from the default branch where the repository has no tag: the tarball measured is a build of gh-stats, not one of the maintainer.'),
+			? 'The App Store catalogue has no app of this id, and the server ships none. It is an ExApp, which ncmake does not build, so it is not measured.'
+			: 'The App Store catalogue has no app of this id, and the server ships none. No release of its repository carries a tarball, so ncmake builds the app from the tag gh-stats measures, or from the default branch where the repository has no tag, and checks that build: the tarball measured is a build of ncmake, not one of the maintainer.'),
 		el('h3', {}, 'Tags'),
 		el('div', { class: 'scroll' }, appTags(u)))]
 }
@@ -1515,7 +1515,7 @@ function appLines(lines) {
 	return el('table', {},
 		el('thead', {}, el('tr', {}, ...['Line', 'Release', 'Nextcloud', 'Published'].map((h) => el('th', {}, h)),
 			...['Total', '1 day', '7 days', '30 days'].map((h) => el('th', { class: 'num' }, h)),
-			el('th', { title: 'warnings of the measurement of the release shown' }, 'Checks'))),
+			el('th', { title: 'warnings the ncmake analysers found in the release shown' }, 'Checks'))),
 		...lines.map((r) => {
 			const [checks, checksRow] = lineChecks(r, 8)
 			return el('tbody', {}, el('tr', {}, el('td', {}, lineLabel(r.line)), ...releaseCells(r, measured.get(`${r.project}\n${r.tag}`)), checks), checksRow)
