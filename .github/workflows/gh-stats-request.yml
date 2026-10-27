@@ -63,13 +63,7 @@ on:
     types: [opened, labeled]
 
 permissions:
-  # Writes the data branch and the database asset, and creates the
-  # repository_dispatch event.
-  contents: write
-  # Comments on, labels and closes the request.
-  issues: write
-  # Rebuilds the site after a removal.
-  actions: write
+  contents: read
 
 concurrency:
   group: request-${{ github.event.issue.number }}
@@ -101,6 +95,9 @@ jobs:
         || (startsWith(github.event.issue.title, 'Remove ') && endsWith(github.event.issue.title, ' from the database')))
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      # Labels the request and comments on it.
+      issues: write
     env:
       GH_TOKEN: ${{ github.token }}
     outputs:
@@ -168,6 +165,13 @@ jobs:
     if: needs.permission.outputs.allowed == '1' && needs.permission.outputs.kind != 'database'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      # Writes the data branch and creates the repository_dispatch event.
+      contents: write
+      # Comments on and closes the request.
+      issues: write
+      # Rebuilds the site after a removal.
+      actions: write
     env:
       GH_TOKEN: ${{ github.token }}
       KIND: ${{ needs.permission.outputs.kind }}
@@ -364,6 +368,13 @@ jobs:
     if: needs.permission.outputs.allowed == '1' && needs.permission.outputs.kind == 'database'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      # Uploads the database asset.
+      contents: write
+      # Comments on and closes the request.
+      issues: write
+      # Rebuilds the site.
+      actions: write
     concurrency:
       group: sampler
       cancel-in-progress: false
