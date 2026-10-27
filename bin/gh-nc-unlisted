@@ -6,11 +6,11 @@
 # catalogue nor shipped by the server. It lists every repository of every owner
 # the catalogue and shipped.json name on GitHub or on a Forgejo or Gitea host,
 # reads the tree of each one that is no fork, no mirror, not archived and not
-# empty, and keeps every tracked appinfo/info.xml that declares a <nextcloud>
-# dependency. The repositories UNLISTED_TOOLS names hold templates and
-# developer tools, whose apps are marked as such. The result replaces its
-# previous copy, from which a repository not pushed since is taken over instead
-# of being read again.
+# empty, and keeps every tracked appinfo/info.xml outside a test or example
+# directory that declares a <nextcloud> dependency. The repositories
+# UNLISTED_TOOLS names hold templates and developer tools, whose apps are
+# marked as such. The result replaces its previous copy, from which a
+# repository not pushed since is taken over instead of being read again.
 
 # == Config ==
 # Optional site config shared with gh-stats and gh-release-sampler. If
@@ -93,25 +93,32 @@ fork, no mirror, not archived and not empty is read, as is every repository
 UNLISTED_INCLUDE names, whatever it is; those UNLISTED_EXCLUDE names are left
 out. Of each, the tree of the default branch is fetched without its blobs and
 every tracked appinfo/info.xml, at the root or below it, that declares a
-<nextcloud> dependency makes an app. Of a repository with an app, the newest
-tag, the newest UNLISTED_TAGS tags, newest first, and whether one of its newest
-UNLISTED_RELEASES releases carries a .tar.gz or .tgz asset are kept as well.
-The tags are ordered by their name without a leading v, as sort -V orders it,
-with an -alpha, -beta or -rc version before its release.
+<nextcloud> dependency makes an app, unless it lies below a directory named
+test, tests, fixture, fixtures, example, examples or e2e, or one whose name
+starts or ends with one of these joined by - or _. Of a repository with an
+app, the newest tag, the newest UNLISTED_TAGS tags, newest first, and whether
+one of its newest UNLISTED_RELEASES releases carries a .tar.gz or .tgz asset
+are kept as well. Only a tag that names a version counts, [v]<number>, more
+numbers each after a dot, and a suffix after -, +, . or ~. The tags are ordered
+by their name without a leading v, as sort -V orders it, with an -alpha, -beta
+or -rc version before its release.
 
 repos holds every repository read, with or without an app, under
 [<host>/]<owner>/<repo> in lower case. One whose pushed time is unchanged is
 taken over from the previous <file> unread, unless it has an app and its entry
-no tags. A run reads at most
-UNLISTED_MAX_READS repositories, the most recently pushed first, and leaves the
-rest to the next run. The repositories of an owner whose listing fails are
-taken over, those of an owner that no longer exists are dropped.
+no tags. A run reads at most UNLISTED_MAX_READS repositories, those
+UNLISTED_INCLUDE and UNLISTED_TOOLS name first, then the most recently pushed,
+and leaves the rest to the next run. The repositories of an owner whose
+listing fails are taken over, those of an owner that no longer exists are
+dropped.
 
 apps holds the apps of repos whose id is neither one of the catalogue nor one
-of shipped.json, nor named by UNLISTED_EXCLUDE; of several repositories with
-the same id the one created first counts. exapp marks an app whose info.xml
-declares <external-app>, an AppAPI app, tool one of a repository UNLISTED_TOOLS
-names, which is read as one UNLISTED_INCLUDE names. The time is UTC throughout.
+of shipped.json, nor named by UNLISTED_EXCLUDE; a repository that holds an app
+of either lists none, since its other apps are its test and helper apps. Of
+several repositories with the same id the one created first counts. exapp
+marks an app whose info.xml declares <external-app>, an AppAPI app, tool one of
+a repository UNLISTED_TOOLS names, which is read as one UNLISTED_INCLUDE names.
+The time is UTC throughout.
 
 UNLISTED_INCLUDE and UNLISTED_EXCLUDE take owners and repositories as owner,
 owner/repo, host/owner or host/owner/repo, separated by spaces or line breaks;
@@ -281,9 +288,11 @@ element() {
 
 # read_repo <n> <key> <host> <owner/repo>: the apps of the repository into
 # read/<n>.json as {key, apps, tag, tags, tarball}; nothing when it could not be
-# read. An info.xml with <external-app> makes an ExApp.
+# read. An info.xml with <external-app> makes an ExApp, one below a test or
+# example directory none.
 read_repo() {
-	local n="$1" key="$2" host="$3" slug="$4" dir="$tmp/clone/$1" f path nc exapp tags tarball i
+	local test_dir='/((tests?|fixtures?|examples?|e2e)([-_][^/]*)?|[^/]*[-_](tests?|fixtures?|examples?|e2e))/'
+	local n="$1" key="$2" host="$3" slug="$4" dir="$tmp/clone/$1" f path parent nc exapp tags tarball i
 	local url="https://$host/$slug.git"
 	for ((i = 0; i <= RETRIES; i++)); do
 		rm -rf "$dir"
@@ -300,6 +309,9 @@ read_repo() {
 		grep -q '<nextcloud[[:space:]/>]' "$dir.xml" || continue
 		path="${f%appinfo/info.xml}"
 		path="${path%/}"
+		parent=""
+		[[ "$path" != */* ]] || parent="${path%/*}"
+		[[ ! "/${parent,,}/" =~ $test_dir ]] || continue
 		nc="$(tr '\r\n\t' '   ' < "$dir.xml" | sed -n 's:.*<nextcloud\([[:space:]][^>]*\)\{0,1\}/\{0,1\}>.*:\1:p')"
 		exapp=false
 		! grep -q '<external-app[[:space:]/>]' "$dir.xml" || exapp=true
@@ -313,9 +325,12 @@ read_repo() {
 	rm -rf "$dir"
 	tags="" tarball=false
 	if [ -s "$dir.apps" ]; then
-		# awk instead of head reads to the end, so sort never meets a closed pipe.
+		# Only a tag that names a version counts; sort -V would order a name such
+		# as theming-1.4.5 after every number. awk instead of head reads to the
+		# end, so sort never meets a closed pipe.
 		tags="$("$GIT" ls-remote --tags --refs "$url" 2>/dev/null \
-			| awk '{ t = $2; sub(/^refs\/tags\//, "", t); k = t; sub(/^[vV]/, "", k); gsub(/-(alpha|beta|rc)/, "~&", k); print k "\t" t }' \
+			| awk '{ t = $2; sub(/^refs\/tags\//, "", t) }
+				t ~ /^[vV]?[0-9]+(\.[0-9]+)*([-+.~][0-9A-Za-z.+~-]*)?$/ { k = t; sub(/^[vV]/, "", k); gsub(/-(alpha|beta|rc)/, "~&", k); print k "\t" t }' \
 			| sort -V -r -k1,1 | awk -F '\t' -v n="$UNLISTED_TAGS" 'NR <= n { print $2 }')" || tags=""
 		if [ "$host" = github.com ]; then
 			"$GH" api "repos/$slug/releases?per_page=$UNLISTED_RELEASES" --jq '.[].assets[].name' > "$dir.rel" 2>/dev/null || :
@@ -367,7 +382,8 @@ awk '{ print NR "\t" tolower(($1 == "github.com" ? "" : $1 "/") $2) }' "$tmp/own
 # not empty and not private, none that UNLISTED_EXCLUDE names. Then the ones
 # whose pushed time the previous file holds are taken over, unless they have
 # an app and no tags or an app not yet marked as ExApp or not, and of the rest
-# the most recently pushed UNLISTED_MAX_READS are read.
+# UNLISTED_MAX_READS are read: the included ones first, so a run that stops
+# at the limit never leaves a tool to the next, then the most recently pushed.
 find "$tmp/list" -name 'i*.json' -exec cat {} + > "$tmp/included.json"
 find "$tmp/list" -name '[0-9]*.json' -exec cat {} + > "$tmp/listed.json"
 "$JQ" -n -c --argjson excluded "$excluded" --slurpfile included "$tmp/included.json" --slurpfile listed "$tmp/listed.json" '
@@ -375,11 +391,12 @@ find "$tmp/list" -name '[0-9]*.json' -exec cat {} + > "$tmp/listed.json"
 	 + [$included[][] | select((.empty or .private) | not)])
 	| map(select(.key as $k | any($excluded[]; . as $x | $k == $x or ($k | startswith($x + "/"))) | not))
 	| unique_by(.key) | .[]' > "$tmp/repos"
-"$JQ" -r --slurpfile prev "$prev" '
-	$prev[0].repos[.key] as $o
+"$JQ" -r --slurpfile prev "$prev" --slurpfile included "$tmp/included.json" '
+	[$included[][] | .key] as $first
+	| $prev[0].repos[.key] as $o
 	| select(($o.pushed // null) != .pushed or (($o.apps // []) != [] and (($o | has("tags") | not) or any($o.apps[]; has("exapp") | not))))
-	| [.pushed, .key, .host, .repo] | @tsv' "$tmp/repos" \
-	| sort -r | cut -f2- > "$tmp/stale"
+	| [(if .key | IN($first[]) then 1 else 0 end), .pushed, .key, .host, .repo] | @tsv' "$tmp/repos" \
+	| sort -r | cut -f3- > "$tmp/stale"
 head -n "$UNLISTED_MAX_READS" "$tmp/stale" | awk -F '\t' '{ printf "%d\0%s\0%s\0%s\0", NR, $1, $2, $3 }' \
 	| xargs -0 -r -n 4 -P "$UNLISTED_JOBS" bash -c 'read_repo "$@"' _
 find "$tmp/read" -name '*.json' -exec cat {} + > "$tmp/read.json"
@@ -391,7 +408,8 @@ left="$(($(wc -l < "$tmp/stale") - UNLISTED_MAX_READS))"
 # Each repository read gets its entry, one not pushed since keeps its previous
 # one, and so does every repository of an owner whose listing failed. A
 # repository that was due but could not be read keeps its previous entry with
-# the pushed time it had, so the next run reads it again.
+# the pushed time it had, so the next run reads it again. A repository with an
+# app of the catalogue or the server lists none of its apps.
 "$JQ" -n --slurpfile prev "$prev" --slurpfile shipped "$shipped" --slurpfile repos "$tmp/repos" --slurpfile read "$tmp/read.json" \
 	--rawfile failed "$tmp/failed" --argjson excluded "$excluded_ids" --argjson tools "$tools" --arg scanned "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '
 	([inputs[] | .id] + [$shipped[0].releases[]?.apps[]?.id] | map(ascii_downcase)) as $known
@@ -402,7 +420,8 @@ left="$(($(wc -l < "$tmp/stale") - UNLISTED_MAX_READS))"
 	                else {key, value: $old[.key]} | select(.value) end]
 	   + [$old | to_entries[] | select(.key as $k | any($f[]; . as $o | $k | startswith($o + "/")))]
 	   | unique_by(.key) | from_entries) as $all
-	| [$all | to_entries[] | .key as $k | .value as $r | $r.apps[]
+	| [$all | to_entries[] | .key as $k | .value as $r
+	   | select(any($r.apps[]; .id | ascii_downcase | IN($known[])) | not) | $r.apps[]
 	   | {id, name, version, nextcloud, exapp, tool: ($k | IN($tools[])), host: $r.host, repo: $r.repo, path,
 	                                tag: $r.tag, tags: $r.tags, tarball: $r.tarball, pushed: $r.pushed, created: $r.created}
 	   | select(.id | ascii_downcase | IN($known[], $excluded[]) | not)]
