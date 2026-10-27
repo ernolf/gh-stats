@@ -12,6 +12,7 @@
 # unchanged one with 304, which does not count against the rate limit. A run
 # starts only when the remaining budget covers it, and the requests that fail are
 # reported. A server error or a missing answer is repeated a few times first.
+# On GitHub Actions a run reports its progress while it samples.
 # Per repository it also records the current name GitHub answers under, which
 # differs from the sampled one after a rename, and the last run that sampled it
 # as a target.
@@ -57,6 +58,10 @@ RETRY_GIVE_UP="${GH_STATS_RETRY_GIVE_UP:-5}"
 # Until then each run lists it in its report; an unreachable one is still asked
 # once per run.
 UNREACHABLE_RUNS="${GH_STATS_UNREACHABLE_RUNS:-3}"
+# Seconds between the progress lines of a run, 0 for none. A run on a runner
+# logs nothing else for many minutes until it ends, so there a run that works
+# would otherwise look like one that hangs.
+SAMPLER_PROGRESS="${SAMPLER_PROGRESS:-$([ -n "${GITHUB_ACTIONS:-}" ] && echo 60 || echo 0)}"
 
 set -euo pipefail
 
@@ -246,6 +251,7 @@ api_path() {
 # the headers either way. A 5xx answer or none is repeated after the pauses of
 # RETRY_DELAYS.
 failed=() missing=() transient=() unreachable=() given_up=0
+requests=0 unchanged=0 left='' done_repos=0 reported=$SECONDS
 request() {
 	local path="$1" e n=0 sq="'"
 	local -a cond=() pause
@@ -263,6 +269,8 @@ request() {
 				sed -n '1,/^$/p' "$body" >"$resp"
 				sed -i '1,/^$/d' "$body"
 				status="$(awk 'NR == 1 && /^HTTP\// { print $2 }' "$resp")"
+				e="$(sed -n 's/^x-ratelimit-remaining: //Ip' "$resp" | head -1)"
+				[ -z "$e" ] || left="$e"
 				;;
 		esac
 		[[ "${status:-5}" == 5* ]] || break
@@ -294,6 +302,17 @@ request() {
 			failed+=("$path ${status:-no answer}")
 			;;
 	esac
+	requests=$((requests + 1))
+	[ "$status" != 304 ] || unchanged=$((unchanged + 1))
+	progress
+}
+
+# A progress line once SAMPLER_PROGRESS seconds passed since the last one. The
+# budget is the one the last GitHub answer named.
+progress() {
+	[ "$SAMPLER_PROGRESS" -gt 0 ] && [ $((SECONDS - reported)) -ge "$SAMPLER_PROGRESS" ] || return 0
+	reported=$SECONDS
+	echo "progress: $done_repos of $total repositories, $requests requests ($unchanged answered 304), $(( ${#failed[@]} + ${#transient[@]} )) failed, ${left:-unknown} API requests left" >&2
 }
 
 # The first 20 of the requests given, indented, and how many more there are.
@@ -451,6 +470,11 @@ if [ "$remaining" -lt "$needed" ]; then
 	echo "skipped: $remaining API requests left, the run needs up to $needed; the budget resets at $(date -u -d "@$reset" +%H:%M) UTC" >&2
 	exit 0
 fi
+sampled=$(grep -c . <<<"$slugs" || true)
+asked=$(grep -c . <<<"$unasked" || true)
+total=$((sampled + asked))
+[ "$SAMPLER_PROGRESS" -eq 0 ] \
+	|| echo "sampling $sampled repositories and asking $asked more for their name; the run needs up to $needed API requests, $remaining are left" >&2
 
 while read -r slug; do
 	[ -n "$slug" ] || continue
@@ -470,7 +494,10 @@ while read -r slug; do
 		| [$h, $o, $r] + .
 		| @tsv' "$body" >> "$rtsv" || true
 	record_repo "$host" "$owner" "$repo" "$ts"
-	[ "$status" != 404 ] || continue
+	if [ "$status" = 404 ]; then
+		done_repos=$((done_repos + 1))
+		continue
+	fi
 	# One request per page; jq derives major from the tag. Forgejo and Gitea
 	# answer the release fields of GitHub, at most 50 items per page.
 	if [ "$host" = github.com ]; then per_page="per_page=100"; else per_page="limit=50"; fi
@@ -494,6 +521,7 @@ while read -r slug; do
 		[ "$more" = 1 ] || break
 		page=$((page + 1))
 	done
+	done_repos=$((done_repos + 1))
 done <<< "$slugs"
 
 while read -r slug; do
@@ -503,6 +531,7 @@ while read -r slug; do
 	unset "etag[$path]"
 	request "$path"
 	record_repo "$host" "$owner" "$repo" NULL
+	done_repos=$((done_repos + 1))
 done <<< "$unasked"
 
 # == Apply: release meta (upsert-ignore) + change-only samples + run marker ==
