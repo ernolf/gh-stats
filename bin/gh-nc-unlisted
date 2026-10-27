@@ -100,8 +100,9 @@ app, the newest tag, the newest UNLISTED_TAGS tags, newest first, and whether
 one of its newest UNLISTED_RELEASES releases carries a .tar.gz or .tgz asset
 are kept as well. Only a tag that names a version counts, [v]<number>, more
 numbers each after a dot, and a suffix after -, +, . or ~. The tags are ordered
-by their name without a leading v, as sort -V orders it, with an -alpha, -beta
-or -rc version before its release.
+by their name without a leading v, as sort -V orders it, with an alpha, beta
+or rc version before its release, in any case and after a digit, a - or a .,
+as in 2.0.0-rc.1, 35.0.2rc2 or 1.4.0.RC1.
 
 repos holds every repository read, with or without an app, under
 [<host>/]<owner>/<repo> in lower case. One whose pushed time is unchanged is
@@ -326,11 +327,22 @@ read_repo() {
 	tags="" tarball=false
 	if [ -s "$dir.apps" ]; then
 		# Only a tag that names a version counts; sort -V would order a name such
-		# as theming-1.4.5 after every number. awk instead of head reads to the
-		# end, so sort never meets a closed pipe.
+		# as theming-1.4.5 after every number. A ~ before an alpha, beta or rc
+		# suffix sorts it before the release; it goes after a digit and before a
+		# separator, which sort -V would otherwise order after the end of the
+		# release. awk instead of head reads to the end, so sort never meets a
+		# closed pipe.
 		tags="$("$GIT" ls-remote --tags --refs "$url" 2>/dev/null \
 			| awk '{ t = $2; sub(/^refs\/tags\//, "", t) }
-				t ~ /^[vV]?[0-9]+(\.[0-9]+)*([-+.~][0-9A-Za-z.+~-]*)?$/ { k = t; sub(/^[vV]/, "", k); gsub(/-(alpha|beta|rc)/, "~&", k); print k "\t" t }' \
+				t ~ /^[vV]?[0-9]+(\.[0-9]+)*([-+.~][0-9A-Za-z.+~-]*)?$/ {
+					k = tolower(t); sub(/^v/, "", k); s = ""
+					while (match(k, /[-.0-9](alpha|beta|rc)/)) {
+						c = substr(k, RSTART, 1)
+						s = s substr(k, 1, RSTART - 1) (c ~ /[0-9]/ ? c "~" : "~" c)
+						k = substr(k, RSTART + 1)
+					}
+					print s k "\t" t
+				}' \
 			| sort -V -r -k1,1 | awk -F '\t' -v n="$UNLISTED_TAGS" 'NR <= n { print $2 }')" || tags=""
 		if [ "$host" = github.com ]; then
 			"$GH" api "repos/$slug/releases?per_page=$UNLISTED_RELEASES" --jq '.[].assets[].name' > "$dir.rel" 2>/dev/null || :
