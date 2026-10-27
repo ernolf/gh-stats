@@ -96,6 +96,8 @@ repository under its current name, plus
              JSON result and why one was skipped
   findings   the findings of the analysers of each run, and one finding per
              aborted run, failed target, skipped JSON result and REUSE lint
+  fields     the fields of the analyser results the badges of a run read, as
+             JSON, by run, analyser and name
   app_details  what the App Store shows of every catalogue app: categories,
              authors, links, dates, ratings and the original URLs of its
              screenshots, and exapp, 1 when it is an AppAPI app of
@@ -135,7 +137,7 @@ at its start.
 Options:
   -o, --output <file>  the database to write
   -r, --results <dir>  the directory apps/ of a checkout of the data branch;
-                       without it the three measurement tables stay empty
+                       without it the four measurement tables stay empty
   -h, --help           this text
 
 Environment (or /etc/gh-stats/gh-stats.env):
@@ -247,11 +249,14 @@ links_sql="$(jq -r "$release_url"'
 ' "$catalogue")"
 
 # == Measurements ==
-# One INSERT per run, target and finding of the run directories below
-# $results. The directory relative to $results keys all three tables, so the
+# One INSERT per run, target, finding and kept field of the run directories
+# below $results. The directory relative to $results keys all four tables, so the
 # site can link each run. A run of a repository on GitHub names no repo_host. Analyser results above 1 MiB are stored gzipped and
 # read one by one; reuse.json carries no findings and release/ holds the diff,
-# whose counts summary.json already has.
+# whose counts summary.json already has. Of the other fields of a result only
+# those result_fields names are kept, the ones the badges of a run read; a
+# badge that needs another field adds it there.
+result_fields='{"build-audit": ["toolchain"], "php-compat": ["range", "next"]}'
 sql_defs='
 	def q: "'\''" + gsub("'\''"; "'\'''\''") + "'\''";
 	def v: if . == null then "NULL" elif type == "string" then q
@@ -267,14 +272,17 @@ if [ -n "$results" ]; then
 	')"
 	findings_jq="$sql_defs"'
 		(if $name == "" then input_filename else $name end | ltrimstr($root) | rtrimstr(".gz") | rtrimstr(".json")) as $p
-		| (.findings? // []) | to_entries[]
-		| "INSERT INTO findings VALUES (\($p | sub("/[^/]*$"; "") | q), \($p | sub("^.*/"; "") | q), \(.key + 1), \(.value.level | v), \(.value.id | v), \(.value.lines // [] | join("\n") | q));"'
+		| ($p | sub("/[^/]*$"; "") | q) as $dir | ($p | sub("^.*/"; "")) as $tool | . as $r
+		| ((.findings? // []) | to_entries[]
+		  | "INSERT INTO findings VALUES (\($dir), \($tool | q), \(.key + 1), \(.value.level | v), \(.value.id | v), \(.value.lines // [] | join("\n") | q));"),
+		  (($fields[$tool] // [])[] as $f | ($r | objects | .[$f]) // empty
+		  | "INSERT INTO fields VALUES (\($dir), \($tool | q), \($f | q), \(tojson | q));")'
 	results_sql+="
 $(find "$results" -name '*.json' ! -name summary.json ! -name reuse.json ! -path '*/release/*' -print0 \
-		| xargs -0 -r jq -r --arg root "$results/" --arg name '' "$findings_jq")"
+		| xargs -0 -r jq -r --arg root "$results/" --arg name '' --argjson fields "$result_fields" "$findings_jq")"
 	while IFS= read -r -d '' f; do
 		results_sql+="
-$(gzip -dc "$f" | jq -r --arg root "$results/" --arg name "$f" "$findings_jq")"
+$(gzip -dc "$f" | jq -r --arg root "$results/" --arg name "$f" --argjson fields "$result_fields" "$findings_jq")"
 	done < <(find "$results" -name '*.json.gz' ! -name reuse.json.gz ! -path '*/release/*' -print0)
 fi
 
@@ -639,6 +647,13 @@ CREATE TABLE findings (
   text  TEXT    NOT NULL,
   PRIMARY KEY (dir, tool, n)
 ) WITHOUT ROWID;
+CREATE TABLE fields (
+  dir   TEXT NOT NULL,
+  tool  TEXT NOT NULL,
+  name  TEXT NOT NULL,
+  value TEXT NOT NULL,
+  PRIMARY KEY (dir, tool, name)
+) WITHOUT ROWID;
 BEGIN;
 $results_sql
 COMMIT;
@@ -650,6 +665,7 @@ DELETE FROM measurements WHERE EXISTS (
      AND m.stamp > measurements.stamp);
 DELETE FROM targets WHERE dir NOT IN (SELECT dir FROM measurements);
 DELETE FROM findings WHERE dir NOT IN (SELECT dir FROM measurements);
+DELETE FROM fields WHERE dir NOT IN (SELECT dir FROM measurements);
 INSERT INTO findings
 SELECT dir, 'gh-nc-appsdiag', 0, 'warn', 'aborted',
        'The run ended with status ' || coalesce(status, 'unknown') || coalesce(': ' || reason, '.')
@@ -818,6 +834,7 @@ UNION ALL SELECT 'projects', count(DISTINCT project) FROM projects
 UNION ALL SELECT 'summary', count(*) FROM summary
 UNION ALL SELECT 'measurements', count(*) FROM measurements
 UNION ALL SELECT 'findings', count(*) FROM findings
+UNION ALL SELECT 'fields', count(*) FROM fields
 UNION ALL SELECT 'app_details', count(*) FROM app_details
 UNION ALL SELECT 'app_releases', count(*) FROM app_releases
 UNION ALL SELECT 'categories', count(*) FROM categories

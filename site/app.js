@@ -304,6 +304,12 @@ function findingsOf(dir) {
 	return query('SELECT tool, level, id, text FROM findings WHERE dir = $dir ORDER BY tool, n', { $dir: dir })
 }
 
+// The kept fields of the analyser results of a run, keyed by tool/name.
+function fieldsOf(dir) {
+	return new Map(query('SELECT tool, name, value FROM fields WHERE dir = $dir', { $dir: dir })
+		.map((r) => [`${r.tool}/${r.name}`, JSON.parse(r.value)]))
+}
+
 // A release of a project is a tag of any of its repositories.
 function otherReleases(project, tag) {
 	return query(`
@@ -599,6 +605,86 @@ function compareSelect(row) {
 	return select
 }
 
+// == Badges ==
+
+// The row above the findings of a run is a positive list: a badge stands for
+// something the run found the app to have or to do right, and a run without
+// it shows nothing in its place, so a missing badge says nothing bad by itself.
+// Each entry returns a badge, a list of them or null for a run, read through
+// runView(); a new badge is one more entry, at the place it takes in the row.
+// A badge is { label, value, title, logo, brand }, all but the label optional.
+// An entry marked fact shows a property that is no merit, such as the bundler,
+// in the colours of its brand instead of those of a pass.
+const BADGES = [
+	{ id: 'bundler', fact: true, of: (run) => {
+		const t = run.field('build-audit', 'toolchain')
+		return (t?.built.length ? t.built : t?.kinds ?? []).filter((k) => BUNDLERS[k]).map((k) => {
+			const b = BUNDLERS[k]
+			const pkg = b.packages.find((p) => t.declared[p])
+			return {
+				label: b.label, logo: b.logo, brand: k,
+				value: pkg && (pkg === b.packages[0] ? t.declared[pkg] : `${pkg} ${t.declared[pkg]}`),
+				title: `Built with ${b.label}${pkg ? `; package.json declares ${pkg} ${t.declared[pkg]}` : ''}.`,
+			}
+		})
+	} },
+	{ id: 'reproducible', of: (run) => run.pass('build-verify', 'reproduced', 'Reproducible') },
+	{ id: 'clean-build', of: (run) => run.pass('build-verify', 'pristine-build', 'Clean build') },
+	{ id: 'reuse', of: (run) => run.pass('reuse', 'compliance', 'REUSE compliant') },
+	{ id: 'php', of: (run) => {
+		const r = run.field('php-compat', 'range')
+		return run.pass('php-compat', 'php-compat', 'PHP', r && (r.floor === r.ceiling ? r.floor : `${r.floor}–${r.ceiling}`))
+	} },
+	{ id: 'php-next', of: (run) => {
+		const next = run.field('php-compat', 'next')?.version?.match(/^\d+\.\d+/)?.[0]
+		return next ? run.pass('php-compat', 'php-next', `PHP ${next} ready`) : null
+	} },
+	{ id: 'changelog', of: (run) => run.pass('changelog-lint', 'changelog-section', 'Changelog') },
+	{ id: 'versions-agree', of: (run) => run.pass('consistency-audit', 'versions-agree', 'Versions agree') },
+	{ id: 'lean-bundle', of: (run) => run.passAll('bundle-report', ['no-duplicated-modules', 'no-stale-files'], 'Lean bundle') },
+]
+
+// The bundlers build-audit names, with the package whose version stands for
+// that of the bundler first, then the Nextcloud config that wraps it.
+const BUNDLERS = {
+	vite: { label: 'Vite', logo: 'img/brands/vite.svg', packages: ['vite', '@nextcloud/vite-config'] },
+	webpack: { label: 'webpack', logo: 'img/brands/webpack.svg', packages: ['webpack', '@nextcloud/webpack-vue-config'] },
+	rspack: { label: 'Rspack', packages: ['@rspack/core', '@rspack/cli'] },
+}
+
+// What a badge reads of a run. A finding counts as passed where its analyser
+// reported it ok and no finding of the same id warns; the badge then carries
+// the text of the finding as its tooltip.
+function runView(fs, fields) {
+	const passed = (tool, id) => {
+		const hits = fs.filter((f) => f.tool === tool && f.id === id)
+		return hits.some((f) => f.level === 'warn') ? null : hits.find((f) => f.level === 'ok') ?? null
+	}
+	return {
+		field: (tool, name) => fields.get(`${tool}/${name}`) ?? null,
+		pass: (tool, id, label, value = null) => {
+			const f = passed(tool, id)
+			return f && { label, value, title: f.text }
+		},
+		passAll: (tool, ids, label) => {
+			const hits = ids.map((id) => passed(tool, id))
+			return hits.every(Boolean) ? { label, title: hits.map((f) => f.text).join('\n') } : null
+		},
+	}
+}
+
+function badgeRow(fs, fields) {
+	const run = runView(fs, fields)
+	const badges = BADGES.flatMap((b) => [b.of(run) ?? []].flat().map((x) => badge(x, b.fact)))
+	return badges.length ? [el('div', { class: 'badges' }, ...badges)] : []
+}
+
+function badge(b, fact) {
+	return el('span', { class: fact ? `badge fact brand-${b.brand ?? ''}` : 'badge pass', title: b.title ?? '' },
+		el('span', { class: 'badge-name' }, ...(b.logo ? [el('img', { src: b.logo, alt: '', width: 14, height: 14 })] : []), b.label),
+		...(b.value ? [el('span', { class: 'badge-version' }, b.value)] : []))
+}
+
 // == Checks ==
 
 function finding(f) {
@@ -625,9 +711,11 @@ function diffText(m) {
 // warnings first; ok and info only as counts that open on demand.
 function checksBlock(m) {
 	const hasWarn = (fs) => fs.some((f) => f.level === 'warn')
-	const tools = [...Map.groupBy(findingsOf(m.dir), (f) => f.tool)].sort(([, a], [, b]) => hasWarn(b) - hasWarn(a))
+	const fs = findingsOf(m.dir)
+	const tools = [...Map.groupBy(fs, (f) => f.tool)].sort(([, a], [, b]) => hasWarn(b) - hasWarn(a))
 	return el('section', { class: 'run' },
 		el('h4', {}, `${m.app_id ?? m.dir} ${m.version ?? ''} `, el('a', { href: `${results}/${m.dir}` }, 'run directory')),
+		...badgeRow(fs, fieldsOf(m.dir)),
 		el('p', {}, diffText(m)),
 		...tools.map(([tool, fs]) => {
 			const rest = fs.filter((f) => f.level !== 'warn')
