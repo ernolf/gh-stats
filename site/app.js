@@ -789,7 +789,7 @@ function unlistedRow(u) {
 			? ['ExApp', EXAPP_TEXT]
 			: version === null
 				? ['no versioned tag', 'no tag of its repository names a version, so the app is not measured']
-				: ['no release tarball', UNLISTED_TEXT]
+				: ['not measured yet', `${UNLISTED_TEXT}; that build has no result yet`]
 		checks.title = title
 		checks.append(el('span', { class: 'check-why' }, why))
 	}
