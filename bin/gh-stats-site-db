@@ -255,8 +255,10 @@ links_sql="$(jq -r "$release_url"'
 # read one by one; reuse.json carries no findings and release/ holds the diff,
 # whose counts summary.json already has. Of the other fields of a result only
 # those result_fields names are kept, the ones the badges of a run read; a
-# badge that needs another field adds it there.
+# badge that needs another field adds it there. A field of a finding is kept
+# where finding_fields names it by the id of the finding, as <id>/<field>.
 result_fields='{"build-audit": ["toolchain"], "php-compat": ["range", "next"]}'
+finding_fields='{"deps-audit": {"licence-summary": ["licences"]}}'
 sql_defs='
 	def q: "'\''" + gsub("'\''"; "'\'''\''") + "'\''";
 	def v: if . == null then "NULL" elif type == "string" then q
@@ -276,13 +278,15 @@ if [ -n "$results" ]; then
 		| ((.findings? // []) | to_entries[]
 		  | "INSERT INTO findings VALUES (\($dir), \($tool | q), \(.key + 1), \(.value.level | v), \(.value.id | v), \(.value.lines // [] | join("\n") | q));"),
 		  (($fields[$tool] // [])[] as $f | ($r | objects | .[$f]) // empty
-		  | "INSERT INTO fields VALUES (\($dir), \($tool | q), \($f | q), \(tojson | q));")'
+		  | "INSERT INTO fields VALUES (\($dir), \($tool | q), \($f | q), \(tojson | q));"),
+		  ((.findings? // [])[] as $x | ($finding_fields[$tool][$x.id]? // [])[] as $f | $x[$f] // empty
+		  | "INSERT INTO fields VALUES (\($dir), \($tool | q), \($x.id + "/" + $f | q), \(tojson | q));")'
 	results_sql+="
 $(find "$results" -name '*.json' ! -name summary.json ! -name reuse.json ! -path '*/release/*' -print0 \
-		| xargs -0 -r jq -r --arg root "$results/" --arg name '' --argjson fields "$result_fields" "$findings_jq")"
+		| xargs -0 -r jq -r --arg root "$results/" --arg name '' --argjson fields "$result_fields" --argjson finding_fields "$finding_fields" "$findings_jq")"
 	while IFS= read -r -d '' f; do
 		results_sql+="
-$(gzip -dc "$f" | jq -r --arg root "$results/" --arg name "$f" --argjson fields "$result_fields" "$findings_jq")"
+$(gzip -dc "$f" | jq -r --arg root "$results/" --arg name "$f" --argjson fields "$result_fields" --argjson finding_fields "$finding_fields" "$findings_jq")"
 	done < <(find "$results" -name '*.json.gz' ! -name reuse.json.gz ! -path '*/release/*' -print0)
 fi
 
@@ -803,7 +807,7 @@ UPDATE app_releases SET mismatch = 1 WHERE stable AND EXISTS (
 -- with the server release: the release before it shipped another one or none.
 -- The first line of the finding names the file and stays.
 CREATE TEMP TABLE shipped_runs AS
-SELECT m.dir, m.owner = 'nextcloud' AND m.repo = 'server' AS tree, m.version, s.previous_server, s.previous_version
+SELECT m.dir, m.owner = 'nextcloud' AND m.repo = 'server' AS tree, m.version, m.server, s.major, s.latest, s.previous_server, s.previous_version
   FROM measurements m LEFT JOIN shipped s ON s.ref = m.server AND s.id = m.app_id
  WHERE m.server IS NOT NULL;
 UPDATE findings AS f SET
@@ -825,6 +829,22 @@ DELETE FROM findings
 UPDATE findings SET text = 'The section for ' || replace(substr(text, length('The App Store finds the section for ') + 1), ' in ', ' is there in ')
  WHERE tool = 'changelog-lint' AND id = 'changelog-section' AND level = 'ok' AND dir IN (SELECT dir FROM shipped_runs)
    AND text LIKE 'The App Store finds the section for %';
+
+-- The links of a shipped app reach its users with the info.xml of the server
+-- release, not with an App Store page. A release never changes again, so a
+-- dead link or a screenshot that is no image warns only on the newest release
+-- of its major and on master: only a release after them can mend it. A run
+-- whose release shipped.json does not list keeps the level the audit gave.
+UPDATE findings AS f SET
+  level = CASE WHEN r.latest IS NOT 0 THEN f.level ELSE 'info' END,
+  text = replace(replace(f.text,
+    '  The App Store page shows these links as they are; a reader who follows one ends on an error page.',
+    '  The app ships with Nextcloud ' || r.server || ', and this info.xml with it.'),
+    '  The App Store shows the bytes behind the URL, so it needs the image itself;',
+    '  A screenshot needs the image itself;')
+    || CASE WHEN r.latest IS NOT 0 THEN '' ELSE char(10) || '  Nextcloud ' || r.server || ' is not the newest release of Nextcloud ' || r.major || ', so its info.xml no longer changes.' END
+  FROM shipped_runs r
+ WHERE f.dir = r.dir AND f.tool = 'consistency-audit' AND f.level = 'warn' AND f.id IN ('link-dead', 'screenshot-not-image');
 
 VACUUM;
 SELECT 'apps', count(*) FROM apps
