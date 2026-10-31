@@ -860,7 +860,7 @@ function checksCell(runs, span, version = null) {
 	}, warn ? `⚠ ${warn}` : '✓')
 	const show = (open) => {
 		if (open && !checks.hasChildNodes()) {
-			const shut = el('button', { type: 'button', class: 'quiet checks-close', title: 'Close these checks' }, 'close')
+			const shut = el('button', { type: 'button', class: 'quiet checks-collapse', title: 'Collapse these checks' }, 'Collapse')
 			shut.addEventListener('click', () => {
 				show(false)
 				button.focus()
