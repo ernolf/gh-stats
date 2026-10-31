@@ -1,0 +1,47 @@
+{
+  "root": ".",
+  "app": {
+    "id": "exelearning",
+    "version": "0.0.0-alpha"
+  },
+  "version": "0.0.0-alpha",
+  "nightly": false,
+  "prerelease": true,
+  "section": "Unreleased",
+  "store": {
+    "languages": 96,
+    "asOf": "Django 4.2.30, 2026-10"
+  },
+  "files": [
+    {
+      "name": "CHANGELOG.md",
+      "read": "en",
+      "utf8": true,
+      "bom": false,
+      "headed": true,
+      "body": "### Fixed\n\n- Nextcloud 31 and 32: the \"New eXeLearning resource\" entry, the eXeLearning\n  file actions and the click-to-preview default action were missing, because\n  the app only registered them through `@nextcloud/files` v4, which only the\n  NC 33 Files app reads. The app now registers through\n  `@nextcloud/files-legacy` (v3) on NC 31-32 and through v4 on NC 33+.\n\n### Changed\n\n- Bump supported range to Nextcloud 31–33 and PHP 8.2–8.5 (was NC 29–31,\n  PHP 8.1–8.3). Drops 28/29/30 — all EOL upstream. See #12.\n- Build the Files-app integration against `@nextcloud/files@^4`. NC 33\n  ships the v4 globals at `window._nc_files_scope.v4_0` and silently\n  ignored actions registered with the v3 build.\n- `Makefile` now defaults `NC_VERSION=stable` (was `nextcloud:30`).\n  Override with `NC_VERSION=33 make up` to pin a major.\n- Migrate frontend from Vue 2.7 to Vue 3.5 (see #13). All SFCs now use\n  `defineComponent`; `beforeDestroy` is `beforeUnmount`; `::v-deep` is\n  `:deep()`; the root in `view-page.ts` uses `createApp().mount()`. No\n  public surface changes; tests, lint and webpack build pass on Vue 3.\n\n### Added\n\n- Viewer now makes the eXeLearning teacher-layer selector available by loading\n  the package index with `?exe-teacher=1`. eXeLearning exports hide teacher-only\n  content by default (see exelearning/exelearning#1972); since the Nextcloud\n  Viewer is a personal file viewer — the person opening the package is\n  effectively its author/teacher — the selector is always offered. It stays OFF\n  by default; the viewer reveals it, and the package's own JS persists the\n  choice and propagates the param across in-package navigation.\n- CI matrix (`.github/workflows/ci.yml`) covering NC 31/32/33 × PHP\n  8.2/8.3/8.4 with rotated databases (sqlite/mysql/pgsql), plus an\n  experimental PHP 8.5 cell. Each cell installs the app into a real\n  Nextcloud server and verifies the Service Worker route responds.\n- `make ci-matrix` reproduces the matrix locally with Docker.\n- README \"Compatibility\" table backed by the CI matrix and a CI badge.\n- Initial Nextcloud app scaffold (`appinfo/info.xml`, routes, bootstrap).\n- `@nextcloud/viewer` handler for `.elpx`, `.elp`, `application/zip` and\n  `application/octet-stream` MIME types.\n- In-browser ZIP extraction with fflate, path normalization and ZIP-bomb\n  guards (`src/elpx/*`).\n- Scoped Service Worker at `/apps/exelearning/runtime/` for serving extracted\n  package assets without a second server round-trip.\n- Sandboxed iframe renderer\n  (`allow-scripts allow-same-origin allow-forms allow-popups allow-downloads`).\n- Backend `PackageController`, `AssetController`, `ThumbnailController`,\n  `EditorController`, `SwController`.\n- `ElpxPreviewProvider` returning `screenshot.png` as the thumbnail.\n- Optional editor scaffold using the upstream postMessage protocol\n  (`src/editor/*`); preview works without it.\n- Files-app actions: open in viewer, edit (when editor installed), download.\n- Vitest unit tests for path normalization, MIME detection, package\n  validation, ZIP reader, and Files MIME helpers.\n- PHPUnit unit tests for `ZipEntryService::normalizeEntry` and the\n  `Application` MIME constants.\n- Makefile targets mirrored from `gdrive-exelearning`\n  (`download-editor`, `fetch-editor-source`, `build-editor`, `clean-editor`,\n  plus `build`, `dev`, `watch-js`, `lint`, `typecheck`, `test`, `clean`,\n  `appstore`).\n\n### Security\n\n- ZIP entry paths normalized; `..`, absolute paths and NUL-tainted entries\n  rejected on both the PHP and TS sides.\n- Permissions re-checked in PHP for every request — Service Worker URLs are\n  intercepted client-side from the same session, but server-side downloads\n  enforce user, MIME and size.\n- `content.xml` is never parsed by this app.",
+      "own": {
+        "headed": false,
+        "body": ""
+      }
+    }
+  ],
+  "findings": [
+    {
+      "level": "warn",
+      "id": "changelog-section",
+      "lines": [
+        "CHANGELOG.md has no section for 0.0.0-alpha.",
+        "  A tagged pre-release is a release of its own: make changelog writes its section and make tag asks for it. The App Store shows it with the stable 0.0.0."
+      ]
+    },
+    {
+      "level": "info",
+      "id": "changelog-prerelease",
+      "lines": [
+        "The App Store shows no changelog on the page of 0.0.0-alpha.",
+        "  For a version with a '-' it reads the Unreleased section, which holds 69 lines in CHANGELOG.md. The section of 0.0.0-alpha appears with the stable 0.0.0, below that release's own section."
+      ]
+    }
+  ]
+}
