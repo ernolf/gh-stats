@@ -61,6 +61,7 @@ BUILD_FILES="GNUmakefile makefile Makefile"
 # act outside the checkout. Neither are secrets-audit, lint-actions and
 # lint-actions-security: the output of a run is public, and their findings show
 # where an app can be attacked (actionlint reports untrusted input in a run step).
+# They run among SECURITY_TARGETS instead.
 TARGETS="${NC_APPSDIAG_TARGETS:-help consistency-audit reuse changelog-lint lint-containerfiles lint-markdown lint-php-syntax lint-shell lint-vue-imports lint-web lint-yaml build deps-audit build-audit bundle-report build-verify php-compat dist}"
 # Offered after the release comparison, because both of them remove what it reads.
 CLEAN_TARGETS="${NC_APPSDIAG_CLEAN_TARGETS:-clean dist-clean}"
@@ -78,6 +79,18 @@ JSON_TARGETS="${NC_APPSDIAG_JSON:-consistency-audit build-audit bundle-report re
 # with ARGS=--json for it. The REUSE tool prints text or JSON, never both; its
 # second run costs seconds.
 JSON_RERUN_TARGETS="${NC_APPSDIAG_JSON_RERUN:-reuse}"
+
+# The targets whose findings show where an app can be attacked. They run after the
+# others with their output kept out of the screen and the log, and what they print
+# and write leaves the run only as security.json.age, encrypted to the age
+# recipient of the site maintainer; without a recipient they do not run.
+# deps-audit runs here a second time, with the advisories.
+SECURITY_TARGETS="${NC_APPSDIAG_SECURITY_TARGETS:-secrets-audit lint-actions lint-actions-security deps-audit}"
+AGE_RECIPIENT="${NC_APPSDIAG_AGE_RECIPIENT:-}"
+# The plain text is padded to a multiple of this many bytes before it is
+# encrypted, since the size of the ciphertext would otherwise tell how much an app
+# was found to have.
+SECURITY_PAD="${NC_APPSDIAG_SECURITY_PAD:-65536}"
 
 # Which ncmake a run measured with: the stub, the core and the developer modules
 # come from the main branch of this repo, the core and the modules by way of the
@@ -106,6 +119,7 @@ GH="${GH_BIN:-/usr/bin/gh}"
 JQ="${JQ_BIN:-/usr/bin/jq}"
 CURL="${CURL_BIN:-/usr/bin/curl}"
 SQLITE="${SQLITE_BIN:-/usr/bin/sqlite3}"
+AGE="${AGE_BIN:-/usr/bin/age}"
 
 # Set by -a for every app of a batch: no question is put, each takes its default.
 AUTO="${NC_APPSDIAG_AUTO:-0}"
@@ -225,6 +239,12 @@ a repository on a Forgejo or Gitea host below a directory of that host:
                           lint-* targets, deps-audit (without advisories),
                           build-audit, bundle-report, build-verify and
                           php-compat
+      security.json.age   the output and the results of the security targets
+                          (secrets-audit, lint-actions, lint-actions-security
+                          and deps-audit with advisories), and every finding
+                          of another result marked "security": true, as JSON
+                          encrypted to NC_APPSDIAG_AGE_RECIPIENT; without a
+                          recipient the security targets do not run
       <name>.orig         the app's own GNUmakefile, makefile and Makefile,
                           except one that is the ncmake stub byte for byte
       release/diff.txt    the staged tree against the shipped tarball, as diff
@@ -272,6 +292,12 @@ Environment (or /etc/gh-stats/gh-stats.env):
   NC_APPSDIAG_TARGETS_ASK    the targets that have to be said yes to
   NC_APPSDIAG_JSON           the targets whose --json result is kept
   NC_APPSDIAG_JSON_RERUN     of those, the ones that run a second time for it
+  NC_APPSDIAG_SECURITY_TARGETS
+                             the targets whose output is only kept encrypted
+  NC_APPSDIAG_AGE_RECIPIENT  the age recipient they are encrypted to
+  NC_APPSDIAG_SECURITY_PAD   the plain text is padded to a multiple of this
+                             many bytes (default: 65536)
+  AGE_BIN                    age (default: /usr/bin/age)
   NC_APPSDIAG_STUB_URL       the ncmake bootstrap stub to install
   NC_APPSDIAG_NCMAKE_REPO    the ncmake repo whose main the run is compared with
   TAG_MENU_MAX               how many tags the list offers (default: 12)
@@ -480,6 +506,8 @@ RUN_DIR=""
 # With -s, apps/<id>/ of the server archive, unpacked before the checkout is
 # read and moved into the run directory by the release comparison.
 SHIPPED_TREE=""
+# Where the security targets write, outside the run directory; removed with the run.
+SECURITY_TMP=""
 shipped_id=""
 server_archive=""
 server_build=""
@@ -880,6 +908,76 @@ json_run() {
 	out="$RUN_DIR/${t}.json"
 	( cd "$APP_DIR" && make "$t" ARGS=--json ) 2>>"$LOG" >"$out.raw" || true
 	split_json "$out.raw" "$out" || warn "make $t ARGS=--json produced nothing"
+}
+
+# == Security targets ==
+# A finding marked "security": true says where an app can be attacked, and the
+# results beside the log are public, so one in any other result is taken out of
+# it. With a file to collect them in, they go there as {tool, findings}, and
+# leave the run encrypted with the rest. Nothing is said about it in the log: a
+# line there would name the app that had one.
+security_strip() {
+	local into="${1:-}" f t
+	[ -n "$RUN_DIR" ] && [ -d "$RUN_DIR" ] && [ -x "$JQ" ] || return 0
+	for f in "$RUN_DIR"/*.json; do
+		[ -f "$f" ] && [ "${f##*/}" != summary.json ] || continue
+		"$JQ" -e 'any(.findings[]?; .security == true)' "$f" >/dev/null 2>&1 || continue
+		t="${f##*/}"
+		t="${t%.json}"
+		[ -z "$into" ] || "$JQ" -c --arg t "$t" '{tool: $t, findings: [.findings[] | select(.security == true)]}' "$f" >>"$into"
+		"$JQ" '.findings |= map(select(.security != true))' "$f" >"$f.tmp" && mv "$f.tmp" "$f"
+	done
+}
+
+# The security targets write into a directory outside the run directory, which
+# neither the log nor the artifact of a CI run reads, and their output leaves the
+# run only as security.json.age. Their exit codes stay out of summary.json too:
+# one that is not 0 says that something was found. Every run with a recipient
+# writes the file, whatever it holds, so its presence says nothing either.
+security_run() {
+	local t rc dir bundle size
+	if [ -z "$AGE_RECIPIENT" ]; then
+		log "   no age recipient in NC_APPSDIAG_AGE_RECIPIENT, so they do not run"
+		security_strip
+		return 0
+	fi
+	if [ ! -x "$AGE" ] || [ ! -x "$JQ" ]; then
+		warn "the security targets need age at $AGE and jq at $JQ, so they do not run"
+		security_strip
+		return 0
+	fi
+	if ! ask_yes "   run $SECURITY_TARGETS, kept only encrypted?"; then
+		security_strip
+		return 0
+	fi
+	mkdir -p "$RUN_DIR"
+	SECURITY_TMP="$(mktemp -d)"
+	dir="$SECURITY_TMP"
+	: >"$dir/targets.jsonl"
+	: >"$dir/flagged.jsonl"
+	for t in $SECURITY_TARGETS; do
+		log "   make $t"
+		if ( cd "$APP_DIR" && make "$t" JSON="$dir/$t.json" ) </dev/null >"$dir/$t.log" 2>&1; then rc=0; else rc=$?; fi
+		sed -i 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$dir/$t.log"
+		[ -s "$dir/$t.json" ] && "$JQ" -e . "$dir/$t.json" >/dev/null 2>&1 || echo null >"$dir/$t.json"
+		"$JQ" -n -c --arg t "$t" --argjson rc "$rc" --rawfile log "$dir/$t.log" --slurpfile r "$dir/$t.json" \
+			'{name: $t, exit: $rc, result: $r[0], log: $log}' >>"$dir/targets.jsonl"
+	done
+	security_strip "$dir/flagged.jsonl"
+	bundle="$dir/security.json"
+	"$JQ" -n -c --slurpfile targets "$dir/targets.jsonl" --slurpfile flagged "$dir/flagged.jsonl" \
+		'{tool: "gh-nc-appsdiag", schema: 1, targets: $targets, flagged: $flagged}' >"$bundle"
+	# Trailing blanks keep the JSON what it is.
+	size="$(wc -c <"$bundle")"
+	head -c $(((size / SECURITY_PAD + 1) * SECURITY_PAD - size)) /dev/zero | tr '\0' ' ' >>"$bundle"
+	if "$AGE" -r "$AGE_RECIPIENT" -o "$RUN_DIR/security.json.age" "$bundle"; then
+		log "   security  $RUN_DIR/security.json.age"
+	else
+		rm -f "$RUN_DIR/security.json.age"
+		warn "age could not encrypt to $AGE_RECIPIENT, so nothing of the security targets is kept"
+	fi
+	rm -rf "$SECURITY_TMP"
+	SECURITY_TMP=""
 }
 
 # == Submodules ==
@@ -1306,6 +1404,7 @@ write_summary_json() {
 	local status="$1" code="$2" head="" host cpus mem cpu inv files diff
 	[ -n "$RUN_DIR" ] || return 0
 	summary_written=1
+	security_strip
 	ncmake_check
 	[ -z "${NC_APPSDIAG_RESULT_FILE:-}" ] || printf '%s\n' "$RUN_DIR" >>"$NC_APPSDIAG_RESULT_FILE"
 	[ -x "$JQ" ] || { warn "no jq at $JQ, so no summary.json"; return 0; }
@@ -1358,6 +1457,7 @@ write_summary_json() {
 # leave its checkout behind any more than a finished one does.
 on_exit() {
 	[ -z "$SHIPPED_TREE" ] || rm -rf "$SHIPPED_TREE"
+	[ -z "$SECURITY_TMP" ] || rm -rf "$SECURITY_TMP"
 	if [ "$fanned" = 1 ]; then
 		rm -rf "$CHECKOUT"
 		rm -f "$LOG"
@@ -1504,6 +1604,10 @@ for t in $TARGETS; do
 		2) break ;;
 	esac
 done
+
+log ""
+log "== security targets"
+security_run
 
 if [ -n "$app_id" ] && [ -n "$app_version" ]; then
 	ask_yes "compare what make dist stages against the shipped tarball?" && release_compare || true
