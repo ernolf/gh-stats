@@ -240,10 +240,12 @@ function categories() {
 	return new Map(query('SELECT id, name FROM categories ORDER BY name COLLATE NOCASE').map((r) => [r.id, r.name]))
 }
 
-// abandoned stays NULL for a run without the JSON of deps-audit, which says
-// nothing about the packages.
+// A lint target warns once per file, however many messages the file has, as
+// checksBlock() shows them. abandoned stays NULL for a run without the JSON of
+// deps-audit, which says nothing about the packages.
 const MEASUREMENT = `m.dir, m.app_id, m.version, m.restrictable, m.server, m.tag, m.tarball, m.signed, m.diff,
-	(SELECT count(*) FROM findings f WHERE f.dir = m.dir AND f.level = 'warn') AS warn,
+	(SELECT count(DISTINCT f.tool || char(10) || CASE WHEN f.tool LIKE 'lint-%' AND f.file IS NOT NULL THEN 'file ' || f.file ELSE f.n END)
+	   FROM findings f WHERE f.dir = m.dir AND f.level = 'warn') AS warn,
 	CASE WHEN EXISTS (SELECT 1 FROM targets t WHERE t.dir = m.dir AND t.name = 'deps-audit' AND t.json)
 	THEN (SELECT count(*) FROM findings f WHERE f.dir = m.dir AND f.tool = 'deps-audit' AND f.id = 'abandoned-dependency') END AS abandoned`
 
@@ -305,7 +307,7 @@ function measurementsByServer() {
 }
 
 function findingsOf(dir) {
-	return query('SELECT tool, level, id, text FROM findings WHERE dir = $dir ORDER BY tool, n', { $dir: dir })
+	return query('SELECT tool, level, id, text, file, line FROM findings WHERE dir = $dir ORDER BY tool, n', { $dir: dir })
 }
 
 // The kept fields of the analyser results of a run, keyed by tool/name.
@@ -721,6 +723,33 @@ function licenceText(fields) {
 		: []
 }
 
+// The findings of a lint target with a file come as one entry per file and
+// level, which opens into its messages, numbered; the first line of a message
+// drops the file the entry names already. Other findings stay as they are.
+function findingEntries(tool, fs) {
+	if (!tool.startsWith('lint-')) {
+		return fs.map(finding)
+	}
+	return [...Map.groupBy(fs, (f) => (f.file === null ? f : `${f.level}\n${f.file}`)).values()].map((group) => {
+		const f = group[0]
+		if (f.file === null) {
+			return finding(f)
+		}
+		return el('details', { class: `finding ${f.level ?? ''}` },
+			el('summary', {}, el('span', { class: 'level' }, f.level ?? ''), ' ', el('code', {}, f.file),
+				` ${group.length} message${group.length === 1 ? '' : 's'}`),
+			el('ol', {}, ...group.map((g) => el('li', {}, el('pre', {}, g.text.startsWith(`${g.file}:`) ? g.text.slice(g.file.length + 1) : g.text)))))
+	})
+}
+
+// Where a lint target warns, the page says how the warnings are found again
+// and kept away by the ncmake target and the workflow of the same name.
+function lintHint(tool) {
+	return el('p', { class: 'hint lint-hint' }, 'Found again with ', el('code', {}, `make ${tool}`),
+		' in a checkout of the release; ', el('code', {}, `make workflows-install W=${tool}`),
+		' installs the workflow that runs the same check on every pull request.')
+}
+
 // Warnings in full, grouped by the tool that found them, the tools with
 // warnings first; ok and info only as counts that open on demand.
 function checksBlock(m) {
@@ -734,12 +763,14 @@ function checksBlock(m) {
 		el('p', {}, diffText(m)),
 		...licenceText(fields),
 		...tools.map(([tool, fs]) => {
+			const warns = fs.filter((f) => f.level === 'warn')
 			const rest = fs.filter((f) => f.level !== 'warn')
 			const counts = ['ok', 'info'].map((l) => [l, rest.filter((f) => f.level === l).length]).filter(([, n]) => n)
 			return el('div', { class: 'tool' }, el('h5', {}, tool),
-				...fs.filter((f) => f.level === 'warn').map(finding),
+				...(warns.length && tool.startsWith('lint-') ? [lintHint(tool)] : []),
+				...findingEntries(tool, warns),
 				...(rest.length
-					? [el('details', {}, el('summary', {}, counts.map(([l, n]) => `${n} ${l}`).join(', ')), ...rest.map(finding))]
+					? [el('details', {}, el('summary', {}, counts.map(([l, n]) => `${n} ${l}`).join(', ')), ...findingEntries(tool, rest))]
 					: []))
 		}))
 }
