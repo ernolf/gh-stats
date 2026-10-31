@@ -1210,14 +1210,25 @@ release_checkout() {
 # that names a version is offered, the ones gh-nc-unlisted keeps: the catalogue
 # knows the branch of an app without such a tag under the version it declares,
 # and a run of a tag such as i18n-european would never meet that key, so the
-# app would be sent again with every catalogue run. Git sorts v1.2.0-rc.1 above
-# v1.2.0 unless it is told which suffixes mark a pre-release.
-TAG_PRERELEASE=(-c versionsort.suffix=-alpha -c versionsort.suffix=-beta -c versionsort.suffix=-rc)
+# app would be sent again with every catalogue run. For the same reason they are
+# ordered as gh-nc-unlisted orders them, by the version without a leading v and
+# with an alpha, beta or rc suffix before its release, so both take the same tag
+# as the newest: git sorts v1.2.0 above 1.3.0, as v comes after every digit.
 TAG_MENU_MAX="${TAG_MENU_MAX:-12}"
 pick_tag() {
 	local cache="$1" tags versions tag v i=0 default=0 n chosen
-	tags="$("$GIT" -C "$CHECKOUT" "${TAG_PRERELEASE[@]}" tag --sort=-v:refname \
-		| grep -E '^[vV]?[0-9]+(\.[0-9]+)*([-+.~][0-9A-Za-z.+~-]*)?$' | head -"$TAG_MENU_MAX")" || true
+	tags="$("$GIT" -C "$CHECKOUT" tag -l \
+		| awk '{ t = $0 }
+			t ~ /^[vV]?[0-9]+(\.[0-9]+)*([-+.~][0-9A-Za-z.+~-]*)?$/ {
+				k = tolower(t); sub(/^v/, "", k); s = ""
+				while (match(k, /[-.0-9](alpha|beta|rc)/)) {
+					c = substr(k, RSTART, 1)
+					s = s substr(k, 1, RSTART - 1) (c ~ /[0-9]/ ? c "~" : "~" c)
+					k = substr(k, RSTART + 1)
+				}
+				print s k "\t" t
+			}' \
+		| sort -V -r -k1,1 | awk -F '\t' -v n="$TAG_MENU_MAX" 'NR <= n { print $2 }')" || true
 	[ -n "$tags" ] || { log "   no tag of $slug names a version, so the branch is all there is"; return 1; }
 	versions="$(release_list "$cache")"
 	log ""
