@@ -830,7 +830,8 @@ function checksBlock(m) {
 }
 
 // The check reports, older lines and comparisons open now, each by the
-// function that closes it, so Reset reaches those of rows the filters hide.
+// function that closes it, so Reset and Collapse reach those of rows the
+// filters hide.
 const opened = { checks: new Set(), older: new Set(), compare: new Set() }
 
 function closeOpened(kinds) {
@@ -869,7 +870,7 @@ function checksCell(runs, span, version = null) {
 			opened.checks.delete(close)
 		}
 	}
-	// Closed by Reset, the report also folds what was opened in it.
+	// Closed by Reset or Collapse, the report also folds what was opened in it.
 	const close = () => {
 		show(false)
 		for (const d of checks.querySelectorAll('details[open]')) {
@@ -1180,6 +1181,8 @@ function initOverview() {
 	enabledCodes.append(el('span', {}, 'Enabled: ', ...Object.entries(ENABLED_CODE).flatMap(([k, code], i) =>
 		[i ? ', ' : '', el('b', {}, code), ` ${ENABLED[k][0]}`])))
 	const reset = document.getElementById('reset')
+	const collapse = document.getElementById('collapse')
+	const collapseWhat = document.getElementById('collapse-what')
 	let sortKey = 'total'
 	let sortDesc = true
 
@@ -1358,6 +1361,9 @@ function initOverview() {
 		sinceHelpToggle.setAttribute('aria-expanded', 'false')
 		restore({})
 		render()
+	})
+	collapse.addEventListener('click', () => {
+		closeOpened({ all: ['checks', 'older'], older: ['older'], checks: ['checks'] }[collapseWhat.value])
 	})
 	restore(readSettings())
 	render()
