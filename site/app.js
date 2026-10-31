@@ -844,7 +844,7 @@ function closeOpened(kinds) {
 
 // The cell counts the warnings of the measurements of a release; a click opens
 // them in the row returned with it, built on first use, which spans the
-// table from its second column. A version given names the release measured
+// table from its second column and closes from its top right corner too. A version given names the release measured
 // when it is another than the one the row shows.
 function checksCell(runs, span, version = null) {
 	const checks = el('tr', { class: 'checks', hidden: '' })
@@ -860,7 +860,12 @@ function checksCell(runs, span, version = null) {
 	}, warn ? `⚠ ${warn}` : '✓')
 	const show = (open) => {
 		if (open && !checks.hasChildNodes()) {
-			checks.append(el('td'), el('td', { colspan: String(span) }, ...runs.map(checksBlock)))
+			const shut = el('button', { type: 'button', class: 'quiet checks-close', title: 'Close these checks' }, 'close')
+			shut.addEventListener('click', () => {
+				show(false)
+				button.focus()
+			})
+			checks.append(el('td'), el('td', { colspan: String(span) }, shut, ...runs.map(checksBlock)))
 		}
 		checks.hidden = !open
 		button.setAttribute('aria-expanded', String(open))
