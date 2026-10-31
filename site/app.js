@@ -619,9 +619,10 @@ function compareSelect(row) {
 // it shows nothing in its place, so a missing badge says nothing bad by itself.
 // Each entry returns a badge, a list of them or null for a run, read through
 // runView(); a new badge is one more entry, at the place it takes in the row.
-// A badge is { label, value, title, logo, brand }, all but the label optional.
-// An entry marked fact shows a property that is no merit, such as the bundler,
-// in the colours of its brand instead of those of a pass.
+// A badge is { label, value, title, logo, brand, items }, all but the label
+// optional; items, the packages behind it, make it unfold into their list. An
+// entry marked fact shows a property that is no merit, such as the bundler, in
+// the colours of its brand instead of those of a pass.
 const BADGES = [
 	{ id: 'bundler', fact: true, of: (run) => {
 		const t = run.field('build-audit', 'toolchain')
@@ -634,6 +635,27 @@ const BADGES = [
 				title: `Built with ${b.label}${pkg ? `; package.json declares ${pkg} ${t.declared[pkg]}` : ''}.`,
 			}
 		})
+	} },
+	// The framework the delivered packages are written against, by its major
+	// version, and every other delivered library, each unfolding into the
+	// packages with the versions the build used. A run measured before
+	// build-audit named them has neither.
+	{ id: 'frameworks', fact: true, of: (run) => (run.field('build-audit', 'frameworks') ?? []).map((f) => {
+		const k = FRAMEWORKS[f.pkg] ?? {}
+		const major = f.version?.match(/^\d+/)?.[0]
+		const name = (typeof k.label === 'function' ? k.label(major) : k.label) ?? f.pkg
+		return {
+			label: major ? `${name} ${major}` : name, logo: k.logo, brand: k.brand ?? 'framework', value: f.version, items: f.family,
+			title: `Written against ${f.pkg}${f.version ? ` ${f.version}` : ''}; ${f.family.length} delivered `
+				+ `package${f.family.length === 1 ? '' : 's'} belong to it.`,
+		}
+	}) },
+	{ id: 'libraries', fact: true, of: (run) => {
+		const l = run.field('build-audit', 'libraries')
+		return l?.length
+			? { label: 'Libraries', value: String(l.length), brand: 'libraries', items: l,
+				title: `${l.length} further delivered package${l.length === 1 ? '' : 's'}, written against no framework.` }
+			: null
 	} },
 	{ id: 'reproducible', of: (run) => run.pass('build-verify', 'reproduced', 'Reproducible') },
 	{ id: 'clean-build', of: (run) => run.pass('build-verify', 'pristine-build', 'Clean build') },
@@ -657,6 +679,18 @@ const BUNDLERS = {
 	vite: { label: 'Vite', logo: 'img/brands/vite.svg', packages: ['vite', '@nextcloud/vite-config'] },
 	webpack: { label: 'webpack', logo: 'img/brands/webpack.svg', packages: ['webpack', '@nextcloud/webpack-vue-config'] },
 	rspack: { label: 'Rspack', packages: ['@rspack/core', '@rspack/cli'] },
+}
+
+// The frameworks with a name of their own; any other is shown by its package.
+// AngularJS is the angular package below 2, Angular the @angular packages.
+const FRAMEWORKS = {
+	vue: { label: 'Vue', logo: 'img/brands/vue.svg', brand: 'vue' },
+	react: { label: 'React', logo: 'img/brands/react.svg', brand: 'react' },
+	preact: { label: 'Preact' },
+	angular: { label: (major) => (major === '1' ? 'AngularJS' : 'Angular') },
+	'@angular/core': { label: 'Angular' },
+	svelte: { label: 'Svelte' },
+	lit: { label: 'Lit' },
 }
 
 // What a badge reads of a run. A finding counts as passed where its analyser
@@ -687,9 +721,20 @@ function badgeRow(fs, fields) {
 }
 
 function badge(b, fact) {
-	return el('span', { class: fact ? `badge fact brand-${b.brand ?? ''}` : 'badge pass', title: b.title ?? '' },
+	const cls = fact ? `badge fact brand-${b.brand ?? ''}` : 'badge pass'
+	const face = [
 		el('span', { class: 'badge-name' }, ...(b.logo ? [el('img', { src: b.logo, alt: '', width: 14, height: 14 })] : []), b.label),
-		...(b.value ? [el('span', { class: 'badge-version' }, b.value)] : []))
+		...(b.value ? [el('span', { class: 'badge-version' }, b.value)] : []),
+	]
+	if (!b.items) return el('span', { class: cls, title: b.title ?? '' }, ...face)
+	// The list opens below the badge and over what follows, so the row keeps its
+	// place; the bytes are those of the page that loads the most of a package.
+	return el('details', { class: 'badge-fold' },
+		el('summary', { class: cls, title: b.title ?? '' }, ...face, el('span', { class: 'badge-more' }, '▾')),
+		el('div', { class: 'badge-items' }, el('table', {},
+			el('thead', {}, el('tr', {}, el('th', {}, 'Package'), el('th', {}, 'Version'), el('th', { class: 'num' }, 'Bytes'))),
+			el('tbody', {}, ...b.items.map((x) => el('tr', {},
+				el('td', {}, x.pkg), el('td', {}, x.version ?? ''), el('td', { class: 'num' }, x.bytes.toLocaleString('en'))))))))
 }
 
 // == Checks ==
