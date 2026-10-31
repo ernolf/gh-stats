@@ -1206,14 +1206,19 @@ release_checkout() {
 # each one says whether the App Store has a tarball of it, because only then is
 # there something to compare the build against. The offered answer is the newest
 # tag that has one, so the usual case is a single return. 0 keeps the branch, which
-# is the only choice that measures a version nobody was ever shipped. Git sorts
-# v1.2.0-rc.1 above v1.2.0 unless it is told which suffixes mark a pre-release.
+# is the only choice that measures a version nobody was ever shipped. Only a tag
+# that names a version is offered, the ones gh-nc-unlisted keeps: the catalogue
+# knows the branch of an app without such a tag under the version it declares,
+# and a run of a tag such as i18n-european would never meet that key, so the
+# app would be sent again with every catalogue run. Git sorts v1.2.0-rc.1 above
+# v1.2.0 unless it is told which suffixes mark a pre-release.
 TAG_PRERELEASE=(-c versionsort.suffix=-alpha -c versionsort.suffix=-beta -c versionsort.suffix=-rc)
 TAG_MENU_MAX="${TAG_MENU_MAX:-12}"
 pick_tag() {
 	local cache="$1" tags versions tag v i=0 default=0 n chosen
-	tags="$("$GIT" -C "$CHECKOUT" "${TAG_PRERELEASE[@]}" tag --sort=-v:refname | head -"$TAG_MENU_MAX")"
-	[ -n "$tags" ] || { log "   no tags in $slug, so the branch is all there is"; return 1; }
+	tags="$("$GIT" -C "$CHECKOUT" "${TAG_PRERELEASE[@]}" tag --sort=-v:refname \
+		| grep -E '^[vV]?[0-9]+(\.[0-9]+)*([-+.~][0-9A-Za-z.+~-]*)?$' | head -"$TAG_MENU_MAX")" || true
+	[ -n "$tags" ] || { log "   no tag of $slug names a version, so the branch is all there is"; return 1; }
 	versions="$(release_list "$cache")"
 	log ""
 	log "== tags of $slug, newest first"
