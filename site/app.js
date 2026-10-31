@@ -607,8 +607,15 @@ function compareSelect(row) {
 		if (select.value) {
 			row.compare.append(el('td'), el('td', { class: 'compare-label' }, 'compared with'),
 				...releaseCells(releaseFigures(row.project, select.value), runs), abandonedCell(abandoned(runs)), checks, el('td'))
+			opened.compare.add(none)
+		} else {
+			opened.compare.delete(none)
 		}
 	})
+	const none = () => {
+		select.value = ''
+		select.dispatchEvent(new Event('change'))
+	}
 	return select
 }
 
@@ -822,6 +829,18 @@ function checksBlock(m) {
 		}))
 }
 
+// The check reports, older lines and comparisons open now, each by the
+// function that closes it, so Reset reaches those of rows the filters hide.
+const opened = { checks: new Set(), older: new Set(), compare: new Set() }
+
+function closeOpened(kinds) {
+	for (const kind of kinds) {
+		for (const close of [...opened[kind]]) {
+			close()
+		}
+	}
+}
+
 // The cell counts the warnings of the measurements of a release; a click opens
 // them in the row returned with it, built on first use, which spans the
 // table from its second column. A version given names the release measured
@@ -838,13 +857,26 @@ function checksCell(runs, span, version = null) {
 		'aria-expanded': 'false',
 		title: `${warn} warning${warn === 1 ? '' : 's'} of the ncmake analysers in ${runs.length} measurement${runs.length === 1 ? '' : 's'}${version ? ` of ${version}` : ''}`,
 	}, warn ? `⚠ ${warn}` : '✓')
-	button.addEventListener('click', () => {
-		if (!checks.hasChildNodes()) {
+	const show = (open) => {
+		if (open && !checks.hasChildNodes()) {
 			checks.append(el('td'), el('td', { colspan: String(span) }, ...runs.map(checksBlock)))
 		}
-		checks.hidden = !checks.hidden
-		button.setAttribute('aria-expanded', String(!checks.hidden))
-	})
+		checks.hidden = !open
+		button.setAttribute('aria-expanded', String(open))
+		if (open) {
+			opened.checks.add(close)
+		} else {
+			opened.checks.delete(close)
+		}
+	}
+	// Closed by Reset, the report also folds what was opened in it.
+	const close = () => {
+		show(false)
+		for (const d of checks.querySelectorAll('details[open]')) {
+			d.open = false
+		}
+	}
+	button.addEventListener('click', () => show(checks.hidden))
 	return [el('td', { class: 'check-col' }, button, ...(version ? [' ', el('span', { class: 'check-of' }, version)] : [])), checks]
 }
 
@@ -1016,10 +1048,17 @@ function unlistedRow(u) {
 // The button opens and closes the lines below the row of a project.
 function olderToggle(p) {
 	const toggle = el('button', { type: 'button', class: 'toggle', 'aria-expanded': 'false' })
-	toggle.addEventListener('click', () => {
-		p.older.hidden = !p.older.hidden
-		toggle.setAttribute('aria-expanded', String(!p.older.hidden))
-	})
+	const show = (open) => {
+		p.older.hidden = !open
+		toggle.setAttribute('aria-expanded', String(open))
+		if (open) {
+			opened.older.add(close)
+		} else {
+			opened.older.delete(close)
+		}
+	}
+	const close = () => show(false)
+	toggle.addEventListener('click', () => show(p.older.hidden))
 	return toggle
 }
 
@@ -1312,7 +1351,11 @@ function initOverview() {
 		document.getElementById(id).addEventListener('change', save)
 	}
 	// The defaults keep nothing, so the render after a reset removes the key.
+	// What was opened in the table closes as well.
 	reset.addEventListener('click', () => {
+		closeOpened(['checks', 'older', 'compare'])
+		sinceHelp.hidden = true
+		sinceHelpToggle.setAttribute('aria-expanded', 'false')
 		restore({})
 		render()
 	})
