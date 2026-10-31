@@ -1,0 +1,144 @@
+#!/usr/bin/env -S LC_CTYPE=C.UTF-8 LC_MESSAGES=C bash
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# gh-stats-security - read what the security targets of gh-nc-appsdiag found.
+# A run keeps their output only as security.json.age, encrypted to the age
+# recipient of the site maintainer, and the data branch holds that file beside
+# the public results. The tool fetches the data branch, opens the file of the
+# newest run of every version with the age identity, and prints the findings.
+# The key never leaves the machine the tool runs on, and nothing it decrypts is
+# written to a file.
+
+set -euo pipefail
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+usage() {
+	cat <<'EOF'
+Usage: gh-stats-security [-i <identity>] [-d <dir>] [-v] [<app-id> [<version>]]
+
+Without an app id, lists every app version whose newest run holds a
+security.json.age, with the number of warnings per security target. With one,
+prints the warnings of each of its versions, or only of <version>: the target,
+the file and line, what the target says, and the commands that find it again
+in a checkout of the release.
+
+The data branch is fetched into <dir>, a shallow clone kept between runs.
+
+  -i, --identity <file>  the age identity, default $GH_STATS_AGE_IDENTITY or
+                         ${XDG_CONFIG_HOME:-~/.config}/gh-stats/age-identity.txt
+  -d, --dir <dir>        the clone of the data branch, default
+                         ${XDG_CACHE_HOME:-~/.cache}/gh-stats/data
+  -n, --no-fetch         read <dir> as it is
+  -v, --verbose          the notes too, and the output of each target
+  -h, --help             this text
+
+Environment:
+  GH_STATS_REPO          the repository, default https://github.com/ernolf/gh-stats.git
+  GH_STATS_DATA_BRANCH   its data branch, default data
+  AGE_BIN, JQ_BIN, GIT_BIN
+EOF
+}
+
+identity="${GH_STATS_AGE_IDENTITY:-${XDG_CONFIG_HOME:-$HOME/.config}/gh-stats/age-identity.txt}"
+dir="${XDG_CACHE_HOME:-$HOME/.cache}/gh-stats/data"
+repo="${GH_STATS_REPO:-https://github.com/ernolf/gh-stats.git}"
+branch="${GH_STATS_DATA_BRANCH:-data}"
+AGE="${AGE_BIN:-/usr/bin/age}"
+JQ="${JQ_BIN:-/usr/bin/jq}"
+GIT="${GIT_BIN:-/usr/bin/git}"
+fetch=1 verbose=0 app='' version=''
+while [ $# -gt 0 ]; do
+	case "$1" in
+		-h|--help) usage; exit 0 ;;
+		-i|--identity)
+			[ $# -ge 2 ] || die "$1 needs a file"
+			identity="$2"; shift ;;
+		-d|--dir)
+			[ $# -ge 2 ] || die "$1 needs a directory"
+			dir="$2"; shift ;;
+		-n|--no-fetch) fetch=0 ;;
+		-v|--verbose) verbose=1 ;;
+		-*) die "unknown option $1, see --help" ;;
+		*)
+			if [ -z "$app" ]; then app="$1"
+			elif [ -z "$version" ]; then version="$1"
+			else die "too many arguments, see --help"
+			fi ;;
+	esac
+	shift
+done
+
+for x in "$AGE" "$JQ" "$GIT"; do
+	[ -x "$x" ] || die "$x not found"
+done
+[ -r "$identity" ] || die "cannot read the age identity $identity"
+
+if [ "$fetch" = 1 ]; then
+	if [ -d "$dir/.git" ]; then
+		"$GIT" -C "$dir" fetch -q --depth 1 origin "$branch"
+		"$GIT" -C "$dir" reset -q --hard FETCH_HEAD
+	else
+		mkdir -p "$(dirname "$dir")"
+		"$GIT" clone -q --depth 1 --branch "$branch" "$repo" "$dir"
+	fi
+fi
+[ -d "$dir/apps" ] || die "no apps/ in $dir"
+
+# The plain text exists only in this pipe.
+decrypt() {
+	case "$1" in
+		*.gz) gzip -dc "$1" | "$AGE" -d -i "$identity" ;;
+		*) "$AGE" -d -i "$identity" "$1" ;;
+	esac
+}
+
+# The newest run directory of every version directory, as "<run dir>" lines: the
+# run directories of a version are named by their timestamp, so the last one in
+# sort order is the newest.
+newest_runs() {
+	find "$dir/apps" -name summary.json -printf '%h\n' | sort | awk '
+		{ v = $0; sub(/\/[^\/]*$/, "", v) }
+		v != last && NR > 1 { print run }
+		{ last = v; run = $0 }
+		END { if (NR) print run }'
+}
+
+found=0
+while IFS= read -r run; do
+	sec=""
+	for f in "$run/security.json.age" "$run/security.json.age.gz"; do
+		[ -f "$f" ] && { sec="$f"; break; }
+	done
+	[ -n "$sec" ] || continue
+	id="$("$JQ" -r '.app_id // .repo' "$run/summary.json")"
+	[ -z "$app" ] || [ "$id" = "$app" ] || continue
+	ver="$("$JQ" -r '.server // .requested_version // .version // "unversioned"' "$run/summary.json")"
+	[ -z "$version" ] || [ "$ver" = "$version" ] || continue
+	found=1
+	plain="$(decrypt "$sec")" || die "cannot decrypt $sec with $identity"
+	if [ -z "$app" ]; then
+		printf '%s\n' "$plain" | "$JQ" -r --arg id "$id" --arg v "$ver" '
+			[.targets[] | "\(.name) \([.result.findings[]? | select(.level == "warn")] | length)"]
+			+ (if (.flagged | length) > 0 then ["other \([.flagged[].findings[]] | length)"] else [] end)
+			| "\($id) \($v)\t\(join("  "))"'
+		continue
+	fi
+	"$JQ" -r --argjson s "$(cat "$run/summary.json")" --argjson verbose "$verbose" --arg v "$ver" '
+		def where: if .file then "  \(.file)\(if .line then ":\(.line)" else "" end)" else "" end;
+		def show: "  [\(.level)] \(.id)\(where)", (.lines[]? | "      \(.)");
+		def keep: $verbose == 1 or .level == "warn";
+		"== \($s.app_id // $s.repo) \($v)  \($s.owner)/\($s.repo)\(if $s.subdir then ":\($s.subdir)" else "" end) at \($s.head.tag // $s.head.sha // "?")",
+		(.targets[] |
+			"-- \(.name), exit \(.exit)",
+			(.result.findings[]? | select(keep) | show),
+			(if .exit != 0 or ([.result.findings[]? | select(.level == "warn")] | length) > 0 then
+				"   again: \(if .name == "deps-audit" then "make build && " else "" end)make \(.name)"
+			else empty end),
+			(if $verbose == 1 then (.log | split("\n")[] | "   | \(.)") else empty end)),
+		(.flagged[] | "-- \(.tool), taken out of its public result", (.findings[] | show)),
+		""' <<<"$plain"
+done < <(newest_runs)
+
+[ "$found" = 1 ] || die "no security.json.age${app:+ for $app}${version:+ $version} in $dir"

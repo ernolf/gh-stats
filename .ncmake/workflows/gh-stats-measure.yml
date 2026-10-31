@@ -34,7 +34,10 @@
 # the results in one commit, so the matrix never pushes. The data branch gets
 # summary.json, the analyser results and the release diff, a file above 1 MiB
 # compressed as <name>.gz; console.log and the app's own build files stay in
-# the artifact. Beside apps/ it keeps tools.json, the versions of Podman and
+# the artifact. With the variable SECURITY_AGE_RECIPIENT set, the targets whose
+# findings show where an app can be attacked run too, and what they find gets
+# there only as security.json.age, encrypted to that recipient; the key that
+# opens it is never in this workflow, and gh-stats-security reads it. Beside apps/ it keeps tools.json, the versions of Podman and
 # ncmake the newest results were measured with, which the site lists under
 # "Built with".
 #
@@ -175,6 +178,12 @@ jobs:
       - name: Fetch the catalogue
         run: gh release download "$CATALOGUE_TAG" -p apps.json -D "$RUNNER_TEMP"
 
+      # The security targets keep what they find only encrypted, and without
+      # age they do not run.
+      - name: Install age
+        if: vars.SECURITY_AGE_RECIPIENT != ''
+        run: sudo apt-get update -q && sudo apt-get install -y -q age
+
       # A failed target or an app that does not build is a result, so the step
       # only warns about the exit code.
       - name: Measure
@@ -185,6 +194,7 @@ jobs:
           APPSTORE_SOURCE: appdata
           APPSTORE_APPDATA_FILE: ${{ runner.temp }}/apps.json
           NC_APPSDIAG_RESULT_FILE: ${{ runner.temp }}/run-dirs.txt
+          NC_APPSDIAG_AGE_RECIPIENT: ${{ vars.SECURITY_AGE_RECIPIENT }}
         run: |
           rc=0
           # shellcheck disable=SC2086 # app and version are two words on purpose
@@ -320,9 +330,9 @@ jobs:
               [ ! -e "$dest" ] || continue
               mkdir -p "$dest"
               (cd "$run" && find . -path ./release/shipped -prune -o -type f \
-                  \( -name '*.json' -o -path './release/diff.*' \) -print0 \
+                  \( -name '*.json' -o -name '*.age' -o -path './release/diff.*' \) -print0 \
                 | xargs -0 -r cp --parents -t "$dest")
-              find "$dest" -type f -size +1048576c -exec gzip -n -9 {} +
+              find "$dest" -type f -size +1048576c ! -name '*.age' -exec gzip -n -9 {} +
               n=$((n + 1))
             done < <(find "$logs" -name summary.json -print0 2>/dev/null)
             if [ "$n" -eq 0 ]; then
