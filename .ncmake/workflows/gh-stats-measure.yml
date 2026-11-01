@@ -181,9 +181,12 @@ jobs:
         run: gh release download "$CATALOGUE_TAG" -p apps.json -D "$RUNNER_TEMP"
 
       # The security targets keep what they find only encrypted, and without
-      # age they do not run.
+      # age they do not run. apt-get normally takes seconds but has hung for
+      # hours; a job stopped here leaves no outcome, so collect measures the
+      # version again.
       - name: Install age
         if: vars.SECURITY_AGE_RECIPIENT != ''
+        timeout-minutes: 5
         run: sudo apt-get update -q && sudo apt-get install -y -q age
 
       # A failed target or an app that does not build is a result, so the step
