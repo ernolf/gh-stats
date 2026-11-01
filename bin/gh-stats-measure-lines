@@ -1,0 +1,70 @@
+#!/usr/bin/env -S LC_CTYPE=C.UTF-8 LC_MESSAGES=C bash
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# gh-stats-measure-lines - list the apps the server ships and the apps outside
+# the App Store as the lines gh-stats-measure.yml measures, from the
+# shipped.json of gh-nc-shipped and the unlisted.json of gh-nc-unlisted.
+# gh-stats-catalogue.yml sends those without a complete run, and
+# gh-stats-measure.yml started by hand measures them all; both take the lines
+# from here, so they name a version the same way.
+
+set -euo pipefail
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+usage() {
+	cat <<'EOF'
+Usage: gh-stats-measure-lines [--keys] [--shipped <file>] [--unlisted <file>]
+
+Writes one line per app version, as gh-nc-appsdiag is asked for it:
+
+  -s master nextcloud/activity
+  -s master nextcloud/server:apps/comments
+  nextcloud/absence 1.0.6
+  codeberg.org/someone/someapp
+
+  - with --shipped, every app of each server release <file> marks as the
+    newest of its major, and of master, as that release ships it; an app the
+    release enables always is part of the server and left out
+  - with --unlisted, every app of <file> whose repository publishes no release
+    tarball and that is no ExApp, with the version of its newest tag, read from
+    the first digit on; an app whose repository has no tag comes without a
+    version, so gh-nc-appsdiag builds its default branch, and one whose tags
+    carry no digit is left out
+
+With --keys, the line of a default branch comes as "<key>\t<line>", the key
+naming the version its info.xml declares, which is the version its run is
+known under.
+
+      --keys             write the key of a default branch in front
+      --shipped <file>   the shipped.json to read
+      --unlisted <file>  the unlisted.json to read
+  -h, --help             this text
+EOF
+}
+
+keys=0 shipped='' unlisted=''
+while [ $# -gt 0 ]; do
+	case "$1" in
+		-h|--help) usage; exit 0 ;;
+		--keys) keys=1 ;;
+		--shipped|--unlisted)
+			[ $# -ge 2 ] || die "$1 needs a file"
+			[ -r "$2" ] || die "no file at $2"
+			if [ "$1" = --shipped ]; then shipped="$2"; else unlisted="$2"; fi
+			shift ;;
+		*) echo "unknown argument: $1" >&2; exit 1 ;;
+	esac
+	shift
+done
+
+[ -n "$shipped$unlisted" ] || { usage >&2; exit 1; }
+
+[ -z "$shipped" ] || jq -r '.releases[] | select(.latest) | .ref as $ref
+	| .apps[] | select(.enabled != "always") | "-s \($ref) \(.repo)" + (if (.path // "") != "" then ":" + .path else "" end)' "$shipped"
+[ -z "$unlisted" ] || jq -r --argjson keys "$keys" '.apps[] | select(.tarball == false and .exapp != true)
+	| ((if .host == "github.com" then "" else .host + "/" end) + .repo
+	   + (if .path != "" then ":" + .path else "" end)) as $app
+	| if (.tags // []) == [] then (if $keys == 1 then "\($app) \(.version // "")\t" else "" end) + $app
+	  else first(.tags[] | sub("^[^0-9]*"; "") | select(. != "")) as $v | "\($app) \($v)" end' "$unlisted"
