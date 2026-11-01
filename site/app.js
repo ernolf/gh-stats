@@ -818,12 +818,12 @@ function findingEntries(tool, fs) {
 	})
 }
 
-// Where a lint target warns, the page says how the warnings are found again
-// and kept away by the ncmake target and the workflow of the same name. Both
-// commands are named as ncmake's, so they are not taken for targets of the app.
+// Where a lint target warns, the page names the ncmake target the warnings come
+// from and the workflow of the same name that keeps them away. Both commands
+// are named as ncmake's, so they are not taken for targets of the app.
 function lintHint(tool) {
 	const ncmake = () => el('a', { href: 'https://github.com/ernolf/ncmake' }, 'ncmake')
-	return el('p', { class: 'hint lint-hint' }, 'Found again with ', ncmake(), '\'s ', el('code', {}, `make ${tool}`),
+	return el('p', { class: 'hint lint-hint' }, 'Findings of ', ncmake(), '\'s ', el('code', {}, `make ${tool}`),
 		' in a checkout of the release; ', ncmake(), '\'s ', el('code', {}, `make workflows-install W=${tool}`),
 		' installs the workflow that runs the same check on every pull request.')
 }
