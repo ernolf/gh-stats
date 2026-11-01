@@ -47,7 +47,9 @@
 # measured again, and with MEASURE_PRUNE_LINES the release lines beyond
 # MEASURE_LINES. The newest run of a version keeps every result, and a version
 # a request pinned stays whatever its line. Once the results are pushed, the
-# site is rebuilt, so they show without waiting for the next sampler run.
+# site is rebuilt, so they show without waiting for the next sampler run, and
+# with SECURITY_AGE_RECIPIENT set gh-stats-security.yml decides again which
+# apps have an overdue security finding.
 #
 # A version whose run says nothing about the app is measured again: one that
 # did not complete, whose rebuild was stopped at its time limit, or whose job
@@ -246,7 +248,7 @@ jobs:
       contents: write
       # Reports the versions still without a result after the last attempt.
       issues: write
-      # Rebuilds the site.
+      # Rebuilds the site and checks the security findings.
       actions: write
     env:
       GH_TOKEN: ${{ github.token }}
@@ -360,6 +362,10 @@ jobs:
       - name: Rebuild the site
         if: env.COMMITTED == '1'
         run: gh workflow run gh-stats-site.yml --ref "$GITHUB_REF_NAME"
+
+      - name: Check the security findings
+        if: env.COMMITTED == '1' && vars.SECURITY_AGE_RECIPIENT != ''
+        run: gh workflow run gh-stats-security.yml --ref "$GITHUB_REF_NAME"
 
       # Only after the commit, so the next run starts once this one is kept.
       - name: Pass the rest on

@@ -9,6 +9,15 @@
 # newest run of every version with the age identity, and prints the findings.
 # The key never leaves the machine the tool runs on, and nothing it decrypts is
 # written to a file.
+#
+# It also keeps the stages of the findings the site maintainer acts on:
+# confirmed, then reported to the maintainer of the app on a day and through a
+# channel, with a deadline after it. They are kept encrypted to the same
+# recipient in the variable SECURITY_STAGES of the environment security of the
+# repository, which only the site maintainer writes. fixed and overdue are never
+# stored but computed from the newest measured release of the app, and
+# --overdue writes the only part of them that is public: which apps are overdue
+# since which report.
 
 set -euo pipefail
 
@@ -17,12 +26,30 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 usage() {
 	cat <<'EOF'
 Usage: gh-stats-security [-i <identity>] [-d <dir>] [-v] [<app-id> [<version>]]
+       gh-stats-security [-i <identity>] [-d <dir>] --stages
+       gh-stats-security [-i <identity>] [-d <dir>] --confirm <app-id> <finding>
+       gh-stats-security [-i <identity>] [-d <dir>] --report <app-id> <finding> <channel> [<YYYY-MM-DD>]
+       gh-stats-security [-i <identity>] --deadline <app-id> <finding> <YYYY-MM-DD>
+       gh-stats-security [-i <identity>] --forget <app-id> <finding>
+       gh-stats-security [-i <identity>] [-d <dir>] --overdue <file>
 
 Without an app id, lists every app version whose newest run holds a
 security.json.age, with the number of warnings per security target. With one,
 prints the warnings of each of its versions, or only of <version>: the target,
 the file and line, what the target says, and the commands that find it again
-in a checkout of the release.
+in a checkout of the release. Each warning names the <finding> the stage
+commands take: <target>:<id>, followed by :<file> when it has one.
+
+--stages lists every finding with a stage and what it is now: confirmed,
+reported, overdue once the deadline has passed without a release that fixes
+it, or fixed once the newest measured release of the app no longer has it.
+--confirm marks a warning of the newest measured release of the app as a real
+issue. --report records that it was reported to the maintainer of the app,
+through <channel>, on <YYYY-MM-DD> or today; the deadline is
+GH_STATS_SECURITY_DAYS days after it. --deadline moves the deadline, to shorten
+or extend it. --forget drops the finding from the stages. --overdue writes the
+public list of the overdue apps to <file> as JSON, each with the day its
+earliest overdue finding was reported, and nothing else.
 
 The data branch is fetched into <dir>, a shallow clone kept between runs.
 
@@ -37,7 +64,14 @@ The data branch is fetched into <dir>, a shallow clone kept between runs.
 Environment:
   GH_STATS_REPO          the repository, default https://github.com/ernolf/gh-stats.git
   GH_STATS_DATA_BRANCH   its data branch, default data
-  AGE_BIN, JQ_BIN, GIT_BIN
+  GH_STATS_SECURITY_ENV  the environment that holds SECURITY_STAGES, default
+                         security
+  GH_STATS_SECURITY_STAGES  the encrypted stages as SECURITY_STAGES holds them,
+                         read in place of the variable when set, also when
+                         empty; the commands that change a stage still write
+                         the variable
+  GH_STATS_SECURITY_DAYS the days from the report to the deadline, default 90
+  AGE_BIN, AGE_KEYGEN_BIN, JQ_BIN, GIT_BIN, GH_BIN
 EOF
 }
 
@@ -45,10 +79,14 @@ identity="${GH_STATS_AGE_IDENTITY:-${XDG_CONFIG_HOME:-$HOME/.config}/gh-stats/ag
 dir="${XDG_CACHE_HOME:-$HOME/.cache}/gh-stats/data"
 repo="${GH_STATS_REPO:-https://github.com/ernolf/gh-stats.git}"
 branch="${GH_STATS_DATA_BRANCH:-data}"
+security_env="${GH_STATS_SECURITY_ENV:-security}"
+days="${GH_STATS_SECURITY_DAYS:-90}"
 AGE="${AGE_BIN:-/usr/bin/age}"
+AGE_KEYGEN="${AGE_KEYGEN_BIN:-/usr/bin/age-keygen}"
 JQ="${JQ_BIN:-/usr/bin/jq}"
 GIT="${GIT_BIN:-/usr/bin/git}"
-fetch=1 verbose=0 app='' version=''
+GH="${GH_BIN:-/usr/bin/gh}"
+fetch=1 verbose=0 mode=list args=()
 while [ $# -gt 0 ]; do
 	case "$1" in
 		-h|--help) usage; exit 0 ;;
@@ -60,20 +98,102 @@ while [ $# -gt 0 ]; do
 			dir="$2"; shift ;;
 		-n|--no-fetch) fetch=0 ;;
 		-v|--verbose) verbose=1 ;;
+		--stages|--confirm|--report|--deadline|--forget|--overdue)
+			[ "$mode" = list ] || die "$1 and --$mode exclude each other"
+			mode="${1#--}" ;;
 		-*) die "unknown option $1, see --help" ;;
-		*)
-			if [ -z "$app" ]; then app="$1"
-			elif [ -z "$version" ]; then version="$1"
-			else die "too many arguments, see --help"
-			fi ;;
+		*) args+=("$1") ;;
 	esac
 	shift
 done
 
-for x in "$AGE" "$JQ" "$GIT"; do
+case "$mode" in
+	list) [ "${#args[@]}" -le 2 ] ;;
+	stages) [ "${#args[@]}" -eq 0 ] ;;
+	confirm|forget) [ "${#args[@]}" -eq 2 ] ;;
+	report) [ "${#args[@]}" -ge 3 ] && [ "${#args[@]}" -le 4 ] ;;
+	deadline) [ "${#args[@]}" -eq 3 ] ;;
+	overdue) [ "${#args[@]}" -eq 1 ] ;;
+esac || die "wrong number of arguments${mode/#list/}, see --help"
+app="${args[0]:-}"
+case "$days" in
+	''|*[!0-9]*) die "GH_STATS_SECURITY_DAYS must be a number of days, not $days" ;;
+esac
+
+# --deadline and --forget read no results, and only the commands that change a
+# stage encrypt.
+need=("$AGE" "$JQ")
+case "$mode" in deadline|forget) ;; *) need+=("$GIT") ;; esac
+case "$mode" in
+	list) ;;
+	stages|overdue) [ -n "${GH_STATS_SECURITY_STAGES+x}" ] || need+=("$GH") ;;
+	*) need+=("$GH" "$AGE_KEYGEN") ;;
+esac
+for x in "${need[@]}"; do
 	[ -x "$x" ] || die "$x not found"
 done
 [ -r "$identity" ] || die "cannot read the age identity $identity"
+
+# A day as YYYY-MM-DD, checked to be one.
+day() {
+	[[ "$1" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] && [ "$(date -u -d "$1" +%F 2>/dev/null)" = "$1" ] \
+		|| die "$1 is no day in the form YYYY-MM-DD"
+	printf '%s\n' "$1"
+}
+
+# The repository as gh takes it, host/owner/repo.
+gh_repo() {
+	local r="${repo#*://}"
+	printf '%s\n' "${r%.git}"
+}
+
+# The stages in plain text, which exist only in the variables of this shell.
+# A repository without the variable yet has none.
+stages_read() {
+	local enc plain
+	if [ -n "${GH_STATS_SECURITY_STAGES+x}" ]; then
+		enc="$GH_STATS_SECURITY_STAGES"
+	elif ! enc="$("$GH" variable get SECURITY_STAGES -e "$security_env" -R "$(gh_repo)" 2>&1)"; then
+		case "$enc" in
+			*'was not found'*) enc='' ;;
+			*) die "cannot read SECURITY_STAGES of the environment $security_env: $enc" ;;
+		esac
+	fi
+	if [ -z "$enc" ]; then
+		echo '{"schema":1,"findings":[]}'
+		return
+	fi
+	plain="$(printf '%s\n' "$enc" | "$AGE" -d -i "$identity" | "$JQ" -c -e 'select(.schema == 1)')" \
+		|| die "cannot decrypt SECURITY_STAGES with $identity, or it holds no stages of schema 1"
+	printf '%s\n' "$plain"
+}
+
+# Encrypts the stages to the recipient of the identity and stores them.
+stages_write() {
+	local recipient
+	recipient="$("$AGE_KEYGEN" -y "$identity")" || die "cannot read the recipient of $identity"
+	printf '%s\n' "$1" | "$JQ" -c '.findings |= sort_by(.app, .id)' | "$AGE" -a -r "$recipient" \
+		| "$GH" variable set SECURITY_STAGES -e "$security_env" -R "$(gh_repo)" >/dev/null \
+		|| die "cannot write SECURITY_STAGES of the environment $security_env"
+}
+
+case "$mode" in
+	deadline|forget)
+		stages="$(stages_read)"
+		"$JQ" -e --arg app "$app" --arg id "${args[1]}" 'any(.findings[]; .app == $app and .id == $id)' <<<"$stages" >/dev/null \
+			|| die "${args[1]} of $app has no stage"
+		if [ "$mode" = forget ]; then
+			stages="$("$JQ" -c --arg app "$app" --arg id "${args[1]}" 'del(.findings[] | select(.app == $app and .id == $id))' <<<"$stages")"
+		else
+			until="$(day "${args[2]}")"
+			stages="$("$JQ" -c -e --arg app "$app" --arg id "${args[1]}" --arg d "$until" '
+				(.findings[] | select(.app == $app and .id == $id)) |= (if .reported then .deadline = $d else error("not reported") end)' <<<"$stages" 2>/dev/null)" \
+				|| die "${args[1]} of $app is not reported yet, so it has no deadline"
+		fi
+		stages_write "$stages"
+		echo "$mode: $app ${args[1]}"
+		exit 0 ;;
+esac
 
 if [ "$fetch" = 1 ]; then
 	if [ -d "$dir/.git" ]; then
@@ -105,12 +225,100 @@ newest_runs() {
 		END { if (NR) print run }'
 }
 
+security_file() {
+	local f
+	for f in "$1/security.json.age" "$1/security.json.age.gz"; do
+		[ -f "$f" ] && { printf '%s\n' "$f"; return; }
+	done
+}
+
+# The newest run with a security.json.age of every app, as "<app>\t<run dir>"
+# lines: that of its newest measured release, where a release of the App Store
+# or of an unlisted app ranks above every server release, and master above the
+# server releases.
+newest_app_runs() {
+	local run id key
+	while IFS= read -r run; do
+		[ -n "$(security_file "$run")" ] || continue
+		IFS=$'\t' read -r id key < <("$JQ" -r '[.app_id // .repo,
+			if .server then "0 \(.server)" else "1 \(.requested_version // .version // "")" end] | @tsv' "$run/summary.json")
+		printf '%s\t%s\t%s\n' "$id" "$key" "$run"
+	done < <(newest_runs) | sort -t $'\t' -k1,1 -k2,2V | awk -F '\t' '
+		$1 != last && NR > 1 { print out }
+		{ last = $1; out = $1 "\t" $3 }
+		END { if (NR) print out }'
+}
+
+# The warnings of a security.json as the findings the stages name.
+# shellcheck disable=SC2016 # jq variables
+FINDINGS='def finding($t): [$t, .id, .file] | map(select(. != null) | tostring) | join(":");'
+# shellcheck disable=SC2016 # jq variables
+OPEN="$FINDINGS"'[(.targets[] | .name as $t | .result.findings[]? | select(.level == "warn") | finding($t)),
+	(.flagged[] | .tool as $t | .findings[] | select(.level == "warn") | finding($t))] | unique'
+
+case "$mode" in
+	stages|overdue|confirm|report)
+		stages="$(stages_read)"
+		# The warnings of the newest measured release of each app with a stage,
+		# and of the app to confirm one of.
+		open='{}'
+		while IFS=$'\t' read -r id run; do
+			if [ "$mode:$id" != "confirm:$app" ]; then
+				"$JQ" -e --arg app "$id" 'any(.findings[]; .app == $app)' <<<"$stages" >/dev/null || continue
+			fi
+			sec="$(security_file "$run")"
+			list="$(decrypt "$sec" | "$JQ" -c "$OPEN")" || die "cannot decrypt $sec with $identity"
+			open="$("$JQ" -c --arg app "$id" --argjson list "$list" '.[$app] = $list' <<<"$open")"
+		done < <(newest_app_runs)
+		today="$(date -u +%F)"
+		# A finding counts as fixed only once a measured release no longer has
+		# it; an app not measured since keeps its finding open.
+		state="$("$JQ" -c --argjson open "$open" --arg today "$today" --argjson days "$days" '
+			def due: .deadline // ((.reported + "T00:00:00Z" | fromdateiso8601) + $days * 86400 | strftime("%Y-%m-%d"));
+			.findings | map(. + {measured: ($open[.app] != null)}
+				| . + {due: (if .reported then due else null end)}
+				| . + {state: (if .measured and (.id as $id | $open[.app] | index($id) | not) then "fixed"
+					elif .reported and .due < $today then "overdue"
+					elif .reported then "reported" else "confirmed" end)})' <<<"$stages")"
+		;;
+esac
+
+case "$mode" in
+	stages)
+		"$JQ" -r '.[] | [.app, .id, .state + (if .measured then "" else ", not measured" end), "confirmed \(.confirmed)",
+			(if .reported then "reported \(.reported) via \(.channel), due \(.due)" else empty end)] | join("  ")' <<<"$state"
+		exit 0 ;;
+	overdue)
+		"$JQ" '{schema: 1, apps: (map(select(.state == "overdue")) | group_by(.app)
+			| map({app: .[0].app, reported: (map(.reported) | min)}))}' <<<"$state" > "${args[0]}"
+		echo "overdue: $("$JQ" '.apps | length' "${args[0]}") apps"
+		exit 0 ;;
+	confirm)
+		"$JQ" -e --arg app "$app" --arg id "${args[1]}" '.[$app] // [] | index($id)' <<<"$open" >/dev/null \
+			|| die "${args[1]} is no warning of the newest measured release of $app"
+		if "$JQ" -e --arg app "$app" --arg id "${args[1]}" 'any(.[]; .app == $app and .id == $id)' <<<"$state" >/dev/null; then
+			die "${args[1]} of $app has a stage already"
+		fi
+		stages="$("$JQ" -c --arg app "$app" --arg id "${args[1]}" --arg today "$today" \
+			'.findings += [{app: $app, id: $id, confirmed: $today}]' <<<"$stages")"
+		stages_write "$stages"
+		echo "confirmed: $app ${args[1]}"
+		exit 0 ;;
+	report)
+		on="$(day "${args[3]:-$today}")"
+		"$JQ" -e --arg app "$app" --arg id "${args[1]}" 'any(.[]; .app == $app and .id == $id and .state != "fixed")' <<<"$state" >/dev/null \
+			|| die "${args[1]} of $app is not confirmed, or fixed already"
+		stages="$("$JQ" -c --arg app "$app" --arg id "${args[1]}" --arg ch "${args[2]}" --arg on "$on" '
+			(.findings[] | select(.app == $app and .id == $id)) |= (. + {reported: $on, channel: $ch} | del(.deadline))' <<<"$stages")"
+		stages_write "$stages"
+		echo "reported: $app ${args[1]} on $on via ${args[2]}"
+		exit 0 ;;
+esac
+
+version="${args[1]:-}"
 found=0
 while IFS= read -r run; do
-	sec=""
-	for f in "$run/security.json.age" "$run/security.json.age.gz"; do
-		[ -f "$f" ] && { sec="$f"; break; }
-	done
+	sec="$(security_file "$run")"
 	[ -n "$sec" ] || continue
 	id="$("$JQ" -r '.app_id // .repo' "$run/summary.json")"
 	[ -z "$app" ] || [ "$id" = "$app" ] || continue
@@ -125,19 +333,21 @@ while IFS= read -r run; do
 			| "\($id) \($v)\t\(join("  "))"'
 		continue
 	fi
-	"$JQ" -r --argjson s "$(cat "$run/summary.json")" --argjson verbose "$verbose" --arg v "$ver" '
+	"$JQ" -r --argjson s "$(cat "$run/summary.json")" --argjson verbose "$verbose" --arg v "$ver" "$FINDINGS"'
 		def where: if .file then "  \(.file)\(if .line then ":\(.line)" else "" end)" else "" end;
-		def show: "  [\(.level)] \(.id)\(where)", (.lines[]? | "      \(.)");
+		def show($t): "  [\(.level)] \(.id)\(where)",
+			(if .level == "warn" then "      finding \(finding($t))" else empty end),
+			(.lines[]? | "      \(.)");
 		def keep: $verbose == 1 or .level == "warn";
 		"== \($s.app_id // $s.repo) \($v)  \($s.owner)/\($s.repo)\(if $s.subdir then ":\($s.subdir)" else "" end) at \($s.head.tag // $s.head.sha // "?")",
 		(.targets[] |
 			"-- \(.name), exit \(.exit)",
-			(.result.findings[]? | select(keep) | show),
+			(.name as $t | .result.findings[]? | select(keep) | show($t)),
 			(if .exit != 0 or ([.result.findings[]? | select(.level == "warn")] | length) > 0 then
 				"   again: \(if .name == "deps-audit" then "make build && " else "" end)make \(.name)"
 			else empty end),
 			(if $verbose == 1 then (.log | split("\n")[] | "   | \(.)") else empty end)),
-		(.flagged[] | "-- \(.tool), taken out of its public result", (.findings[] | show)),
+		(.flagged[] | .tool as $t | "-- \(.tool), taken out of its public result", (.findings[] | show($t))),
 		""' <<<"$plain"
 done < <(newest_runs)
 

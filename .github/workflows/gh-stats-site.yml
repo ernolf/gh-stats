@@ -4,9 +4,11 @@
 # Builds the site and deploys it to GitHub Pages. The site has no server side:
 # the browser loads the site database whole and queries it with sql.js, so the
 # deployment carries the pages under site/, the database gh-stats-site-db builds
-# from the latest sampler database, catalogue, shipped and unlisted apps and the
-# measurement results on the data branch, sql.js itself, uPlot for the charts,
-# and marked and DOMPurify for the app descriptions. Nothing of it is committed.
+# from the latest sampler database, catalogue, shipped and unlisted apps, the
+# apps with an overdue security finding that gh-stats-security.yml keeps in the
+# release security, and the measurement results on the data branch, sql.js
+# itself, uPlot for the charts, and marked and DOMPurify for the app
+# descriptions. Nothing of it is committed.
 #
 # The sampler workflow dispatches this one after every upload of its database,
 # so a new measurement shows on the site with the next upload.
@@ -43,6 +45,7 @@ env:
   CATALOGUE_TAG: catalogue
   SAMPLER_DB_TAG: sampler-db
   SAMPLER_DB_ASSET: downloads.sqlite.zst
+  SECURITY_TAG: security
   DATA_BRANCH: data
 
 jobs:
@@ -99,6 +102,10 @@ jobs:
           # Without them the Apps tab lists no app outside the App Store.
           gh release download "$CATALOGUE_TAG" -p unlisted.json -D "$state" \
             || echo "::warning::No unlisted apps in the catalogue"
+          # Without them the site marks no app as having an overdue security
+          # finding; before the first check of the findings there is no such list.
+          gh release download "$SECURITY_TAG" -p security-overdue.json -D "$state" \
+            || echo "::warning::No list of the apps with an overdue security finding"
           gh release download "$SAMPLER_DB_TAG" -p tools.json -D "$state" \
             || echo "::warning::No versions of the sampler tools"
 

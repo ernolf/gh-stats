@@ -39,6 +39,7 @@ APPSTORE_APPAPI_CACHE="${APPSTORE_APPAPI_CACHE:-$(dirname "$APPSTORE_CACHE")/app
 APPSTORE_CATEGORIES_CACHE="${APPSTORE_CATEGORIES_CACHE:-$(dirname "$APPSTORE_CACHE")/categories.json}"
 SHIPPED_CACHE="${SHIPPED_CACHE:-$(dirname "$APPSTORE_CACHE")/shipped.json}"
 UNLISTED_CACHE="${UNLISTED_CACHE:-$(dirname "$APPSTORE_CACHE")/unlisted.json}"
+SECURITY_OVERDUE_CACHE="${SECURITY_OVERDUE_CACHE:-$(dirname "$APPSTORE_CACHE")/security-overdue.json}"
 SQLITE="${SQLITE_BIN:-/usr/bin/sqlite3}"
 # The asset extensions gh-stats counts by default; the summary counts the same.
 ASSETS="zip tar.bz2 tar.gz tar.xz tgz"
@@ -128,6 +129,10 @@ repository under its current name, plus
              newest tag, its newest tags as JSON, newest first, whether a
              release carries a tarball and when it was pushed last; empty
              without unlisted.json
+  security_overdue  every app with a security finding reported to its
+             maintainer that no measured release has fixed within the
+             deadline, and the day it was reported; empty without
+             security-overdue.json
 
 Downloads are the summed counters of the assets gh-stats counts by default
 (zip, tar.bz2, tar.gz, tar.xz, tgz). A line whose releases have none of them is
@@ -153,6 +158,9 @@ Environment (or /etc/gh-stats/gh-stats.env):
                   (default: next to apps.json)
   UNLISTED_CACHE  the unlisted apps unlisted.json of gh-nc-unlisted, optional
                   (default: next to apps.json)
+  SECURITY_OVERDUE_CACHE  the overdue apps security-overdue.json of
+                  gh-stats-security --overdue, optional (default: next to
+                  apps.json)
   SQLITE_BIN      sqlite3 (default: /usr/bin/sqlite3)
 EOF
 }
@@ -343,6 +351,14 @@ if [ -r "$UNLISTED_CACHE" ]; then
 		| (if .nextcloud.min then ">=" + (.nextcloud.min | tostring) + (if .nextcloud.max then " <=" + (.nextcloud.max | tostring) else "" end) else null end) as $nc
 		| "INSERT OR IGNORE INTO unlisted VALUES (\(.id | q), \(.name // .id | q), \(.version | v), \($nc | v), \(.exapp // false | v), \(.tool // false | v), \(.host | q), \(.repo | q), \(.path // "" | q), \(.tag | v), \(.tags // [] | tojson | q), \(.tarball | v), \(.pushed | v));"
 	' "$UNLISTED_CACHE")"
+fi
+# The security workflow keeps the apps whose reported finding is overdue;
+# without them the site marks none.
+overdue_sql=''
+if [ -r "$SECURITY_OVERDUE_CACHE" ]; then
+	overdue_sql="$(jq -r "$sql_defs"'
+		.apps[] | "INSERT OR IGNORE INTO security_overdue VALUES (\(.app | q), \(.reported | q));"
+	' "$SECURITY_OVERDUE_CACHE")"
 fi
 
 # -bail stops at the first error; the half-written copy is removed then.
@@ -789,11 +805,18 @@ CREATE TABLE unlisted (
   tarball  INTEGER NOT NULL,
   pushed   TEXT
 ) WITHOUT ROWID;
+-- The apps with an overdue security finding, by the day the earliest of them
+-- was reported; the site names nothing of the finding itself.
+CREATE TABLE security_overdue (
+  id       TEXT NOT NULL PRIMARY KEY,
+  reported TEXT NOT NULL
+) WITHOUT ROWID;
 BEGIN;
 $catalogue_sql
 $categories_sql
 $shipped_sql
 $unlisted_sql
+$overdue_sql
 COMMIT;
 ALTER TABLE app_releases ADD COLUMN stable INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE app_releases ADD COLUMN mismatch INTEGER NOT NULL DEFAULT 0;
@@ -862,7 +885,8 @@ UNION ALL SELECT 'app_details', count(*) FROM app_details
 UNION ALL SELECT 'app_releases', count(*) FROM app_releases
 UNION ALL SELECT 'categories', count(*) FROM categories
 UNION ALL SELECT 'shipped', count(DISTINCT id) FROM shipped
-UNION ALL SELECT 'unlisted', count(*) FROM unlisted;
+UNION ALL SELECT 'unlisted', count(*) FROM unlisted
+UNION ALL SELECT 'security_overdue', count(*) FROM security_overdue;
 SQL
 trap - ERR
 echo "site database written to $out ($(stat -c %s "$out") bytes)"
