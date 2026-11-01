@@ -1,0 +1,55 @@
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# An Apache virtual host for the private copy of the site that
+# gh-stats-security-site keeps. The copy holds the security results in plain
+# text, so serve it only on a port that no router forwards, and keep the basic
+# authentication on unless only the site maintainer reaches that network.
+# Install it as /etc/apache2/sites-available/gh-stats-security-site.conf, set
+# the four values below, and enable it with a2ensite; it needs mod_ssl and
+# mod_deflate, and mod_auth_basic and mod_authn_file while the authentication
+# is on.
+
+Define GH_STATS_SITE_NAME site.example.org
+Define GH_STATS_SITE_PORT <port>
+Define GH_STATS_SITE_DIR /srv/gh-stats/site
+Define GH_STATS_SITE_CERT /etc/ssl/site.example.org
+# The authentication is on while this line stands; comment it out to turn it
+# off. The password file takes the users htpasswd adds.
+Define GH_STATS_SITE_AUTH
+
+Listen ${GH_STATS_SITE_PORT} https
+
+<VirtualHost *:${GH_STATS_SITE_PORT}>
+	ServerName ${GH_STATS_SITE_NAME}
+
+	SSLEngine on
+	SSLCertificateFile ${GH_STATS_SITE_CERT}/fullchain.pem
+	SSLCertificateKeyFile ${GH_STATS_SITE_CERT}/privkey.pem
+
+	# current is the symlink gh-stats-security-site switches to each new build;
+	# the section names the site directory, which holds the builds it points to.
+	DocumentRoot ${GH_STATS_SITE_DIR}/current
+	<Directory ${GH_STATS_SITE_DIR}>
+		Options FollowSymLinks
+		AllowOverride None
+		<IfDefine GH_STATS_SITE_AUTH>
+			AuthType Basic
+			AuthName "gh-stats security"
+			AuthBasicProvider file
+			AuthUserFile ${GH_STATS_SITE_DIR}/htpasswd
+			Require valid-user
+		</IfDefine>
+		<IfDefine !GH_STATS_SITE_AUTH>
+			Require all granted
+		</IfDefine>
+	</Directory>
+
+	# The page loads the database whole and announces its uncompressed size, so
+	# the transfer may be compressed, as on Pages.
+	<FilesMatch "\.sqlite$">
+		SetOutputFilter DEFLATE
+	</FilesMatch>
+	AddType "text/plain; charset=utf-8" .log
+	AddOutputFilterByType DEFLATE text/plain
+</VirtualHost>

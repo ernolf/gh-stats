@@ -8,7 +8,7 @@
 # the public results. The tool fetches the data branch, opens the file of the
 # newest run of every version with the age identity, and prints the findings.
 # The key never leaves the machine the tool runs on, and nothing it decrypts is
-# written to a file.
+# written to a file, but by --export.
 #
 # It also keeps the stages of the findings the site maintainer acts on:
 # confirmed, then reported to the maintainer of the app on a day and through a
@@ -18,6 +18,9 @@
 # stored but computed from the newest measured release of the app, and
 # --overdue writes the only part of them that is public: which apps are overdue
 # since which report.
+#
+# --export writes what it decrypts, for the private copy of the site that
+# gh-stats-security-site keeps.
 
 set -euo pipefail
 
@@ -32,6 +35,7 @@ Usage: gh-stats-security [-i <identity>] [-d <dir>] [-v] [<app-id> [<version>]]
        gh-stats-security [-i <identity>] --deadline <app-id> <finding> <YYYY-MM-DD>
        gh-stats-security [-i <identity>] --forget <app-id> <finding>
        gh-stats-security [-i <identity>] [-d <dir>] --overdue <file>
+       gh-stats-security [-i <identity>] [-d <dir>] --export <out-dir>
 
 Without an app id, lists every app version whose newest run holds a
 security.json.age, with the number of warnings per security target. With one,
@@ -50,6 +54,12 @@ GH_STATS_SECURITY_DAYS days after it. --deadline moves the deadline, to shorten
 or extend it. --forget drops the finding from the stages. --overdue writes the
 public list of the overdue apps to <file> as JSON, each with the day its
 earliest overdue finding was reported, and nothing else.
+
+--export writes the results of the newest run of every version in plain text
+into <out-dir>, which must not exist yet: security.sql, the statements that add
+them to a database of gh-stats-site-db, and logs/<run dir>/<target>.log, the
+output of each security target. A warning becomes a finding of the tool
+security/<target>, one taken out of a public result one of security/<tool>.
 
 The data branch is fetched into <dir>, a shallow clone kept between runs.
 
@@ -98,7 +108,7 @@ while [ $# -gt 0 ]; do
 			dir="$2"; shift ;;
 		-n|--no-fetch) fetch=0 ;;
 		-v|--verbose) verbose=1 ;;
-		--stages|--confirm|--report|--deadline|--forget|--overdue)
+		--stages|--confirm|--report|--deadline|--forget|--overdue|--export)
 			[ "$mode" = list ] || die "$1 and --$mode exclude each other"
 			mode="${1#--}" ;;
 		-*) die "unknown option $1, see --help" ;;
@@ -113,7 +123,7 @@ case "$mode" in
 	confirm|forget) [ "${#args[@]}" -eq 2 ] ;;
 	report) [ "${#args[@]}" -ge 3 ] && [ "${#args[@]}" -le 4 ] ;;
 	deadline) [ "${#args[@]}" -eq 3 ] ;;
-	overdue) [ "${#args[@]}" -eq 1 ] ;;
+	overdue|export) [ "${#args[@]}" -eq 1 ] ;;
 esac || die "wrong number of arguments${mode/#list/}, see --help"
 app="${args[0]:-}"
 case "$days" in
@@ -125,7 +135,7 @@ esac
 need=("$AGE" "$JQ")
 case "$mode" in deadline|forget) ;; *) need+=("$GIT") ;; esac
 case "$mode" in
-	list) ;;
+	list|export) ;;
 	stages|overdue) [ -n "${GH_STATS_SECURITY_STAGES+x}" ] || need+=("$GH") ;;
 	*) need+=("$GH" "$AGE_KEYGEN") ;;
 esac
@@ -206,7 +216,7 @@ if [ "$fetch" = 1 ]; then
 fi
 [ -d "$dir/apps" ] || die "no apps/ in $dir"
 
-# The plain text exists only in this pipe.
+# The plain text exists only in this pipe, unless --export writes it.
 decrypt() {
 	case "$1" in
 		*.gz) gzip -dc "$1" | "$AGE" -d -i "$identity" ;;
@@ -258,6 +268,50 @@ FINDINGS='def finding($t): [$t, .id, .file] | map(select(. != null) | tostring) 
 # shellcheck disable=SC2016 # jq variables
 OPEN="$FINDINGS"'[(.targets[] | .name as $t | .result.findings[]? | select(.level == "warn") | finding($t)),
 	(.flagged[] | .tool as $t | .findings[] | select(.level == "warn") | finding($t))] | unique'
+
+# The tables and rows --export writes: the runs with a result, the exit code of
+# each security target, and the warnings, notes and failures as findings, in
+# the table gh-stats-site-db fills, numbered per tool. A target that ended with
+# another exit than 0 and left no result fails, as gh-stats-site-db has it for
+# the public targets.
+# shellcheck disable=SC2016 # jq variables
+EXPORT='def q: ([39] | implode) as $s | $s + gsub($s; $s + $s) + $s;
+	def v: if . == null then "NULL" elif type == "string" then q
+		elif type == "boolean" then (if . then "1" else "0" end) else tostring end;
+	"INSERT INTO security_runs VALUES (\($dir | q));",
+	(.targets[] | "INSERT INTO security_targets VALUES (\($dir | q), \(.name | q), \(.exit | v));"),
+	([(.targets[] | .name as $t | (.result.findings? // [])[] | {tool: $t, f: .}),
+		(.targets[] | select(.exit != 0 and .result == null)
+			| {tool: .name, f: {level: "warn", id: "failed", lines: ["make \(.name) ended with exit \(.exit) and left no result."]}}),
+		(.flagged[] | .tool as $t | .findings[] | {tool: $t, f: .})]
+	| group_by(.tool)[] | to_entries[]
+	| "INSERT INTO findings VALUES (\($dir | q), \("security/" + .value.tool | q), \(.key + 1), \(.value.f.level | v), \(.value.f.id | v), \(.value.f.lines // [] | join("\n") | q), \(.value.f.file | v), \(.value.f.line | v));")'
+
+if [ "$mode" = export ]; then
+	out="${args[0]}"
+	[ ! -e "$out" ] || die "$out exists already"
+	mkdir -p "$out/logs"
+	{
+		echo 'CREATE TABLE security_runs (dir TEXT NOT NULL PRIMARY KEY) WITHOUT ROWID;'
+		echo 'CREATE TABLE security_targets (dir TEXT NOT NULL, name TEXT NOT NULL, exit INTEGER, PRIMARY KEY (dir, name)) WITHOUT ROWID;'
+		echo 'BEGIN;'
+		while IFS= read -r run; do
+			sec="$(security_file "$run")"
+			[ -n "$sec" ] || continue
+			rel="${run#"$dir/apps/"}"
+			plain="$(decrypt "$sec")" || die "cannot decrypt $sec with $identity"
+			mkdir -p "$out/logs/$rel"
+			while IFS= read -r t; do
+				# shellcheck disable=SC2016 # jq variables
+				"$JQ" -r --arg t "$t" '.targets[] | select(.name == $t) | .log' <<<"$plain" >"$out/logs/$rel/$t.log"
+			done < <("$JQ" -r '.targets[].name' <<<"$plain")
+			"$JQ" -r --arg dir "$rel" "$EXPORT" <<<"$plain"
+		done < <(newest_runs)
+		echo 'COMMIT;'
+	} >"$out/security.sql"
+	echo "export: $(grep -c '^INSERT INTO security_runs' "$out/security.sql") runs into $out"
+	exit 0
+fi
 
 case "$mode" in
 	stages|overdue|confirm|report)

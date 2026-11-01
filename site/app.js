@@ -20,6 +20,9 @@ let measuredLines
 let measuredShipped
 let shipped
 let security
+// Whether the database holds the security results, which only a private copy
+// of the site has.
+let securityResults = false
 // The line rows of each project and the project of each app, for the app pages.
 const projectLines = new Map()
 let appProjects
@@ -100,6 +103,14 @@ async function load() {
 	} catch (e) {
 		text.textContent = `The database could not be loaded (${e.message}). Reload the page to try again.`
 		return
+	}
+	// The queries of the measurements read the table on the public site too.
+	securityResults = query("SELECT count(*) AS n FROM sqlite_master WHERE type = 'table' AND name = 'security_runs'")[0].n > 0
+	if (securityResults) {
+		const head = el('th', { 'data-sort': 'sec', class: 'num check-col', title: 'warnings the security targets found in the release shown' }, 'Security')
+		document.querySelector('#overview th[data-sort="warn"]').before(head)
+	} else {
+		db.run('CREATE TABLE security_runs (dir TEXT NOT NULL PRIMARY KEY) WITHOUT ROWID')
 	}
 	// The SQLite that sql.js compiled in, as the engine itself reports it.
 	showVersions({ SQLite: query('SELECT sqlite_version() AS v')[0].v })
@@ -243,13 +254,16 @@ function categories() {
 
 // A lint target warns once per file, however many messages the file has, as
 // checksBlock() shows them. abandoned stays NULL for a run without the JSON of
-// deps-audit, which says nothing about the packages.
+// deps-audit, which says nothing about the packages, and sec for a run without
+// security results.
+const WARNINGS = `count(DISTINCT f.tool || char(10) || CASE WHEN (f.tool LIKE 'lint-%' OR f.tool LIKE 'security/lint-%') AND f.file IS NOT NULL THEN 'file ' || f.file ELSE f.n END)`
 const MEASUREMENT = `m.dir, m.host, m.owner, m.repo, m.subdir, m.app_id, m.version, m.restrictable, m.server, m.tag, m.tarball, m.signed, m.diff, m.info_xml,
 	(SELECT s.repo FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_repo,
 	(SELECT s.path FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_path,
 	(SELECT s.app_ref FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_ref,
-	(SELECT count(DISTINCT f.tool || char(10) || CASE WHEN f.tool LIKE 'lint-%' AND f.file IS NOT NULL THEN 'file ' || f.file ELSE f.n END)
-	   FROM findings f WHERE f.dir = m.dir AND f.level = 'warn') AS warn,
+	(SELECT ${WARNINGS} FROM findings f WHERE f.dir = m.dir AND f.level = 'warn' AND f.tool NOT LIKE 'security/%') AS warn,
+	CASE WHEN EXISTS (SELECT 1 FROM security_runs r WHERE r.dir = m.dir)
+	THEN (SELECT ${WARNINGS} FROM findings f WHERE f.dir = m.dir AND f.level = 'warn' AND f.tool LIKE 'security/%') END AS sec,
 	CASE WHEN EXISTS (SELECT 1 FROM targets t WHERE t.dir = m.dir AND t.name = 'deps-audit' AND t.json)
 	THEN (SELECT count(*) FROM findings f WHERE f.dir = m.dir AND f.tool = 'deps-audit' AND f.id = 'abandoned-dependency') END AS abandoned`
 
@@ -625,12 +639,12 @@ function compareSelect(row) {
 		row.compare.replaceChildren()
 		row.compare.hidden = !select.value
 		const runs = select.value && measured.get(`${row.project}\n${select.value}`)
-		const [checks, checksRow] = checksCell(runs, 11)
+		const [checks, checksRow, sec] = checksCell(runs, 11)
 		row.compareChecks.replaceWith(checksRow)
 		row.compareChecks = checksRow
 		if (select.value) {
 			row.compare.append(el('td'), el('td', { class: 'compare-label' }, 'compared with'),
-				...releaseCells(releaseFigures(row.project, select.value), runs), abandonedCell(abandoned(runs)), checks, el('td'))
+				...releaseCells(releaseFigures(row.project, select.value), runs), abandonedCell(abandoned(runs)), ...sec, checks, el('td'))
 			opened.compare.add(none)
 		} else {
 			opened.compare.delete(none)
@@ -803,7 +817,7 @@ function licenceText(fields) {
 // level, which opens into its messages, numbered; the first line of a message
 // drops the file the entry names already. Other findings stay as they are.
 function findingEntries(tool, fs) {
-	if (!tool.startsWith('lint-')) {
+	if (!baseTool(tool).startsWith('lint-')) {
 		return fs.map(finding)
 	}
 	return [...Map.groupBy(fs, (f) => (f.file === null ? f : `${f.level}\n${f.file}`)).values()].map((group) => {
@@ -816,6 +830,22 @@ function findingEntries(tool, fs) {
 				` ${group.length} message${group.length === 1 ? '' : 's'}`),
 			el('ol', {}, ...group.map((g) => el('li', {}, el('pre', {}, g.text.startsWith(`${g.file}:`) ? g.text.slice(g.file.length + 1) : g.text)))))
 	})
+}
+
+// A security target is named as the analyser it runs.
+function baseTool(tool) {
+	return tool.replace(/^security\//, '')
+}
+
+// The security targets of a run, each with its exit code and its output.
+function securityTargets(m) {
+	const targets = query('SELECT name, exit FROM security_targets WHERE dir = $dir ORDER BY name', { $dir: m.dir })
+	if (!targets.length) {
+		return []
+	}
+	return [el('p', { class: 'security-targets' }, 'Security targets: ', ...targets.flatMap((t, i) => [i ? ', ' : '',
+		el('code', {}, t.name), ` exit ${t.exit ?? '?'} `,
+		el('a', { href: `security/${m.dir}/${encodeURIComponent(t.name)}.log` }, 'log')]))]
 }
 
 // Where a lint target warns, the page names the ncmake target the warnings come
@@ -846,24 +876,26 @@ function infoXmlLink(m) {
 	return href ? [' ', el('a', { href, title }, 'info.xml')] : []
 }
 
-// Warnings in full, grouped by the tool that found them, the tools with
-// warnings first; ok and info only as counts that open on demand.
+// Warnings in full, grouped by the tool that found them, the security targets
+// first, then the tools with warnings; ok and info only as counts that open on
+// demand.
 function checksBlock(m) {
-	const hasWarn = (fs) => fs.some((f) => f.level === 'warn')
+	const rank = ([tool, fs]) => (tool.startsWith('security/') ? 2 : 0) + (fs.some((f) => f.level === 'warn') ? 1 : 0)
 	const fs = findingsOf(m.dir)
 	const fields = fieldsOf(m.dir)
-	const tools = [...Map.groupBy(fs, (f) => f.tool)].sort(([, a], [, b]) => hasWarn(b) - hasWarn(a))
+	const tools = [...Map.groupBy(fs, (f) => f.tool)].sort((a, b) => rank(b) - rank(a))
 	return el('section', { class: 'run' },
 		el('h4', {}, `${m.app_id ?? m.dir} ${m.version ?? ''} `, el('a', { href: `${results}/${m.dir}` }, 'run directory'), ...infoXmlLink(m)),
 		...badgeRow(fs, fields),
 		el('p', {}, diffText(m)),
 		...licenceText(fields),
+		...(securityResults ? securityTargets(m) : []),
 		...tools.map(([tool, fs]) => {
 			const warns = fs.filter((f) => f.level === 'warn')
 			const rest = fs.filter((f) => f.level !== 'warn')
 			const counts = ['ok', 'info'].map((l) => [l, rest.filter((f) => f.level === l).length]).filter(([, n]) => n)
-			return el('div', { class: 'tool' }, el('h5', {}, tool),
-				...(warns.length && tool.startsWith('lint-') ? [lintHint(tool)] : []),
+			return el('div', { class: tool.startsWith('security/') ? 'tool security' : 'tool' }, el('h5', {}, tool),
+				...(warns.length && baseTool(tool).startsWith('lint-') ? [lintHint(baseTool(tool))] : []),
 				...findingEntries(tool, warns),
 				...(rest.length
 					? [el('details', {}, el('summary', {}, counts.map(([l, n]) => `${n} ${l}`).join(', ')), ...findingEntries(tool, rest))]
@@ -887,11 +919,17 @@ function closeOpened(kinds) {
 // The cell counts the warnings of the measurements of a release; a click opens
 // them in the row returned with it, built on first use, which spans the
 // table from its second column and closes from its top right corner too. A version given names the release measured
-// when it is another than the one the row shows.
+// when it is another than the one the row shows. Where the database has the
+// security results, the cells of their column come third, to go before the
+// cell, and open the same row; span counts the columns without it.
 function checksCell(runs, span, version = null) {
 	const checks = el('tr', { class: 'checks', hidden: '' })
+	if (securityResults) {
+		span += 1
+	}
 	if (!runs) {
-		return [el('td', { class: 'check-col', title: 'not measured' }), checks]
+		return [el('td', { class: 'check-col', title: 'not measured' }), checks,
+			securityResults ? [el('td', { class: 'num check-col', title: 'not measured' })] : []]
 	}
 	const warn = warnings(runs)
 	const button = el('button', {
@@ -925,13 +963,40 @@ function checksCell(runs, span, version = null) {
 		}
 	}
 	button.addEventListener('click', () => show(checks.hidden))
-	return [el('td', { class: 'check-col' }, button, ...(version ? [' ', el('span', { class: 'check-of' }, version)] : [])), checks]
+	return [el('td', { class: 'check-col' }, button, ...(version ? [' ', el('span', { class: 'check-of' }, version)] : [])), checks,
+		securityResults ? [securityCell(runs, () => show(checks.hidden), version)] : []]
+}
+
+function securityCell(runs, toggle, version) {
+	const n = securityWarnings(runs)
+	if (n === null) {
+		return el('td', { class: 'num check-col', title: 'no security results' })
+	}
+	const button = el('button', {
+		type: 'button',
+		class: n ? 'check-count warn' : 'check-count',
+		title: `${n} warning${n === 1 ? '' : 's'} of the security targets${version ? ` in ${version}` : ''}`,
+	}, n ? `⚠ ${n}` : '✓')
+	button.addEventListener('click', toggle)
+	return el('td', { class: 'num check-col' }, button)
 }
 
 // The warnings of the measurements of a release, null when it has none, so an
 // unmeasured row sorts like an empty period.
 function warnings(runs) {
 	return runs ? runs.reduce((n, m) => n + m.warn, 0) : null
+}
+
+// The security warnings of the measurements of a release, null when none of
+// them has security results.
+function securityWarnings(runs) {
+	const known = (runs ?? []).filter((m) => m.sec !== null)
+	return known.length ? known.reduce((n, m) => n + m.sec, 0) : null
+}
+
+// The column head of the security results, where the database has them.
+function securityHead() {
+	return securityResults ? [el('th', { class: 'num', title: 'warnings the security targets found in the release shown' }, 'Security')] : []
 }
 
 // The abandoned packages deps-audit found in the measurements of a release,
@@ -960,12 +1025,14 @@ function lineChecks(row, span) {
 	const own = measured.get(`${row.project}\n${row.tag}`)
 	if (own) {
 		row.warn = warnings(own)
+		row.sec = securityWarnings(own)
 		row.abandoned = abandoned(own)
 		return [abandonedCell(row.abandoned), ...checksCell(own, span)]
 	}
 	const runs = measuredLines.get(`${row.project}\n${row.line}`)
 	const version = runs?.[0].version ?? runs?.[0].tag
 	row.warn = warnings(runs)
+	row.sec = securityWarnings(runs)
 	row.abandoned = abandoned(runs)
 	return [abandonedCell(row.abandoned, version), ...checksCell(runs, span, version)]
 }
@@ -974,9 +1041,9 @@ function lineChecks(row, span) {
 function lineRows(row, first) {
 	row.pick = el('input', { type: 'checkbox', 'aria-label': `Chart ${row.name} line ${lineLabel(row.line)}` })
 	row.pick.addEventListener('change', () => pickRow(row, row.pick.checked))
-	const [abandonedTd, checks, checksRow] = lineChecks(row, 11)
+	const [abandonedTd, checks, checksRow, sec] = lineChecks(row, 11)
 	row.checks = checksRow
-	row.tr = el('tr', {}, el('td', { class: 'pick' }, row.pick), first, ...releaseCells(row, measured.get(`${row.project}\n${row.tag}`)), abandonedTd, checks, el('td'))
+	row.tr = el('tr', {}, el('td', { class: 'pick' }, row.pick), first, ...releaseCells(row, measured.get(`${row.project}\n${row.tag}`)), abandonedTd, ...sec, checks, el('td'))
 	row.compare = el('tr', { class: 'compare', hidden: '' })
 	row.compareChecks = el('tr', { class: 'checks', hidden: '' })
 	row.tr.lastChild.append(compareSelect(row))
@@ -1030,9 +1097,10 @@ function catalogueRow(a) {
 	}
 	const runs = p.tab === 'apps' ? measurementsByVersion(a.id).get(a.version) : undefined
 	p.warn = warnings(runs)
+	p.sec = securityWarnings(runs)
 	p.abandoned = abandoned(runs)
 	const [label, reason] = downloadReason(a)
-	const [checks, checksRow] = checksCell(runs, 11)
+	const [checks, checksRow, sec] = checksCell(runs, 11)
 	if (!runs) {
 		const [why, title] = released && !a.stable
 			? ['no stable release', 'the App Store lists only nightlies or pre-releases of this app, and only stable releases are measured']
@@ -1048,7 +1116,7 @@ function catalogueRow(a) {
 		el('td', {}, ncRange(a.platform)),
 		el('td', {}, a.published === null ? '' : date(a.published)),
 		...['total', ...PERIODS].map(() => el('td', empty)),
-		abandonedCell(p.abandoned), checks, el('td')), checksRow)
+		abandonedCell(p.abandoned), ...sec, checks, el('td')), checksRow)
 	p.older = el('tbody', { class: 'older', hidden: '' })
 	p.toggle = el('button', { type: 'button', class: 'toggle', hidden: '' })
 	return p
@@ -1068,8 +1136,9 @@ function unlistedRow(u) {
 	}
 	const runs = version === null || u.exapp ? undefined : measurementsByVersion(u.id).get(version)
 	p.warn = warnings(runs)
+	p.sec = securityWarnings(runs)
 	p.abandoned = abandoned(runs)
-	const [checks, checksRow] = checksCell(runs, 11)
+	const [checks, checksRow, sec] = checksCell(runs, 11)
 	if (!runs) {
 		const [why, title] = u.exapp
 			? ['ExApp', EXAPP_TEXT]
@@ -1087,7 +1156,7 @@ function unlistedRow(u) {
 		el('td', {}, ncRange(u.platform)),
 		el('td'),
 		...['total', ...PERIODS].map(() => el('td', empty)),
-		abandonedCell(p.abandoned), checks, el('td')), checksRow)
+		abandonedCell(p.abandoned), ...sec, checks, el('td')), checksRow)
 	p.older = el('tbody', { class: 'older', hidden: '' })
 	p.toggle = el('button', { type: 'button', class: 'toggle', hidden: '' })
 	return p
@@ -1122,9 +1191,9 @@ function shippedRow(releases) {
 	const main = releases.find((s) => s.ref === 'master') ?? releases[0]
 	const line = (s, first, since = null) => {
 		const runs = measuredShipped.get(`${s.id}\n${s.ref}`)
-		const [checks, checksRow] = checksCell(runs, 10)
+		const [checks, checksRow, sec] = checksCell(runs, 10)
 		const r = {
-			published: s.published, nc: `>=${s.major} <=${s.major}`, warn: warnings(runs), abandoned: abandoned(runs), checks: checksRow,
+			published: s.published, nc: `>=${s.major} <=${s.major}`, warn: warnings(runs), sec: securityWarnings(runs), abandoned: abandoned(runs), checks: checksRow,
 			compare: el('tr', { class: 'compare', hidden: '' }), compareChecks: el('tr', { class: 'checks', hidden: '' }),
 		}
 		r.tr = el('tr', {}, el('td', { class: 'pick' }), first,
@@ -1135,7 +1204,7 @@ function shippedRow(releases) {
 			s.enabled ? el('td', { class: 'mark', title: ENABLED[s.enabled][0] }, ENABLED_CODE[s.enabled]) : el('td'),
 			el('td', { class: 'mark' }, s.restrictable === 0 ? 'X' : ''),
 			el('td', { class: 'mark' }, s.repo === SERVER_REPO ? 'X' : ''),
-			abandonedCell(r.abandoned), checks)
+			abandonedCell(r.abandoned), ...sec, checks)
 		return r
 	}
 	const head = el('td', {}, el('span', { class: 'name' }, el('a', { href: `#app/${encodeURIComponent(main.id)}` }, main.name)),
@@ -1144,7 +1213,7 @@ function shippedRow(releases) {
 	const row = line(main, head, since)
 	const p = {
 		tab: 'shipped', name: main.name, tag: main.version, published: main.published, nc: row.nc, enabled: main.enabled, tree: main.repo === SERVER_REPO,
-		total: null, d1: null, d7: null, d30: null, since, warn: row.warn, abandoned: row.abandoned,
+		total: null, d1: null, d7: null, d30: null, since, warn: row.warn, sec: row.sec, abandoned: row.abandoned,
 		lines: releases.filter((s) => s !== main)
 			.map((s) => line(s, el('td', { class: 'line-label' }, `Nextcloud ${s.major}`))),
 		search: `${main.name} ${main.id} ${main.repo}`.toLowerCase(), categories: new Set(JSON.parse(main.categories ?? '[]')),
@@ -1196,6 +1265,7 @@ function initOverview() {
 			...own.flatMap((a) => shippedMark(a.id)), ...tooled.flatMap(exappMark))
 		p.main = el('tbody', {}, ...lineRows(main, head))
 		p.warn = main.warn
+		p.sec = main.sec
 		p.abandoned = main.abandoned
 		p.older = el('tbody', { class: 'older', hidden: '' },
 			...older.flatMap((r) => lineRows(r, el('td', { class: 'line-label' }, `line ${lineLabel(r.line)}`))))
@@ -1700,10 +1770,10 @@ function appReleases(id, requests) {
 		.map((r) => r.version).sort(compareVersions).at(-1)
 	return el('table', {},
 		el('thead', {}, el('tr', {}, ...['Version', 'Released', 'Channel', 'Nextcloud', 'PHP', 'Databases', 'PHP extensions', 'Licences']
-			.map((h) => el('th', {}, h)), el('th', { title: 'warnings the ncmake analysers found in the release' }, 'Checks'),
+			.map((h) => el('th', {}, h)), ...securityHead(), el('th', { title: 'warnings the ncmake analysers found in the release' }, 'Checks'),
 		...(asks ? [el('th', { title: 'opens a prefilled issue that asks for the measurement' }, 'Request')] : []))),
 		...releases.map((r) => {
-			const [checks, checksRow] = checksCell(runs.get(r.version), asks ? 9 : 8)
+			const [checks, checksRow, sec] = checksCell(runs.get(r.version), asks ? 9 : 8)
 			return el('tbody', {}, el('tr', {},
 				el('td', {}, r.version, ...restrictionMark(runs.get(r.version) ?? [])),
 				el('td', {}, (r.created ?? '').slice(0, 10)),
@@ -1713,7 +1783,7 @@ function appReleases(id, requests) {
 				el('td', { class: 'wrap' }, specList(r.databases)),
 				el('td', { class: 'wrap' }, specList(r.php_extensions)),
 				el('td', {}, JSON.parse(r.licenses).join(', ')),
-				checks,
+				...sec, checks,
 				...(asks ? [requestCell(id, r, runs.get(r.version), newest)] : [])), checksRow)
 		}))
 }
@@ -1738,18 +1808,18 @@ function appShipped(releases) {
 	const asks = Boolean(issues)
 	return el('table', {},
 		el('thead', {}, el('tr', {}, ...['Nextcloud', 'Published', 'App version', 'Enabled', 'Source'].map((h) => el('th', {}, h)),
-			el('th', { title: 'warnings the ncmake analysers found in the app as the server release ships it' }, 'Checks'),
+			...securityHead(), el('th', { title: 'warnings the ncmake analysers found in the app as the server release ships it' }, 'Checks'),
 			...(asks ? [el('th', { title: 'opens a prefilled issue that asks for the measurement' }, 'Request')] : []))),
 		...releases.map((s) => {
 			const runs = measuredShipped.get(`${s.id}\n${s.ref}`)
-			const [checks, checksRow] = checksCell(runs, asks ? 6 : 5)
+			const [checks, checksRow, sec] = checksCell(runs, asks ? 6 : 5)
 			return el('tbody', {}, el('tr', {},
 				el('td', {}, serverLink(s)),
 				el('td', {}, s.published === null ? '' : date(s.published)),
 				el('td', {}, s.version, ...restrictionMark([s])),
 				el('td', {}, ...enabledMark(s)),
 				el('td', {}, el('a', { href: shippedSource(s) }, s.path ? `${s.repo}/${s.path}` : s.repo)),
-				checks,
+				...sec, checks,
 				...(asks ? [shippedRequestCell(s, runs)] : [])), checksRow)
 		}))
 }
@@ -1780,14 +1850,14 @@ function appTags(u) {
 	const rows = tags.length ? tags.map((t) => [t, tagVersion(t)]) : [['default branch', u.version ?? '']]
 	return el('table', {},
 		el('thead', {}, el('tr', {}, ...['Tag', 'Version'].map((h) => el('th', {}, h)),
-			el('th', { title: 'warnings the ncmake analysers found in the ncmake build' }, 'Checks'),
+			...securityHead(), el('th', { title: 'warnings the ncmake analysers found in the ncmake build' }, 'Checks'),
 			...(asks ? [el('th', { title: 'opens a prefilled issue that asks for the measurement' }, 'Request')] : []))),
 		...rows.map(([tag, version]) => {
-			const [checks, checksRow] = checksCell(version ? runs.get(version) : undefined, asks ? 3 : 2)
+			const [checks, checksRow, sec] = checksCell(version ? runs.get(version) : undefined, asks ? 3 : 2)
 			return el('tbody', {}, el('tr', {},
 				el('td', {}, tag),
 				el('td', {}, version, ...restrictionMark(runs.get(version) ?? [])),
-				checks,
+				...sec, checks,
 				...(asks ? [unlistedRequestCell(u.id, version, runs.get(version), newest)] : [])), checksRow)
 		}))
 }
@@ -1821,10 +1891,10 @@ function appLines(lines) {
 		el('thead', {}, el('tr', {}, ...['Line', 'Release', 'Nextcloud', 'Published'].map((h) => el('th', {}, h)),
 			...['Total', '1 day', '7 days', '30 days'].map((h) => el('th', { class: 'num' }, h)),
 			el('th', { class: 'num', title: 'abandoned packages that ship with the release shown, as deps-audit names them' }, 'Abandoned'),
-			el('th', { title: 'warnings the ncmake analysers found in the release shown' }, 'Checks'))),
+			...securityHead(), el('th', { title: 'warnings the ncmake analysers found in the release shown' }, 'Checks'))),
 		...lines.map((r) => {
-			const [abandonedTd, checks, checksRow] = lineChecks(r, 9)
-			return el('tbody', {}, el('tr', {}, el('td', {}, lineLabel(r.line)), ...releaseCells(r, measured.get(`${r.project}\n${r.tag}`)), abandonedTd, checks), checksRow)
+			const [abandonedTd, checks, checksRow, sec] = lineChecks(r, 9)
+			return el('tbody', {}, el('tr', {}, el('td', {}, lineLabel(r.line)), ...releaseCells(r, measured.get(`${r.project}\n${r.tag}`)), abandonedTd, ...sec, checks), checksRow)
 		}))
 }
 
