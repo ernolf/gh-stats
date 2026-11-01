@@ -21,13 +21,19 @@
 #                                "-s <server release> [<host>/]<owner>/<repo>[:<directory>]"
 #                                measures a shipped app as that server release ships it
 #   workflow_dispatch            the "<app-id> <version>" pairs of the input
-#                                versions, or without one the newest stable
-#                                version of every app, as gh-nc-appslist lists them
+#                                versions, or without one the apps of the input
+#                                scope: appstore the newest stable version of
+#                                every app, as gh-nc-appslist lists them, shipped
+#                                the apps the server ships, unlisted the apps
+#                                outside the App Store, both as
+#                                gh-stats-measure-lines lists them, and all the
+#                                three together
 #
-# The catalogue is read from the asset apps.json of the release catalogue,
-# never from the App Store. A matrix holds at most 256 jobs, so a run measures
-# the first 256 entries and dispatches the rest as a new run once its own are
-# collected; the runs of a full measurement follow one another.
+# The catalogue is read from the assets apps.json, shipped.json and
+# unlisted.json of the release catalogue, never from the App Store. A matrix
+# holds at most 256 jobs, so a run measures the first 256 entries and dispatches
+# the rest as a new run once its own are collected; the runs of a full
+# measurement follow one another.
 #
 # The jobs that build the apps run third-party code and hold a read-only token.
 # Each uploads its run directory as an artifact, and one job after them commits
@@ -66,9 +72,18 @@ on:
   workflow_dispatch:
     inputs:
       versions:
-        description: '"<app-id> <version>" pairs, separated by commas; empty measures the newest stable version of every app'
+        description: '"<app-id> <version>" pairs, separated by commas; empty measures the apps of scope'
         required: false
         default: ''
+      scope:
+        description: 'Without versions: appstore, the newest stable version of every App Store app; shipped, the apps the server ships; unlisted, the apps outside the App Store; all, the three'
+        type: choice
+        options:
+          - appstore
+          - shipped
+          - unlisted
+          - all
+        default: appstore
 
 permissions:
   contents: read
@@ -117,7 +132,12 @@ jobs:
           persist-credentials: false
 
       - name: Fetch the catalogue
-        run: gh release download "$CATALOGUE_TAG" -p apps.json -D "$RUNNER_TEMP"
+        env:
+          SCOPE: ${{ inputs.scope }}
+        run: |
+          gh release download "$CATALOGUE_TAG" -p apps.json -D "$RUNNER_TEMP"
+          case "$SCOPE" in shipped|all) gh release download "$CATALOGUE_TAG" -p shipped.json -D "$RUNNER_TEMP" ;; esac
+          case "$SCOPE" in unlisted|all) gh release download "$CATALOGUE_TAG" -p unlisted.json -D "$RUNNER_TEMP" ;; esac
 
       - name: List the app versions
         id: plan
@@ -125,6 +145,7 @@ jobs:
           PAYLOAD_VERSIONS: ${{ toJSON(github.event.client_payload.versions) }}
           PAYLOAD_APPS: ${{ toJSON(github.event.client_payload.apps) }}
           INPUT_VERSIONS: ${{ inputs.versions }}
+          SCOPE: ${{ inputs.scope }}
           APPSTORE_SOURCE: appdata
           APPSTORE_TARGETS: bin/gh-nc-appstore-targets
         run: |
@@ -140,8 +161,18 @@ jobs:
               tr ',' '\n' <<<"$INPUT_VERSIONS" > "$wanted"
               set -- -v "$wanted"
             fi
-            APPSTORE_APPDATA_FILE="$RUNNER_TEMP/apps.json" bin/gh-nc-appslist "$@" -o - \
-              | sed '/^#/d' > "$list"
+            # A repository_dispatch has no scope, and versions leave none.
+            scope="${SCOPE:-appstore}"
+            [ $# -eq 0 ] || scope=appstore
+            : > "$list"
+            case "$scope" in appstore|all)
+              APPSTORE_APPDATA_FILE="$RUNNER_TEMP/apps.json" bin/gh-nc-appslist "$@" -o - \
+                | sed '/^#/d' >> "$list" ;;
+            esac
+            files=()
+            case "$scope" in shipped|all) files+=(--shipped "$RUNNER_TEMP/shipped.json") ;; esac
+            case "$scope" in unlisted|all) files+=(--unlisted "$RUNNER_TEMP/unlisted.json") ;; esac
+            [ ${#files[@]} -eq 0 ] || bin/gh-stats-measure-lines "${files[@]}" >> "$list"
           fi
           as_json() { jq -R -s -c 'split("\n") | map(select(length > 0))'; }
           {
