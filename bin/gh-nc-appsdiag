@@ -234,7 +234,9 @@ a repository on a Forgejo or Gitea host below a directory of that host:
                           kind, every target with exit code and duration
                           (and, for a reuse that never linted, why it has no
                           JSON), the result files
-      <target>.json       the machine-readable analyser results, by default of
+      info.xml            appinfo/info.xml of the measured tree, the one the
+                          analysers read
+      <target>.json      the machine-readable analyser results, by default of
                           consistency-audit, reuse, changelog-lint, the
                           lint-* targets, deps-audit (without advisories),
                           build-audit, bundle-report, build-verify and
@@ -1430,7 +1432,10 @@ write_summary_json() {
 	mem="$(awk '/^MemTotal:/ { print int($2 / 1024) }' /proc/meminfo 2>/dev/null)" || mem=""
 	cpu="$(awk -F': *' '/^model name/ { print $2; exit }' /proc/cpuinfo 2>/dev/null)" || cpu=""
 	inv="$(printf '%s\n' "${inv_files[@]}" | "$JQ" -R -s -c 'split("\n") | map(select(length > 0))')"
-	files="$(cd "$RUN_DIR" && find . -path ./release/shipped -prune -o -name '*.json' ! -name summary.json -print \
+	# The findings quote info.xml, so the run keeps the file they quote.
+	[ ! -f "$APP_DIR/appinfo/info.xml" ] || cp "$APP_DIR/appinfo/info.xml" "$RUN_DIR/info.xml" \
+		|| warn "could not keep appinfo/info.xml in $RUN_DIR"
+	files="$(cd "$RUN_DIR" && find . -path ./release/shipped -prune -o \( -name '*.json' -o -path ./info.xml \) ! -name summary.json -print \
 		| sed 's:^\./::' | sort | "$JQ" -R -s -c 'split("\n") | map(select(length > 0))')"
 	diff=null
 	[ -s "$RUN_DIR/release/diff.json" ] && diff="$("$JQ" -c '{signed, counts}' "$RUN_DIR/release/diff.json")" || true

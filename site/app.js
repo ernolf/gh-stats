@@ -244,7 +244,10 @@ function categories() {
 // A lint target warns once per file, however many messages the file has, as
 // checksBlock() shows them. abandoned stays NULL for a run without the JSON of
 // deps-audit, which says nothing about the packages.
-const MEASUREMENT = `m.dir, m.app_id, m.version, m.restrictable, m.server, m.tag, m.tarball, m.signed, m.diff,
+const MEASUREMENT = `m.dir, m.host, m.owner, m.repo, m.subdir, m.app_id, m.version, m.restrictable, m.server, m.tag, m.tarball, m.signed, m.diff, m.info_xml,
+	(SELECT s.repo FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_repo,
+	(SELECT s.path FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_path,
+	(SELECT s.app_ref FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_ref,
 	(SELECT count(DISTINCT f.tool || char(10) || CASE WHEN f.tool LIKE 'lint-%' AND f.file IS NOT NULL THEN 'file ' || f.file ELSE f.n END)
 	   FROM findings f WHERE f.dir = m.dir AND f.level = 'warn') AS warn,
 	CASE WHEN EXISTS (SELECT 1 FROM targets t WHERE t.dir = m.dir AND t.name = 'deps-audit' AND t.json)
@@ -825,6 +828,24 @@ function lintHint(tool) {
 		' installs the workflow that runs the same check on every pull request.')
 }
 
+// The info.xml the analysers read: the copy the run kept, else, for a run from
+// before such copies, the file at the ref it measured. That of master is the
+// branch, which may have moved on since the build the run measured.
+function infoXmlLink(m) {
+	let href = null
+	let title = 'The appinfo/info.xml the checks of this run read'
+	if (m.info_xml) {
+		href = `${results}/${m.dir}/info.xml`
+	} else if (m.shipped_repo) {
+		href = `https://github.com/${m.shipped_repo}/blob/${encodeURIComponent(m.shipped_ref)}/${m.shipped_path ? `${m.shipped_path}/` : ''}appinfo/info.xml`
+		title = `appinfo/info.xml at ${m.shipped_ref} of ${m.shipped_repo}`
+	} else if (m.tag && m.host === 'github.com') {
+		href = `${repoUrl(m)}/blob/${encodeURIComponent(m.tag)}/${m.subdir ? `${m.subdir}/` : ''}appinfo/info.xml`
+		title = `appinfo/info.xml at ${m.tag} of ${m.owner}/${m.repo}`
+	}
+	return href ? [' ', el('a', { href, title }, 'info.xml')] : []
+}
+
 // Warnings in full, grouped by the tool that found them, the tools with
 // warnings first; ok and info only as counts that open on demand.
 function checksBlock(m) {
@@ -833,7 +854,7 @@ function checksBlock(m) {
 	const fields = fieldsOf(m.dir)
 	const tools = [...Map.groupBy(fs, (f) => f.tool)].sort(([, a], [, b]) => hasWarn(b) - hasWarn(a))
 	return el('section', { class: 'run' },
-		el('h4', {}, `${m.app_id ?? m.dir} ${m.version ?? ''} `, el('a', { href: `${results}/${m.dir}` }, 'run directory')),
+		el('h4', {}, `${m.app_id ?? m.dir} ${m.version ?? ''} `, el('a', { href: `${results}/${m.dir}` }, 'run directory'), ...infoXmlLink(m)),
 		...badgeRow(fs, fields),
 		el('p', {}, diffText(m)),
 		...licenceText(fields),
