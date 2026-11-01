@@ -81,6 +81,9 @@ Environment:
                          empty; the commands that change a stage still write
                          the variable
   GH_STATS_SECURITY_DAYS the days from the report to the deadline, default 90
+  GH_STATS_SECURITY_ATTEMPTS  how often a call to GitHub is tried, default 5
+  GH_STATS_SECURITY_CALL_TIMEOUT  seconds before a call is given up, default
+                         600
   AGE_BIN, AGE_KEYGEN_BIN, JQ_BIN, GIT_BIN, GH_BIN
 EOF
 }
@@ -91,6 +94,8 @@ repo="${GH_STATS_REPO:-https://github.com/ernolf/gh-stats.git}"
 branch="${GH_STATS_DATA_BRANCH:-data}"
 security_env="${GH_STATS_SECURITY_ENV:-security}"
 days="${GH_STATS_SECURITY_DAYS:-90}"
+attempts="${GH_STATS_SECURITY_ATTEMPTS:-5}"
+call_timeout="${GH_STATS_SECURITY_CALL_TIMEOUT:-600}"
 AGE="${AGE_BIN:-/usr/bin/age}"
 AGE_KEYGEN="${AGE_KEYGEN_BIN:-/usr/bin/age-keygen}"
 JQ="${JQ_BIN:-/usr/bin/jq}"
@@ -157,17 +162,30 @@ gh_repo() {
 	printf '%s\n' "${r%.git}"
 }
 
+# A connection to GitHub fails now and then where the next one gets through, so
+# a call is tried again, after a pause that grows with each attempt.
+retry() {
+	local i
+	for ((i = 1; ; i++)); do
+		"$@" && return 0
+		[ "$i" -lt "$attempts" ] || return 1
+		sleep $((i * 10))
+	done
+}
+
 # The stages in plain text, which exist only in the variables of this shell.
 # A repository without the variable yet has none.
 stages_read() {
-	local enc plain
+	local enc plain i
 	if [ -n "${GH_STATS_SECURITY_STAGES+x}" ]; then
 		enc="$GH_STATS_SECURITY_STAGES"
-	elif ! enc="$("$GH" variable get SECURITY_STAGES -e "$security_env" -R "$(gh_repo)" 2>&1)"; then
-		case "$enc" in
-			*'was not found'*) enc='' ;;
-			*) die "cannot read SECURITY_STAGES of the environment $security_env: $enc" ;;
-		esac
+	else
+		for ((i = 1; ; i++)); do
+			enc="$(timeout "$call_timeout" "$GH" variable get SECURITY_STAGES -e "$security_env" -R "$(gh_repo)" 2>&1)" && break
+			case "$enc" in *'was not found'*) enc=''; break ;; esac
+			[ "$i" -lt "$attempts" ] || die "cannot read SECURITY_STAGES of the environment $security_env: $enc"
+			sleep $((i * 10))
+		done
 	fi
 	if [ -z "$enc" ]; then
 		echo '{"schema":1,"findings":[]}'
@@ -180,10 +198,13 @@ stages_read() {
 
 # Encrypts the stages to the recipient of the identity and stores them.
 stages_write() {
-	local recipient
+	local recipient enc
 	recipient="$("$AGE_KEYGEN" -y "$identity")" || die "cannot read the recipient of $identity"
-	printf '%s\n' "$1" | "$JQ" -c '.findings |= sort_by(.app, .id)' | "$AGE" -a -r "$recipient" \
-		| "$GH" variable set SECURITY_STAGES -e "$security_env" -R "$(gh_repo)" >/dev/null \
+	enc="$(printf '%s\n' "$1" | "$JQ" -c '.findings |= sort_by(.app, .id)' | "$AGE" -a -r "$recipient")" \
+		|| die "cannot encrypt the stages"
+	# Setting the same value twice changes nothing, so a call that failed after
+	# it took effect may be repeated.
+	retry timeout "$call_timeout" "$GH" variable set SECURITY_STAGES -e "$security_env" -R "$(gh_repo)" --body "$enc" >/dev/null \
 		|| die "cannot write SECURITY_STAGES of the environment $security_env"
 }
 
@@ -207,11 +228,14 @@ esac
 
 if [ "$fetch" = 1 ]; then
 	if [ -d "$dir/.git" ]; then
-		"$GIT" -C "$dir" fetch -q --depth 1 origin "$branch"
+		retry timeout "$call_timeout" "$GIT" -C "$dir" fetch -q --depth 1 origin "$branch" \
+			|| die "cannot fetch $branch of $repo"
 		"$GIT" -C "$dir" reset -q --hard FETCH_HEAD
 	else
 		mkdir -p "$(dirname "$dir")"
-		"$GIT" clone -q --depth 1 --branch "$branch" "$repo" "$dir"
+		# A failed clone removes what it wrote, so the next attempt starts empty.
+		retry timeout "$call_timeout" "$GIT" clone -q --depth 1 --branch "$branch" "$repo" "$dir" \
+			|| die "cannot clone $branch of $repo"
 	fi
 fi
 [ -d "$dir/apps" ] || die "no apps/ in $dir"

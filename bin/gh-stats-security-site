@@ -45,12 +45,16 @@ Environment:
   GH_STATS_REPO          the repository, default https://github.com/ernolf/gh-stats.git
   GH_STATS_SITE_WORKFLOW the site workflow, default gh-stats-site.yml
   GH_STATS_SECURITY_BIN  default gh-stats-security beside this tool
+  GH_STATS_SITE_ATTEMPTS how often a call to GitHub is tried, default 5
+  GH_STATS_SITE_CALL_TIMEOUT  seconds before a call is given up, default 600
   GH_BIN, JQ_BIN, SQLITE_BIN, TAR_BIN
 EOF
 }
 
 repo="${GH_STATS_REPO:-https://github.com/ernolf/gh-stats.git}"
 workflow="${GH_STATS_SITE_WORKFLOW:-gh-stats-site.yml}"
+attempts="${GH_STATS_SITE_ATTEMPTS:-5}"
+call_timeout="${GH_STATS_SITE_CALL_TIMEOUT:-600}"
 SECURITY="${GH_STATS_SECURITY_BIN:-$(dirname "$(readlink -f "$0")")/gh-stats-security}"
 GH="${GH_BIN:-/usr/bin/gh}"
 JQ="${JQ_BIN:-/usr/bin/jq}"
@@ -88,16 +92,36 @@ flock -n 9 || die "another run holds $site/.lock"
 
 gh_repo="${repo#*://}"
 gh_repo="${gh_repo%.git}"
-run_id="$("$GH" run list -R "$gh_repo" -w "$workflow" -s success -L 1 --json databaseId -q '.[0].databaseId')"
+
+# A connection to GitHub fails now and then where the next one gets through, so
+# a call is tried again, after a pause that grows with each attempt.
+retry() {
+	local i
+	for ((i = 1; ; i++)); do
+		"$@" && return 0
+		[ "$i" -lt "$attempts" ] || return 1
+		sleep $((i * 10))
+	done
+}
+
+run_id="$(retry timeout "$call_timeout" "$GH" run list -R "$gh_repo" -w "$workflow" -s success -L 1 --json databaseId -q '.[0].databaseId')" \
+	|| die "cannot list the runs of $workflow"
 [ -n "$run_id" ] || die "no successful run of $workflow"
 
 work="$(mktemp -d "$site/.work.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 
+# Every attempt starts in an empty directory, so a broken one leaves nothing
+# the next one would find.
+download() {
+	rm -rf "$work/download"
+	timeout "$call_timeout" "$GH" run download "$run_id" -R "$gh_repo" -n github-pages -D "$work/download"
+}
+
 # The artifact of a run never changes, so it is fetched once per run.
 cache="$site/cache/$run_id"
 if [ ! -f "$cache/artifact.tar" ]; then
-	"$GH" run download "$run_id" -R "$gh_repo" -n github-pages -D "$work/download"
+	retry download || die "cannot download the artifact of run $run_id"
 	[ -f "$work/download/artifact.tar" ] || die "the artifact of run $run_id holds no artifact.tar"
 	find "$site/cache" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
 	mkdir -p "$cache"
