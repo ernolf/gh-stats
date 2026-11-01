@@ -1820,10 +1820,11 @@ function appLines(lines) {
 	return el('table', {},
 		el('thead', {}, el('tr', {}, ...['Line', 'Release', 'Nextcloud', 'Published'].map((h) => el('th', {}, h)),
 			...['Total', '1 day', '7 days', '30 days'].map((h) => el('th', { class: 'num' }, h)),
+			el('th', { class: 'num', title: 'abandoned packages that ship with the release shown, as deps-audit names them' }, 'Abandoned'),
 			el('th', { title: 'warnings the ncmake analysers found in the release shown' }, 'Checks'))),
 		...lines.map((r) => {
-			const [checks, checksRow] = lineChecks(r, 8)
-			return el('tbody', {}, el('tr', {}, el('td', {}, lineLabel(r.line)), ...releaseCells(r, measured.get(`${r.project}\n${r.tag}`)), checks), checksRow)
+			const [abandonedTd, checks, checksRow] = lineChecks(r, 9)
+			return el('tbody', {}, el('tr', {}, el('td', {}, lineLabel(r.line)), ...releaseCells(r, measured.get(`${r.project}\n${r.tag}`)), abandonedTd, checks), checksRow)
 		}))
 }
 
