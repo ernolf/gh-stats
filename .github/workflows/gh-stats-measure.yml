@@ -32,7 +32,8 @@
 # The jobs that build the apps run third-party code and hold a read-only token.
 # Each uploads its run directory as an artifact, and one job after them commits
 # the results in one commit, so the matrix never pushes. The data branch gets
-# summary.json, the analyser results and the release diff, a file above 1 MiB
+# summary.json, the analyser results, the info.xml they read and the release
+# diff, a file above 1 MiB
 # compressed as <name>.gz; console.log and the app's own build files stay in
 # the artifact. With the variable SECURITY_AGE_RECIPIENT set, the targets whose
 # findings show where an app can be attacked run too, and what they find gets
@@ -335,7 +336,7 @@ jobs:
               [ ! -e "$dest" ] || continue
               mkdir -p "$dest"
               (cd "$run" && find . -path ./release/shipped -prune -o -type f \
-                  \( -name '*.json' -o -name '*.age' -o -path './release/diff.*' \) -print0 \
+                  \( -name '*.json' -o -name '*.age' -o -path ./info.xml -o -path './release/diff.*' \) -print0 \
                 | xargs -0 -r cp --parents -t "$dest")
               find "$dest" -type f -size +1048576c ! -name '*.age' -exec gzip -n -9 {} +
               n=$((n + 1))
