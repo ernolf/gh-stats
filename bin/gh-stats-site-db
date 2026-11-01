@@ -872,6 +872,28 @@ UPDATE findings AS f SET
   FROM shipped_runs r
  WHERE f.dir = r.dir AND f.tool = 'consistency-audit' AND f.level = 'warn' AND f.id IN ('link-dead', 'screenshot-not-image');
 
+-- A shipped app is installed with the server release, not offered by the App
+-- Store, so a range of exactly the major of that release is right for it, also
+-- on master, whose major is not released yet. Any other range keeps the level
+-- the audit gave.
+UPDATE findings AS f SET
+  level = 'info',
+  text = substr(f.text, 1, instr(f.text || char(10), char(10)) - 1) || char(10)
+    || '  The app ships with Nextcloud ' || r.server || ' and declares exactly its major, ' || r.major || '.'
+  FROM shipped_runs r
+ WHERE f.dir = r.dir AND f.tool = 'consistency-audit' AND f.level = 'warn' AND f.id = 'nextcloud-support'
+   AND f.text LIKE 'Declares Nextcloud ' || r.major || ' to ' || r.major || ';%';
+-- An app of the server tree has no repository of its own: its source is
+-- nextcloud/server. A missing <bugs> stays a warning, and so does a missing
+-- <repository> of a shipped app with a repository of its own.
+UPDATE findings AS f SET
+  level = 'info',
+  text = 'appinfo/info.xml states no <repository>.' || char(10)
+    || '  The app is part of the tree of nextcloud/server, which is its source.'
+  FROM shipped_runs r
+ WHERE f.dir = r.dir AND r.tree AND f.tool = 'consistency-audit' AND f.level = 'warn' AND f.id = 'repository-link'
+   AND f.text LIKE 'appinfo/info.xml states no <repository>.' || char(10) || '%';
+
 VACUUM;
 SELECT 'apps', count(*) FROM apps
 UNION ALL SELECT 'platforms', count(*) FROM platforms
