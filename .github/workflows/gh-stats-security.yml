@@ -1,0 +1,105 @@
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# Decides which apps have an overdue security finding and keeps the list as
+# security-overdue.json in the release security, from where gh-stats-site.yml
+# takes it. A finding is overdue once the site maintainer reported it to the
+# maintainer of the app and the deadline passed without a measured release that
+# no longer has it; the site marks such an app and names nothing of the
+# finding.
+#
+# What the security targets find is kept only as security.json.age in the data
+# branch, and the stages of the findings, which gh-stats-security records, only
+# encrypted in the variable SECURITY_STAGES; both are encrypted to the recipient
+# SECURITY_AGE_RECIPIENT. This is the one workflow that holds the identity that
+# opens them, as the secret SECURITY_AGE_IDENTITY of the environment security,
+# which the site maintainer limits to main. It runs no code of the measured
+# apps, checks out nothing of the data branch but summary.json and
+# security.json.age, and writes nothing it decrypts to the log or to a file
+# beyond the list of the overdue apps.
+#
+# gh-stats-measure.yml dispatches it once the results of a measurement are
+# pushed, so a fixing release counts at once. A deadline passes without a
+# measurement, so an external cron dispatches it once a day too, for example
+# with a /etc/cron.d entry whose retry repeats a failed dispatch:
+#
+#   23 4 * * * root retry gh workflow run gh-stats-security.yml -R ernolf/gh-stats >/dev/null 2>&1
+#
+# The site shows the new list with its next build, which the sampler
+# dispatches every 30 minutes.
+
+name: Check the security findings
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Each run reads the stages and the results as they are, so a queued one is as
+# good as the one it replaces.
+concurrency:
+  group: security
+  cancel-in-progress: false
+
+env:
+  GH_REPO: ${{ github.repository }}
+  SECURITY_TAG: security
+  DATA_BRANCH: data
+
+jobs:
+  overdue:
+    name: overdue
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: security
+    permissions:
+      # Creates the release security and replaces its asset.
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Checkout the measurement results
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.DATA_BRANCH }}
+          path: data
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            apps/**/summary.json
+            apps/**/security.json.age
+
+      - name: Install age
+        run: sudo apt-get update -q && sudo apt-get install -y -q age
+
+      # The identity exists only in a file of this runner that only this step
+      # can read, and is removed when the step ends.
+      - name: Decide the overdue apps
+        env:
+          AGE_IDENTITY: ${{ secrets.SECURITY_AGE_IDENTITY }}
+          GH_STATS_SECURITY_STAGES: ${{ vars.SECURITY_STAGES }}
+        run: |
+          if [ -z "$AGE_IDENTITY" ]; then
+            echo "::error::The environment security has no secret SECURITY_AGE_IDENTITY"
+            exit 1
+          fi
+          umask 077
+          identity="$RUNNER_TEMP/age-identity.txt"
+          trap 'rm -f "$identity"' EXIT
+          printf '%s\n' "$AGE_IDENTITY" > "$identity"
+          bin/gh-stats-security -n -d data -i "$identity" --overdue "$RUNNER_TEMP/security-overdue.json"
+
+      - name: Upload the overdue apps
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "$SECURITY_TAG" >/dev/null 2>&1; then
+            gh release create "$SECURITY_TAG" --prerelease \
+              --title "Overdue security findings" \
+              --notes "The apps with a security finding that was reported to their maintainer and not fixed by its deadline, kept by the security workflow for the site."
+          fi
+          gh release upload "$SECURITY_TAG" "$RUNNER_TEMP/security-overdue.json" --clobber

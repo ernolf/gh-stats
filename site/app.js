@@ -19,6 +19,7 @@ let measured
 let measuredLines
 let measuredShipped
 let shipped
+let security
 // The line rows of each project and the project of each app, for the app pages.
 const projectLines = new Map()
 let appProjects
@@ -497,6 +498,26 @@ const SHIPPED_TEXT = 'the first Nextcloud major whose core/shipped.json lists th
 
 function shippedMark(id) {
 	return shipped.has(id) ? [el('span', { class: 'shipped', title: SHIPPED_TEXT }, `shipped since Nextcloud ${shipped.get(id)}`)] : []
+}
+
+// The apps with a security finding that was reported to their maintainer and
+// is not fixed by its deadline, by the day it was reported. The site names
+// nothing of the finding itself.
+function securityOverdue() {
+	return new Map(query("SELECT id, CAST(strftime('%s', reported) AS INTEGER) AS reported FROM security_overdue")
+		.map((r) => [r.id, r.reported]))
+}
+
+function securityText(id) {
+	return `Known security issue, reported to the maintainer on ${date(security.get(id))} and not fixed. Consider disabling this app until a fixed release is available.`
+}
+
+function securityMark(id) {
+	return security.has(id) ? [el('span', { class: 'security-issue', title: securityText(id) }, 'Known security issue')] : []
+}
+
+function securityNotice(id) {
+	return security.has(id) ? [el('p', { class: 'security-notice' }, securityText(id))] : []
 }
 
 // What the core/shipped.json of a server release says of an app: always
@@ -1001,7 +1022,7 @@ function catalogueRow(a) {
 	const empty = { class: released ? 'num na' : 'num', title: reason }
 	p.main = el('tbody', {}, el('tr', {},
 		el('td', { class: 'pick' }),
-		el('td', {}, el('span', { class: 'name' }, el('a', { href: `#app/${encodeURIComponent(a.id)}` }, a.name)), ...shippedMark(a.id)),
+		el('td', {}, el('span', { class: 'name' }, el('a', { href: `#app/${encodeURIComponent(a.id)}` }, a.name)), ...securityMark(a.id), ...shippedMark(a.id)),
 		el('td', { class: 'tag' }, a.version ?? '', ...restrictionMark(runs ?? [])),
 		el('td', {}, ncRange(a.platform)),
 		el('td', {}, a.published === null ? '' : date(a.published)),
@@ -1040,7 +1061,7 @@ function unlistedRow(u) {
 	const empty = { class: 'num na', title: u.exapp ? 'no release of its repository carries a tarball' : UNLISTED_TEXT }
 	p.main = el('tbody', {}, el('tr', {},
 		el('td', { class: 'pick' }),
-		el('td', {}, el('span', { class: 'name' }, el('a', { href: `#app/${encodeURIComponent(u.id)}` }, u.name)), unlistedSource(u), ...exappMark(u)),
+		el('td', {}, el('span', { class: 'name' }, el('a', { href: `#app/${encodeURIComponent(u.id)}` }, u.name)), ...securityMark(u.id), unlistedSource(u), ...exappMark(u)),
 		el('td', { class: 'tag' }, version ?? '', ...restrictionMark(runs ?? [])),
 		el('td', {}, ncRange(u.platform)),
 		el('td'),
@@ -1097,7 +1118,7 @@ function shippedRow(releases) {
 		return r
 	}
 	const head = el('td', {}, el('span', { class: 'name' }, el('a', { href: `#app/${encodeURIComponent(main.id)}` }, main.name)),
-		el('a', { class: 'slug', href: `https://github.com/${main.repo}` }, main.repo))
+		...securityMark(main.id), el('a', { class: 'slug', href: `https://github.com/${main.repo}` }, main.repo))
 	const since = shipped.get(main.id) ?? null
 	const row = line(main, head, since)
 	const p = {
@@ -1120,6 +1141,7 @@ function initOverview() {
 	measuredLines = measurementsByLine(measured)
 	measuredShipped = measurementsByServer()
 	shipped = shippedSince()
+	security = securityOverdue()
 	const repos = Map.groupBy(projectRepos(), (r) => r.project)
 	const apps = Map.groupBy(projectApps(), (r) => r.project)
 	appProjects = new Map([...apps.values()].flat().map((a) => [a.id, a.project]))
@@ -1148,6 +1170,7 @@ function initOverview() {
 		const links = [...own, ...tooled].flatMap((a, i) => [i ? ', ' : '',
 			a.tarball ? a.name : el('a', { href: `#app/${encodeURIComponent(a.id)}` }, a.name)])
 		const head = el('td', {}, el('span', { class: 'name' }, ...(links.length ? links : [p.name])),
+			...[...own, ...tooled].flatMap((a) => securityMark(a.id)),
 			...members.flatMap((r) => [el('a', { class: 'slug', href: repoUrl(r) }, slugOf(r)), ...unreachableMark(r)]),
 			...own.flatMap((a) => shippedMark(a.id)), ...tooled.flatMap(exappMark))
 		p.main = el('tbody', {}, ...lineRows(main, head))
@@ -1752,7 +1775,7 @@ function appTags(u) {
 // and its tags.
 function unlistedPage(u) {
 	const kind = [...(u.tool ? ['template or developer tool'] : []), ...(u.exapp ? [el('span', { title: EXAPP_TEXT }, 'ExApp')] : [])]
-	return [el('div', {}, el('h2', {}, u.name),
+	return [el('div', {}, el('h2', {}, u.name), ...securityNotice(u.id),
 		factList([
 			['App id', el('code', {}, u.id)],
 			...(kind.length ? [['Kind', ...kind.flatMap((k, i) => [i ? ', ' : '', k])]] : []),
@@ -1798,7 +1821,7 @@ function appPage(id, lines) {
 	const shippedPart = ships.length ? [el('h3', {}, 'Shipped with Nextcloud'), el('div', { class: 'scroll' }, appShipped(ships))] : []
 	if (!d) {
 		return ships.length
-			? [el('div', {}, el('h2', {}, ships[0].name), factList([['App id', el('code', {}, id)], ...shippedFact]),
+			? [el('div', {}, el('h2', {}, ships[0].name), ...securityNotice(id), factList([['App id', el('code', {}, id)], ...shippedFact]),
 				el('p', { class: 'hint' }, 'The App Store catalogue has no app of this id.'), ...shippedPart)]
 			: [el('h2', {}, id), el('p', {}, 'The App Store catalogue has no app of this id.')]
 	}
@@ -1838,6 +1861,7 @@ function appPage(id, lines) {
 	const shots = JSON.parse(d.screenshots)
 	const page = el('div', {},
 		el('h2', { lang: name.lang }, name.value || id),
+		...securityNotice(id),
 		el('p', { class: 'summary', lang: summary.lang, dir: 'auto' }, summary.value),
 		el('ul', { class: 'app-links' }, ...links.map((a) => el('li', {}, a))),
 		factList(facts))

@@ -14,7 +14,9 @@
 #
 # A configuration in the repository root wins: eslint.config.*, a Stylelint
 # config, .htmlvalidate.* or html-validate.config.*. Without one each tool uses
-# its recommended set. The tools are installed outside the checkout and linked
+# its recommended set, and ESLint in a Nextcloud app (appinfo/info.xml present)
+# also knows the globals of the Nextcloud server, as @nextcloud/eslint-config
+# declares them. The tools are installed outside the checkout and linked
 # in as node_modules, so a repository configuration that imports a preset,
 # such as @eslint/js, resolves it as well.
 #
@@ -119,13 +121,20 @@ jobs:
           npm install --prefix "$tools" --no-audit --no-fund --no-package-lock \
             "eslint@$ESLINT_VERSION" "@eslint/js@$ESLINT_JS_VERSION" "globals@$GLOBALS_VERSION"
           ln -s "$tools/node_modules" node_modules
-          cat > "$tools/eslint.config.mjs" <<'EOF'
+          nextcloud=
+          if test -f appinfo/info.xml; then
+            # The globals the Nextcloud server and its build configuration
+            # provide to the scripts of an app, as @nextcloud/eslint-config
+            # declares them in lib/configs/javascript.ts.
+            nextcloud=", OC: 'readonly', OCA: 'writable', OCP: 'readonly', appName: 'readonly', appVersion: 'readonly', t: 'readonly', n: 'readonly', __webpack_nonce__: 'writable'"
+          fi
+          cat > "$tools/eslint.config.mjs" <<EOF
           import js from '@eslint/js'
           import globals from 'globals'
 
           export default [
             js.configs.recommended,
-            { languageOptions: { globals: { ...globals.browser } } },
+            { languageOptions: { globals: { ...globals.browser$nextcloud } } },
           ]
           EOF
 
