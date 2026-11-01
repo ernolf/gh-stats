@@ -1,0 +1,149 @@
+#!/usr/bin/env -S LC_CTYPE=C.UTF-8 LC_MESSAGES=C bash
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# gh-stats-security-site - keep a private copy of the site with the security
+# results in it. The tool takes the site of the newest successful run of the
+# site workflow as that run uploaded it for Pages, adds what gh-stats-security
+# --export decrypts to its database, and makes it the current build of
+# <site-dir>, which a web server serves from <site-dir>/current. The page shows
+# the security results only where its database has them, so the public site
+# stays as it is.
+#
+# Everything below <site-dir> is plain text: the database with the security
+# findings and the output of every security target. Only a server that only the
+# site maintainer reaches may serve it.
+
+set -euo pipefail
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+usage() {
+	cat <<'EOF'
+Usage: gh-stats-security-site [-i <identity>] [-d <dir>] [-g <group>] <site-dir>
+
+Builds <site-dir>/builds/<stamp>/ from the Pages artifact of the newest
+successful run of the site workflow and the security results of the data
+branch, and points <site-dir>/current at it. The build before it stays as the
+fallback, older ones are removed. The artifact is kept in <site-dir>/cache/
+until another run replaces it. The security results land in the database of the
+build, and the output of each security target in security/<run dir>/<target>.log
+beside it. A run that the database of the artifact does not hold is left out.
+
+Each build gets a database path of its own, so a browser never mixes a cached
+config.json with another database. One run at a time holds <site-dir>/.lock.
+
+  -i, --identity <file>  the age identity, passed to gh-stats-security
+  -d, --dir <dir>        the clone of the data branch, passed to
+                         gh-stats-security
+  -g, --group <group>    the group the build belongs to, the one the web
+                         server reads it as; the files are not readable for
+                         others
+  -h, --help             this text
+
+Environment:
+  GH_STATS_REPO          the repository, default https://github.com/ernolf/gh-stats.git
+  GH_STATS_SITE_WORKFLOW the site workflow, default gh-stats-site.yml
+  GH_STATS_SECURITY_BIN  default gh-stats-security beside this tool
+  GH_BIN, JQ_BIN, SQLITE_BIN, TAR_BIN
+EOF
+}
+
+repo="${GH_STATS_REPO:-https://github.com/ernolf/gh-stats.git}"
+workflow="${GH_STATS_SITE_WORKFLOW:-gh-stats-site.yml}"
+SECURITY="${GH_STATS_SECURITY_BIN:-$(dirname "$(readlink -f "$0")")/gh-stats-security}"
+GH="${GH_BIN:-/usr/bin/gh}"
+JQ="${JQ_BIN:-/usr/bin/jq}"
+SQLITE="${SQLITE_BIN:-/usr/bin/sqlite3}"
+TAR="${TAR_BIN:-/usr/bin/tar}"
+security_args=() group='' args=()
+while [ $# -gt 0 ]; do
+	case "$1" in
+		-h|--help) usage; exit 0 ;;
+		-i|--identity|-d|--dir)
+			[ $# -ge 2 ] || die "$1 needs a value"
+			security_args+=("$1" "$2"); shift ;;
+		-g|--group)
+			[ $# -ge 2 ] || die "$1 needs a value"
+			group="$2"; shift ;;
+		-*) die "unknown option $1, see --help" ;;
+		*) args+=("$1") ;;
+	esac
+	shift
+done
+[ "${#args[@]}" -eq 1 ] || die "wrong number of arguments, see --help"
+site="${args[0]}"
+for b in "$SECURITY" "$GH" "$JQ" "$SQLITE" "$TAR"; do
+	[ -x "$b" ] || die "$b not found"
+done
+[ -z "$group" ] || getent group "$group" >/dev/null || die "no group $group"
+
+# A run of a minute's work must not leave the site readable for others, nor a
+# group that may not read it.
+umask 027
+mkdir -p "$site/builds" "$site/cache"
+[ -z "$group" ] || chgrp "$group" "$site" "$site/builds"
+exec 9>"$site/.lock"
+flock -n 9 || die "another run holds $site/.lock"
+
+gh_repo="${repo#*://}"
+gh_repo="${gh_repo%.git}"
+run_id="$("$GH" run list -R "$gh_repo" -w "$workflow" -s success -L 1 --json databaseId -q '.[0].databaseId')"
+[ -n "$run_id" ] || die "no successful run of $workflow"
+
+work="$(mktemp -d "$site/.work.XXXXXX")"
+trap 'rm -rf "$work"' EXIT
+
+# The artifact of a run never changes, so it is fetched once per run.
+cache="$site/cache/$run_id"
+if [ ! -f "$cache/artifact.tar" ]; then
+	"$GH" run download "$run_id" -R "$gh_repo" -n github-pages -D "$work/download"
+	[ -f "$work/download/artifact.tar" ] || die "the artifact of run $run_id holds no artifact.tar"
+	find "$site/cache" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+	mkdir -p "$cache"
+	mv "$work/download/artifact.tar" "$cache/artifact.tar"
+fi
+
+stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+build="$work/build"
+mkdir -p "$build"
+"$TAR" -xf "$cache/artifact.tar" -C "$build"
+old_db="$("$JQ" -r '.db' "$build/config.json")"
+[ -f "$build/$old_db" ] || die "the artifact of run $run_id has no $old_db"
+
+"$SECURITY" "${security_args[@]}" --export "$work/export"
+
+"$SQLITE" -bail "$build/$old_db" <"$work/export/security.sql"
+"$SQLITE" -bail "$build/$old_db" <<'EOF'
+DELETE FROM findings WHERE tool LIKE 'security/%' AND dir NOT IN (SELECT dir FROM measurements);
+DELETE FROM security_targets WHERE dir NOT IN (SELECT dir FROM measurements);
+DELETE FROM security_runs WHERE dir NOT IN (SELECT dir FROM measurements);
+VACUUM;
+EOF
+
+while IFS= read -r rel; do
+	mkdir -p "$build/security/$(dirname "$rel")"
+	mv "$work/export/logs/$rel" "$build/security/$rel"
+done < <("$SQLITE" "$build/$old_db" 'SELECT dir FROM security_runs')
+
+db="db/$run_id-$stamp/gh-stats.sqlite"
+mkdir -p "$build/$(dirname "$db")"
+mv "$build/$old_db" "$build/$db"
+rmdir "$build/$(dirname "$old_db")"
+# shellcheck disable=SC2016 # jq variables
+"$JQ" --arg db "$db" --argjson bytes "$(stat -c %s "$build/$db")" '.db = $db | .bytes = $bytes' \
+	"$build/config.json" >"$work/config.json"
+mv "$work/config.json" "$build/config.json"
+
+# The artifact carries the modes of the runner, which the umask does not touch.
+chmod -R o-rwx,g-w "$build"
+[ -z "$group" ] || chgrp -R "$group" "$build"
+mv "$build" "$site/builds/$stamp"
+ln -sfn "builds/$stamp" "$site/current.new"
+mv -T "$site/current.new" "$site/current"
+
+# The build before the current one stays, so a page that loaded its config.json
+# just before the switch still finds its database.
+find "$site/builds" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -r | tail -n +3 \
+	| while IFS= read -r b; do rm -rf "${site:?}/builds/$b"; done
+echo "site: run $run_id with $("$SQLITE" "$site/builds/$stamp/$db" 'SELECT count(*) FROM security_runs') security runs as $site/builds/$stamp"
