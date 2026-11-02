@@ -1,0 +1,108 @@
+<?xml version="1.0"?>
+<!--
+  - SPDX-FileCopyrightText: 2026 Nextcloud GmbH and Nextcloud contributors
+  - SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+    <id>intrusion_detection</id>
+    <name>Intrusion detection</name>
+    <summary>The Nextcloud-aware companion to fail2ban, CrowdSec and WAFs: recognises and answers attacks on logins, shares and accounts.</summary>
+    <description><![CDATA[Nextcloud's brute-force protection slows down guessing from one address. This app recognises the attacks it cannot see: botnets that send one attempt per address, one password tried against every account, stolen app passwords, phishing login requests and more.
+
+It works alongside fail2ban, CrowdSec or a web application firewall. They block cheaply at the edge; this app sees accounts, passwords, second factors and share links, which they cannot. Its firewall export lets fail2ban, nftables or ipset enforce its blocks before requests reach PHP.
+
+Every check can be switched between Off, Observe and Protect, every threshold is configurable, and every detection explains in plain language why it happened and what Nextcloud did. Normal requests cost a few memory-cache lookups.]]></description>
+    <version>1.0.4</version>
+    <licence>agpl</licence>
+    <author>Nextcloud GmbH and Nextcloud contributors</author>
+    <namespace>IntrusionDetection</namespace>
+    <default_enable/>
+    <types>
+        <logging/>
+    </types>
+
+    <documentation>
+        <admin>https://docs.nextcloud.com/server/latest/admin_manual/configuration_server/intrusion_detection.html</admin>
+    </documentation>
+
+    <category>security</category>
+
+    <website>https://github.com/nextcloud/intrusion_detection</website>
+    <bugs>https://github.com/nextcloud/intrusion_detection/issues</bugs>
+    <repository type="git">https://github.com/nextcloud/intrusion_detection.git</repository>
+    <screenshot>https://raw.githubusercontent.com/nextcloud/intrusion_detection/main/screenshots/overview-light.png</screenshot>
+    <screenshot>https://raw.githubusercontent.com/nextcloud/intrusion_detection/main/screenshots/detection-explained.png</screenshot>
+    <screenshot>https://raw.githubusercontent.com/nextcloud/intrusion_detection/main/screenshots/blocks.png</screenshot>
+    <screenshot>https://raw.githubusercontent.com/nextcloud/intrusion_detection/main/screenshots/was-this-you.gif</screenshot>
+    <screenshot>https://raw.githubusercontent.com/nextcloud/intrusion_detection/main/screenshots/secure-account.png</screenshot>
+    <screenshot>https://raw.githubusercontent.com/nextcloud/intrusion_detection/main/screenshots/privacy.png</screenshot>
+
+    <dependencies>
+        <nextcloud min-version="36" max-version="36"/>
+    </dependencies>
+
+    <background-jobs>
+        <job>OCA\IntrusionDetection\BackgroundJob\Cleanup</job>
+        <job>OCA\IntrusionDetection\BackgroundJob\LearningModeJob</job>
+        <job>OCA\IntrusionDetection\BackgroundJob\FirewallExportJob</job>
+        <job>OCA\IntrusionDetection\BackgroundJob\BlocklistSyncJob</job>
+        <job>OCA\IntrusionDetection\BackgroundJob\ConfigWatchJob</job>
+        <job>OCA\IntrusionDetection\BackgroundJob\ApprovalExpiryJob</job>
+        <job>OCA\IntrusionDetection\BackgroundJob\DigestJob</job>
+        <job>OCA\IntrusionDetection\BackgroundJob\StatusRefreshJob</job>
+    </background-jobs>
+
+    <repair-steps>
+        <install>
+            <step>OCA\IntrusionDetection\Repair\ReserveSuggestedNames</step>
+            <step>OCA\IntrusionDetection\Repair\StartLearningMode</step>
+        </install>
+    </repair-steps>
+
+    <commands>
+        <command>OCA\IntrusionDetection\Command\Status</command>
+        <command>OCA\IntrusionDetection\Command\Benchmark</command>
+        <command>OCA\IntrusionDetection\Command\Learning</command>
+        <command>OCA\IntrusionDetection\Command\Checks\ListChecks</command>
+        <command>OCA\IntrusionDetection\Command\Checks\Set</command>
+        <command>OCA\IntrusionDetection\Command\Checks\Explain</command>
+        <command>OCA\IntrusionDetection\Command\Bans\ListBans</command>
+        <command>OCA\IntrusionDetection\Command\Bans\Lift</command>
+        <command>OCA\IntrusionDetection\Command\Bans\Add</command>
+        <command>OCA\IntrusionDetection\Command\Detections\ListDetections</command>
+        <command>OCA\IntrusionDetection\Command\Detections\Explain</command>
+        <command>OCA\IntrusionDetection\Command\Export\Write</command>
+        <command>OCA\IntrusionDetection\Command\Blocklists\ListBlocklists</command>
+        <command>OCA\IntrusionDetection\Command\Blocklists\Sync</command>
+        <command>OCA\IntrusionDetection\Command\Blocklists\Set</command>
+        <command>OCA\IntrusionDetection\Command\ReservedNames</command>
+        <command>OCA\IntrusionDetection\Command\TrapPaths</command>
+        <command>OCA\IntrusionDetection\Command\Simulate</command>
+        <command>OCA\IntrusionDetection\Command\User</command>
+        <command>OCA\IntrusionDetection\Command\Decoys\ListDecoys</command>
+        <command>OCA\IntrusionDetection\Command\Decoys\Create</command>
+        <command>OCA\IntrusionDetection\Command\Decoys\Delete</command>
+        <command>OCA\IntrusionDetection\Command\Payload\Test</command>
+        <command>OCA\IntrusionDetection\Command\Approvals\ListApprovals</command>
+        <command>OCA\IntrusionDetection\Command\Approvals\Decide</command>
+        <command>OCA\IntrusionDetection\Command\Report</command>
+        <command>OCA\IntrusionDetection\Command\Users\NoConfirmation</command>
+        <command>OCA\IntrusionDetection\Command\Credentials\Stale</command>
+    </commands>
+
+    <settings>
+        <admin>OCA\IntrusionDetection\Settings\Admin</admin>
+        <admin-section>OCA\IntrusionDetection\Settings\AdminSection</admin-section>
+        <personal>OCA\IntrusionDetection\Settings\Personal</personal>
+    </settings>
+
+    <openmetrics>
+        <exporter>OCA\IntrusionDetection\OpenMetrics\DetectionsMetric</exporter>
+        <exporter>OCA\IntrusionDetection\OpenMetrics\BansActiveMetric</exporter>
+        <exporter>OCA\IntrusionDetection\OpenMetrics\GuardSecondsMetric</exporter>
+        <exporter>OCA\IntrusionDetection\OpenMetrics\LearningModeMetric</exporter>
+        <exporter>OCA\IntrusionDetection\OpenMetrics\BlocklistRangesMetric</exporter>
+        <exporter>OCA\IntrusionDetection\OpenMetrics\ApprovalsPendingMetric</exporter>
+    </openmetrics>
+</info>

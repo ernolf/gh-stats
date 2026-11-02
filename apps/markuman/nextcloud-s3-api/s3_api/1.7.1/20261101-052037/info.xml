@@ -1,0 +1,95 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	  xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>s3_api</id>
+	<name>S3 API</name>
+	<summary>Expose Nextcloud folders as S3-compatible buckets</summary>
+	<description><![CDATA[
+**Point any S3 client at a Nextcloud folder.**
+
+Mark a folder as a bucket in your personal settings, create an API key, and use it with the AWS
+CLI, boto3, rclone or any other S3-compatible client. The files stay ordinary Nextcloud files —
+visible in the web UI, synced by the desktop client, shareable, versioned. Nothing is duplicated
+into a separate object store.
+
+Rather than the handful of calls a file sync needs, this implements the parts that make an S3
+endpoint usable as a real backend:
+
+* Conditional writes (`If-Match` / `If-None-Match`) that serialise concurrent writers, so the
+  store works as a compare-and-swap primitive
+* Multipart uploads, including `UploadPartCopy` for server-side compose
+* Ranged and conditional reads, delimited listings, presigned URLs
+* Streaming uploads — bodies are never buffered in memory, and `aws-chunked` payloads have their
+  per-chunk signature chain verified
+* Correct S3 ETags (content MD5, compound form for multipart) rather than Nextcloud's internal
+  etag, which is too coarse to build a compare-and-swap on
+
+Authentication is AWS Signature V4, via header or presigned URL. Each API key is scoped to exactly
+one bucket and is either readonly or readwrite.
+
+Verified against [gits3](https://github.com/markuman/gits3srv), a git server that keeps bare
+repositories in a bucket: its own S3 client and a real push / clone / gc cycle run against this
+app in the test suite, exercising compare-and-swap, content ETags, ranged reads and delimited
+listings.
+
+**Note:** every request passes through PHP and Nextcloud's storage layer. This is a convenient way
+to talk S3 to data you already keep in Nextcloud — not a replacement for a high-throughput object
+store.
+	]]></description>
+	<version>1.7.1</version>
+	<!-- SPDX identifier, required for apps targeting Nextcloud 31+ -->
+	<licence>AGPL-3.0-or-later</licence>
+	<author>Markus Bergholz</author>
+	<namespace>S3Api</namespace>
+	<!-- element order below is fixed by the XSD, not cosmetic -->
+	<documentation>
+		<admin>https://github.com/markuman/nextcloud-s3-api#readme</admin>
+	</documentation>
+	<category>files</category>
+	<category>integration</category>
+	<website>https://github.com/markuman/nextcloud-s3-api</website>
+	<bugs>https://github.com/markuman/nextcloud-s3-api/issues</bugs>
+	<repository type="git">https://github.com/markuman/nextcloud-s3-api</repository>
+	<!--
+		Served from `latest`, the default branch. `main` still resolves today
+		because the two happen to point at the same commit, but it stops
+		receiving updates the moment they diverge — and a stale screenshot URL
+		fails silently, as an empty tile on the store page.
+	-->
+	<screenshot>https://raw.githubusercontent.com/markuman/nextcloud-s3-api/latest/s3_api/img/1-settings.png</screenshot>
+	<!--
+		8.2 is the floor rather than 8.3: <php min-version> is resolved against
+		the server, so it has to be satisfiable on the *oldest* Nextcloud in
+		the range. 33 and 34 ask for 8.2 and run on it happily; demanding 8.3
+		there would lock out installations for nothing. Nothing in lib/ uses a
+		language feature past 8.1, verified by linting on 8.2, 8.4 and 8.5.
+
+		33 is the floor because the app uses IResult::fetchAssociative() and
+		fetchFirstColumn(), which arrived in 33 and replace the PDO-flavoured
+		fetch()/fetchAll() Nextcloud is moving away from.
+
+		Nextcloud 35 and 36 need 8.3, but they enforce that themselves: an
+		admin cannot run them on 8.2 regardless of what this file says. So
+		the low floor costs their users nothing.
+
+		36 is in the range before its release on purpose: a major upgrade
+		disables every app whose max-version is below the new server, so
+		waiting for 36 to ship would switch the app off for everyone who
+		upgrades on day one. Checked against the daily master build with
+		`NC_VERSION=master tests/run.sh`.
+	-->
+	<dependencies>
+		<php min-version="8.2"/>
+		<nextcloud min-version="33" max-version="36" />
+	</dependencies>
+	<background-jobs>
+		<job>OCA\S3Api\BackgroundJob\CleanupJob</job>
+	</background-jobs>
+	<commands>
+		<command>OCA\S3Api\Command\BucketCreate</command>
+	</commands>
+	<settings>
+		<personal>OCA\S3Api\Settings\Personal</personal>
+		<personal-section>OCA\S3Api\Settings\PersonalSection</personal-section>
+	</settings>
+</info>
