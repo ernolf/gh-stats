@@ -9,8 +9,9 @@
 # needs is dropped; what the browser cannot derive cheaply is added: the apps of
 # the App Store catalogue, the ordinary ones of apps.json and the AppAPI apps
 # (ExApps) of appapi_apps.json, the apps the server ships, as gh-nc-shipped
-# lists them, the apps outside both, as gh-nc-unlisted lists them, and the
-# Nextcloud versions of the catalogue releases, the
+# lists them, the apps outside both, as gh-nc-unlisted lists them, the
+# repository and tag gh-nc-sources found for each release that is no release
+# asset, and the Nextcloud versions of the catalogue releases, the
 # version key and strict pre-release flag of gh-stats on every release, the
 # projects the repositories form, one summary row per project and release line
 # for the start page, the measurement results of the data branch, and what the
@@ -39,6 +40,7 @@ APPSTORE_APPAPI_CACHE="${APPSTORE_APPAPI_CACHE:-$(dirname "$APPSTORE_CACHE")/app
 APPSTORE_CATEGORIES_CACHE="${APPSTORE_CATEGORIES_CACHE:-$(dirname "$APPSTORE_CACHE")/categories.json}"
 SHIPPED_CACHE="${SHIPPED_CACHE:-$(dirname "$APPSTORE_CACHE")/shipped.json}"
 UNLISTED_CACHE="${UNLISTED_CACHE:-$(dirname "$APPSTORE_CACHE")/unlisted.json}"
+SOURCES_CACHE="${SOURCES_CACHE:-$(dirname "$APPSTORE_CACHE")/sources.json}"
 SECURITY_OVERDUE_CACHE="${SECURITY_OVERDUE_CACHE:-$(dirname "$APPSTORE_CACHE")/security-overdue.json}"
 SQLITE="${SQLITE_BIN:-/usr/bin/sqlite3}"
 # The asset extensions gh-stats counts by default; the summary counts the same.
@@ -129,6 +131,9 @@ repository under its current name, plus
              newest tag, its newest tags as JSON, newest first, whether a
              release carries a tarball and when it was pushed last; empty
              without unlisted.json
+  sources    every App Store release that is no release asset whose tag
+             gh-nc-sources found: app id, version, host, repository, tag;
+             empty without sources.json
   security_overdue  every app with a security finding reported to its
              maintainer that no measured release has fixed within the
              deadline, and the day it was reported; empty without
@@ -158,6 +163,9 @@ Environment (or /etc/gh-stats/gh-stats.env):
                   (default: next to apps.json)
   UNLISTED_CACHE  the unlisted apps unlisted.json of gh-nc-unlisted, optional
                   (default: next to apps.json)
+  SOURCES_CACHE   the tags of the releases that are no release asset,
+                  sources.json of gh-nc-sources, optional (default: next to
+                  apps.json)
   SECURITY_OVERDUE_CACHE  the overdue apps security-overdue.json of
                   gh-stats-security --overdue, optional (default: next to
                   apps.json)
@@ -351,6 +359,15 @@ if [ -r "$UNLISTED_CACHE" ]; then
 		| (if .nextcloud.min then ">=" + (.nextcloud.min | tostring) + (if .nextcloud.max then " <=" + (.nextcloud.max | tostring) else "" end) else null end) as $nc
 		| "INSERT OR IGNORE INTO unlisted VALUES (\(.id | q), \(.name // .id | q), \(.version | v), \($nc | v), \(.exapp // false | v), \(.tool // false | v), \(.host | q), \(.repo | q), \(.path // "" | q), \(.tag | v), \(.tags // [] | tojson | q), \(.tarball | v), \(.pushed | v));"
 	' "$UNLISTED_CACHE")"
+fi
+# The catalogue workflow keeps the repository and tag of each release that is no
+# release asset; without them the site marks none as measured from a tag.
+sources_sql=''
+if [ -r "$SOURCES_CACHE" ]; then
+	sources_sql="$(jq -r "$sql_defs"'
+		.apps[] | select(.repo != null) | . as $a | .versions[] | select(.tag != null)
+		| "INSERT OR IGNORE INTO sources VALUES (\($a.id | q), \(.version | q), \($a.host | q), \($a.repo | q), \(.tag | q));"
+	' "$SOURCES_CACHE")"
 fi
 # The security workflow keeps the apps whose reported finding is overdue;
 # without them the site marks none.
@@ -806,6 +823,17 @@ CREATE TABLE unlisted (
   tarball  INTEGER NOT NULL,
   pushed   TEXT
 ) WITHOUT ROWID;
+-- The App Store releases that are no release asset, with the repository and
+-- the tag gh-nc-sources found for them. repo is the path below host, which on
+-- GitLab can hold groups.
+CREATE TABLE sources (
+  id      TEXT NOT NULL,
+  version TEXT NOT NULL,
+  host    TEXT NOT NULL,
+  repo    TEXT NOT NULL,
+  tag     TEXT NOT NULL,
+  PRIMARY KEY (id, version)
+) WITHOUT ROWID;
 -- The apps with an overdue security finding, by the day the earliest of them
 -- was reported; the site names nothing of the finding itself.
 CREATE TABLE security_overdue (
@@ -817,6 +845,7 @@ $catalogue_sql
 $categories_sql
 $shipped_sql
 $unlisted_sql
+$sources_sql
 $overdue_sql
 COMMIT;
 ALTER TABLE app_releases ADD COLUMN stable INTEGER NOT NULL DEFAULT 0;
@@ -909,6 +938,7 @@ UNION ALL SELECT 'app_releases', count(*) FROM app_releases
 UNION ALL SELECT 'categories', count(*) FROM categories
 UNION ALL SELECT 'shipped', count(DISTINCT id) FROM shipped
 UNION ALL SELECT 'unlisted', count(*) FROM unlisted
+UNION ALL SELECT 'sources', count(*) FROM sources
 UNION ALL SELECT 'security_overdue', count(*) FROM security_overdue;
 SQL
 trap - ERR

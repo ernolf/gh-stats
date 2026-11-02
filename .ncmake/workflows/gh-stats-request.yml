@@ -224,6 +224,9 @@ jobs:
           echo "WHICH=$VERSION" >> "$GITHUB_ENV"
           gh release download "$CATALOGUE_TAG" -p apps.json -D "$state"
           export APPSTORE_APPDATA_FILE="$state/apps.json"
+          # Without it a release that is no release asset is not listed.
+          gh release download "$CATALOGUE_TAG" -p sources.json -D "$state" 2>/dev/null || :
+          export SOURCES_CACHE="$state/sources.json"
           printf '%s %s\n' "$APP" "$VERSION" > "$state/versions"
           bin/gh-nc-appslist -v "$state/versions" -o - | sed '/^#/d' | tr '[:upper:]' '[:lower:]' \
             | LC_ALL=C sort -u > "$state/lines"

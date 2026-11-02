@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 #
 # gh-nc-appsdiag - try ncmake on a Nextcloud app that was never built with it. Takes
-# the URL of a repository on GitHub or on a Forgejo or Gitea host, clones the app, reports what the checkout is made of, and on
+# the URL of a repository on GitHub or on another git host, clones the app, reports what the checkout is made of, and on
 # confirmation adds the ncmake bootstrap stub as GNUmakefile, which make reads
 # before the app's own makefile or Makefile. Then it offers the ncmake targets one by
 # one and records exit code and duration of each; where an analyser has a --json
@@ -110,6 +110,9 @@ APPSTORE_EBTB_DB="${APPSTORE_EBTB_DB:-}"
 # The repositories that publish the releases of an app developed in another one,
 # the same variable gh-nc-appslist maps such an app with.
 APPLIST_RELEASE_REPOS="${APPLIST_RELEASE_REPOS:-nextcloud-releases christianlupus-nextcloud/cookbook-releases}"
+# The tags gh-nc-sources found for the releases that are no release asset, the
+# file gh-nc-appslist lists them from.
+SOURCES_CACHE="${SOURCES_CACHE:-$(dirname "$APPSTORE_CACHE")/sources.json}"
 
 # The app types the server never restricts to groups, its
 # AppManager::$protectedAppTypes.
@@ -161,8 +164,9 @@ Usage: gh-nc-appsdiag <url|[host/]owner/repo>[:<dir>] [version]
        gh-nc-appsdiag -s <server-version|master> <url|owner/repo>[:<dir>]
        gh-nc-appsdiag -a [-s <server-version|master>] [-l <file>] [<url|[host/]owner/repo>[:<dir>] [version]] ...
 
-A repository on GitHub is named by its URL or as owner/repo, one on a Forgejo
-or Gitea host by its URL or as host/owner/repo.
+A repository on GitHub is named by its URL or as owner/repo, one on another
+host by its URL or as host/<path>, where the path can name nested groups, as
+host/group/subgroup/repo.
 
 Clones the app, reports what it is built with, and on confirmation adds the
 ncmake bootstrap stub as GNUmakefile, which make reads before a makefile or a
@@ -180,9 +184,10 @@ its number; the newest tag the store ships is the offered answer, and 0 keeps th
 default branch. With a version on the command line nothing is asked: the tag of
 that version is checked out before anything is read, so an older release can be
 measured as it was shipped. The tag is the one the App Store download of that
-version names. For a version the store does not ship it is v<version> or
-<version>, else the one tag whose version from its first digit on is this one,
-as in v.<version> or <component>-v<version>. The run directory, the App Store
+version names, or for a download that is no release asset the one gh-nc-sources
+found for it in SOURCES_CACHE. For a version the store does not ship it is
+v<version> or <version>, else the one tag whose version from its first digit on
+is this one, as in v.<version> or <component>-v<version>. The run directory, the App Store
 release and the tarball compared are those of the version asked for, or of the
 tag picked, also where appinfo/info.xml declares another: an app that sets its
 version only when it builds a release declares the same one in every tag.
@@ -217,7 +222,7 @@ and summary.json names it as server.
 
 Everything one run produces goes into one directory, for an app below the root
 with its app id after the repo (or its directory, while the id is unknown), for
-a repository on a Forgejo or Gitea host below a directory of that host:
+a repository on another host below a directory of that host:
 
   <logs>/[<host>/]<owner>/<repo>/<version>/<timestamp>/
   <logs>/[<host>/]<owner>/<repo>/<app-id>/<version>/<timestamp>/
@@ -309,6 +314,8 @@ Environment (or /etc/gh-stats/gh-stats.env):
   APPSTORE_APPDATA_FILE      the catalogue of the appdata source
   APPSTORE_EBTB_DB           the nc-apps database of the ebtb source
   APPLIST_RELEASE_REPOS      the release repositories, as in gh-nc-appslist
+  SOURCES_CACHE              sources.json of gh-nc-sources, optional
+                             (default: next to APPSTORE_CACHE)
   SHIPPED_BIN                gh-nc-shipped (default: the one beside this script)
   SERVER_REPO                the server repository (default: nextcloud/server)
   SERVER_BUILD_CANDIDATES    for master, the commits held against the archive
@@ -466,10 +473,10 @@ fi
 
 [ ${#pos[@]} -ge 1 ] && [ ${#pos[@]} -le 2 ] || { usage; exit 1; }
 
-# github.com/owner/repo, git@codeberg.org:owner/repo.git, codeberg.org/owner/repo
-# and owner/repo all reduce to the last two path elements. A directory comes after
-# a last colon that follows the repository; the colon of git@host:owner/repo has
-# no slash before it.
+# https://github.com/owner/repo, git@codeberg.org:owner/repo.git,
+# gitlab.com/group/subgroup/repo and owner/repo all name a repository by its path,
+# with or without the host. A directory comes after a last colon that follows the
+# repository; the colon of git@host:owner/repo has no slash before it.
 spec="${pos[0]%/}"
 subdir=""
 if [[ "$spec" == *:* ]] && [[ "${spec%:*}" == */* ]]; then
@@ -478,14 +485,23 @@ if [[ "$spec" == *:* ]] && [[ "${spec%:*}" == */* ]]; then
 	[ -n "$subdir" ] || die "an empty directory after the colon in '${pos[0]}'"
 fi
 spec="${spec%.git}"
-owner="$(printf '%s\n' "$spec" | awk -F'[/:]' '{print $(NF-1)}')"
-repo="$(printf '%s\n' "$spec" | awk -F'[/:]' '{print $NF}')"
+# The first element names the host when it holds a dot, without a user before an
+# @; GitHub owners hold no dot, so without one the repository is on GitHub. The
+# last element is the repository, everything between it and the host the owner,
+# which on GitLab can be a group with subgroups. Logs and messages name a
+# repository elsewhere as host/<path>.
+path="${spec#*://}"
+[[ "${path%%/*}" != *@* ]] || path="${path#*@}"
+[[ "${path%%/*}" != *:* ]] || path="${path/:/\/}"
+IFS=/ read -r -a parts <<< "$path"
+repo_host=github.com
+if [ ${#parts[@]} -ge 3 ] && [[ "${parts[0]}" == *.* ]]; then
+	repo_host="${parts[0],,}"
+	parts=("${parts[@]:1}")
+fi
+repo="${parts[${#parts[@]}-1]:-}"
+owner="$(IFS=/; printf '%s' "${parts[*]:0:${#parts[@]}-1}")"
 [ -n "$owner" ] && [ -n "$repo" ] || die "cannot read owner/repo from '${pos[0]}'"
-# The element before the owner names the host, without a user before an @. GitHub
-# names hold no dot, so without a dotted element there the repository is on
-# GitHub. Logs and messages name a repository elsewhere as host/owner/repo.
-repo_host="$(printf '%s\n' "$spec" | awk -F'[/:]' 'NF >= 3 { h = $(NF-2); sub(/^.*@/, "", h); if (h ~ /\./) print tolower(h) }')"
-repo_host="${repo_host:-github.com}"
 slug="$owner/$repo"
 [ "$repo_host" = github.com ] || slug="$repo_host/$slug"
 # The second argument, if there is one, is the version to measure.
@@ -1124,9 +1140,11 @@ release_versions() {
 # the tag the shipped tarball was built from. A release counts when it lies in this
 # repository, or when it comes from one of APPLIST_RELEASE_REPOS and the app's issue
 # tracker, else its website, names this repository: the mapping gh-nc-appslist
-# lists such an app under. Several app ids of one repository can ship the same
-# version from the same tag, so each tag is named once. A nightly of the same
-# version as a stable release is left out, as in release_url.
+# lists such an app under. A download that is no release asset names no tag of
+# this repository; gh-nc-sources found its repository and tag, and SOURCES_CACHE
+# holds them. Several app ids of one repository can ship the same version from
+# the same tag, so each tag is named once. A nightly of the same version as a
+# stable release is left out, as in release_url.
 store_tags() {
 	local cache
 	cache="$(appstore_catalogue)" || return 0
@@ -1148,7 +1166,11 @@ store_tags() {
 		       else $dl end) as $src
 		    | select(($src | ascii_downcase) == $repo)
 		    | $p[7] ]
-		| unique | .[]' "$cache" 2>/dev/null || true; } | while IFS= read -r t; do printf '%b\n' "${t//%/\\x}"; done
+		| unique | .[]' "$cache" 2>/dev/null || true
+	  "$JQ" -r --arg repo "${slug,,}" --arg v "$1" '.apps[]? | select(.repo != null)
+		| select(((if .host == "github.com" then "" else .host + "/" end) + .repo | ascii_downcase) == $repo)
+		| .versions[] | select(.version == $v) | .tag | strings' "$SOURCES_CACHE" 2>/dev/null || true
+	} | while IFS= read -r t; do printf '%b\n' "${t//%/\\x}"; done | awk '!seen[$0]++'
 }
 
 checkout_tag() {
