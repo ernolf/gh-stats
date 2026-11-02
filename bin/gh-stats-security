@@ -6,7 +6,9 @@
 # A run keeps their output only as security.json.age, encrypted to the age
 # recipient of the site maintainer, and the data branch holds that file beside
 # the public results. The tool fetches the data branch, opens the file of the
-# newest run of every version with the age identity, and prints the findings.
+# newest run of every version with the age identity, and prints the findings. A
+# master run that carries an earlier scan of the whole history as
+# secrets-history.json.age adds the findings of that scan.
 # The key never leaves the machine the tool runs on, and nothing it decrypts is
 # written to a file, but by --export.
 #
@@ -248,6 +250,29 @@ decrypt() {
 	esac
 }
 
+# The plain text of the security.json.age of a run: <run dir> <file>. A master run
+# that scanned only the commits since an earlier scan of the whole history
+# carries that scan as secrets-history.json.age, and its findings join those of
+# secrets-audit, each once by its fingerprint, or without one by its commit, file
+# and rule. Once one does, the line that says the history has no secret no longer
+# holds, and secrets-audit counts as having found one.
+# shellcheck disable=SC2016 # jq variables
+CARRY='def key: .fingerprint // "\(.commit):\(.file):\(.rule)";
+	.[0] as $run | ([.[1].result.findings[]? | select(.id == "secret-in-history")]) as $carried
+	| $run | (.targets[] | select(.name == "secrets-audit")) |= (
+		[.result.findings[]? | key] as $have
+		| [$carried[] | select(key | IN($have[]) | not)] as $add
+		| if ($add | length) == 0 then .
+		  else .result.findings = [(.result.findings[]? | select(.id != "secrets-history")), $add[]]
+			| .exit = (if .exit == 0 then 1 else .exit end) end)'
+security_plain() {
+	local plain carried
+	plain="$(decrypt "$2")" || return 1
+	[ -f "$1/secrets-history.json.age" ] || { printf '%s\n' "$plain"; return 0; }
+	carried="$(decrypt "$1/secrets-history.json.age")" || return 1
+	printf '%s\n%s\n' "$plain" "$carried" | "$JQ" -c -s "$CARRY"
+}
+
 # The newest run directory of every version directory, as "<run dir>" lines: the
 # run directories of a version are named by their timestamp, so the last one in
 # sort order is the newest.
@@ -323,7 +348,7 @@ if [ "$mode" = export ]; then
 			sec="$(security_file "$run")"
 			[ -n "$sec" ] || continue
 			rel="${run#"$dir/apps/"}"
-			plain="$(decrypt "$sec")" || die "cannot decrypt $sec with $identity"
+			plain="$(security_plain "$run" "$sec")" || die "cannot decrypt $sec with $identity"
 			mkdir -p "$out/logs/$rel"
 			while IFS= read -r t; do
 				# shellcheck disable=SC2016 # jq variables
@@ -348,7 +373,7 @@ case "$mode" in
 				"$JQ" -e --arg app "$id" 'any(.findings[]; .app == $app)' <<<"$stages" >/dev/null || continue
 			fi
 			sec="$(security_file "$run")"
-			list="$(decrypt "$sec" | "$JQ" -c "$OPEN")" || die "cannot decrypt $sec with $identity"
+			list="$(security_plain "$run" "$sec" | "$JQ" -c "$OPEN")" || die "cannot decrypt $sec with $identity"
 			open="$("$JQ" -c --arg app "$id" --argjson list "$list" '.[$app] = $list' <<<"$open")"
 		done < <(newest_app_runs)
 		today="$(date -u +%F)"
@@ -406,7 +431,7 @@ while IFS= read -r run; do
 	ver="$("$JQ" -r '.server // .requested_version // .version // "unversioned"' "$run/summary.json")"
 	[ -z "$version" ] || [ "$ver" = "$version" ] || continue
 	found=1
-	plain="$(decrypt "$sec")" || die "cannot decrypt $sec with $identity"
+	plain="$(security_plain "$run" "$sec")" || die "cannot decrypt $sec with $identity"
 	if [ -z "$app" ]; then
 		printf '%s\n' "$plain" | "$JQ" -r --arg id "$id" --arg v "$ver" '
 			[.targets[] | "\(.name) \([.result.findings[]? | select(.level == "warn")] | length)"]

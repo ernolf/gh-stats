@@ -49,6 +49,10 @@
 # ncmake the newest results were measured with, which the site lists under
 # "Built with".
 #
+# A master run keeps the scan of the whole history by secrets-audit as
+# secrets-history.json.age; the next master run of the app checks it out and
+# scans only the commits that came since.
+#
 # The data branch keeps no history. Every write replaces it with a single
 # commit of the new tree, after gh-stats-data-prune thinned the history, so
 # what was removed leaves the repository too: the older runs of a version
@@ -219,6 +223,20 @@ jobs:
           gh release download "$CATALOGUE_TAG" -p sources.json -D "$RUNNER_TEMP" \
             || echo "::notice::No sources yet, a release that is no release asset takes its tag from the version"
 
+      # A master run carries the history scan of secrets-audit of its earlier
+      # run on and scans only the commits since, so of the data branch only
+      # the secrets-history files are checked out.
+      - name: Checkout the earlier history scans
+        if: vars.SECURITY_AGE_RECIPIENT != ''
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.DATA_BRANCH }}
+          path: prior
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            apps/**/secrets-history.*
+
       # The security targets keep what they find only encrypted, and without
       # age they do not run. apt-get normally takes seconds but has hung for
       # hours; a job stopped here leaves no outcome, so collect measures the
@@ -240,6 +258,7 @@ jobs:
           SOURCES_CACHE: ${{ runner.temp }}/sources.json
           NC_APPSDIAG_RESULT_FILE: ${{ runner.temp }}/run-dirs.txt
           NC_APPSDIAG_AGE_RECIPIENT: ${{ vars.SECURITY_AGE_RECIPIENT }}
+          NC_APPSDIAG_PRIOR: ${{ github.workspace }}/prior/apps
         run: |
           rc=0
           # shellcheck disable=SC2086 # app and version are two words on purpose
