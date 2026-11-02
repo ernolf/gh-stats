@@ -1,0 +1,239 @@
+#!/usr/bin/env -S LC_CTYPE=C.UTF-8 LC_MESSAGES=C bash
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# gh-nc-sources - find the repository and the tag of the App Store releases
+# that are no release asset. Such a release is downloaded from a host of its
+# own, a package registry or a file in a repository, so the catalogue names no
+# repository for it. The repository is taken from the download URL, the issue
+# tracker or the website of the app, on any host, and a release counts once
+# that repository has the tag its download URL names, v<version> or <version>.
+# gh-nc-appslist lists these releases for gh-nc-appsdiag, which checks the tag
+# out, and gh-stats-site-db shows which tag the checks of a version come from.
+# The result replaces its previous copy, from which an app whose releases are
+# unchanged is taken over until it is due again.
+
+# == Config ==
+# Optional site config shared with gh-stats and gh-release-sampler. If
+# /etc/gh-stats/gh-stats.env exists it is sourced here, so its assignments feed
+# the ${VAR:-default} reads below. Precedence is built-in default <
+# gh-stats.env < environment. Point GH_STATS_ENV at another path to use a
+# different file.
+GH_STATS_ENV="${GH_STATS_ENV:-/etc/gh-stats/gh-stats.env}"
+# shellcheck disable=SC1090 # the site config is a run-time path
+if [ -r "$GH_STATS_ENV" ]; then
+	_env_snapshot="$(export -p)"
+	set -a; . "$GH_STATS_ENV"; set +a
+	eval "$_env_snapshot"
+	unset _env_snapshot
+fi
+
+STATE_DIR="${GH_STATS_DIR:-/var/lib/gh-stats}"
+APPSTORE_CACHE="${APPSTORE_CACHE:-${STATE_DIR}/apps.json}"
+SOURCES_FILE="${SOURCES_FILE:-$(dirname "$APPSTORE_CACHE")/sources.json}"
+# The same cutoff gh-nc-appslist applies: an app counts while its newest
+# release that is no release asset is from this year or later.
+APPSTORE_SINCE_YEAR="${APPSTORE_SINCE_YEAR:-$(($(date -u +%Y) - 1))}"
+# How many days a resolved app is taken over before it is resolved again; an
+# app whose releases changed and one that did not resolve are resolved on every
+# run.
+SOURCES_RECHECK_DAYS="${SOURCES_RECHECK_DAYS:-7}"
+# How often a request that times out or fails transiently is repeated.
+RETRIES=3
+
+JQ="${JQ_BIN:-jq}"
+GIT="${GIT_BIN:-git}"
+
+set -euo pipefail
+# A repository that does not exist or is private must fail, not ask for a login.
+export GIT_TERMINAL_PROMPT=0
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+warn() { echo "WARNING: $*" >&2; }
+
+usage() {
+	cat <<'EOF'
+Usage: gh-nc-sources [-f <file>]
+
+Writes the repository and the tag of every App Store release that is no
+release asset to <file>, as JSON:
+
+  {
+    "scanned": "2026-11-01T00:20:00Z",
+    "apps": [{"id": "passwords", "host": "git.example.org",
+              "repo": "group/passwords", "checked": "2026-11-01T00:20:00Z",
+              "versions": [{"version": "2026.10.20",
+                            "download": "https://...", "tag": "2026.10.0"},
+                           ...]}, ...]
+  }
+
+A release counts when it is stable, no nightly and a version of numbers only,
+and its download is no release asset: neither one on GitHub nor one under
+/releases/download/ of another host. An app counts when the newest of these
+releases is from APPSTORE_SINCE_YEAR or later. Its versions are all of these
+releases.
+
+The repository is the first of these candidates that has a tag for one of the
+versions, at most one of each:
+
+  1. the download URL: the project of a GitLab package URL
+     (/api/v4/projects/<id>/...), read from the API of its host; the path in
+     front of /-/ (a release, a job artefact or an archive); the first two
+     elements of a path on GitHub, also of raw.githubusercontent.com; the path
+     in front of /archive/
+  2. the issue tracker of the app
+  3. the website of the app
+
+Of the issue tracker and the website, the host is read without www., a path
+on GitHub by its first two elements, any other path in front of /-/ or of
+/issues, /pulls, /merge_requests, /tree, /src, /blob, /raw, /wiki, /releases
+or /archive and without .git; it takes two elements at least, and groups in
+groups are kept.
+
+The tag of a version is the first of these that the repository has: the tag
+the download URL names (/packages/generic/<package>/<tag>/<file> and
+/-/releases/<tag>/downloads/<file>), v<version>, <version>. Several versions
+can name the same tag, when the App Store lists one tarball under several
+versions. host and repo are null for an app that no candidate resolved, tag
+for a version without a tag.
+
+A resolved app is taken over from the previous <file> while its versions and
+downloads are unchanged and it was checked less than SOURCES_RECHECK_DAYS days
+ago. Every other app is resolved again; one that resolved before with the same
+releases and does not now keeps its previous entry. The time is UTC
+throughout.
+
+Options:
+  -f, --file <file>  the file to read and replace (default: next to APPSTORE_CACHE)
+  -h, --help         this text
+
+Environment (or /etc/gh-stats/gh-stats.env):
+  SOURCES_FILE          as -f
+  GH_STATS_DIR          state directory (default: /var/lib/gh-stats)
+  APPSTORE_CACHE        the App Store catalogue apps.json
+                        (default: $GH_STATS_DIR/apps.json)
+  APPSTORE_SINCE_YEAR   the year the newest release is from at least
+                        (default: last year)
+  SOURCES_RECHECK_DAYS  the days a resolved app is taken over (default: 7)
+EOF
+}
+
+while [ $# -gt 0 ]; do
+	case "$1" in
+		-h|--help) usage; exit 0 ;;
+		-f|--file) [ $# -ge 2 ] || die "$1 needs a file"; SOURCES_FILE="$2"; shift ;;
+		*) echo "unknown argument: $1" >&2; exit 1 ;;
+	esac
+	shift
+done
+
+[[ "$APPSTORE_SINCE_YEAR" =~ ^[0-9]{4}$ ]] || die "APPSTORE_SINCE_YEAR is $APPSTORE_SINCE_YEAR, it takes a year"
+[[ "$SOURCES_RECHECK_DAYS" =~ ^[0-9]+$ ]] || die "SOURCES_RECHECK_DAYS is $SOURCES_RECHECK_DAYS, it takes a number"
+[ -r "$APPSTORE_CACHE" ] || die "no catalogue at $APPSTORE_CACHE"
+
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+
+prev="$tmp/prev.json"
+echo '{}' > "$prev"
+[ ! -r "$SOURCES_FILE" ] || cp "$SOURCES_FILE" "$prev"
+now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+# == Candidates ==
+# One line per app: {id, versions: [{version, download, url_tag}], candidates},
+# a candidate being {host, repo} or {api} for a GitLab project still to be read.
+# A tag in a URL is percent-encoded.
+"$JQ" -c --arg since "$APPSTORE_SINCE_YEAR" '
+	def url: capture("^[A-Za-z][A-Za-z0-9+.-]*://(?<h>[^/?#]+)(?<p>[^?#]*)")
+		| .h |= (ascii_downcase | sub("^www\\."; ""))
+		| .p |= (split("/") | map(select(. != "")));
+	def repo($h; $e): if ($e | length) >= 2 then {host: $h, repo: ($e | join("/"))} else empty end;
+	def before_dash: (index("-") // length) as $i | .[0:$i];
+	# The repository a URL of the issue tracker or the website names.
+	def page: url | .h as $h
+		| if $h == "github.com" then repo($h; .p[0:2])
+		  else .p | before_dash
+		     | (map(test("^(issues|pulls|merge_requests|tree|src|blob|raw|wiki|releases|archive)$")) | index(true)) as $i
+		     | (if $i then .[0:$i] else . end)
+		     | (if length > 0 then .[-1] |= sub("\\.git$"; "") else . end)
+		     | repo($h; .)
+		  end;
+	# The repository a download URL names, and the tag it names.
+	def download: url | .h as $h | .p as $p
+		| if $p[0:3] == ["api", "v4", "projects"] and ($p[3] // "") != "" then
+			{api: "https://\($h)/api/v4/projects/\($p[3])"}
+			+ (if $p[4:6] == ["packages", "generic"] and ($p | length) >= 9 then {tag: $p[7]} else {} end)
+		  elif ($h == "github.com" or $h == "raw.githubusercontent.com") then repo("github.com"; $p[0:2]) // {}
+		  elif ($p | index("-")) then ($p | index("-")) as $i
+			| (repo($h; $p[0:$i]) // {})
+			+ (if $p[$i + 1] == "releases" and $p[$i + 3] == "downloads" and ($p[$i + 2] // "") != "" then {tag: $p[$i + 2]} else {} end)
+		  elif ($p | index("archive")) then repo($h; $p[0:($p | index("archive"))]) // {}
+		  else {} end;
+	def decode: if . == null then null
+		else gsub("%(?<x>[0-9A-Fa-f]{2})"; .x | ascii_downcase | explode | map(if . >= 97 then . - 87 else . - 48 end) | [.[0] * 16 + .[1]] | implode) end;
+	def key: if .api then .api else (.host + "/" + .repo | ascii_downcase) end;
+	(if type == "array" then . else .data end)[] | . as $a
+	| [.releases[]? | select(.download != null and (.isNightly | not)
+	                         and (.version | test("^[0-9]+(\\.[0-9]+)*$")))
+	   | (.download | split("/")) as $p
+	   | select(($p[5] == "releases" and ($p[2] == "github.com" or $p[6] == "download")) | not)]
+	| select(length > 0 and (max_by(.created) | .created[0:4]) >= $since)
+	| map(. + {dl: (.download | try download catch {})})
+	| {id: $a.id,
+	   versions: (map({version, download, url_tag: (.dl.tag | decode)}) | sort_by(.version | split(".") | map(tonumber)) | reverse),
+	   candidates: ([.[].dl | del(.tag) | select(. != {})] + [$a.issueTracker, $a.website | strings | try page catch empty]
+	                | reduce .[] as $c ([]; if any(.[]; key == ($c | key)) then . else . + [$c] end))}
+' "$APPSTORE_CACHE" > "$tmp/apps"
+
+# == Resolving ==
+# resolve <app>: the entry of the app, with the first candidate whose tags
+# resolve any of its versions, or host and repo null.
+resolve() {
+	local app="$1" c api path url tried=" "
+	while IFS= read -r c; do
+		api="$("$JQ" -r '.api // empty' <<<"$c")"
+		if [ -n "$api" ]; then
+			path="$(curl -fsS --retry "$RETRIES" --max-time 30 "$api" 2>/dev/null | "$JQ" -r '.path_with_namespace // empty' 2>/dev/null)" || path=""
+			[ -n "$path" ] || { warn "$api: no project"; continue; }
+			c="$("$JQ" -c --arg path "$path" '{host: (.api | capture("^https://(?<h>[^/]+)").h), repo: $path}' <<<"$c")"
+		fi
+		url="$("$JQ" -r '"https://\(.host)/\(.repo).git"' <<<"$c")"
+		# A package URL can name the repository the issue tracker names as well.
+		[[ "$tried" != *" ${url,,} "* ]] || continue
+		tried+="${url,,} "
+		timeout 60 "$GIT" ls-remote --tags --refs "$url" 2>/dev/null | sed -n 's|^[0-9a-f]*\trefs/tags/||p' > "$tmp/tags" || continue
+		"$JQ" -c --argjson c "$c" --rawfile tags "$tmp/tags" --arg now "$now" '
+			($tags | split("\n") | map(select(. != "")) | map({key: ., value: true}) | from_entries) as $has
+			| {id, host: $c.host, repo: $c.repo, checked: $now,
+			   versions: [.versions[] | {version, download,
+			              tag: (first([.url_tag, "v" + .version, .version][] | strings | select($has[.])) // null)}]}
+			| select(any(.versions[]; .tag != null))' <<<"$app" > "$tmp/entry"
+		[ ! -s "$tmp/entry" ] || { cat "$tmp/entry"; return 0; }
+	done < <("$JQ" -c '.candidates[]' <<<"$app")
+	"$JQ" -c --arg now "$now" '{id, host: null, repo: null, checked: $now, versions: [.versions[] | {version, download, tag: null}]}' <<<"$app"
+}
+
+resolved=0 kept=0
+: > "$tmp/entries"
+while IFS= read -r app; do
+	old="$("$JQ" -c --argjson app "$app" '[.apps[]? | select(.id == $app.id)][0] // empty
+		| select([.versions[] | [.version, .download]] == [$app.versions[] | [.version, .download]])' "$prev")"
+	if [ -n "$old" ] && "$JQ" -e --arg now "$now" --argjson days "$SOURCES_RECHECK_DAYS" \
+		'.repo != null and ($now | fromdate) - (.checked | fromdate) < $days * 86400' <<<"$old" >/dev/null; then
+		printf '%s\n' "$old" >> "$tmp/entries"
+		kept=$((kept + 1))
+		continue
+	fi
+	entry="$(resolve "$app")"
+	resolved=$((resolved + 1))
+	# A host that is down for a run does not lose what it resolved before.
+	if [ -n "$old" ] && "$JQ" -e '.repo == null' <<<"$entry" >/dev/null && "$JQ" -e '.repo != null' <<<"$old" >/dev/null; then
+		entry="$old"
+	fi
+	printf '%s\n' "$entry" >> "$tmp/entries"
+done < "$tmp/apps"
+
+# == Result ==
+"$JQ" -s --arg scanned "$now" '{scanned: $scanned, apps: sort_by(.id | ascii_downcase)}' "$tmp/entries" > "$SOURCES_FILE.new"
+mv "$SOURCES_FILE.new" "$SOURCES_FILE"
+echo "sources written to $SOURCES_FILE ($("$JQ" -r '"\([.apps[] | select(.repo != null)] | length) of \(.apps | length) apps resolved"' "$SOURCES_FILE"), $resolved resolved, $kept taken over)"

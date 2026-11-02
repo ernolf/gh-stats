@@ -29,8 +29,9 @@
 #                                gh-stats-measure-lines lists them, and all the
 #                                three together
 #
-# The catalogue is read from the assets apps.json, shipped.json and
-# unlisted.json of the release catalogue, never from the App Store. A matrix
+# The catalogue is read from the assets apps.json, shipped.json,
+# unlisted.json and sources.json of the release catalogue, never from the App
+# Store. A matrix
 # holds at most 256 jobs, so a run measures the first 256 entries and dispatches
 # the rest as a new run once its own are collected; the runs of a full
 # measurement follow one another.
@@ -136,6 +137,8 @@ jobs:
           SCOPE: ${{ inputs.scope }}
         run: |
           gh release download "$CATALOGUE_TAG" -p apps.json -D "$RUNNER_TEMP"
+          gh release download "$CATALOGUE_TAG" -p sources.json -D "$RUNNER_TEMP" \
+            || echo "::notice::No sources yet, no release that is no release asset is listed"
           case "$SCOPE" in shipped|all) gh release download "$CATALOGUE_TAG" -p shipped.json -D "$RUNNER_TEMP" ;; esac
           case "$SCOPE" in unlisted|all) gh release download "$CATALOGUE_TAG" -p unlisted.json -D "$RUNNER_TEMP" ;; esac
 
@@ -148,6 +151,7 @@ jobs:
           SCOPE: ${{ inputs.scope }}
           APPSTORE_SOURCE: appdata
           APPSTORE_TARGETS: bin/gh-nc-appstore-targets
+          SOURCES_CACHE: ${{ runner.temp }}/sources.json
         run: |
           list="$RUNNER_TEMP/apps.txt"
           wanted="$RUNNER_TEMP/versions.txt"
@@ -210,7 +214,10 @@ jobs:
           persist-credentials: false
 
       - name: Fetch the catalogue
-        run: gh release download "$CATALOGUE_TAG" -p apps.json -D "$RUNNER_TEMP"
+        run: |
+          gh release download "$CATALOGUE_TAG" -p apps.json -D "$RUNNER_TEMP"
+          gh release download "$CATALOGUE_TAG" -p sources.json -D "$RUNNER_TEMP" \
+            || echo "::notice::No sources yet, a release that is no release asset takes its tag from the version"
 
       # The security targets keep what they find only encrypted, and without
       # age they do not run. apt-get normally takes seconds but has hung for
@@ -230,6 +237,7 @@ jobs:
           NC_APPSDIAG_AUTO: 1
           APPSTORE_SOURCE: appdata
           APPSTORE_APPDATA_FILE: ${{ runner.temp }}/apps.json
+          SOURCES_CACHE: ${{ runner.temp }}/sources.json
           NC_APPSDIAG_RESULT_FILE: ${{ runner.temp }}/run-dirs.txt
           NC_APPSDIAG_AGE_RECIPIENT: ${{ vars.SECURITY_AGE_RECIPIENT }}
         run: |

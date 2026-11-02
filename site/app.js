@@ -20,6 +20,9 @@ let measuredLines
 let measuredShipped
 let shipped
 let security
+// The repository and tag of each App Store release that is no release asset,
+// by app id.
+let sources
 // Whether the database holds the security results, which only a private copy
 // of the site has.
 let securityResults = false
@@ -242,6 +245,24 @@ function exappMark(u) {
 	return u.exapp ? [el('span', { class: 'exapp', title: EXAPP_TEXT }, 'ExApp')] : []
 }
 
+function tagSources() {
+	return Map.groupBy(query('SELECT id, version, host, repo, tag FROM sources'), (r) => r.id)
+}
+
+function sourceOf(id, version) {
+	return sources.get(id)?.find((s) => s.version === version)
+}
+
+const SOURCE_TEXT = 'the App Store names no repository for this release; gh-stats builds and checks the tag of the repository that the download, the issue tracker or the website points to, and holds it against the tarball the App Store delivers; the downloads stay empty, as no release asset counts them'
+
+function sourceMark(s) {
+	if (!s) {
+		return []
+	}
+	const slug = s.host === 'github.com' ? s.repo : `${s.host}/${s.repo}`
+	return [el('a', { class: 'source', href: `https://${s.host}/${s.repo}`, title: SOURCE_TEXT }, `from ${slug}, tag ${s.tag}`)]
+}
+
 // The Nextcloud major each shipped app is shipped since.
 function shippedSince() {
 	return new Map(query('SELECT id, major FROM shipped_since').map((r) => [r.id, r.major]))
@@ -311,10 +332,21 @@ function measurementsByLine(byRelease) {
 }
 
 // The measurements of one app, keyed by the version of the release they
-// measured, as the App Store ships it.
+// measured, as the App Store ships it. A tag the App Store lists under several
+// versions is measured once, under the newest of them; the others share that
+// measurement.
 function measurementsByVersion(id) {
-	return Map.groupBy(query(`SELECT ${MEASUREMENT} FROM measurements m WHERE m.app_id = $id AND m.server IS NULL`, { $id: id }),
+	const runs = Map.groupBy(query(`SELECT ${MEASUREMENT} FROM measurements m WHERE m.app_id = $id AND m.server IS NULL`, { $id: id }),
 		(r) => r.version)
+	const tagged = sources.get(id) ?? []
+	for (const s of tagged) {
+		const same = runs.has(s.version) ? undefined
+			: tagged.find((t) => runs.has(t.version) && t.host === s.host && t.repo === s.repo && t.tag === s.tag)
+		if (same) {
+			runs.set(s.version, runs.get(same.version))
+		}
+	}
+	return runs
 }
 
 // The measurements of the shipped apps, keyed by app id and the tag of the
@@ -1111,7 +1143,8 @@ function catalogueRow(a) {
 	const empty = { class: released ? 'num na' : 'num', title: reason }
 	p.main = el('tbody', {}, el('tr', {},
 		el('td', { class: 'pick' }),
-		el('td', {}, el('span', { class: 'name' }, el('a', { href: `#app/${encodeURIComponent(a.id)}` }, a.name)), ...securityMark(a.id), ...shippedMark(a.id)),
+		el('td', {}, el('span', { class: 'name' }, el('a', { href: `#app/${encodeURIComponent(a.id)}` }, a.name)), ...securityMark(a.id), ...shippedMark(a.id),
+			...sourceMark(sourceOf(a.id, a.version))),
 		el('td', { class: 'tag' }, a.version ?? '', ...restrictionMark(runs ?? [])),
 		el('td', {}, ncRange(a.platform)),
 		el('td', {}, a.published === null ? '' : date(a.published)),
@@ -1232,6 +1265,7 @@ function initOverview() {
 	measuredShipped = measurementsByServer()
 	shipped = shippedSince()
 	security = securityOverdue()
+	sources = tagSources()
 	const repos = Map.groupBy(projectRepos(), (r) => r.project)
 	const apps = Map.groupBy(projectApps(), (r) => r.project)
 	appProjects = new Map([...apps.values()].flat().map((a) => [a.id, a.project]))
@@ -1775,7 +1809,7 @@ function appReleases(id, requests) {
 		...releases.map((r) => {
 			const [checks, checksRow, sec] = checksCell(runs.get(r.version), asks ? 9 : 8)
 			return el('tbody', {}, el('tr', {},
-				el('td', {}, r.version, ...restrictionMark(runs.get(r.version) ?? [])),
+				el('td', {}, r.version, ...restrictionMark(runs.get(r.version) ?? []), ...sourceMark(sourceOf(id, r.version))),
 				el('td', {}, (r.created ?? '').slice(0, 10)),
 				el('td', {}, r.nightly ? 'nightly' : r.stable ? 'stable' : 'pre-release', ...(r.mismatch ? [mismatchMark()] : [])),
 				el('td', {}, ncRange(r.platform)),

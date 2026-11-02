@@ -31,6 +31,14 @@
 # nor one whose check a request removed, and while a measurement runs none is
 # sent, since its versions have no result yet.
 #
+# A release whose download is no release asset names no repository gh-stats
+# samples: one from a host of its own, a package registry or a file in a
+# repository. Before the versions without a result are sought, gh-nc-sources
+# finds the repository and the tag of each such release, from the download, the
+# issue tracker or the website, and keeps them as sources.json in the release
+# catalogue, from which gh-nc-appslist lists these versions as well. An app is
+# resolved again when its releases changed or its entry is older than a week.
+#
 # The same holds for the apps that are neither in the catalogue nor shipped by
 # the server and publish no release tarball, as the unlisted.json of the
 # catalogue lists them: each is sent with the version of its newest tag, read
@@ -206,6 +214,19 @@ jobs:
             echo "MESSAGE=$message"
           } >> "$GITHUB_ENV"
 
+      # Before the versions are sought and sent, so gh-nc-appslist and the
+      # measurement read the same file. An app that was rechecked without a
+      # result keeps no other change, so only its time does not count as one.
+      - name: Find the sources of the releases
+        run: |
+          entries() { jq -S '[.apps[] | if .repo then . else del(.checked) end]' "$1" 2>/dev/null || true; }
+          gh release download "$CATALOGUE_TAG" -p sources.json -D "$STATE" \
+            || echo "::warning::No sources yet, resolving every app"
+          cp "$STATE/sources.json" "$STATE/sources.json.before" 2>/dev/null || true
+          APPSTORE_CACHE="$STATE/apps.json" SOURCES_FILE="$STATE/sources.json" bin/gh-nc-sources
+          [ "$(entries "$STATE/sources.json")" = "$(entries "$STATE/sources.json.before")" ] \
+            || gh release upload "$CATALOGUE_TAG" "$STATE/sources.json" --clobber
+
       - name: Find the versions without a result
         env:
           APPSTORE_SOURCE: appdata
@@ -219,6 +240,7 @@ jobs:
             exit 0
           fi
           export APPSTORE_APPDATA_FILE="$STATE/apps.json"
+          export SOURCES_CACHE="$STATE/sources.json"
           # "[<host>/]<owner>/<repo> <version>" in lower case, as gh-nc-appslist
           # names a version and gh-nc-appsdiag is asked for it, and for a shipped
           # app "-s <server release> [<host>/]<owner>/<repo>[:<directory>]". A run
