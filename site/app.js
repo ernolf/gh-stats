@@ -915,15 +915,24 @@ function infoXmlLink(m) {
 
 // Warnings in full, grouped by the tool that found them, the security targets
 // first, then the tools with warnings; ok and info only as counts that open on
-// demand.
-function checksBlock(m) {
+// demand. The head of a measurement, its name and badges, stays in view while
+// its findings scroll beneath it, with the button that collapses the row and,
+// while it sticks, the one back to the start of the measurement.
+function checksBlock(m, collapse) {
 	const rank = ([tool, fs]) => (tool.startsWith('security/') ? 2 : 0) + (fs.some((f) => f.level === 'warn') ? 1 : 0)
 	const fs = findingsOf(m.dir)
 	const fields = fieldsOf(m.dir)
 	const tools = [...Map.groupBy(fs, (f) => f.tool)].sort((a, b) => rank(b) - rank(a))
-	return el('section', { class: 'run' },
+	const run = el('section', { class: 'run' })
+	const start = el('button', { type: 'button', class: 'quiet', title: 'Back to the start of this measurement', hidden: '' }, '↑ Start')
+	start.addEventListener('click', () => {
+		scrollBy(0, run.getBoundingClientRect().top - parseFloat(getComputedStyle(head).top))
+	})
+	const head = el('div', { class: 'run-head' },
+		el('div', { class: 'run-actions' }, start, collapse()),
 		el('h4', {}, `${m.app_id ?? m.dir} ${m.version ?? ''} `, el('a', { href: `${results}/${m.dir}` }, 'run directory'), ...infoXmlLink(m)),
-		...badgeRow(fs, fields),
+		...badgeRow(fs, fields))
+	run.append(head,
 		el('p', {}, diffText(m)),
 		...licenceText(fields),
 		...(securityResults ? securityTargets(m) : []),
@@ -938,6 +947,15 @@ function checksBlock(m) {
 					? [el('details', {}, el('summary', {}, counts.map(([l, n]) => `${n} ${l}`).join(', ')), ...findingEntries(tool, rest))]
 					: []))
 		}))
+	return run
+}
+
+// A head sticks once it has left the top of its measurement; only then does
+// the way back to that start show.
+function markStuck() {
+	for (const head of document.querySelectorAll('tr.checks:not([hidden]) .run-head')) {
+		head.querySelector('.run-actions button').hidden = head.getBoundingClientRect().top - head.parentElement.getBoundingClientRect().top < 1
+	}
 }
 
 // The check reports, older lines and comparisons open now, each by the
@@ -955,7 +973,8 @@ function closeOpened(kinds) {
 
 // The cell counts the warnings of the measurements of a release; a click opens
 // them in the row returned with it, built on first use, which spans the
-// table from its second column and closes from its top right corner too. A version given names the release measured
+// table from its second column and closes from the head of each measurement
+// too. A version given names the release measured
 // when it is another than the one the row shows. Where the database has the
 // security results, the cells of their column come third, to go before the
 // cell, and open the same row; span counts the columns without it.
@@ -977,12 +996,15 @@ function checksCell(runs, span, version = null) {
 	}, warn ? `⚠ ${warn}` : '✓')
 	const show = (open) => {
 		if (open && !checks.hasChildNodes()) {
-			const shut = el('button', { type: 'button', class: 'quiet checks-collapse', title: 'Collapse these checks' }, 'Collapse')
-			shut.addEventListener('click', () => {
-				show(false)
-				button.focus()
-			})
-			checks.append(el('td'), el('td', { colspan: String(span) }, shut, ...runs.map(checksBlock)))
+			const collapse = () => {
+				const shut = el('button', { type: 'button', class: 'quiet', title: 'Collapse these checks' }, 'Collapse')
+				shut.addEventListener('click', () => {
+					show(false)
+					button.focus()
+				})
+				return shut
+			}
+			checks.append(el('td'), el('td', { colspan: String(span) }, ...runs.map((m) => checksBlock(m, collapse))))
 		}
 		checks.hidden = !open
 		button.setAttribute('aria-expanded', String(open))
@@ -1533,14 +1555,20 @@ function initOverview() {
 // == Scrolling ==
 
 // The column headings stick below the bar, so they follow its height, which
-// changes when the filters wrap or the help of Released since opens. Back to
-// top shows once the page header is out of view.
+// changes when the filters wrap or the help of Released since opens; the heads
+// of the measurements stick below the headings. Back to top shows once the
+// page header is out of view.
 function initScrolling() {
 	const overview = document.getElementById('overview')
 	const bar = document.getElementById('listing-bar')
-	new ResizeObserver(() => {
+	const headings = overview.querySelector('thead')
+	const heights = new ResizeObserver(() => {
 		overview.style.setProperty('--bar-height', `${bar.offsetHeight}px`)
-	}).observe(bar)
+		overview.style.setProperty('--head-height', `${headings.offsetHeight}px`)
+	})
+	heights.observe(bar)
+	heights.observe(headings)
+	addEventListener('scroll', markStuck, { passive: true })
 	const toTop = document.getElementById('to-top')
 	new IntersectionObserver(([entry]) => {
 		toTop.hidden = entry.isIntersecting
