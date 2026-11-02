@@ -91,6 +91,10 @@ AGE_RECIPIENT="${NC_APPSDIAG_AGE_RECIPIENT:-}"
 # encrypted, since the size of the ciphertext would otherwise tell how much an app
 # was found to have.
 SECURITY_PAD="${NC_APPSDIAG_SECURITY_PAD:-65536}"
+# The results of earlier runs, laid out as NC_APPSDIAG_LOGS, such as apps/ of the
+# data branch. A master run carries the history scan of secrets-audit of its
+# newest earlier run on from there and scans only the commits that came since.
+PRIOR_DIR="${NC_APPSDIAG_PRIOR:-}"
 
 # Which ncmake a run measured with: the stub, the core and the developer modules
 # come from the main branch of this repo, the core and the modules by way of the
@@ -252,6 +256,14 @@ a repository on another host below a directory of that host:
                           of another result marked "security": true, as JSON
                           encrypted to NC_APPSDIAG_AGE_RECIPIENT; without a
                           recipient the security targets do not run
+      secrets-history.json.age
+                          with -s master, the result of the last secrets-audit
+                          that read the whole history, encrypted like
+                          security.json.age and carried on by the runs after
+                          it, which scan only the commits since
+      secrets-history.json
+                          beside it, the rules that scan ran with and the
+                          commits it reached
       <name>.orig         the app's own GNUmakefile, makefile and Makefile,
                           except one that is the ncmake stub byte for byte
       release/diff.txt    the staged tree against the shipped tarball, as diff
@@ -304,6 +316,9 @@ Environment (or /etc/gh-stats/gh-stats.env):
   NC_APPSDIAG_AGE_RECIPIENT  the age recipient they are encrypted to
   NC_APPSDIAG_SECURITY_PAD   the plain text is padded to a multiple of this
                              many bytes (default: 65536)
+  NC_APPSDIAG_PRIOR          earlier results, laid out as NC_APPSDIAG_LOGS, whose
+                             history scan of secrets-audit a run with -s master
+                             carries on
   AGE_BIN                    age (default: /usr/bin/age)
   NC_APPSDIAG_STUB_URL       the ncmake bootstrap stub to install
   NC_APPSDIAG_NCMAKE_REPO    the ncmake repo whose main the run is compared with
@@ -947,13 +962,117 @@ security_strip() {
 	done
 }
 
+# Runs one security target into SECURITY_TMP, with the make arguments after it,
+# and leaves its exit code in rc.
+security_make() {
+	local t="$1"
+	shift
+	if ( cd "$APP_DIR" && make "$t" JSON="$SECURITY_TMP/$t.json" "$@" ) </dev/null >"$SECURITY_TMP/$t.log" 2>&1; then rc=0; else rc=$?; fi
+	sed -i 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$SECURITY_TMP/$t.log"
+	[ -s "$SECURITY_TMP/$t.json" ] && "$JQ" -e . "$SECURITY_TMP/$t.json" >/dev/null 2>&1 || echo null >"$SECURITY_TMP/$t.json"
+}
+
+# Trailing blanks keep the JSON what it is.
+security_pad() {
+	local size
+	size="$(wc -c <"$1")"
+	head -c $(((size / SECURITY_PAD + 1) * SECURITY_PAD - size)) /dev/zero | tr '\0' ' ' >>"$1"
+}
+
+# == Secrets history ==
+# Of an app with a long history, secrets-audit spends most of a master run on
+# commits an earlier run read already. So the result of a scan of the whole
+# history is kept on its own, as secrets-history.json.age, and each later run of
+# the version copies it into its own directory unchanged and scans only every
+# branch and tag without the commits that scan reached. secrets-history.json
+# names those commits and the rules the scan ran with. The runner holds no key,
+# so it carries the file without reading it; gh-stats-security adds its findings
+# to those of the run. With other rules, or without an earlier scan, the whole
+# history is scanned.
+
+# Whether a master run of this repository scans the whole history: secrets-audit
+# runs, and no earlier run of an app of the repository kept a scan. A full clone
+# then takes less time than fetching the files of the history later.
+history_whole() {
+	[ -n "$AGE_RECIPIENT" ] && [[ " $SECURITY_TARGETS " == *" secrets-audit "* ]] || return 1
+	[ -n "$PRIOR_DIR" ] || return 0
+	[ -z "$(find "$PRIOR_DIR/$slug" -path '*/server-master/*/secrets-history.json' -print -quit 2>/dev/null)" ]
+}
+
+# The newest earlier run of this version that kept both files, or nothing.
+history_prior() {
+	local f
+	[ -n "$PRIOR_DIR" ] || return 0
+	f="$(find "$PRIOR_DIR/$(dirname "${RUN_DIR#"$LOG_DIR"/}")" -mindepth 2 -maxdepth 2 -name secrets-history.json 2>/dev/null | sort | tail -n 1)" || :
+	[ -n "$f" ] && [ -f "${f%/*}/secrets-history.json.age" ] || return 0
+	printf '%s\n' "${f%/*}"
+}
+
+# The commits the scan reaches: those every branch, tag and HEAD point to, without
+# the ones another of them reaches, since --not excludes what they reach as well.
+history_tips() {
+	"$GIT" -C "$CHECKOUT" rev-list --no-walk --all HEAD | xargs -r "$GIT" -C "$CHECKOUT" merge-base --independent
+}
+
+# A clone without the files of the history would fetch them for the scan one
+# commit at a time, which takes far longer than fetching all of them at once.
+history_complete() {
+	"$GIT" -C "$CHECKOUT" config remote.origin.partialclonefilter >/dev/null || return 0
+	log "   fetching the files of the whole history"
+	"$GIT" -C "$CHECKOUT" config --unset remote.origin.partialclonefilter
+	"$GIT" -C "$CHECKOUT" fetch -q --refetch origin 2>&1 | tee_plain "$LOG" \
+		|| warn "the files of the history could not be fetched at once, the scan fetches them one commit at a time"
+}
+
+# Keeps the result of a scan of the whole history, unless it read none.
+history_keep() {
+	local plain="$SECURITY_TMP/secrets-history.json" tips
+	"$JQ" -e '.rules != null and .history != null and .history.error == null' "$1" >/dev/null 2>&1 || return 0
+	tips="$(history_tips)" || return 0
+	"$JQ" -c '{tool: "gh-nc-appsdiag", schema: 1, result: .}' "$1" >"$plain"
+	security_pad "$plain"
+	if "$AGE" -r "$AGE_RECIPIENT" -o "$RUN_DIR/secrets-history.json.age" "$plain"; then
+		"$JQ" -n --slurpfile r "$1" --arg tips "$tips" \
+			'{tool: "gh-nc-appsdiag", schema: 1, rules: $r[0].rules, tips: ($tips | split("\n") | map(select(. != "")))}' \
+			>"$RUN_DIR/secrets-history.json"
+	else
+		rm -f "$RUN_DIR/secrets-history.json.age"
+	fi
+}
+
+# secrets-audit of a master run: the commits since the earlier scan, or the whole
+# history. A commit of the earlier scan that the clone no longer has, after a
+# force push, is left out of --not, so the commits only it reached are scanned
+# again. A scan that left no result keeps the earlier one, since another scan
+# would fail the same way.
+secrets_history() {
+	local prior tips="" c
+	prior="$(history_prior)"
+	if [ -n "$prior" ]; then
+		while IFS= read -r c; do
+			! "$GIT" -C "$CHECKOUT" cat-file -e "$c^{commit}" 2>/dev/null || tips+=" $c"
+		done < <("$JQ" -r '.tips[]?' "$prior/secrets-history.json")
+	fi
+	if [ -n "$tips" ]; then
+		cp "$prior/secrets-history.json" "$prior/secrets-history.json.age" "$RUN_DIR/"
+		security_make secrets-audit COMMITS="--all --not$tips"
+		"$JQ" -e --slurpfile p "$prior/secrets-history.json" '.rules == null or .rules == $p[0].rules' \
+			"$SECURITY_TMP/secrets-audit.json" >/dev/null && return 0
+		log "   the rules changed since the earlier scan, so the whole history is scanned"
+		rm -f "$RUN_DIR/secrets-history.json" "$RUN_DIR/secrets-history.json.age"
+	fi
+	history_complete
+	security_make secrets-audit
+	history_keep "$SECURITY_TMP/secrets-audit.json"
+}
+
 # The security targets write into a directory outside the run directory, which
 # neither the log nor the artifact of a CI run reads, and their output leaves the
 # run only as security.json.age. Their exit codes stay out of summary.json too:
 # one that is not 0 says that something was found. Every run with a recipient
 # writes the file, whatever it holds, so its presence says nothing either.
 security_run() {
-	local t rc dir bundle size
+	local t rc dir bundle
 	if [ -z "$AGE_RECIPIENT" ]; then
 		log "   no age recipient in NC_APPSDIAG_AGE_RECIPIENT, so they do not run"
 		security_strip
@@ -975,9 +1094,11 @@ security_run() {
 	: >"$dir/flagged.jsonl"
 	for t in $SECURITY_TARGETS; do
 		log "   make $t"
-		if ( cd "$APP_DIR" && make "$t" JSON="$dir/$t.json" ) </dev/null >"$dir/$t.log" 2>&1; then rc=0; else rc=$?; fi
-		sed -i 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$dir/$t.log"
-		[ -s "$dir/$t.json" ] && "$JQ" -e . "$dir/$t.json" >/dev/null 2>&1 || echo null >"$dir/$t.json"
+		if [ "$t" = secrets-audit ] && [ "$SERVER_REF" = master ]; then
+			secrets_history
+		else
+			security_make "$t"
+		fi
 		"$JQ" -n -c --arg t "$t" --argjson rc "$rc" --rawfile log "$dir/$t.log" --slurpfile r "$dir/$t.json" \
 			'{name: $t, exit: $rc, result: $r[0], log: $log}' >>"$dir/targets.jsonl"
 	done
@@ -985,9 +1106,7 @@ security_run() {
 	bundle="$dir/security.json"
 	"$JQ" -n -c --slurpfile targets "$dir/targets.jsonl" --slurpfile flagged "$dir/flagged.jsonl" \
 		'{tool: "gh-nc-appsdiag", schema: 1, targets: $targets, flagged: $flagged}' >"$bundle"
-	# Trailing blanks keep the JSON what it is.
-	size="$(wc -c <"$bundle")"
-	head -c $(((size / SECURITY_PAD + 1) * SECURITY_PAD - size)) /dev/zero | tr '\0' ' ' >>"$bundle"
+	security_pad "$bundle"
 	if "$AGE" -r "$AGE_RECIPIENT" -o "$RUN_DIR/security.json.age" "$bundle"; then
 		log "   security  $RUN_DIR/security.json.age"
 	else
@@ -1560,7 +1679,8 @@ elif [ ! -d "$CHECKOUT" ]; then
 	# A server release is measured at one commit and nothing else, so the history
 	# stays on the host; of the server repository it is most of the clone. Only
 	# for master of an app with a repository of its own the commit is yet to be
-	# found, which takes the commits and trees but no file of the history.
+	# found, which takes the commits and trees but no file of the history, unless
+	# secrets-audit reads all of it.
 	clone_args=()
 	if [ -n "$SERVER_REF" ] && [ "$SERVER_REF" != master ]; then
 		# The server and an app's repository spell a pre-release tag rc or RC,
@@ -1570,7 +1690,7 @@ elif [ ! -d "$CHECKOUT" ]; then
 		clone_args+=(--depth 1 --branch "${server_tag:-$SERVER_REF}")
 	elif [ "$SERVER_REF" = master ] && [ "$owner/$repo" = "$SERVER_REPO" ]; then
 		clone_args+=(--depth 1)
-	elif [ "$SERVER_REF" = master ]; then
+	elif [ "$SERVER_REF" = master ] && ! history_whole; then
 		clone_args+=(--filter=blob:none)
 	fi
 	"$GIT" clone "${clone_args[@]}" "https://$repo_host/$owner/$repo.git" "$CHECKOUT" 2>&1 | tee_plain "$LOG" \
