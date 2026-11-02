@@ -5,7 +5,8 @@
 # the browser loads the site database whole and queries it with sql.js, so the
 # deployment carries the pages under site/, the database gh-stats-site-db builds
 # from the latest sampler database, catalogue, shipped and unlisted apps, the
-# apps with an overdue security finding that gh-stats-security.yml keeps in the
+# repositories and tags of the releases that are no release asset, the apps
+# with an overdue security finding that gh-stats-security.yml keeps in the
 # release security, and the measurement results on the data branch, sql.js
 # itself, uPlot for the charts, and marked and DOMPurify for the app
 # descriptions. Nothing of it is committed.
@@ -102,6 +103,9 @@ jobs:
           # Without them the Apps tab lists no app outside the App Store.
           gh release download "$CATALOGUE_TAG" -p unlisted.json -D "$state" \
             || echo "::warning::No unlisted apps in the catalogue"
+          # Without them the site marks no release as measured from a tag.
+          gh release download "$CATALOGUE_TAG" -p sources.json -D "$state" \
+            || echo "::warning::No sources of the releases in the catalogue"
           # Without them the site marks no app as having an overdue security
           # finding; before the first check of the findings there is no such list.
           gh release download "$SECURITY_TAG" -p security-overdue.json -D "$state" \
