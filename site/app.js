@@ -810,13 +810,14 @@ function badge(b, fact) {
 	]
 	if (!b.items) return el('span', { class: cls, title: b.title ?? '' }, ...face)
 	// The list opens below the badge and over what follows, so the row keeps its
-	// place; the bytes are those of the page that loads the most of a package.
+	// place; the bytes are those of the page that loads the most of a package, and
+	// none for a package that only a .license file names.
 	return el('details', { class: 'badge-fold' },
 		el('summary', { class: cls, title: b.title ?? '' }, ...face, el('span', { class: 'badge-more' }, '▾')),
 		el('div', { class: 'badge-items' }, el('table', {},
 			el('thead', {}, el('tr', {}, el('th', {}, 'Package'), el('th', {}, 'Version'), el('th', { class: 'num' }, 'Bytes'))),
 			el('tbody', {}, ...b.items.map((x) => el('tr', {},
-				el('td', {}, x.pkg), el('td', {}, x.version ?? ''), el('td', { class: 'num' }, x.bytes.toLocaleString('en'))))))))
+				el('td', {}, x.pkg), el('td', {}, x.version ?? ''), el('td', { class: 'num' }, x.bytes?.toLocaleString('en') ?? '')))))))
 }
 
 // == Checks ==
