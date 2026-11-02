@@ -235,7 +235,7 @@ function unlistedVersion(u) {
 // The repository of an unlisted app, its directory below the root appended.
 function unlistedSource(u) {
 	const slug = u.host === 'github.com' ? u.repo : `${u.host}/${u.repo}`
-	return el('a', { class: 'slug', href: `https://${u.host}/${u.repo}` }, u.path ? `${slug}/${u.path}` : slug)
+	return slugLink(`https://${u.host}/${u.repo}`, u.path ? `${slug}/${u.path}` : slug)
 }
 
 const UNLISTED_TEXT = 'no release of its repository carries a tarball, so ncmake builds the app from its newest tag, or from the default branch where it has none, and checks that build'
@@ -522,6 +522,11 @@ function el(tag, attrs = {}, ...children) {
 	}
 	e.append(...children)
 	return e
+}
+
+// The link to a repository, which wraps after a slash before it breaks a name.
+function slugLink(href, text) {
+	return el('a', { class: 'slug', href }, ...text.split('/').flatMap((part, i) => (i ? ['/', el('wbr'), part] : [part])))
 }
 
 // Forgejo and Gitea name a repository and its releases with the paths GitHub uses.
@@ -1241,7 +1246,7 @@ function shippedRow(releases) {
 		return r
 	}
 	const head = el('td', {}, el('span', { class: 'name' }, el('a', { href: `#app/${encodeURIComponent(main.id)}` }, main.name)),
-		...securityMark(main.id), el('a', { class: 'slug', href: `https://github.com/${main.repo}` }, main.repo))
+		...securityMark(main.id), slugLink(`https://github.com/${main.repo}`, main.repo))
 	const since = shipped.get(main.id) ?? null
 	const row = line(main, head, since)
 	const p = {
@@ -1289,13 +1294,14 @@ function initOverview() {
 		p.search = `${p.name} ${members.map(slugOf).join(' ')}`.toLowerCase()
 		p.categories = new Set(own.flatMap((a) => JSON.parse(a.categories)))
 
-		// Each app links its page; a project that is no App Store app has none,
-		// unless it is a tool without a release tarball, whose tags have it.
-		const links = [...own, ...tooled].flatMap((a, i) => [i ? ', ' : '',
+		// Each app links its page, one per line; a project that is no App Store
+		// app has none, unless it is a tool without a release tarball, whose
+		// tags have it.
+		const links = [...own, ...tooled].flatMap((a, i) => [i ? el('br') : '',
 			a.tarball ? a.name : el('a', { href: `#app/${encodeURIComponent(a.id)}` }, a.name)])
 		const head = el('td', {}, el('span', { class: 'name' }, ...(links.length ? links : [p.name])),
 			...[...own, ...tooled].flatMap((a) => securityMark(a.id)),
-			...members.flatMap((r) => [el('a', { class: 'slug', href: repoUrl(r) }, slugOf(r)), ...unreachableMark(r)]),
+			...members.flatMap((r) => [slugLink(repoUrl(r), slugOf(r)), ...unreachableMark(r)]),
 			...own.flatMap((a) => shippedMark(a.id)), ...tooled.flatMap(exappMark))
 		p.main = el('tbody', {}, ...lineRows(main, head))
 		p.warn = main.warn
