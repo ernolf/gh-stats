@@ -850,6 +850,38 @@ function licenceText(fields) {
 		: []
 }
 
+// A known defect of the toolchain that leaves the source maps of the build
+// short, as a note for the maintainer: build-audit then reads the frameworks and
+// libraries from the .license files, and its proof build in a copy says whether
+// the versions that fix the defect fix it here. The sizes of the run are those
+// of the app's own build.
+function defectNotes(fields) {
+	const versions = (xs) => xs.map((x) => `${x.pkg} ${x.version}`).join(', ')
+	const ratio = (c) => `the map of ${c.file} names ${c.listed - c.missing} of the ${c.listed} `
+		+ `package${c.listed === 1 ? '' : 's'} its .license file names`
+	return (fields.get('build-audit/defects') ?? []).map((d) => {
+		const p = d.proof
+		const built = p && `A build with ${versions(d.prove.filter((x) => p.set?.includes(x.pkg)))}`
+			+ `${p.resolved?.length ? `, which resolves ${d.package} ${p.resolved.join(', ')},` : ''}`
+		const proof = !p ? `No build with ${versions(d.prove)} ran to show whether they fix it here.`
+			: p.outcome === 'fixed' ? `${built} succeeds, and the defect is gone: ${ratio(p.chunks[0])}.`
+				: p.outcome === 'not-fixed' ? `${built} succeeds, but the defect stays: ${ratio(p.chunks[0])}.`
+					: p.outcome === 'no-build' ? `${built} fails: ${p.step} ended with "${p.reason}".`
+						: p.outcome === 'unchecked' ? `${built} succeeds, but writes no chunk with both a map and a .license file, `
+							+ 'so it shows nothing of the defect.'
+							: p.outcome === 'undeclared' ? `package.json declares none of ${d.prove.map((x) => x.pkg).join(', ')}, `
+								+ 'so there is no version a build could set.'
+								: `No build with ${versions(d.prove)} could run: ${p.reason}.`
+		const more = d.chunks.length - 1
+		return el('p', { class: 'hint defect-note' }, 'For the maintainer: ',
+			`${d.package} ${d.locked.join(', ')} in ${d.lock}${d.condition ? `, where ${d.condition},` : ''} ${d.says}. `
+			+ `Here ${ratio(d.chunks[0])}${more ? `, and ${more} further chunk${more === 1 ? ' shows' : 's show'} the same` : ''}. `
+			+ 'The app runs as built; the frameworks and libraries are read from the .license files, '
+			+ 'and the sizes are those of this build. ',
+			`Fixed in ${d.package} ${d.fixed}: `, el('a', { href: d.upstream }, d.upstream), `. ${proof}`)
+	})
+}
+
 // The findings of a lint target with a file come as one entry per file and
 // level, which opens into its messages, numbered; the first line of a message
 // drops the file the entry names already. Other findings stay as they are.
@@ -933,6 +965,7 @@ function checksBlock(m, collapse) {
 		el('h4', {}, `${m.app_id ?? m.dir} ${m.version ?? ''} `, el('a', { href: `${results}/${m.dir}` }, 'run directory'), ...infoXmlLink(m)),
 		...badgeRow(fs, fields))
 	run.append(head,
+		...defectNotes(fields),
 		el('p', {}, diffText(m)),
 		...licenceText(fields),
 		...(securityResults ? securityTargets(m) : []),

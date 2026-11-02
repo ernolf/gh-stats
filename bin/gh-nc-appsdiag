@@ -875,6 +875,13 @@ run_target() {
 	if [ "$t" = deps-audit ]; then
 		args+=(NO_ADVISORIES=1)
 	fi
+	# Where a known defect of the toolchain leaves the source maps short, the result
+	# says whether the versions that fix it build the app and fix its maps. That
+	# build runs in a copy and only where a defect applies; the sizes stay those of
+	# the app's own build.
+	if [ "$t" = build-audit ]; then
+		args+=(PROVE=1)
+	fi
 	if ( cd "$APP_DIR" && make "$t" "${args[@]}" ) 2>&1 | tee_plain "$LOG"; then rc=0; else rc=$?; fi
 	results+=("$t	$rc	$((SECONDS - start))")
 	log "----- make $t: exit $rc after $((SECONDS - start))s"
