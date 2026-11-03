@@ -26,6 +26,8 @@ let sources
 // Whether the database holds the security results, which only a private copy
 // of the site has.
 let securityResults = false
+// The directory of the findings of the measurements, beside the database.
+let findingsBase
 // The line rows of each project and the project of each app, for the app pages.
 const projectLines = new Map()
 let appProjects
@@ -93,6 +95,7 @@ async function load() {
 		const config = await res.json()
 		results = config.results
 		issues = config.issues
+		findingsBase = config.db.replace(/[^/]*$/, 'findings/')
 		showVersions(config.lib ?? {})
 		progress.max = config.bytes
 		const [SQL, bytes] = await Promise.all([
@@ -107,13 +110,10 @@ async function load() {
 		text.textContent = `The database could not be loaded (${e.message}). Reload the page to try again.`
 		return
 	}
-	// The queries of the measurements read the table on the public site too.
 	securityResults = query("SELECT count(*) AS n FROM sqlite_master WHERE type = 'table' AND name = 'security_runs'")[0].n > 0
 	if (securityResults) {
 		const head = el('th', { 'data-sort': 'sec', class: 'num check-col', title: 'warnings the security targets found in the release shown' }, 'Security')
 		document.querySelector('#overview th[data-sort="warn"]').before(head)
-	} else {
-		db.run('CREATE TABLE security_runs (dir TEXT NOT NULL PRIMARY KEY) WITHOUT ROWID')
 	}
 	// The SQLite that sql.js compiled in, as the engine itself reports it.
 	showVersions({ SQLite: query('SELECT sqlite_version() AS v')[0].v })
@@ -273,20 +273,13 @@ function categories() {
 	return new Map(query('SELECT id, name FROM categories ORDER BY name COLLATE NOCASE').map((r) => [r.id, r.name]))
 }
 
-// A lint target warns once per file, however many messages the file has, as
-// checksBlock() shows them. abandoned stays NULL for a run without the JSON of
-// deps-audit, which says nothing about the packages, and sec for a run without
-// security results.
-const WARNINGS = `count(DISTINCT f.tool || char(10) || CASE WHEN (f.tool LIKE 'lint-%' OR f.tool LIKE 'security/lint-%') AND f.file IS NOT NULL THEN 'file ' || f.file ELSE f.n END)`
+// warn, sec and abandoned are the counts gh-stats-site-db and
+// gh-stats-security-site take from the findings.
 const MEASUREMENT = `m.dir, m.host, m.owner, m.repo, m.subdir, m.app_id, m.version, m.restrictable, m.server, m.tag, m.tarball, m.signed, m.diff, m.info_xml,
+	m.warn, m.sec, m.abandoned,
 	(SELECT s.repo FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_repo,
 	(SELECT s.path FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_path,
-	(SELECT s.app_ref FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_ref,
-	(SELECT ${WARNINGS} FROM findings f WHERE f.dir = m.dir AND f.level = 'warn' AND f.tool NOT LIKE 'security/%') AS warn,
-	CASE WHEN EXISTS (SELECT 1 FROM security_runs r WHERE r.dir = m.dir)
-	THEN (SELECT ${WARNINGS} FROM findings f WHERE f.dir = m.dir AND f.level = 'warn' AND f.tool LIKE 'security/%') END AS sec,
-	CASE WHEN EXISTS (SELECT 1 FROM targets t WHERE t.dir = m.dir AND t.name = 'deps-audit' AND t.json)
-	THEN (SELECT count(*) FROM findings f WHERE f.dir = m.dir AND f.tool = 'deps-audit' AND f.id = 'abandoned-dependency') END AS abandoned`
+	(SELECT s.app_ref FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_ref`
 
 // The measurements of each release, keyed by project and tag; a repository that
 // holds several apps has one per app. A measurement belongs to the project of
@@ -356,8 +349,20 @@ function measurementsByServer() {
 		(r) => `${r.app_id}\n${r.server}`)
 }
 
-function findingsOf(dir) {
-	return query('SELECT tool, level, id, text, file, line FROM findings WHERE dir = $dir ORDER BY tool, n', { $dir: dir })
+// The findings of a run, by tool, from the file beside the database, and where
+// the database has security results for it, those of the security targets
+// after them.
+async function findingsOf(m) {
+	const path = m.dir.split('/').map(encodeURIComponent).join('/')
+	const urls = [`${findingsBase}${path}.json`, ...(m.sec !== null ? [`security/${path}/findings.json`] : [])]
+	const lists = await Promise.all(urls.map(async (url) => {
+		const res = await fetch(url)
+		if (!res.ok) {
+			throw new Error(`${url}: HTTP ${res.status}`)
+		}
+		return res.json()
+	}))
+	return lists.flat()
 }
 
 // The kept fields of the analyser results of a run, keyed by tool/name.
@@ -950,12 +955,11 @@ function infoXmlLink(m) {
 // first, then the tools with warnings; ok and info only as counts that open on
 // demand. The head of a measurement, its name and badges, stays in view while
 // its findings scroll beneath it, with the button that collapses the row and,
-// while it sticks, the one back to the start of the measurement.
+// while it sticks, the one back to the start of the measurement. The findings,
+// and the badges taken from them, follow once their file has arrived.
 function checksBlock(m, collapse) {
 	const rank = ([tool, fs]) => (tool.startsWith('security/') ? 2 : 0) + (fs.some((f) => f.level === 'warn') ? 1 : 0)
-	const fs = findingsOf(m.dir)
 	const fields = fieldsOf(m.dir)
-	const tools = [...Map.groupBy(fs, (f) => f.tool)].sort((a, b) => rank(b) - rank(a))
 	const run = el('section', { class: 'run' })
 	const start = el('button', { type: 'button', class: 'quiet', title: 'Back to the start of this measurement', hidden: '' }, '↑ Start')
 	start.addEventListener('click', () => {
@@ -963,24 +967,37 @@ function checksBlock(m, collapse) {
 	})
 	const head = el('div', { class: 'run-head' },
 		el('div', { class: 'run-actions' }, start, collapse()),
-		el('h4', {}, `${m.app_id ?? m.dir} ${m.version ?? ''} `, el('a', { href: `${results}/${m.dir}` }, 'run directory'), ...infoXmlLink(m)),
-		...badgeRow(fs, fields))
+		el('h4', {}, `${m.app_id ?? m.dir} ${m.version ?? ''} `, el('a', { href: `${results}/${m.dir}` }, 'run directory'), ...infoXmlLink(m)))
+	const status = el('p', { class: 'hint' })
 	run.append(head,
 		...defectNotes(fields),
 		el('p', {}, diffText(m)),
 		...licenceText(fields),
 		...(securityResults ? securityTargets(m) : []),
-		...tools.map(([tool, fs]) => {
-			const warns = fs.filter((f) => f.level === 'warn')
-			const rest = fs.filter((f) => f.level !== 'warn')
-			const counts = ['ok', 'info'].map((l) => [l, rest.filter((f) => f.level === l).length]).filter(([, n]) => n)
-			return el('div', { class: tool.startsWith('security/') ? 'tool security' : 'tool' }, el('h5', {}, tool),
-				...(warns.length && baseTool(tool).startsWith('lint-') ? [lintHint(baseTool(tool))] : []),
-				...findingEntries(tool, warns),
-				...(rest.length
-					? [el('details', {}, el('summary', {}, counts.map(([l, n]) => `${n} ${l}`).join(', ')), ...findingEntries(tool, rest))]
-					: []))
-		}))
+		status)
+	const load = () => {
+		status.replaceChildren('Loading the findings of this run.')
+		findingsOf(m).then((fs) => {
+			head.append(...badgeRow(fs, fields))
+			const tools = [...Map.groupBy(fs, (f) => f.tool)].sort((a, b) => rank(b) - rank(a))
+			status.replaceWith(...tools.map(([tool, fs]) => {
+				const warns = fs.filter((f) => f.level === 'warn')
+				const rest = fs.filter((f) => f.level !== 'warn')
+				const counts = ['ok', 'info'].map((l) => [l, rest.filter((f) => f.level === l).length]).filter(([, n]) => n)
+				return el('div', { class: tool.startsWith('security/') ? 'tool security' : 'tool' }, el('h5', {}, tool),
+					...(warns.length && baseTool(tool).startsWith('lint-') ? [lintHint(baseTool(tool))] : []),
+					...findingEntries(tool, warns),
+					...(rest.length
+						? [el('details', {}, el('summary', {}, counts.map(([l, n]) => `${n} ${l}`).join(', ')), ...findingEntries(tool, rest))]
+						: []))
+			}))
+		}, (e) => {
+			const again = el('button', { type: 'button', class: 'quiet' }, 'Try again')
+			again.addEventListener('click', load)
+			status.replaceChildren(`The findings of this run could not be loaded (${e.message}). `, again)
+		})
+	}
+	load()
 	return run
 }
 
