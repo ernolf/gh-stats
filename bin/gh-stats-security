@@ -323,16 +323,21 @@ OPEN="$FINDINGS"'[(.targets[] | .name as $t | .result.findings[]? | select(.leve
 # the table gh-stats-site-db fills, numbered per tool, and whether the target
 # marks a finding as one of security. A target that ended with another exit
 # than 0 and left no result fails, as gh-stats-site-db has it for the public
-# targets.
+# targets, with the last line its log has before the error of make.
 # shellcheck disable=SC2016 # jq variables
 EXPORT='def q: ([39] | implode) as $s | $s + gsub($s; $s + $s) + $s;
 	def v: if . == null then "NULL" elif type == "string" then q
 		elif type == "boolean" then (if . then "1" else "0" end) else tostring end;
+	def stopped: (.log // "" | split("\n")) as $l
+		| ($l | map(test("^make(\\[[0-9]+\\])?: \\*\\*\\* ")) | index(true)) as $i
+		| [($l | if $i == null then . else .[:$i] end)[] | select(test("\\S"))] | last | if . == null then null else .[:300] end;
 	"INSERT INTO security_runs VALUES (\($dir | q));",
 	(.targets[] | "INSERT INTO security_targets VALUES (\($dir | q), \(.name | q), \(.exit | v));"),
 	([(.targets[] | .name as $t | (.result.findings? // [])[] | {tool: $t, f: .}),
 		(.targets[] | select(.exit != 0 and .result == null)
-			| {tool: .name, f: {level: "warn", id: "failed", lines: ["make \(.name) ended with exit \(.exit) and left no result."]}}),
+			| {tool: .name, f: {level: "warn", id: "failed", lines: (["make \(.name) ended with exit \(.exit) and left no result.",
+				"This is no finding in the app: the check did not run, and the cause lies with ncmake or the run."]
+				+ (stopped | if . == null then [] else ["It stopped with: \(.)"] end))}}),
 		(.flagged[] | .tool as $t | .findings[] | {tool: $t, f: .})]
 	| group_by(.tool)[] | to_entries[]
 	| "INSERT INTO findings VALUES (\($dir | q), \("security/" + .value.tool | q), \(.key + 1), \(.value.f.level | v), \(.value.f.id | v), \(.value.f.lines // [] | join("\n") | q), \(.value.f.file | v), \(.value.f.line | v), \(.value.f.security == true | v));")'
