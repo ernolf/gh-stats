@@ -242,7 +242,9 @@ a repository on another host below a directory of that host:
                           the build file make read before the stub and its
                           kind, every target with exit code and duration
                           (and, for a reuse that never linted, why it has no
-                          JSON), the result files
+                          JSON), whether it is one of the analysers with a
+                          JSON result, and for one that failed the line it
+                          stopped with (stopped), the result files
       info.xml            appinfo/info.xml of the measured tree, the one the
                           analysers read
       <target>.json      the machine-readable analyser results, by default of
@@ -549,6 +551,8 @@ app_version=""
 app_restrictable=""
 tag_version=""
 results=()
+# The line each target that failed stopped with, by target.
+declare -A stopped_lines=()
 # What summary.json reports besides the targets, filled in where it is learnt.
 STARTED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 head_tag=""
@@ -883,6 +887,7 @@ run_target() {
 		args+=(PROVE=1)
 	fi
 	if ( cd "$APP_DIR" && make "$t" "${args[@]}" ) 2>&1 | tee_plain "$LOG"; then rc=0; else rc=$?; fi
+	[ "$rc" = 0 ] || stopped_lines[$t]="$(tail -n "+$from" "$LOG" | stopped_line)"
 	results+=("$t	$rc	$((SECONDS - start))")
 	log "----- make $t: exit $rc after $((SECONDS - start))s"
 	if json_file "$t"; then
@@ -896,6 +901,13 @@ run_target() {
 	# exactly when it has something to report, and that report is what is kept.
 	json_run "$t" "$from"
 	return 0
+}
+
+# What a failed target printed last before make reported the error, on standard
+# input, which is why it stopped as far as its output says. Without the error
+# of make it is the last line at all.
+stopped_line() {
+	awk '/^make(\[[0-9]+\])?: \*\*\* / { exit } NF { last = $0 } END { print substr(last, 1, 300) }'
 }
 
 # A target in JSON_TARGETS writes its JSON in the run that prints its report,
@@ -1567,7 +1579,7 @@ release_compare() {
 # console.log is for people. It is written once: by summary() at the end of a run,
 # or by the exit trap of a run that ended before, and its status says which.
 write_summary_json() {
-	local status="$1" code="$2" head="" host cpus mem cpu inv files diff
+	local status="$1" code="$2" head="" host cpus mem cpu inv files diff stopped
 	[ -n "$RUN_DIR" ] || return 0
 	summary_written=1
 	security_strip
@@ -1587,6 +1599,8 @@ write_summary_json() {
 		| sed 's:^\./::' | sort | "$JQ" -R -s -c 'split("\n") | map(select(length > 0))')"
 	diff=null
 	[ -s "$RUN_DIR/release/diff.json" ] && diff="$("$JQ" -c '{signed, counts}' "$RUN_DIR/release/diff.json")" || true
+	stopped="$(for t in "${!stopped_lines[@]}"; do printf '%s\t%s\n' "$t" "${stopped_lines[$t]}"; done \
+		| "$JQ" -R -s -c 'split("\n") | map(select(length > 0) | split("\t") | {key: .[0], value: (.[1:] | join("\t"))}) | from_entries')"
 	printf '%s\n' "${results[@]}" | "$JQ" -R -s \
 		--arg repo_host "$repo_host" --arg owner "$owner" --arg repo "$repo" --arg subdir "$subdir" --arg app_id "$app_id" --arg version "$app_version" --arg restrictable "$app_restrictable" \
 		--arg want "$want_version" --arg server "$SERVER_REF" --arg server_build "$server_build" --arg stamp "$STAMP" --arg started "$STARTED" \
@@ -1595,7 +1609,8 @@ write_summary_json() {
 		--arg ncmain "$ncmake_main" --arg ncdiffers "$ncmake_differs" --argjson ncchecked "$ncmake_checked" \
 		--arg host "$host" --arg cpus "$cpus" --arg mem "$mem" --arg cpu "$cpu" \
 		--argjson inv "$inv" --arg bname "$build_name" --arg bkind "$build_kind" --argjson files "$files" \
-		--arg tarball "$rel_tarball" --arg bytes "$rel_bytes" --argjson diff "$diff" '
+		--arg tarball "$rel_tarball" --arg bytes "$rel_bytes" --argjson diff "$diff" \
+		--argjson stopped "$stopped" --arg analysers " $JSON_TARGETS " '
 		def nul($s): if $s == "" then null else $s end;
 		def num($s): if $s == "" then null else ($s | tonumber) end;
 		{tool: "gh-nc-appsdiag", schema: 1,
@@ -1611,7 +1626,8 @@ write_summary_json() {
 		 host: {name: $host, cpus: num($cpus), mem_mb: num($mem), cpu_model: nul($cpu)},
 		 inventory: {files: $inv,
 		            build_file: (if $bname == "" then null else {name: $bname, kind: $bkind} end)},
-		 targets: [split("\n")[] | select(length > 0) | split("\t") | {name: .[0], exit: (.[1] | tonumber), seconds: (.[2] | tonumber), json_skipped: nul(.[3] // "")}],
+		 targets: [split("\n")[] | select(length > 0) | split("\t") | {name: .[0], exit: (.[1] | tonumber), seconds: (.[2] | tonumber), json_skipped: nul(.[3] // ""),
+		          analyser: ((" " + .[0] + " ") as $n | $analysers | contains($n)), stopped: ($stopped[.[0]] // null)}],
 		 files: $files,
 		 release: (if $tarball == "" then null else
 			{tarball: $tarball, bytes: num($bytes), diff: (if $diff == null then null else "release/diff.json" end),
