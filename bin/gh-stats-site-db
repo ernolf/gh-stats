@@ -938,6 +938,16 @@ UPDATE findings AS f SET
   FROM shipped_runs r
  WHERE f.dir = r.dir AND r.tree AND f.tool = 'consistency-audit' AND f.level = 'warn' AND f.id = 'repository-link'
    AND f.text LIKE 'appinfo/info.xml states no <repository>.' || char(10) || '%';
+-- The App Store rules keep Nextcloud out of the name of an app it offers, since
+-- such a name reads as part of Nextcloud. An app of the server tree is part of
+-- Nextcloud and not offered by the App Store. A shipped app with a repository
+-- of its own keeps the warning.
+UPDATE findings AS f SET
+  level = 'info',
+  text = substr(f.text, 1, instr(f.text || char(10), char(10)) - 1) || char(10)
+    || '  The app is part of the tree of nextcloud/server, so of Nextcloud itself, and the App Store does not offer it.'
+  FROM shipped_runs r
+ WHERE f.dir = r.dir AND r.tree AND f.tool = 'consistency-audit' AND f.level = 'warn' AND f.id = 'app-name';
 
 -- The counts of the overview, so the page needs no findings to show them. A
 -- lint target warns once per file, however many messages the file has, as the
