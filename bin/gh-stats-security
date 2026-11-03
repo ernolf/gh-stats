@@ -320,9 +320,10 @@ OPEN="$FINDINGS"'[(.targets[] | .name as $t | .result.findings[]? | select(.leve
 
 # The tables and rows --export writes: the runs with a result, the exit code of
 # each security target, and the warnings, notes and failures as findings, in
-# the table gh-stats-site-db fills, numbered per tool. A target that ended with
-# another exit than 0 and left no result fails, as gh-stats-site-db has it for
-# the public targets.
+# the table gh-stats-site-db fills, numbered per tool, and whether the target
+# marks a finding as one of security. A target that ended with another exit
+# than 0 and left no result fails, as gh-stats-site-db has it for the public
+# targets.
 # shellcheck disable=SC2016 # jq variables
 EXPORT='def q: ([39] | implode) as $s | $s + gsub($s; $s + $s) + $s;
 	def v: if . == null then "NULL" elif type == "string" then q
@@ -334,7 +335,7 @@ EXPORT='def q: ([39] | implode) as $s | $s + gsub($s; $s + $s) + $s;
 			| {tool: .name, f: {level: "warn", id: "failed", lines: ["make \(.name) ended with exit \(.exit) and left no result."]}}),
 		(.flagged[] | .tool as $t | .findings[] | {tool: $t, f: .})]
 	| group_by(.tool)[] | to_entries[]
-	| "INSERT INTO findings VALUES (\($dir | q), \("security/" + .value.tool | q), \(.key + 1), \(.value.f.level | v), \(.value.f.id | v), \(.value.f.lines // [] | join("\n") | q), \(.value.f.file | v), \(.value.f.line | v));")'
+	| "INSERT INTO findings VALUES (\($dir | q), \("security/" + .value.tool | q), \(.key + 1), \(.value.f.level | v), \(.value.f.id | v), \(.value.f.lines // [] | join("\n") | q), \(.value.f.file | v), \(.value.f.line | v), \(.value.f.security == true | v));")'
 
 if [ "$mode" = export ]; then
 	out="${args[0]}"

@@ -115,7 +115,7 @@ async function load() {
 	}
 	securityResults = query("SELECT count(*) AS n FROM sqlite_master WHERE type = 'table' AND name = 'security_runs'")[0].n > 0
 	if (securityResults) {
-		const head = el('th', { 'data-sort': 'sec', class: 'num check-col', title: 'warnings the security targets found in the release shown' }, 'Security')
+		const head = el('th', { 'data-sort': 'sec', class: 'num check-col', title: 'security findings the security targets found in the release shown' }, 'Security')
 		document.querySelector('#overview th[data-sort="warn"]').before(head)
 	}
 	// The SQLite that sql.js compiled in, as the engine itself reports it.
@@ -276,10 +276,10 @@ function categories() {
 	return new Map(query('SELECT id, name FROM categories ORDER BY name COLLATE NOCASE').map((r) => [r.id, r.name]))
 }
 
-// warn, sec and abandoned are the counts gh-stats-site-db and
+// warn, sec, sec_other and abandoned are the counts gh-stats-site-db and
 // gh-stats-security-site take from the findings.
 const MEASUREMENT = `m.dir, m.host, m.owner, m.repo, m.subdir, m.app_id, m.version, m.restrictable, m.server, m.tag, m.tarball, m.signed, m.diff, m.info_xml,
-	m.warn, m.sec, m.abandoned,
+	m.warn, m.sec, m.sec_other, m.abandoned,
 	(SELECT s.repo FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_repo,
 	(SELECT s.path FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_path,
 	(SELECT s.app_ref FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_ref`
@@ -966,13 +966,16 @@ function infoXmlLink(m) {
 }
 
 // Warnings in full, grouped by the tool that found them, the security targets
-// first, then the tools with warnings; ok and info only as counts that open on
-// demand. The head of a measurement, its name and badges, stays in view while
+// first, those with a security finding before the others, then the tools with
+// warnings; within a tool the security findings come first, ok and info only as
+// counts that open on demand. A security target names how many of its warnings
+// are security findings, counted as its column counts them. The head of a measurement, its name and badges, stays in view while
 // its findings scroll beneath it, with the button that collapses the row and,
 // while it sticks, the one back to the start of the measurement. The findings,
 // and the badges taken from them, follow once their file has arrived.
 function checksBlock(m, collapse) {
-	const rank = ([tool, fs]) => (tool.startsWith('security/') ? 2 : 0) + (fs.some((f) => f.level === 'warn') ? 1 : 0)
+	const rank = ([tool, fs]) => (tool.startsWith('security/') ? 4 : 0) + (fs.some((f) => f.level === 'warn' && f.security) ? 2 : 0)
+		+ (fs.some((f) => f.level === 'warn') ? 1 : 0)
 	const fields = fieldsOf(m.dir)
 	const run = el('section', { class: 'run' })
 	const start = el('button', { type: 'button', class: 'quiet', title: 'Back to the start of this measurement', hidden: '' }, '↑ Start')
@@ -995,10 +998,14 @@ function checksBlock(m, collapse) {
 			head.append(...badgeRow(fs, fields))
 			const tools = [...Map.groupBy(fs, (f) => f.tool)].sort((a, b) => rank(b) - rank(a))
 			status.replaceWith(...tools.map(([tool, fs]) => {
-				const warns = fs.filter((f) => f.level === 'warn')
+				const warns = fs.filter((f) => f.level === 'warn').sort((a, b) => Number(b.security === true) - Number(a.security === true))
 				const rest = fs.filter((f) => f.level !== 'warn')
 				const counts = ['ok', 'info'].map((l) => [l, rest.filter((f) => f.level === l).length]).filter(([, n]) => n)
-				return el('div', { class: tool.startsWith('security/') ? 'tool security' : 'tool' }, el('h5', {}, tool),
+				const split = tool.startsWith('security/') && warns.length
+					? [' ', el('span', { class: 'check-of' },
+						`${counted(tool, warns.filter((f) => f.security))} security, ${counted(tool, warns.filter((f) => !f.security))} other`)]
+					: []
+				return el('div', { class: tool.startsWith('security/') ? 'tool security' : 'tool' }, el('h5', {}, tool, ...split),
 					...(warns.length && baseTool(tool).startsWith('lint-') ? [lintHint(baseTool(tool))] : []),
 					...findingEntries(tool, warns),
 					...(rest.length
@@ -1097,18 +1104,22 @@ function checksCell(runs, span, version = null) {
 		securityResults ? [securityCell(runs, () => show(checks.hidden), version)] : []]
 }
 
+// The cell of the security column counts the security findings; the other
+// warnings of the security targets follow it as a number of their own.
 function securityCell(runs, toggle, version) {
 	const n = securityWarnings(runs)
 	if (n === null) {
 		return el('td', { class: 'num check-col', title: 'no security results' })
 	}
+	const other = securityWarnings(runs, 'sec_other')
 	const button = el('button', {
 		type: 'button',
 		class: n ? 'check-count warn' : 'check-count',
-		title: `${n} warning${n === 1 ? '' : 's'} of the security targets${version ? ` in ${version}` : ''}`,
+		title: `${n} security finding${n === 1 ? '' : 's'} and ${other} other warning${other === 1 ? '' : 's'} of the security targets${version ? ` in ${version}` : ''}`,
 	}, n ? `⚠ ${n}` : '✓')
 	button.addEventListener('click', toggle)
-	return el('td', { class: 'num check-col' }, button)
+	return el('td', { class: 'num check-col' }, button,
+		...(other ? [' ', el('span', { class: 'check-of', title: `${other} warning${other === 1 ? '' : 's'} of the security targets that ${other === 1 ? 'is no security finding' : 'are no security findings'}` }, `+${other}`)] : []))
 }
 
 // The warnings of the measurements of a release, null when it has none, so an
@@ -1117,16 +1128,23 @@ function warnings(runs) {
 	return runs ? runs.reduce((n, m) => n + m.warn, 0) : null
 }
 
-// The security warnings of the measurements of a release, null when none of
-// them has security results.
-function securityWarnings(runs) {
+// The security findings of the measurements of a release, or with sec_other
+// the other warnings of the security targets, null when none of them has
+// security results.
+function securityWarnings(runs, count = 'sec') {
 	const known = (runs ?? []).filter((m) => m.sec !== null)
-	return known.length ? known.reduce((n, m) => n + m.sec, 0) : null
+	return known.length ? known.reduce((n, m) => n + (m[count] ?? 0), 0) : null
+}
+
+// The warnings of a tool as its counts have them: those of a lint target once
+// per file.
+function counted(tool, fs) {
+	return new Set(fs.map((f) => (baseTool(tool).startsWith('lint-') && f.file !== null ? `file ${f.file}` : f))).size
 }
 
 // The column head of the security results, where the database has them.
 function securityHead() {
-	return securityResults ? [el('th', { class: 'num', title: 'warnings the security targets found in the release shown' }, 'Security')] : []
+	return securityResults ? [el('th', { class: 'num', title: 'security findings the security targets found in the release shown' }, 'Security')] : []
 }
 
 // The abandoned packages deps-audit found in the measurements of a release,

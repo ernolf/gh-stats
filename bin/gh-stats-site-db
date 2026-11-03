@@ -98,7 +98,7 @@ repository under its current name, plus
              tag, status, the shipped tarball, the counts of the release
              diff, info_xml, 1 when the run kept the info.xml it read, and
              warn and abandoned, the warnings of the run and the abandoned
-             packages deps-audit found; sec stays empty for
+             packages deps-audit found; sec and sec_other stay empty for
              gh-stats-security-site
   targets    the make targets of each run, with exit code, whether they left a
              JSON result and why one was skipped
@@ -937,10 +937,12 @@ UPDATE findings AS f SET
 -- The counts of the overview, so the page needs no findings to show them. A
 -- lint target warns once per file, however many messages the file has, as the
 -- run block shows them. abandoned stays NULL for a run without the JSON of
--- deps-audit, which says nothing about the packages; sec is the count of the
--- security targets, which only the private copy of gh-stats-security-site has.
+-- deps-audit, which says nothing about the packages; sec and sec_other are the
+-- counts of the security targets, which only the private copy of
+-- gh-stats-security-site has.
 ALTER TABLE measurements ADD COLUMN warn INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE measurements ADD COLUMN sec INTEGER;
+ALTER TABLE measurements ADD COLUMN sec_other INTEGER;
 ALTER TABLE measurements ADD COLUMN abandoned INTEGER;
 UPDATE measurements AS m SET
   warn = (SELECT count(DISTINCT f.tool || char(10) || CASE WHEN f.tool LIKE 'lint-%' AND f.file IS NOT NULL THEN 'file ' || f.file ELSE f.n END)
