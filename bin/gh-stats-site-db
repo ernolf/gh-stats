@@ -15,8 +15,10 @@
 # version key and strict pre-release flag of gh-stats on every release, the
 # projects the repositories form, one summary row per project and release line
 # for the start page, the measurement results of the data branch, and what the
-# App Store shows of every catalogue app for its page. The source database is
-# only read.
+# App Store shows of every catalogue app for its page. The findings of the
+# measurements are not in it: each measurement has them in a JSON file of its
+# own beside the database, which the page fetches only when the measurement is
+# opened. The source database is only read.
 
 # == Config ==
 # Optional site config shared with gh-stats and gh-release-sampler. If
@@ -94,12 +96,12 @@ repository under its current name, plus
              it was asked for, else the one its info.xml declares, the
              server release of a shipped app measured as the server ships it,
              tag, status, the shipped tarball, the counts of the release
-             diff, and info_xml, 1 when the run kept the info.xml it read
+             diff, info_xml, 1 when the run kept the info.xml it read, and
+             warn and abandoned, the warnings of the run and the abandoned
+             packages deps-audit found; sec stays empty for
+             gh-stats-security-site
   targets    the make targets of each run, with exit code, whether they left a
              JSON result and why one was skipped
-  findings   the findings of the analysers of each run, with the file and
-             line they name, and one finding per aborted run, failed target,
-             skipped JSON result and REUSE lint
   fields     the fields of the analyser results the badges and notes of a run read, as
              JSON, by run, analyser and name
   app_details  what the App Store shows of every catalogue app: categories,
@@ -139,6 +141,10 @@ repository under its current name, plus
              deadline, and the day it was reported; empty without
              security-overdue.json
 
+Beside <file>, findings/<run dir>.json holds the findings of each run as a JSON
+array: the findings of the analysers with the file and line they name, and one
+finding per aborted run, failed target, skipped JSON result and REUSE lint.
+
 Downloads are the summed counters of the assets gh-stats counts by default
 (zip, tar.bz2, tar.gz, tar.xz, tgz). A line whose releases have none of them is
 left out unless no line of its project has any. A period stays empty when the
@@ -146,9 +152,11 @@ release is younger than it or a repository with its assets was not sampled yet
 at its start.
 
 Options:
-  -o, --output <file>  the database to write
+  -o, --output <file>  the database to write; the findings of each measurement
+                       go to findings/<run dir>.json beside it
   -r, --results <dir>  the directory apps/ of a checkout of the data branch;
-                       without it the four measurement tables stay empty
+                       without it the three measurement tables stay empty
+                       and no findings are written
   -h, --help           this text
 
 Environment (or /etc/gh-stats/gh-stats.env):
@@ -190,6 +198,8 @@ done
 [ -r "$APPSTORE_CACHE" ] || die "no catalogue at $APPSTORE_CACHE"
 [ -r "$APPSTORE_APPAPI_CACHE" ] || die "no AppAPI catalogue at $APPSTORE_APPAPI_CACHE"
 [ ! -e "$out" ] || die "$out exists"
+findings="$(dirname "$out")/findings"
+[ ! -e "$findings" ] || die "$findings exists"
 [ -z "$results" ] || [ -d "$results" ] || die "no results directory at $results"
 
 # == Catalogue ==
@@ -379,7 +389,7 @@ if [ -r "$SECURITY_OVERDUE_CACHE" ]; then
 fi
 
 # -bail stops at the first error; the half-written copy is removed then.
-trap 'rm -f "$out"' ERR
+trap 'rm -rf "$out" "$findings"' ERR
 # The key of a repository in the projects: owner/repo on GitHub, host/owner/repo
 # elsewhere, lowercase.
 host_k="CASE WHEN host = 'github.com' THEN '' ELSE host || '/' END"
@@ -924,6 +934,30 @@ UPDATE findings AS f SET
  WHERE f.dir = r.dir AND r.tree AND f.tool = 'consistency-audit' AND f.level = 'warn' AND f.id = 'repository-link'
    AND f.text LIKE 'appinfo/info.xml states no <repository>.' || char(10) || '%';
 
+-- The counts of the overview, so the page needs no findings to show them. A
+-- lint target warns once per file, however many messages the file has, as the
+-- run block shows them. abandoned stays NULL for a run without the JSON of
+-- deps-audit, which says nothing about the packages; sec is the count of the
+-- security targets, which only the private copy of gh-stats-security-site has.
+ALTER TABLE measurements ADD COLUMN warn INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE measurements ADD COLUMN sec INTEGER;
+ALTER TABLE measurements ADD COLUMN abandoned INTEGER;
+UPDATE measurements AS m SET
+  warn = (SELECT count(DISTINCT f.tool || char(10) || CASE WHEN f.tool LIKE 'lint-%' AND f.file IS NOT NULL THEN 'file ' || f.file ELSE f.n END)
+            FROM findings f WHERE f.dir = m.dir AND f.level = 'warn'),
+  abandoned = CASE WHEN EXISTS (SELECT 1 FROM targets t WHERE t.dir = m.dir AND t.name = 'deps-audit' AND t.json)
+    THEN (SELECT count(*) FROM findings f WHERE f.dir = m.dir AND f.tool = 'deps-audit' AND f.id = 'abandoned-dependency') END;
+-- The findings of a measurement, by tool and in the order of the analyser, as
+-- the JSON array the run block reads; a measurement without any has an empty
+-- one, so a file that is missing is an error. The table itself is not shipped.
+CREATE TEMP TABLE exported AS
+SELECT (SELECT count(*) FROM findings) AS findings, sum(writefile('${findings//$sq/$sq$sq}/' || m.dir || '.json',
+  (SELECT json_group_array(json(o)) FROM (
+     SELECT json_object('tool', f.tool, 'level', f.level, 'id', f.id, 'text', f.text, 'file', f.file, 'line', f.line) AS o
+       FROM findings f WHERE f.dir = m.dir ORDER BY f.tool, f.n)))) AS bytes
+  FROM measurements m;
+DROP TABLE findings;
+
 VACUUM;
 SELECT 'apps', count(*) FROM apps
 UNION ALL SELECT 'platforms', count(*) FROM platforms
@@ -931,7 +965,7 @@ UNION ALL SELECT 'releases', count(*) FROM releases
 UNION ALL SELECT 'projects', count(DISTINCT project) FROM projects
 UNION ALL SELECT 'summary', count(*) FROM summary
 UNION ALL SELECT 'measurements', count(*) FROM measurements
-UNION ALL SELECT 'findings', count(*) FROM findings
+UNION ALL SELECT 'findings', findings FROM exported
 UNION ALL SELECT 'fields', count(*) FROM fields
 UNION ALL SELECT 'app_details', count(*) FROM app_details
 UNION ALL SELECT 'app_releases', count(*) FROM app_releases
