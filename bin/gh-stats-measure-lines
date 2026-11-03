@@ -25,8 +25,7 @@ Writes one line per app version, as gh-nc-appsdiag is asked for it:
   codeberg.org/someone/someapp
 
   - with --shipped, every app of each server release <file> marks as the
-    newest of its major, and of master, as that release ships it; an app the
-    release enables always is part of the server and left out
+    newest of its major, and of master, as that release ships it
   - with --unlisted, every app of <file> whose repository publishes no release
     tarball and that is no ExApp, with the version of its newest tag, read from
     the first digit on; an app whose repository has no tag comes without a
@@ -62,7 +61,7 @@ done
 [ -n "$shipped$unlisted" ] || { usage >&2; exit 1; }
 
 [ -z "$shipped" ] || jq -r '.releases[] | select(.latest) | .ref as $ref
-	| .apps[] | select(.enabled != "always") | "-s \($ref) \(.repo)" + (if (.path // "") != "" then ":" + .path else "" end)' "$shipped"
+	| .apps[] | "-s \($ref) \(.repo)" + (if (.path // "") != "" then ":" + .path else "" end)' "$shipped"
 [ -z "$unlisted" ] || jq -r --argjson keys "$keys" '.apps[] | select(.tarball == false and .exapp != true)
 	| ((if .host == "github.com" then "" else .host + "/" end) + .repo
 	   + (if .path != "" then ":" + .path else "" end)) as $app

@@ -45,7 +45,7 @@
 # version of a repository always keeps its result, as does the newest tag of an
 # unlisted app, and so does a shipped app as
 # the newest release of its server major, the newest pre-release of a major
-# without a release, or master ships it, unless the release enables it always.
+# without a release, or master ships it.
 # A shipped app has the line "-s v<release> <owner>/<repo>[:<directory>]", for
 # master "-s master ...".
 #
@@ -211,7 +211,7 @@ jobs:
             # has its id between the repository and the server release.
             jq -r '.repo + (if .path != "" then "/" + .id else "" end)' "$state/app.json" \
               | tr '[:upper:]' '[:lower:]' > "$state/key"
-            if [ "$KIND" = remove ] && jq -e '.latest and .enabled != "always"' "$state/app.json" >/dev/null; then
+            if [ "$KIND" = remove ] && jq -e '.latest' "$state/app.json" >/dev/null; then
               if [ "$SERVER" = master ]; then
                 gh issue close "$NUMBER" --reason "not planned" --comment "Each build of master is measured, the check of \`$APP\` as it ships it stays."
               else
