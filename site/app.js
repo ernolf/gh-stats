@@ -1220,7 +1220,7 @@ function downloadReason(a) {
 function catalogueRow(a) {
 	const released = a.version !== null
 	const p = {
-		tab: !released ? 'other' : a.exapp ? 'exapps' : 'apps',
+		tab: !released ? 'other' : a.exapp ? 'exapps' : 'apps', listed: true,
 		name: a.name, tag: a.version, published: a.published, nc: a.platform,
 		total: null, d1: null, d7: null, d30: null, lines: [],
 		search: `${a.name} ${a.id}`.toLowerCase(), categories: new Set(JSON.parse(a.categories)),
@@ -1261,7 +1261,7 @@ function catalogueRow(a) {
 function unlistedRow(u) {
 	const version = unlistedVersion(u)
 	const p = {
-		tab: u.tool ? 'tools' : u.exapp ? 'exapps' : 'apps', name: u.name, tag: version, published: null, nc: u.platform,
+		tab: u.tool ? 'tools' : u.exapp ? 'exapps' : 'apps', listed: false, name: u.name, tag: version, published: null, nc: u.platform,
 		total: null, d1: null, d7: null, d30: null, lines: [],
 		search: `${u.name} ${u.id} ${u.repo}`.toLowerCase(), categories: new Set(),
 	}
@@ -1379,7 +1379,7 @@ function initOverview() {
 		for (const u of tooled) {
 			toolIds.add(u.id)
 		}
-		const p = { project, tab: tooled.length ? 'tools' : projectTab(own), name: [...own, ...tooled].map((a) => a.name).join(', ') || main.repo, ...main, lines: older }
+		const p = { project, tab: tooled.length ? 'tools' : projectTab(own), listed: own.length > 0, name: [...own, ...tooled].map((a) => a.name).join(', ') || main.repo, ...main, lines: older }
 		for (const r of lines) {
 			r.name = p.name
 		}
@@ -1427,6 +1427,7 @@ function initOverview() {
 	const appFilters = document.getElementById('app-filters')
 	const nc = document.getElementById('nc')
 	const category = document.getElementById('category')
+	const store = document.getElementById('store')
 	const enabled = document.getElementById('enabled')
 	const source = document.getElementById('source')
 	const enabledCodes = document.getElementById('enabled-codes')
@@ -1486,15 +1487,17 @@ function initOverview() {
 		for (const tbody of table.querySelectorAll('tbody')) {
 			tbody.remove()
 		}
-		// The projects of the Other tab and the tools carry no category.
-		const c = tab === 'other' || tab === 'tools' ? '' : category.value
+		// Only the tabs Apps and ExApps hold apps outside the App Store, which
+		// carry no category, as do the projects of the Other tab and the tools.
+		const listed = storeTab() && store.value ? store.value === 'listed' : null
+		const c = tab === 'other' || tab === 'tools' || listed === false ? '' : category.value
 		// Only a shipped app is enabled or not by the server.
 		const e = tab === 'shipped' && enabled.value ? ENABLED_FILTER[enabled.value] ?? [enabled.value] : null
 		const tree = tab === 'shipped' && source.value ? source.value === 'tree' : null
 		const frag = document.createDocumentFragment()
 		for (const p of projects) {
 			const older = p.lines.filter(counts)
-			if (p.tab !== tab || (f && p.search.includes(f) === invert.checked) || (c && !p.categories.has(c)) || (e && !e.includes(p.enabled)) || (tree !== null && p.tree !== tree) || (!counts(p) && !older.length)) {
+			if (p.tab !== tab || (f && p.search.includes(f) === invert.checked) || (c && !p.categories.has(c)) || (listed !== null && p.listed !== listed) || (e && !e.includes(p.enabled)) || (tree !== null && p.tree !== tree) || (!counts(p) && !older.length)) {
 				continue
 			}
 			p.older.replaceChildren(...older.flatMap((r) => [r.tr, r.checks, r.compare, r.compareChecks]))
@@ -1509,6 +1512,17 @@ function initOverview() {
 		save()
 	}
 
+	const storeTab = () => tab === 'apps' || tab === 'exapps'
+	// The category stays hidden while only apps outside the App Store are shown.
+	const showFilters = () => {
+		appFilters.hidden = tab === 'other'
+		store.hidden = !storeTab()
+		category.hidden = !names.size || tab === 'tools' || (storeTab() && store.value === 'unlisted')
+		enabled.hidden = tab !== 'shipped'
+		source.hidden = tab !== 'shipped'
+		enabledCodes.hidden = tab !== 'shipped'
+	}
+
 	// Only the apps, the shipped apps and the tools are built and measured, so
 	// only their tabs have the checks.
 	const showTab = (next) => {
@@ -1519,11 +1533,7 @@ function initOverview() {
 		tab = next
 		table.dataset.tab = tab
 		nameHead.textContent = { apps: 'App', exapps: 'ExApp', shipped: 'App', tools: 'Tool', other: 'Project' }[tab]
-		appFilters.hidden = tab === 'other'
-		category.hidden = !names.size || tab === 'tools'
-		enabled.hidden = tab !== 'shipped'
-		source.hidden = tab !== 'shipped'
-		enabledCodes.hidden = tab !== 'shipped'
+		showFilters()
 		for (const b of tabs) {
 			b.setAttribute('aria-pressed', String(b.dataset.tab === tab))
 		}
@@ -1538,6 +1548,10 @@ function initOverview() {
 	category.append(...[...names].map(([id, name]) => el('option', { value: id }, name)))
 	category.hidden = !names.size
 	category.addEventListener('change', render)
+	store.addEventListener('change', () => {
+		showFilters()
+		render()
+	})
 	enabled.addEventListener('change', render)
 	source.addEventListener('change', render)
 
@@ -1594,6 +1608,7 @@ function initOverview() {
 	// leaves the start.
 	const restore = (s) => {
 		restoreControls(s)
+		showFilters()
 		syncRange()
 		const keys = [...document.querySelectorAll('th[data-sort]')].map((th) => th.dataset.sort)
 		const sorted = keys.includes(s.sort?.key) && typeof s.sort.desc === 'boolean'
@@ -1653,7 +1668,7 @@ function initScrolling() {
 // differs from the defaults under one key. Without storage, in a private
 // window or with the site data blocked, the page starts from the defaults.
 const SETTINGS_KEY = 'gh-stats.settings'
-const OVERVIEW_SETTINGS = ['filter', 'invert', 'since', 'category', 'nc', 'enabled', 'source']
+const OVERVIEW_SETTINGS = ['filter', 'invert', 'since', 'category', 'nc', 'store', 'enabled', 'source']
 const CHART_SETTINGS = ['scope', 'split', 'share-figure', 'measure', 'bucket', 'range', 'style', 'log']
 
 // The defaults are those the page is written with.
