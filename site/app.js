@@ -530,6 +530,17 @@ function ncMajors(spec) {
 	return m && [parseInt(m[1]), m[2] === undefined ? Infinity : parseInt(m[2])]
 }
 
+// A link that leaves the page opens in a new tab, so the view keeps its open
+// rows and its scroll position. A link within the page, #app/<id> and the like,
+// is a view of its own and stays in the tab.
+function newTab(a) {
+	const href = a.getAttribute('href')
+	if (href !== null && !href.startsWith('#')) {
+		a.target = '_blank'
+		a.rel = 'noopener'
+	}
+}
+
 function el(tag, attrs = {}, ...children) {
 	const e = document.createElement(tag)
 	for (const [k, v] of Object.entries(attrs)) {
@@ -538,6 +549,9 @@ function el(tag, attrs = {}, ...children) {
 		} else {
 			e.setAttribute(k, v)
 		}
+	}
+	if (tag === 'a') {
+		newTab(e)
 	}
 	e.append(...children)
 	return e
@@ -1357,7 +1371,9 @@ function shippedRow(releases) {
 		return r
 	}
 	const head = el('td', {}, el('span', { class: 'name' }, el('a', { href: `#app/${encodeURIComponent(main.id)}` }, main.name)),
-		...securityMark(main.id), slugLink(`https://github.com/${main.repo}`, main.repo))
+		...securityMark(main.id), main.repo === SERVER_REPO
+			? slugLink(shippedSource(main), `${main.repo}/${main.path}`)
+			: slugLink(`https://github.com/${main.repo}`, main.repo))
 	const since = shipped.get(main.id) ?? null
 	const row = line(main, head, since)
 	const p = {
@@ -1868,6 +1884,7 @@ function description(md) {
 		const alt = img.getAttribute('alt') ?? ''
 		img.replaceWith(/^https?:\/\//i.test(src) ? imageHolder(src, alt, !img.closest('a')) : alt)
 	}
+	doc.querySelectorAll('a').forEach(newTab)
 	return [...doc.body.childNodes]
 }
 
@@ -1903,7 +1920,7 @@ function requestLink(text, title, help, label = 'appsdiag') {
 	const body = `${help}\n\nSubmitting this issue asks for it. A request of a user without write access to this repository waits until a maintainer approves it.`
 	const params = [['title', title], ['labels', label], ['body', body]]
 		.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')
-	return el('a', { class: 'request', href: `${issues}?${params}`, target: '_blank', rel: 'noopener', title: help }, text)
+	return el('a', { class: 'request', href: `${issues}?${params}`, title: help }, text)
 }
 
 // The newest stable version keeps its check, so it has no button to remove it.
