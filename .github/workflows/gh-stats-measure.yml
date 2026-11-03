@@ -23,7 +23,9 @@
 #   workflow_dispatch            the "<app-id> <version>" pairs of the input
 #                                versions, or without one the apps of the input
 #                                scope: appstore the newest stable version of
-#                                every app, as gh-nc-appslist lists them, shipped
+#                                every app and that of each of the MEASURE_LINES
+#                                release lines before its newest, as
+#                                gh-nc-appslist lists them, shipped
 #                                the apps the server ships, unlisted the apps
 #                                outside the App Store, both as
 #                                gh-stats-measure-lines lists them, and all the
@@ -81,7 +83,7 @@ on:
         required: false
         default: ''
       scope:
-        description: 'Without versions: appstore, the newest stable version of every App Store app; shipped, the apps the server ships; unlisted, the apps outside the App Store; all, the three'
+        description: 'Without versions: appstore, the newest stable version of every App Store app and of its MEASURE_LINES older release lines; shipped, the apps the server ships; unlisted, the apps outside the App Store; all, the three'
         type: choice
         options:
           - appstore
@@ -110,8 +112,9 @@ env:
   ISSUE_TITLE: App versions without a result
   ISSUE_LABEL: appsdiag
   # Release lines before the newest that are measured as well, 0 to 4; unset
-  # means 1. With MEASURE_PRUNE_LINES true, the results of lines beyond them
-  # are removed.
+  # means 1. The scope appstore lists them as gh-stats-catalogue.yml sends
+  # them. With MEASURE_PRUNE_LINES true, the results of lines beyond them are
+  # removed.
   MEASURE_LINES: ${{ vars.MEASURE_LINES }}
   MEASURE_PRUNE_LINES: ${{ vars.MEASURE_PRUNE_LINES }}
   PINNED: requests/pinned.txt
@@ -174,6 +177,14 @@ jobs:
             [ $# -eq 0 ] || scope=appstore
             : > "$list"
             case "$scope" in appstore|all)
+              if [ $# -eq 0 ]; then
+                lines="${MEASURE_LINES:-1}"
+                if ! [[ "$lines" =~ ^[0-4]$ ]]; then
+                  echo "::error::MEASURE_LINES is $lines, it takes 0 to 4"
+                  exit 1
+                fi
+                set -- -L "$lines"
+              fi
               APPSTORE_APPDATA_FILE="$RUNNER_TEMP/apps.json" bin/gh-nc-appslist "$@" -o - \
                 | sed '/^#/d' >> "$list" ;;
             esac
