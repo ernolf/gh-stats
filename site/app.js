@@ -26,7 +26,9 @@ let sources
 // Whether the database holds the security results, which only a private copy
 // of the site has.
 let securityResults = false
-// The directory of the findings of the measurements, beside the database.
+// The database the page loaded, and the directory of the findings of its
+// measurements beside it.
+let loadedDb
 let findingsBase
 // The line rows of each project and the project of each app, for the app pages.
 const projectLines = new Map()
@@ -95,6 +97,7 @@ async function load() {
 		const config = await res.json()
 		results = config.results
 		issues = config.issues
+		loadedDb = config.db
 		findingsBase = config.db.replace(/[^/]*$/, 'findings/')
 		showVersions(config.lib ?? {})
 		progress.max = config.bytes
@@ -363,6 +366,17 @@ async function findingsOf(m) {
 		return res.json()
 	}))
 	return lists.flat()
+}
+
+// Pages serves only the newest build, so the files beside the database of an
+// older one are gone once config.json names another.
+async function siteRebuilt() {
+	try {
+		const res = await fetch('config.json', { cache: 'no-cache' })
+		return res.ok && (await res.json()).db !== loadedDb
+	} catch {
+		return false
+	}
 }
 
 // The kept fields of the analyser results of a run, keyed by tool/name.
@@ -991,7 +1005,13 @@ function checksBlock(m, collapse) {
 						? [el('details', {}, el('summary', {}, counts.map(([l, n]) => `${n} ${l}`).join(', ')), ...findingEntries(tool, rest))]
 						: []))
 			}))
-		}, (e) => {
+		}, async (e) => {
+			if (await siteRebuilt()) {
+				const reload = el('button', { type: 'button', class: 'quiet' }, 'Reload')
+				reload.addEventListener('click', () => location.reload())
+				status.replaceChildren('The site has been rebuilt since this page was loaded. ', reload)
+				return
+			}
 			const again = el('button', { type: 'button', class: 'quiet' }, 'Try again')
 			again.addEventListener('click', load)
 			status.replaceChildren(`The findings of this run could not be loaded (${e.message}). `, again)
