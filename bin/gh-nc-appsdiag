@@ -260,8 +260,10 @@ a repository on another host below a directory of that host:
                           kind, every target with exit code and duration
                           (and, for a reuse that never linted, why it has no
                           JSON), whether it is one of the analysers with a
-                          JSON result, and for one that failed the line it
-                          stopped with (stopped), the result files
+                          JSON result, for one that failed the line it
+                          stopped with (stopped), and for one whose result
+                          jq cannot read, which is not kept and counts as
+                          failed, the jq error (json_invalid), the result files
       info.xml            appinfo/info.xml of the measured tree, the one the
                           analysers read
       <target>.json      the machine-readable analyser results, by default of
@@ -434,7 +436,7 @@ if [ "$batch" -eq 1 ]; then
 	batch_entry() {
 		local label="$1" rc="$2" secs="$3" run_dir="$4" failed="no summary.json"
 		if [ -n "$run_dir" ] && [ -s "$run_dir/summary.json" ] && [ -x "$JQ" ]; then
-			failed="$("$JQ" -r '([.targets[] | select(.exit != 0) | "\(.name)=\(.exit)"] | if length == 0 then "none failed" else "failed: " + join(" ") end) as $f
+			failed="$("$JQ" -r '([.targets[] | select(.exit != 0 or .json_invalid != null) | "\(.name)=\(if .exit != 0 then .exit else "json" end)"] | if length == 0 then "none failed" else "failed: " + join(" ") end) as $f
 				| (.inventory.build_file // null | if . == null then "" else "  [\(.name): \(.kind)]" end) as $b
 				| (if .status == "completed" then $f
 				  else "\(.status): \(.reason // "exit \(.exit)")" + (if (.targets | length) == 0 then "" else "; \($f)" end) end) + $b' "$run_dir/summary.json")"
@@ -589,6 +591,8 @@ tag_version=""
 results=()
 # The line each target that failed stopped with, by target.
 declare -A stopped_lines=()
+# Why the result of a target was not kept because jq cannot read it, by target.
+declare -A json_invalid=()
 # What summary.json reports besides the targets, filled in where it is learnt.
 STARTED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 head_tag=""
@@ -929,6 +933,7 @@ run_target() {
 	if json_file "$t"; then
 		if [ -s "$out" ]; then
 			log "   json  $out ($(wc -c <"$out") B)"
+			json_check "$t" "$out"
 		else
 			warn "make $t JSON=$out wrote no file"
 		fi
@@ -996,6 +1001,20 @@ json_run() {
 	out="$RUN_DIR/${t}.json"
 	( cd "$APP_DIR" && make "$t" ARGS=--json ) 2>>"$LOG" >"$out.raw" || true
 	split_json "$out.raw" "$out" || warn "make $t ARGS=--json produced nothing"
+	json_check "$t" "$out"
+}
+
+# A result jq cannot read would stop everything that reads the results, the
+# site among them, so it is not kept. The first line of the jq error goes into
+# the log and, as json_invalid of the target, into summary.json, and the target
+# counts as failed: the run then says nothing about the app and is repeated.
+json_check() {
+	local t="$1" out="$2" err
+	[ -s "$out" ] && [ -x "$JQ" ] || return 0
+	err="$("$JQ" empty <"$out" 2>&1 >/dev/null)" && return 0
+	json_invalid[$t]="$(head -n 1 <<<"${err:-jq exited non-zero}" | cut -c 1-300)"
+	rm -f "$out"
+	warn "make $t wrote no JSON jq reads, so it is not kept: ${json_invalid[$t]}"
 }
 
 # == Security targets ==
@@ -1630,7 +1649,7 @@ release_compare() {
 # console.log is for people. It is written once: by summary() at the end of a run,
 # or by the exit trap of a run that ended before, and its status says which.
 write_summary_json() {
-	local status="$1" code="$2" head="" host cpus mem cpu inv files diff stopped
+	local status="$1" code="$2" head="" host cpus mem cpu inv files diff stopped invalid
 	[ -n "$RUN_DIR" ] || return 0
 	summary_written=1
 	security_strip
@@ -1652,6 +1671,8 @@ write_summary_json() {
 	[ -s "$RUN_DIR/release/diff.json" ] && diff="$("$JQ" -c '{signed, counts}' "$RUN_DIR/release/diff.json")" || true
 	stopped="$(for t in "${!stopped_lines[@]}"; do printf '%s\t%s\n' "$t" "${stopped_lines[$t]}"; done \
 		| "$JQ" -R -s -c 'split("\n") | map(select(length > 0) | split("\t") | {key: .[0], value: (.[1:] | join("\t"))}) | from_entries')"
+	invalid="$(for t in "${!json_invalid[@]}"; do printf '%s\t%s\n' "$t" "${json_invalid[$t]}"; done \
+		| "$JQ" -R -s -c 'split("\n") | map(select(length > 0) | split("\t") | {key: .[0], value: (.[1:] | join("\t"))}) | from_entries')"
 	printf '%s\n' "${results[@]}" | "$JQ" -R -s \
 		--arg repo_host "$repo_host" --arg owner "$owner" --arg repo "$repo" --arg subdir "$subdir" --arg app_id "$app_id" --arg version "$app_version" --arg restrictable "$app_restrictable" \
 		--arg want "$want_version" --arg server "$SERVER_REF" --arg server_build "$server_build" --arg stamp "$STAMP" --arg started "$STARTED" \
@@ -1661,7 +1682,7 @@ write_summary_json() {
 		--arg host "$host" --arg cpus "$cpus" --arg mem "$mem" --arg cpu "$cpu" \
 		--argjson inv "$inv" --arg bname "$build_name" --arg bkind "$build_kind" --argjson files "$files" \
 		--arg tarball "$rel_tarball" --arg bytes "$rel_bytes" --argjson diff "$diff" \
-		--argjson stopped "$stopped" --arg analysers " $JSON_TARGETS " '
+		--argjson stopped "$stopped" --argjson invalid "$invalid" --arg analysers " $JSON_TARGETS " '
 		def nul($s): if $s == "" then null else $s end;
 		def num($s): if $s == "" then null else ($s | tonumber) end;
 		{tool: "gh-nc-appsdiag", schema: 1,
@@ -1678,7 +1699,8 @@ write_summary_json() {
 		 inventory: {files: $inv,
 		            build_file: (if $bname == "" then null else {name: $bname, kind: $bkind} end)},
 		 targets: [split("\n")[] | select(length > 0) | split("\t") | {name: .[0], exit: (.[1] | tonumber), seconds: (.[2] | tonumber), json_skipped: nul(.[3] // ""),
-		          analyser: ((" " + .[0] + " ") as $n | $analysers | contains($n)), stopped: ($stopped[.[0]] // null)}],
+		          analyser: ((" " + .[0] + " ") as $n | $analysers | contains($n)), stopped: ($stopped[.[0]] // null),
+		          json_invalid: ($invalid[.[0]] // null)}],
 		 files: $files,
 		 release: (if $tarball == "" then null else
 			{tarball: $tarball, bytes: num($bytes), diff: (if $diff == null then null else "release/diff.json" end),
@@ -1718,7 +1740,7 @@ summary() {
 		for r in "${results[@]}"; do
 			IFS=$'\t' read -r t rc s _ <<<"$r"
 			log "$(printf '   %-20s %5s %8s' "$t" "$rc" "$s")"
-			[ "$rc" = 0 ] || failed="$failed $t"
+			[ "$rc" = 0 ] && [ -z "${json_invalid[$t]:-}" ] || failed="$failed $t"
 		done
 		log "   failed:${failed:- none}"
 	fi

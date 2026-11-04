@@ -284,6 +284,8 @@ jobs:
               failed="no summary.json, exit $rc"
             elif ! jq -e '.status == "completed"' "$dir/summary.json" >/dev/null; then
               failed="$(jq -r '"\(.status): \(.reason // "exit \(.exit)")"' "$dir/summary.json")"
+            elif jq -e 'any(.targets[]; .json_invalid != null)' "$dir/summary.json" >/dev/null; then
+              failed="$(jq -r '[.targets[] | select(.json_invalid != null) | "the result of \(.name) is no JSON jq reads: \(.json_invalid)"] | join("; ")' "$dir/summary.json")"
             elif jq -e 'any(.findings[]?; .id == "step-timeout")' "$dir/build-verify.json" >/dev/null 2>&1; then
               failed="a build-verify step was stopped at its time limit"
             fi
