@@ -95,7 +95,7 @@ repository under its current name, plus
              below <dir>: its directory, repository host, app, the version
              it was asked for, else the one its info.xml declares, the
              server release of a shipped app measured as the server ships it,
-             tag, status, the shipped tarball, the counts of the release
+             and of a run of nextcloud/server itself at that release, tag, status, the shipped tarball, the counts of the release
              diff, info_xml, 1 when the run kept the info.xml it read, and
              warn and abandoned, the warnings of the run and the abandoned
              packages deps-audit found; sec and sec_other stay empty for
@@ -144,7 +144,11 @@ repository under its current name, plus
 
 Beside <file>, findings/<run dir>.json holds the findings of each run as a JSON
 array: the findings of the analysers with the file and line they name, and one
-finding per aborted run, failed target, skipped JSON result and REUSE lint.
+finding per aborted run, failed target, skipped JSON result and REUSE lint. An
+app of the server tree runs no REUSE lint of its own: its REUSE finding comes
+from the reuse.json of the newest run of nextcloud/server at the same server
+release, by the files below the directory of the app, and says so where no
+such run has one.
 
 Downloads are the summed counters of the assets gh-stats counts by default
 (zip, tar.bz2, tar.gz, tar.xz, tgz). A line whose releases have none of them is
@@ -316,6 +320,25 @@ $(find "$results" -name '*.json' ! -name summary.json ! -name reuse.json ! -path
 		results_sql+="
 $(gzip -dc "$f" | jq -r --arg root "$results/" --arg name "$f" --argjson fields "$result_fields" --argjson finding_fields "$finding_fields" "$findings_jq")"
 	done < <(find "$results" -name '*.json.gz' ! -name reuse.json.gz ! -path '*/release/*' -print0)
+	# The run of nextcloud/server at a server release is the REUSE project of
+	# every app of its tree. Of its reuse.json only the files below apps/ that
+	# fail are kept, one row per file and problem: no copyright or no licensing
+	# information, or a licence the file names that LICENSES/ lacks.
+	reuse_jq="$sql_defs"'
+		.non_compliant as $n | ($n.missing_licenses // []) as $missing
+		| ([($n.missing_copyright_info // [])[] | [., "no copyright information"]],
+		   [($n.missing_licensing_info // [])[] | [., "no licensing information"]],
+		   [.files[]? | .path as $p
+		    | [.spdx_expressions[]?.value | scan("[A-Za-z0-9.+:-]+")] - ["AND", "OR", "WITH"]
+		    | unique[] | select(IN($missing[])) | [$p, "the licence " + . + ", which LICENSES/ lacks"]])
+		| .[] | select(.[0] | startswith("apps/"))
+		| "INSERT OR IGNORE INTO reuse_files VALUES (\($dir | q), \(.[0] | q), \(.[1] | q));"'
+	for f in "$results"/nextcloud/server/server-*/*/reuse.json "$results"/nextcloud/server/server-*/*/reuse.json.gz; do
+		[ -f "$f" ] || continue
+		d="${f%/*}"
+		results_sql+="
+$(case "$f" in *.gz) gzip -dc "$f" ;; *) cat "$f" ;; esac | jq -r --arg dir "${d#"$results/"}" "$reuse_jq")"
+	done
 fi
 
 # == App pages ==
@@ -708,6 +731,12 @@ CREATE TABLE fields (
   value TEXT NOT NULL,
   PRIMARY KEY (dir, tool, name)
 ) WITHOUT ROWID;
+CREATE TEMP TABLE reuse_files (
+  dir     TEXT NOT NULL,
+  path    TEXT NOT NULL,
+  problem TEXT NOT NULL,
+  PRIMARY KEY (dir, path, problem)
+) WITHOUT ROWID;
 BEGIN;
 $results_sql
 COMMIT;
@@ -736,6 +765,37 @@ SELECT dir, name, 0, CASE exit WHEN 0 THEN 'ok' ELSE 'warn' END, 'compliance',
        CASE exit WHEN 0 THEN 'The checkout is REUSE compliant.'
             ELSE 'The checkout is not REUSE compliant; reuse.json in the run directory lists the files.' END, NULL, NULL
   FROM targets WHERE name = 'reuse' AND json AND skipped IS NULL;
+-- An app of the server tree is a directory of nextcloud/server, and the server
+-- repository is the REUSE project: its LICENSES/ and REUSE.toml are at the
+-- root. The newest run of the server at the same server release decides, by
+-- the files below the directory of the app. What a run of the app left of a
+-- REUSE lint of its own gives way to it.
+CREATE TEMP TABLE tree_reuse AS
+SELECT a.dir, a.subdir, a.server, s.dir AS source, s.tag AS source_tag
+  FROM measurements a
+  LEFT JOIN measurements s ON s.host = a.host AND s.owner = 'nextcloud' AND s.repo = 'server' AND s.subdir IS NULL
+   AND s.server = a.server
+   AND EXISTS (SELECT 1 FROM targets t WHERE t.dir = s.dir AND t.name = 'reuse' AND t.json AND t.skipped IS NULL)
+ WHERE a.owner = 'nextcloud' AND a.repo = 'server' AND a.subdir IS NOT NULL AND a.server IS NOT NULL;
+DELETE FROM findings WHERE tool = 'reuse' AND dir IN (SELECT dir FROM tree_reuse);
+INSERT INTO findings
+SELECT r.dir, 'reuse', 0,
+       CASE WHEN r.source IS NULL THEN 'info' WHEN b.files IS NULL THEN 'ok' ELSE 'warn' END,
+       CASE WHEN r.source IS NULL THEN 'no-result' ELSE 'compliance' END,
+       CASE WHEN r.source IS NULL
+              THEN 'No run of nextcloud/server at ' || r.server || ' has a REUSE result, so the app has none.'
+            WHEN b.files IS NULL
+              THEN 'The files below ' || r.subdir || '/ are REUSE compliant.'
+            ELSE b.files || CASE b.files WHEN 1 THEN ' file' ELSE ' files' END || ' below ' || r.subdir || '/ are not REUSE compliant:' || b.lines END
+         || CASE WHEN r.source IS NULL THEN ''
+            ELSE char(10) || '  From the run of nextcloud/server at ' || coalesce(r.source_tag, r.server) || ', ' || r.source || '.' END,
+       NULL, NULL
+  FROM tree_reuse r
+  LEFT JOIN (SELECT dir, count(*) AS files, group_concat(line, '') AS lines FROM (
+    SELECT r.dir, char(10) || '  ' || f.path || ': ' || group_concat(f.problem, '; ') AS line
+      FROM tree_reuse r JOIN reuse_files f ON f.dir = r.source AND substr(f.path, 1, length(r.subdir) + 1) = r.subdir || '/'
+     GROUP BY r.dir, f.path ORDER BY r.dir, f.path)
+   GROUP BY dir) b ON b.dir = r.dir;
 
 -- Every catalogue app, also one that is downloaded from elsewhere than a
 -- release of GitHub, Forgejo or Gitea: its page then shows only what the App
@@ -880,7 +940,7 @@ UPDATE app_releases SET mismatch = 1 WHERE stable AND EXISTS (
 CREATE TEMP TABLE shipped_runs AS
 SELECT m.dir, m.owner = 'nextcloud' AND m.repo = 'server' AS tree, m.version, m.server, s.major, s.latest, s.previous_server, s.previous_version
   FROM measurements m LEFT JOIN shipped s ON s.ref = m.server AND s.id = m.app_id
- WHERE m.server IS NOT NULL;
+ WHERE m.server IS NOT NULL AND NOT (m.owner = 'nextcloud' AND m.repo = 'server' AND m.subdir IS NULL);
 UPDATE findings AS f SET
   level = CASE WHEN r.tree OR f.id = 'changelog-missing' OR r.previous_version = r.version THEN 'info' ELSE 'warn' END,
   text = substr(f.text, 1, instr(f.text || char(10), char(10)) - 1) || char(10) || CASE

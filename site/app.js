@@ -18,6 +18,7 @@ let issues
 let measured
 let measuredLines
 let measuredShipped
+let measuredServer
 let shipped
 let security
 // The repository and tag of each App Store release that is no release asset,
@@ -348,8 +349,21 @@ function measurementsByVersion(id) {
 // The measurements of the shipped apps, keyed by app id and the tag of the
 // server release, or master, as the shipped table names it.
 function measurementsByServer() {
-	return Map.groupBy(query(`SELECT ${MEASUREMENT} FROM measurements m WHERE m.server IS NOT NULL`),
+	return Map.groupBy(query(`SELECT ${MEASUREMENT} FROM measurements m WHERE m.server IS NOT NULL
+		AND NOT (m.owner = 'nextcloud' AND m.repo = 'server' AND m.subdir IS NULL)`),
 		(r) => `${r.app_id}\n${r.server}`)
+}
+
+// The measurements of nextcloud/server itself, keyed by the tag of the server
+// release, or master.
+function measurementsOfServer() {
+	return Map.groupBy(query(`SELECT ${MEASUREMENT} FROM measurements m WHERE m.server IS NOT NULL
+		AND m.owner = 'nextcloud' AND m.repo = 'server' AND m.subdir IS NULL`),
+		(r) => r.server)
+}
+
+function isServerRun(m) {
+	return m.host === 'github.com' && `${m.owner}/${m.repo}` === SERVER_REPO && m.subdir === null
 }
 
 // The findings of a run, by tool, from the file beside the database, and where
@@ -581,6 +595,14 @@ function unreachableMark(r) {
 }
 
 const SERVER_REPO = 'nextcloud/server'
+// The server publishes its releases here, so the project of the server is the
+// one of this repository.
+const SERVER_RELEASES_REPO = 'nextcloud-releases/server'
+
+function isServerProject(r) {
+	return r.host === 'github.com' && `${r.owner}/${r.repo}` === SERVER_RELEASES_REPO
+}
+
 const SHIPPED_TEXT = 'the first Nextcloud major whose core/shipped.json lists the app; the file exists since Nextcloud 9'
 
 function shippedMark(id) {
@@ -998,11 +1020,13 @@ function checksBlock(m, collapse) {
 	})
 	const head = el('div', { class: 'run-head' },
 		el('div', { class: 'run-actions' }, start, collapse()),
-		el('h4', {}, `${m.app_id ?? m.dir} ${m.version ?? ''} `, el('a', { href: `${results}/${m.dir}` }, 'run directory'), ...infoXmlLink(m)))
+		isServerRun(m)
+			? el('h4', {}, `${SERVER_REPO} ${m.server} `, el('a', { href: `${results}/${m.dir}` }, 'run directory'))
+			: el('h4', {}, `${m.app_id ?? m.dir} ${m.version ?? ''} `, el('a', { href: `${results}/${m.dir}` }, 'run directory'), ...infoXmlLink(m)))
 	const status = el('p', { class: 'hint' })
 	run.append(head,
 		...defectNotes(fields),
-		el('p', {}, diffText(m)),
+		...(isServerRun(m) ? [] : [el('p', {}, diffText(m))]),
 		...licenceText(fields),
 		...(securityResults ? securityTargets(m) : []),
 		status)
@@ -1182,8 +1206,13 @@ function abandonedCell(n, version = null) {
 
 // The checks of a line row: those of the release it shows, else those of the
 // newest measured release of its line, with that release's version. The row
-// keeps the counts of the cells to sort by.
+// keeps the counts of the cells to sort by. The server is measured in
+// nextcloud/server at the newest release of each major, so its line takes
+// the run of that release.
 function lineChecks(row, span) {
+	if (isServerProject(row)) {
+		return serverLineChecks(row, span)
+	}
 	const own = measured.get(`${row.project}\n${row.tag}`)
 	if (own) {
 		row.warn = warnings(own)
@@ -1197,6 +1226,34 @@ function lineChecks(row, span) {
 	row.sec = securityWarnings(runs)
 	row.abandoned = abandoned(runs)
 	return [abandonedCell(row.abandoned, version), ...checksCell(runs, span, version)]
+}
+
+function serverLineChecks(row, span) {
+	const prefix = `v${lineLabel(row.line)}.`
+	const ref = measuredServer.has(row.tag) ? row.tag
+		: [...measuredServer.keys()].filter((r) => r.startsWith(prefix))
+			.sort((a, b) => b.localeCompare(a, 'en', { numeric: true }))[0]
+	const runs = ref && measuredServer.get(ref)
+	const version = ref === row.tag ? null : ref
+	row.warn = warnings(runs)
+	row.sec = securityWarnings(runs)
+	row.abandoned = abandoned(runs)
+	return [abandonedCell(row.abandoned, version), ...checksCell(runs, span, version)]
+}
+
+// The run of nextcloud/server at master, below the row of its newest release,
+// at the commit of the daily build the apps of master are measured at.
+function serverMasterRows() {
+	const runs = measuredServer.get('master')
+	if (!runs) {
+		return []
+	}
+	const [checks, checksRow, sec] = checksCell(runs, 11)
+	const tr = el('tr', {}, el('td', { class: 'pick' }), el('td', { class: 'line-label' }, 'master'),
+		el('td', { class: 'tag' }, el('a', { href: `https://github.com/${SERVER_REPO}/tree/master` }, 'master')),
+		el('td'), el('td'), ...['total', ...PERIODS].map(() => el('td', { class: 'num' })),
+		abandonedCell(abandoned(runs)), ...sec, checks, el('td'))
+	return [tr, checksRow]
 }
 
 // The tick puts the row into the charts.
@@ -1395,6 +1452,7 @@ function initOverview() {
 	measured = measurementsByRelease()
 	measuredLines = measurementsByLine(measured)
 	measuredShipped = measurementsByServer()
+	measuredServer = measurementsOfServer()
 	shipped = shippedSince()
 	security = securityOverdue()
 	sources = tagSources()
@@ -1430,7 +1488,8 @@ function initOverview() {
 			...[...own, ...tooled].flatMap((a) => securityMark(a.id)),
 			...members.flatMap((r) => [slugLink(repoUrl(r), slugOf(r)), ...unreachableMark(r)]),
 			...own.flatMap((a) => shippedMark(a.id)), ...tooled.flatMap(exappMark))
-		p.main = el('tbody', {}, ...lineRows(main, head))
+		p.main = el('tbody', {}, ...lineRows(main, head),
+			...(members.some(isServerProject) ? serverMasterRows() : []))
 		p.warn = main.warn
 		p.sec = main.sec
 		p.abandoned = main.abandoned
@@ -1557,8 +1616,8 @@ function initOverview() {
 		enabledCodes.hidden = tab !== 'shipped'
 	}
 
-	// Only the apps, the shipped apps and the tools are built and measured, so
-	// only their tabs have the checks.
+	// Only the apps, the shipped apps, the tools and nextcloud/server are built
+	// or measured, so only their tabs have the checks.
 	const showTab = (next) => {
 		if (next === tab) {
 			return

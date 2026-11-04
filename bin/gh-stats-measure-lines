@@ -2,14 +2,17 @@
 # SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
 # SPDX-License-Identifier: MIT
 #
-# gh-stats-measure-lines - list the apps the server ships and the apps outside
-# the App Store as the lines gh-stats-measure.yml measures, from the
+# gh-stats-measure-lines - list the apps the server ships, the server
+# repository and the apps outside the App Store as the lines
+# gh-stats-measure.yml measures, from the
 # shipped.json of gh-nc-shipped and the unlisted.json of gh-nc-unlisted.
 # gh-stats-catalogue.yml sends those without a complete run, and
 # gh-stats-measure.yml started by hand measures them all; both take the lines
 # from here, so they name a version the same way.
 
 set -euo pipefail
+
+SERVER_REPO="${SERVER_REPO:-nextcloud/server}"
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 
@@ -19,13 +22,15 @@ Usage: gh-stats-measure-lines [--keys] [--shipped <file>] [--unlisted <file>]
 
 Writes one line per app version, as gh-nc-appsdiag is asked for it:
 
+  -s master nextcloud/server
   -s master nextcloud/activity
   -s master nextcloud/server:apps/comments
   nextcloud/absence 1.0.6
   codeberg.org/someone/someapp
 
   - with --shipped, every app of each server release <file> marks as the
-    newest of its major, and of master, as that release ships it
+    newest of its major, and of master, as that release ships it, and the
+    server repository once per such release
   - with --unlisted, every app of <file> whose repository publishes no release
     tarball and that is no ExApp, with the version of its newest tag, read from
     the first digit on; an app whose repository has no tag comes without a
@@ -40,6 +45,9 @@ known under.
       --shipped <file>   the shipped.json to read
       --unlisted <file>  the unlisted.json to read
   -h, --help             this text
+
+Environment:
+  SERVER_REPO            the server repository (default: nextcloud/server)
 EOF
 }
 
@@ -60,8 +68,9 @@ done
 
 [ -n "$shipped$unlisted" ] || { usage >&2; exit 1; }
 
-[ -z "$shipped" ] || jq -r '.releases[] | select(.latest) | .ref as $ref
-	| .apps[] | "-s \($ref) \(.repo)" + (if (.path // "") != "" then ":" + .path else "" end)' "$shipped"
+[ -z "$shipped" ] || jq -r --arg server "$SERVER_REPO" '.releases[] | select(.latest) | .ref as $ref
+	| "-s \($ref) \($server)",
+	  (.apps[] | "-s \($ref) \(.repo)" + (if (.path // "") != "" then ":" + .path else "" end))' "$shipped"
 [ -z "$unlisted" ] || jq -r --argjson keys "$keys" '.apps[] | select(.tarball == false and .exapp != true)
 	| ((if .host == "github.com" then "" else .host + "/" end) + .repo
 	   + (if .path != "" then ":" + .path else "" end)) as $app
