@@ -21,7 +21,10 @@
 # A repository whose app is not at its root, or that holds several apps, is measured
 # once per app, each in a run of its own in the app's directory.
 # An app the Nextcloud server ships is measured with -s at the commit a server
-# release was built from, against apps/<id>/ of its archive.
+# release was built from, against apps/<id>/ of its archive. The server
+# repository itself is measured with -s as well, at the same commit, by the
+# targets that read only the tracked files: it is the REUSE project of every app
+# of its tree, so those apps run no reuse of their own.
 
 # == Config ==
 # Optional site config shared with gh-stats and gh-release-sampler. If
@@ -86,6 +89,11 @@ JSON_RERUN_TARGETS="${NC_APPSDIAG_JSON_RERUN:-reuse}"
 # recipient of the site maintainer; without a recipient they do not run.
 # deps-audit runs here a second time, with the advisories.
 SECURITY_TARGETS="${NC_APPSDIAG_SECURITY_TARGETS:-secrets-audit lint-actions lint-actions-security deps-audit}"
+# A run of the server repository at its root, with -s, measures no app: it runs
+# these in place of TARGETS and SECURITY_TARGETS, the ones that read only the
+# tracked files of the repository.
+SERVER_TARGETS="${NC_APPSDIAG_SERVER_TARGETS:-reuse lint-markdown lint-shell lint-yaml}"
+SERVER_SECURITY_TARGETS="${NC_APPSDIAG_SERVER_SECURITY_TARGETS:-lint-actions}"
 AGE_RECIPIENT="${NC_APPSDIAG_AGE_RECIPIENT:-}"
 # The plain text is padded to a multiple of this many bytes before it is
 # encrypted, since the size of the ciphertext would otherwise tell how much an app
@@ -224,6 +232,15 @@ is held against the files unpacked. The run directory is named after the
 server release, server-35.0.2 or server-master, in place of the app version,
 and summary.json names it as server.
 
+With -s, nextcloud/server without a directory measures the server repository
+itself, at the server release tag or, for master, at the commit the
+version.php of the daily archive names, as gh-nc-shipped -b reads it. It
+measures no app and nothing is unpacked: it runs NC_APPSDIAG_SERVER_TARGETS in
+place of the target list and NC_APPSDIAG_SERVER_SECURITY_TARGETS in place of
+the security targets. The repository is the REUSE project of every app of its
+tree, so an app of the server tree runs no reuse; its REUSE result is read from
+the run of the server repository at the same server release.
+
 Everything one run produces goes into one directory, for an app below the root
 with its app id after the repo (or its directory, while the id is unknown), for
 a repository on another host below a directory of that host:
@@ -318,6 +335,11 @@ Environment (or /etc/gh-stats/gh-stats.env):
   NC_APPSDIAG_AGE_RECIPIENT  the age recipient they are encrypted to
   NC_APPSDIAG_SECURITY_PAD   the plain text is padded to a multiple of this
                              many bytes (default: 65536)
+  NC_APPSDIAG_SERVER_TARGETS the target list of a run of the server repository
+                             itself (default: reuse lint-markdown lint-shell
+                             lint-yaml)
+  NC_APPSDIAG_SERVER_SECURITY_TARGETS
+                             its security targets (default: lint-actions)
   NC_APPSDIAG_PRIOR          earlier results, laid out as NC_APPSDIAG_LOGS, whose
                              history scan of secrets-audit a run with -s master
                              carries on
@@ -525,6 +547,20 @@ slug="$owner/$repo"
 want_version="${pos[1]:-}"
 # A server release decides the commit, so it leaves no version to ask for.
 [ -z "$SERVER_REF" ] || [ -z "$want_version" ] || die "-s $SERVER_REF and the version $want_version exclude each other"
+
+# With -s the server repository at its root is measured itself, and an app of
+# its tree leaves reuse to that run.
+server_run=0
+if [ -n "$SERVER_REF" ] && [ "$repo_host" = github.com ] && [ "$owner/$repo" = "$SERVER_REPO" ]; then
+	if [ -z "$subdir" ]; then
+		server_run=1
+		TARGETS="$SERVER_TARGETS"
+		SECURITY_TARGETS="$SERVER_SECURITY_TARGETS"
+	else
+		TARGETS=" $TARGETS "
+		TARGETS="${TARGETS// reuse / }"
+	fi
+fi
 
 mkdir -p "$CHECKOUT_DIR" "$LOG_DIR"
 # git works on the checkout, everything else on the app in it. An app below the
@@ -1236,6 +1272,21 @@ build_checkout() {
 	log "   build $server_build: $best"
 }
 
+# The build of the server archive into server_build, for a run of the server
+# repository itself, which unpacks nothing. As for an app of its tree, for
+# master the build alone tells the commit.
+server_build_read() {
+	local out
+	if ! out="$("$SHIPPED" -b "${SERVER_REF#v}" 2> >(tee -a "$LOG" >&2))"; then
+		[ "$SERVER_REF" != master ] || die "cannot read the build of the daily archive of master, so the commit it was built from is unknown"
+		warn "cannot read the build of the server archive of $SERVER_REF"
+		return 0
+	fi
+	server_archive="$(sed -n '1s:.*/::p' <<<"$out")"
+	server_build="$(sed -n 2p <<<"$out")"
+	log "   $server_archive${server_build:+ built $server_build}"
+}
+
 # == Release ==
 # The catalogue is resolved on every read: nc-apps writes each refresh to a new
 # file, so a batch that runs for a day sees the releases a refresh brings meanwhile.
@@ -1721,9 +1772,13 @@ elif [ ! -d "$CHECKOUT" ]; then
 fi
 [ -d "$CHECKOUT/.git" ] || die "no checkout at $CHECKOUT"
 # A repository with its apps below the root unpacks nothing here: each of them
-# does so in a run of its own.
+# does so in a run of its own. The server repository itself only reads the
+# build.
 if [ -n "$SERVER_REF" ] && [ -f "$APP_DIR/appinfo/info.xml" ]; then
 	server_unpack
+	[ "$SERVER_REF" != master ] || build_checkout
+elif [ "$server_run" = 1 ]; then
+	server_build_read
 	[ "$SERVER_REF" != master ] || build_checkout
 fi
 log "   head  $("$GIT" -C "$CHECKOUT" log -1 --format='%h %ad %s' --date=short)"
@@ -1742,7 +1797,7 @@ fi
 
 if [ -n "$subdir" ]; then
 	[ -f "$APP_DIR/appinfo/info.xml" ] || die "no appinfo/info.xml in $subdir of $slug"
-elif [ ! -f "$CHECKOUT/appinfo/info.xml" ]; then
+elif [ "$server_run" = 0 ] && [ ! -f "$CHECKOUT/appinfo/info.xml" ]; then
 	mapfile -t below < <(app_dirs)
 	[ ${#below[@]} -eq 0 ] || fan_out "${below[@]}"
 fi

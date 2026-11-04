@@ -14,7 +14,8 @@
 #
 # With -x it unpacks apps/<id>/ of one server release archive instead, from a
 # single range, so that what a release ships of an app can be compared with what
-# its source builds.
+# its source builds. With -b it prints only the build of one archive, the
+# server commit a run of the server repository checks out.
 
 # == Config ==
 # Optional site config shared with gh-stats and gh-release-sampler. If
@@ -70,6 +71,7 @@ usage() {
 	cat <<'EOF'
 Usage: gh-nc-shipped [-f <file>]
        gh-nc-shipped -x <server-version|master> <app-id> <dir>
+       gh-nc-shipped -b <server-version|master>
 
 Writes the apps the Nextcloud server ships to <file>, as JSON:
 
@@ -139,10 +141,15 @@ master, into <dir>/<app-id>/ and prints the URL of the archive, then the
 $OC_Build of its version.php: the time the archive was built and the server
 commit it was built from. Nothing else is read or written.
 
+-b prints the same two lines for the archive of that server release or of the
+daily archive of master, and unpacks nothing.
+
 Options:
   -f, --file <file>  the file to read and replace (default: $GH_STATS_DIR/shipped.json)
   -x, --extract <server-version|master> <app-id> <dir>
                      unpack the app from the server release archive
+  -b, --build <server-version|master>
+                     print the URL and the build of the server release archive
   -h, --help         this text
 
 Environment (or /etc/gh-stats/gh-stats.env):
@@ -161,7 +168,7 @@ Environment (or /etc/gh-stats/gh-stats.env):
 EOF
 }
 
-x_server=""
+x_server="" x_build=0
 while [ $# -gt 0 ]; do
 	case "$1" in
 		-h|--help) usage; exit 0 ;;
@@ -170,6 +177,11 @@ while [ $# -gt 0 ]; do
 			[ $# -ge 4 ] || die "$1 needs a server version, an app id and a directory"
 			x_server="${2#v}" x_id="$3" x_dir="$4"
 			shift 3
+			;;
+		-b|--build)
+			[ $# -ge 2 ] || die "$1 needs a server version"
+			x_server="${2#v}" x_build=1
+			shift
 			;;
 		*) echo "unknown argument: $1" >&2; exit 1 ;;
 	esac
@@ -534,14 +546,21 @@ unpack() {
 		n=$((n + 1))
 	done < "$tmp/dir"
 	echo "$n files of $ARCHIVE_ROOT/apps/$id/ unpacked to $dest/$id" >&2
+	version_build "$url"
+}
+
+# version_build <url>: the $OC_Build of the version.php of the archive central
+# just read, into build.
+version_build() {
+	local line
 	line="$(directory "$tmp/cd" | awk -v n="$ARCHIVE_ROOT/version.php" '$1 == n')"
-	[ -n "$line" ] || die "$url: no version.php"
-	extract "$url" "$etag" "$line" "$tmp/version.php"
+	[ -n "$line" ] || die "$1: no version.php"
+	extract "$1" "$etag" "$line" "$tmp/version.php"
 	build="$(sed -n "s/^\$OC_Build = '\(.*\)';.*/\1/p" "$tmp/version.php")"
 }
 
 if [ -n "$x_server" ]; then
-	[[ "$x_id" =~ ^[A-Za-z0-9_-]+$ ]] || die "not an app id: $x_id"
+	[ "$x_build" = 1 ] || [[ "$x_id" =~ ^[A-Za-z0-9_-]+$ ]] || die "not an app id: $x_id"
 	if [ "$x_server" = master ]; then
 		url="$SERVER_MASTER_ARCHIVE"
 	else
@@ -549,8 +568,14 @@ if [ -n "$x_server" ]; then
 		archive_url "$x_server" || die "no archive of $x_server in $SERVER_PRERELEASES_URL/"
 	fi
 	available "$url" || die "no archive at $url"
-	mkdir -p "$x_dir"
-	unpack "$url" "$x_id" "$x_dir"
+	if [ "$x_build" = 1 ]; then
+		heads "$url"
+		central "$url"
+		version_build "$url"
+	else
+		mkdir -p "$x_dir"
+		unpack "$url" "$x_id" "$x_dir"
+	fi
 	echo "$url"
 	echo "$build"
 	exit 0
