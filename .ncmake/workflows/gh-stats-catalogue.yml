@@ -29,7 +29,9 @@
 # is sent as well, whether gh-nc-appslist lists it or not. A version the
 # measurement already gave up on, listed in its open issue, is not sent again,
 # nor one whose check a request removed, and while a measurement runs none is
-# sent, since its versions have no result yet.
+# sent, since its versions have no result yet. They go out in one event that
+# names this run, whose artifact apps holds them, since the list can exceed the
+# 64 KB a client_payload takes.
 #
 # A release whose download is no release asset names no repository gh-stats
 # samples: one from a host of its own, a package registry or a file in a
@@ -370,13 +372,28 @@ jobs:
               done
           echo "::notice::Sent $NEW new versions"
 
+      # An artifact, as the list can exceed what a client_payload takes.
+      - name: Keep the versions without a result
+        if: env.UNMEASURED != '0'
+        run: |
+          mkdir -p "$STATE/apps"
+          sed '/^$/d' "$STATE/unmeasured" > "$STATE/apps/apps.txt"
+
+      - name: Upload the versions without a result
+        if: env.UNMEASURED != '0'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: apps
+          path: ${{ env.STATE }}/apps/apps.txt
+          if-no-files-found: error
+
       # In one event: gh-stats-measure.yml passes on what one run cannot hold, so the
       # runs follow one another.
       - name: Send the versions without a result to the measurement
         if: env.UNMEASURED != '0'
         run: |
-          jq -R -n -c --arg type "$EVENT_TYPE" \
-            '{event_type: $type, client_payload: {apps: [inputs | select(length > 0)]}}' "$STATE/unmeasured" \
+          jq -n -c --arg type "$EVENT_TYPE" --arg run "$GITHUB_RUN_ID" \
+            '{event_type: $type, client_payload: {apps_run: $run}}' \
             | gh api --method POST "repos/$GH_REPO/dispatches" --input -
           echo "::notice::Sent $UNMEASURED versions without a result"
 
