@@ -18,7 +18,9 @@
 # App Store shows of every catalogue app for its page. The findings of the
 # measurements are not in it: each measurement has them in a JSON file of its
 # own beside the database, which the page fetches only when the measurement is
-# opened. The source database is only read.
+# opened. Neither are the download samples: each project has them in a JSON file
+# of its own beside the database, which the page fetches the first time a chart
+# or a comparison needs them. The source database is only read.
 
 # == Config ==
 # Optional site config shared with gh-stats and gh-release-sampler. If
@@ -57,9 +59,10 @@ usage() {
 Usage: gh-stats-site-db -o <file> [-r <dir> [-u <file>]]
 
 Writes the database the site serves to <file>, which must not exist yet: a copy
-of the gh-release-sampler database without a journal and without the tables
-etags and repos, with one spelling per repository where the sampler knows it
-under spellings that differ only in case, and the series of a renamed
+of the gh-release-sampler database without a journal, without the tables
+etags and repos and with the table samples empty, with one spelling per
+repository where the sampler knows it under spellings that differ only in
+case, and the series of a renamed
 repository under its current name, plus
 
   apps       app id, name, host, owner and repo of every App Store app whose
@@ -151,6 +154,11 @@ from the reuse.json of the newest run of nextcloud/server at the same server
 release, by the files below the directory of the app, and says so where no
 such run has one.
 
+Beside <file>, samples/<project>.json holds the samples of each project, of
+the assets the summary counts, as a JSON array with one entry per asset:
+[host, owner, repo, tag, asset, [[ts, downloads], ...]]. A project without
+samples has an empty array.
+
 A result below <dir> that jq cannot read is left out, so one file does not stop
 the build: a summary.json with its whole run, any other result alone. Each file
 left out is named on standard error, and in the file of -u.
@@ -163,7 +171,8 @@ at its start.
 
 Options:
   -o, --output <file>  the database to write; the findings of each measurement
-                       go to findings/<run dir>.json beside it
+                       go to findings/<run dir>.json beside it, the samples of
+                       each project to samples/<project>.json
   -r, --results <dir>  the directory apps/ of a checkout of the data branch;
                        without it the three measurement tables stay empty
                        and no findings are written
@@ -214,6 +223,8 @@ done
 [ ! -e "$out" ] || die "$out exists"
 findings="$(dirname "$out")/findings"
 [ ! -e "$findings" ] || die "$findings exists"
+samples_dir="$(dirname "$out")/samples"
+[ ! -e "$samples_dir" ] || die "$samples_dir exists"
 [ -z "$results" ] || [ -d "$results" ] || die "no results directory at $results"
 
 # == Catalogue ==
@@ -463,7 +474,7 @@ if [ -r "$SECURITY_OVERDUE_CACHE" ]; then
 fi
 
 # -bail stops at the first error; the half-written copy is removed then.
-trap 'rm -rf "$out" "$findings"' ERR
+trap 'rm -rf "$out" "$findings" "$samples_dir"' ERR
 # The key of a repository in the projects: owner/repo on GitHub, host/owner/repo
 # elsewhere, lowercase.
 host_k="CASE WHEN host = 'github.com' THEN '' ELSE host || '/' END"
@@ -1090,6 +1101,22 @@ SELECT (SELECT count(*) FROM findings) AS findings, sum(writefile('${findings//$
        FROM findings f WHERE f.dir = m.dir ORDER BY f.tool, f.n)))) AS bytes
   FROM measurements m;
 DROP TABLE findings;
+-- The samples of a project, of the assets the summary counts, as the JSON array
+-- the charts and the comparison read: one entry per asset, [host, owner, repo,
+-- tag, asset, [[ts, downloads], ...]]. A project without any has an empty one,
+-- so a file that is missing is an error. The table ships empty, and the page
+-- fills it from these files.
+CREATE TEMP TABLE exported_samples AS
+SELECT (SELECT count(*) FROM samples s JOIN projects j ON s.host = j.host AND s.owner = j.owner AND s.repo = j.repo
+         WHERE $asset_flt) AS samples,
+       sum(writefile('${samples_dir//$sq/$sq$sq}/' || p.project || '.json',
+  (SELECT json_group_array(json(a)) FROM (
+     SELECT json_array(s.host, s.owner, s.repo, s.tag, s.asset, json_group_array(json_array(s.ts, s.downloads))) AS a
+       FROM samples s JOIN projects j ON s.host = j.host AND s.owner = j.owner AND s.repo = j.repo
+      WHERE j.project = p.project AND ($asset_flt)
+      GROUP BY s.host, s.owner, s.repo, s.tag, s.asset)))) AS bytes
+  FROM (SELECT DISTINCT project FROM projects) p;
+DELETE FROM samples;
 
 VACUUM;
 SELECT 'apps', count(*) FROM apps
@@ -1099,6 +1126,7 @@ UNION ALL SELECT 'projects', count(DISTINCT project) FROM projects
 UNION ALL SELECT 'summary', count(*) FROM summary
 UNION ALL SELECT 'measurements', count(*) FROM measurements
 UNION ALL SELECT 'findings', findings FROM exported
+UNION ALL SELECT 'samples', samples FROM exported_samples
 UNION ALL SELECT 'fields', count(*) FROM fields
 UNION ALL SELECT 'app_details', count(*) FROM app_details
 UNION ALL SELECT 'app_releases', count(*) FROM app_releases

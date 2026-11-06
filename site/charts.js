@@ -444,12 +444,28 @@ function draw() {
 	drawChips()
 	const items = chartItems()
 	ui.hint.hidden = items.length > 0
-	ui.body.hidden = !items.length
 	if (!items.length) {
+		ui.status.hidden = true
+		ui.body.hidden = true
 		plot?.destroy()
 		plot = null
 		return
 	}
+	// The charts drawn last stay while the samples of a newly ticked project
+	// arrive, and go when they cannot be loaded, as they no longer match the
+	// ticked rows.
+	const loading = samplesOf(items.map((i) => i.project))
+	if (loading) {
+		ui.status.replaceChildren('Loading the downloads.')
+		ui.status.hidden = false
+		loading.then(drawCharts, (e) => {
+			ui.body.hidden = true
+			loadFailed(ui.status, 'The downloads', e, drawCharts)
+		})
+		return
+	}
+	ui.status.hidden = true
+	ui.body.hidden = false
 	const split = ui.split.value
 	const days = Number(ui.figure.value)
 	const all = shares(items, split, days)
@@ -470,7 +486,7 @@ function draw() {
 function initCharts() {
 	const id = (name) => document.getElementById(name)
 	ui = {
-		hint: id('charts-hint'), body: id('charts-body'), chips: id('picked'), note: id('history-note'),
+		hint: id('charts-hint'), status: id('charts-status'), body: id('charts-body'), chips: id('picked'), note: id('history-note'),
 		scope: id('scope'), split: id('split'), figure: id('share-figure'), shares: id('shares'),
 		measure: id('measure'), bucket: id('bucket'), range: id('range'), style: id('style'), log: id('log'),
 		history: id('history'), all: id('pick-all'),
