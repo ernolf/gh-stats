@@ -63,6 +63,12 @@ export GIT_TERMINAL_PROMPT=0
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 warn() { echo "WARNING: $*" >&2; }
+# A list entry that is left out. On a runner it becomes an annotation and a line
+# of the step summary, so the run points at it.
+left_out() {
+	if [ -n "${GITHUB_ACTIONS:-}" ]; then echo "::error::${*//%/%25}"; else echo "ERROR: $*" >&2; fi
+	[ -z "${GITHUB_STEP_SUMMARY:-}" ] || printf -- '- %s\n' "$*" >> "$GITHUB_STEP_SUMMARY"
+}
 
 usage() {
 	cat <<'EOF'
@@ -125,7 +131,9 @@ UNLISTED_INCLUDE and UNLISTED_EXCLUDE take owners and repositories as owner,
 owner/repo, host/owner or host/owner/repo, separated by spaces or line breaks;
 a first part with a dot is a host, without one the host is github.com.
 UNLISTED_EXCLUDE also takes app ids, as id:<app-id>. UNLISTED_TOOLS takes
-repositories only, in the same forms.
+repositories only, in the same forms. An entry of another form is left out
+and reported, and the others are used; once <file> is written, the run exits
+with 1. gh-release-sampler leaves out the same entries of UNLISTED_TOOLS.
 
 Options:
   -f, --file <file>  the file to read and replace (default: $GH_STATS_DIR/unlisted.json)
@@ -180,24 +188,40 @@ echo '{}' > "$shipped"
 # == Settings ==
 # spec: one entry of UNLISTED_INCLUDE, UNLISTED_EXCLUDE or UNLISTED_TOOLS as {host, owner, repo}
 # or {id}, keyed as the repositories are, or null when it has another form.
+# why: why the entry is left out from the variable $var, or null.
+# directory: the repository of an entry that names a directory in it, or null.
 SPEC_JQ='
 	def spec:
 		if startswith("id:") then (.[3:] | if test("^[A-Za-z0-9_-]+$") then {id: .} else null end)
 		else split("/") as $p
 			| (if $p[0] | test("\\.") then {host: ($p[0] | ascii_downcase), r: $p[1:]} else {host: "github.com", r: $p} end)
-			| if (.r | length) < 1 or (.r | length) > 2 or any(.r[]; test("^[A-Za-z0-9_.-]+$") | not) then null
+			| if (.r | length) < 1 or (.r | length) > 2 or any(.host, .r[]; test("^[A-Za-z0-9_.-]+$") | not) then null
 			  else {host, owner: .r[0], repo: .r[1]}
 			     | .key = ((if .host == "github.com" then "" else .host + "/" end) + .owner + (if .repo then "/" + .repo else "" end) | ascii_downcase)
 			  end
 		end;
-	[$v | splits("\\s+") | select(. != "") | {entry: ., spec: spec}]'
+	def directory:
+		split("/") as $p | (if $p[0] | test("\\.") then 3 else 2 end) as $n
+		| if ($p | length) > $n and all($p[]; test("^[A-Za-z0-9_.-]+$")) then $p[:$n] | join("/") else null end;
+	def why:
+		(if .spec == null then .entry | directory else null end) as $r
+		| if $r then "a directory of a repository, it takes the repository, \($r)"
+		  elif $var == "UNLISTED_TOOLS" and .spec.repo == null then "it takes repositories only, owner/repo or host/owner/repo"
+		  elif .spec == null then "it takes owner, owner/repo, host/owner or host/owner/repo" + (if $var == "UNLISTED_EXCLUDE" then ", or id:<app-id>" else "" end)
+		  elif $var == "UNLISTED_INCLUDE" and .spec.id then "it takes no app id"
+		  else null end;
+	[$v | splits("\\s+") | select(. != "") | {entry: ., spec: spec} | .why = why]'
+# An entry of the wrong form is left out and the others are used; the run fails
+# only after the result is written, so one typo costs no other entry its apps.
+wrong=0
 for var in UNLISTED_INCLUDE UNLISTED_EXCLUDE UNLISTED_TOOLS; do
-	"$JQ" -n -c --arg v "${!var}" "$SPEC_JQ" > "$tmp/$var"
-	bad="$("$JQ" -r '[.[] | select(.spec == null) | .entry] | join(" ")' "$tmp/$var")"
-	[ -z "$bad" ] || die "$var holds $bad, it takes owner, owner/repo, host/owner or host/owner/repo"
+	"$JQ" -n -c --arg v "${!var}" --arg var "$var" "$SPEC_JQ" > "$tmp/$var.all"
+	while IFS=$'\t' read -r entry why; do
+		left_out "$var holds $entry, $why"
+		wrong=$((wrong + 1))
+	done < <("$JQ" -r '.[] | select(.why) | [.entry, .why] | @tsv' "$tmp/$var.all")
+	"$JQ" -c 'map(select(.why == null))' "$tmp/$var.all" > "$tmp/$var"
 done
-"$JQ" -e 'all(.[]; .spec.id == null)' "$tmp/UNLISTED_INCLUDE" >/dev/null || die "UNLISTED_INCLUDE takes no app id"
-"$JQ" -e 'all(.[]; .spec.repo != null)' "$tmp/UNLISTED_TOOLS" >/dev/null || die "UNLISTED_TOOLS takes repositories only"
 tools="$("$JQ" -c '[.[].spec.key]' "$tmp/UNLISTED_TOOLS")"
 excluded="$("$JQ" -c '[.[].spec.key | strings]' "$tmp/UNLISTED_EXCLUDE")"
 excluded_ids="$("$JQ" -c '[.[].spec.id | strings | ascii_downcase]' "$tmp/UNLISTED_EXCLUDE")"
@@ -441,3 +465,4 @@ left="$(($(wc -l < "$tmp/stale") - UNLISTED_MAX_READS))"
 	| {scanned: $scanned, apps: ., repos: $all}' "$APPSTORE_CACHE" "$APPSTORE_APPAPI_CACHE" > "$UNLISTED_FILE.new"
 mv "$UNLISTED_FILE.new" "$UNLISTED_FILE"
 echo "unlisted apps written to $UNLISTED_FILE ($("$JQ" -r '"\(.apps | length) apps in \(.repos | length) repositories"' "$UNLISTED_FILE"), $(wc -l < "$tmp/owners") owners, $(wc -l < "$tmp/failed") not listed, $reads repositories read, $left left to the next run)"
+[ "$wrong" = 0 ] || die "$wrong list entries of the wrong form were left out"

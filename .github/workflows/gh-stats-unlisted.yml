@@ -71,11 +71,16 @@ jobs:
           gh api rate_limit --jq .resources > "$state/rate.before"
 
       - name: List the unlisted apps
+        id: list
         env:
           GH_STATS_DIR: ${{ runner.temp }}/catalogue
         run: bin/gh-nc-unlisted
 
+      # Also after a listing that left out a list entry of the wrong form: it
+      # fails only after it has written unlisted.json. A listing that failed
+      # before leaves the copy fetched above, which is kept unchanged.
       - name: Keep the unlisted apps
+        if: ${{ !cancelled() && (steps.list.outcome == 'success' || steps.list.outcome == 'failure') }}
         run: gh release upload "$CATALOGUE_TAG" "$STATE/unlisted.json" --clobber
 
       - name: Report the rate limits
