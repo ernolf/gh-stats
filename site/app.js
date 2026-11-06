@@ -27,10 +27,15 @@ let sources
 // Whether the database holds the security results, which only a private copy
 // of the site has.
 let securityResults = false
-// The database the page loaded, and the directory of the findings of its
-// measurements beside it.
+// The database the page loaded, and the directories of the findings of its
+// measurements and of the samples of its projects beside it.
 let loadedDb
 let findingsBase
+let samplesBase
+// The samples of each project are fetched the first time a chart or a
+// comparison needs them: by project, the fetch while it runs and true once
+// its rows are in the table.
+const samplesLoaded = new Map()
 // The line rows of each project and the project of each app, for the app pages.
 const projectLines = new Map()
 let appProjects
@@ -100,6 +105,7 @@ async function load() {
 		issues = config.issues
 		loadedDb = config.db
 		findingsBase = config.db.replace(/[^/]*$/, 'findings/')
+		samplesBase = config.db.replace(/[^/]*$/, 'samples/')
 		showVersions(config.lib ?? {})
 		progress.max = config.bytes
 		const [SQL, bytes] = await Promise.all([
@@ -391,6 +397,70 @@ async function siteRebuilt() {
 	} catch {
 		return false
 	}
+}
+
+// Says in status that what was asked for could not be loaded, with a way to
+// try again, or to reload the page when the site has been rebuilt since.
+async function loadFailed(status, what, e, retry) {
+	if (await siteRebuilt()) {
+		const reload = el('button', { type: 'button', class: 'quiet' }, 'Reload')
+		reload.addEventListener('click', () => location.reload())
+		status.replaceChildren('The site has been rebuilt since this page was loaded. ', reload)
+		return
+	}
+	const again = el('button', { type: 'button', class: 'quiet' }, 'Try again')
+	again.addEventListener('click', retry)
+	status.replaceChildren(`${what} could not be loaded (${e.message}). `, again)
+}
+
+// The samples of a project, from the file beside the database, into the table,
+// which the database brings empty.
+async function fetchSamples(project) {
+	const url = `${samplesBase}${project.split('/').map(encodeURIComponent).join('/')}.json`
+	const res = await fetch(url)
+	if (!res.ok) {
+		throw new Error(`${url}: HTTP ${res.status}`)
+	}
+	const assets = await res.json()
+	const stmt = db.prepare('INSERT INTO samples (ts, host, owner, repo, tag, asset, downloads) VALUES (?, ?, ?, ?, ?, ?, ?)')
+	db.run('BEGIN')
+	try {
+		for (const [host, owner, repo, tag, asset, points] of assets) {
+			for (const [ts, downloads] of points) {
+				stmt.run([ts, host, owner, repo, tag, asset, downloads])
+			}
+		}
+		db.run('COMMIT')
+	} catch (e) {
+		db.run('ROLLBACK')
+		throw e
+	} finally {
+		stmt.free()
+	}
+}
+
+// null when the samples of all projects given are in the table, otherwise a
+// promise that settles once they are. A project whose fetch failed is fetched
+// again by the next call.
+function samplesOf(projects) {
+	const pending = []
+	for (const project of new Set(projects)) {
+		let loading = samplesLoaded.get(project)
+		if (loading === true) {
+			continue
+		}
+		if (!loading) {
+			loading = fetchSamples(project).then(() => {
+				samplesLoaded.set(project, true)
+			}, (e) => {
+				samplesLoaded.delete(project)
+				throw e
+			})
+			samplesLoaded.set(project, loading)
+		}
+		pending.push(loading)
+	}
+	return pending.length ? Promise.all(pending) : null
 }
 
 // The kept fields of the analyser results of a run, keyed by tool/name.
@@ -735,8 +805,21 @@ function compareSelect(row) {
 		row.compareChecks.replaceWith(checksRow)
 		row.compareChecks = checksRow
 		if (select.value) {
+			// The figures take the place of this cell once the samples are there.
+			const figures = el('td', { class: 'hint', colspan: String(4 + PERIODS.length) })
+			const tag = select.value
+			const show = () => {
+				const loading = samplesOf([row.project])
+				if (!loading) {
+					figures.replaceWith(...releaseCells(releaseFigures(row.project, tag), runs))
+					return
+				}
+				figures.replaceChildren('Loading the downloads.')
+				loading.then(show, (e) => loadFailed(figures, 'The downloads of this project', e, show))
+			}
 			row.compare.append(el('td'), el('td', { class: 'compare-label' }, 'compared with'),
-				...releaseCells(releaseFigures(row.project, select.value), runs), abandonedCell(abandoned(runs)), ...sec, checks, el('td'))
+				figures, abandonedCell(abandoned(runs)), ...sec, checks, el('td'))
+			show()
 			opened.compare.add(none)
 		} else {
 			opened.compare.delete(none)
@@ -1050,17 +1133,7 @@ function checksBlock(m, collapse) {
 						? [el('details', {}, el('summary', {}, counts.map(([l, n]) => `${n} ${l}`).join(', ')), ...findingEntries(tool, rest))]
 						: []))
 			}))
-		}, async (e) => {
-			if (await siteRebuilt()) {
-				const reload = el('button', { type: 'button', class: 'quiet' }, 'Reload')
-				reload.addEventListener('click', () => location.reload())
-				status.replaceChildren('The site has been rebuilt since this page was loaded. ', reload)
-				return
-			}
-			const again = el('button', { type: 'button', class: 'quiet' }, 'Try again')
-			again.addEventListener('click', load)
-			status.replaceChildren(`The findings of this run could not be loaded (${e.message}). `, again)
-		})
+		}, (e) => loadFailed(status, 'The findings of this run', e, load))
 	}
 	load()
 	return run
