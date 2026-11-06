@@ -67,7 +67,8 @@ env:
   # targets.json, separated by spaces or line breaks. Without it, only the App
   # Store targets are sampled. The repositories of the templates and developer
   # tools, UNLISTED_TOOLS as gh-stats-unlisted.yml reads it, are sampled as
-  # well, so the site shows the downloads of their releases.
+  # well, so the site shows the downloads of their releases. The sampler reads
+  # both itself, so it names the variable of a target it leaves out.
   SAMPLER_TARGETS: ${{ vars.SAMPLER_TARGETS }}
   UNLISTED_TOOLS: ${{ vars.UNLISTED_TOOLS }}
 
@@ -92,8 +93,6 @@ jobs:
             echo "GH_STATS_CONFIG=$state/targets.json"
             echo "GH_STATS_TARGETS_DIR=$state/targets.d"
           } >> "$GITHUB_ENV"
-          jq -n --arg t "$SAMPLER_TARGETS $UNLISTED_TOOLS" \
-            '{targets: ([$t | splits("\\s+")] | map(select(. != "")) | unique)}' > "$state/targets.json"
 
       - name: Restore the App Store catalogue
         env:
@@ -159,8 +158,9 @@ jobs:
           fi
           bin/gh-release-sampler
 
-      # Also after a sampler run that reported failed requests: what it did
-      # sample is committed to the database and would otherwise be lost.
+      # Also after a sampler run that reported failed requests or left out a
+      # target of the wrong form: what it did sample is committed to the
+      # database and would otherwise be lost.
       - name: Thin and upload the database
         id: upload
         if: ${{ !cancelled() && steps.restore.outcome == 'success' }}

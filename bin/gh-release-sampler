@@ -22,6 +22,8 @@
 # A target host/owner/repo is a repository on a Forgejo or Gitea host, sampled
 # the same way through its API at https://<host>/api/v1. Every table keys its
 # rows by host, github.com for GitHub.
+# A target of the wrong form is left out and reported before the API is asked,
+# and the others are sampled; once they are committed, the run exits with 1.
 
 # == Config ==
 # Optional site config shared with gh-stats. If /etc/gh-stats/gh-stats.env
@@ -44,6 +46,11 @@ CONFIG="${GH_STATS_CONFIG:-/etc/gh-stats/targets.json}"
 # config (its .targets[] appended, then de-duplicated), so a generated list
 # (e.g. from gh-nc-appstore-targets) can live beside the hand-curated targets.json.
 TARGETS_DIR="${GH_STATS_TARGETS_DIR:-/etc/gh-stats/targets.d}"
+# Further hand-curated targets, separated by spaces or line breaks. UNLISTED_TOOLS
+# names the repositories of the templates and developer tools, as gh-nc-unlisted
+# reads it, so the downloads of their releases are sampled as well.
+SAMPLER_TARGETS="${SAMPLER_TARGETS:-}"
+UNLISTED_TOOLS="${UNLISTED_TOOLS:-}"
 STATE_DIR="${GH_STATS_DIR:-/var/lib/gh-stats}"
 DB="${GH_STATS_DB:-${STATE_DIR}/downloads.sqlite}"
 GH="${GH_BIN:-/usr/bin/gh}"
@@ -361,31 +368,76 @@ record_repo() {
 		"$h" "$o" "$r" "$n" "$seen" "$m" "$since" "$(( m >= UNREACHABLE_RUNS ))" >>"$nsql"
 }
 
-# Merge the main config with any targets.d/*.json drop-ins, de-duplicated
-# without case, as GitHub resolves names, blank lines dropped, first occurrence
-# wins. Both sources are optional; the caller checks that at least one target
-# came out.
+# Every target with its source, the file or the variable, tab-separated: the
+# main config, any targets.d/*.json drop-ins, SAMPLER_TARGETS and UNLISTED_TOOLS.
+# All of them are optional; the caller checks that at least one target came out.
 collect_targets() {
-	{
-		if [ -f "$CONFIG" ]; then jq -r '.targets[]?' "$CONFIG"; fi
-		if [ -d "$TARGETS_DIR" ]; then
-			for f in "$TARGETS_DIR"/*.json; do
-				[ -e "$f" ] || continue
-				jq -r '.targets[]?' "$f"
-			done
-		fi
-	} | awk 'NF && !seen[tolower($0)]++'
+	local f var
+	if [ -f "$CONFIG" ]; then jq -r --arg f "$CONFIG" '.targets[]? | "\($f)\t\(.)"' "$CONFIG"; fi
+	if [ -d "$TARGETS_DIR" ]; then
+		for f in "$TARGETS_DIR"/*.json; do
+			[ -e "$f" ] || continue
+			jq -r --arg f "$f" '.targets[]? | "\($f)\t\(.)"' "$f"
+		done
+	fi
+	for var in SAMPLER_TARGETS UNLISTED_TOOLS; do
+		jq -r -n --arg v "${!var}" --arg var "$var" '$v | splits("\\s+") | select(. != "") | "\($var)\t\(.)"'
+	done
 }
 
+# Why a target from the source $1 has the wrong form, nothing for the right one.
+# A target is owner, owner/repo or host/owner/repo, each part of letters,
+# digits, _, . and -, and a first part with a dot is a host; an owner is listed
+# whole on GitHub only. UNLISTED_TOOLS takes repositories only. These are the
+# forms gh-nc-unlisted takes for UNLISTED_TOOLS, so both leave out the same
+# entries of it.
+target_form() {
+	local src="$1" t="$2" part='[A-Za-z0-9_.-]+' rest="$2" n=2
+	if [[ "${t%%/*}" == *.* ]]; then
+		[[ "$t" =~ ^$part/(.*)$ ]] && rest="${BASH_REMATCH[1]}" || rest=''
+		n=3
+	fi
+	if [[ "$rest" =~ ^$part/$part$ ]] || { [[ "$rest" =~ ^$part$ ]] && [ "$n" = 2 ] && [ "$src" != UNLISTED_TOOLS ]; }; then
+		return 0
+	elif [[ "$t" =~ ^$part(/$part)+$ && "$rest" =~ ^$part/$part/ ]]; then
+		echo "a directory of a repository, it takes the repository, $(cut -d/ -f-"$n" <<<"$t")"
+	elif [ "$src" = UNLISTED_TOOLS ]; then
+		echo "it takes repositories only, owner/repo or host/owner/repo"
+	else
+		echo "it takes owner, owner/repo or host/owner/repo, an owner on GitHub only"
+	fi
+}
+
+# A target that is left out. On a runner it becomes an annotation and a line
+# of the step summary, so the run points at it.
+left_out() {
+	if [ -n "${GITHUB_ACTIONS:-}" ]; then echo "::error::${*//%/%25}"; else echo "ERROR: $*" >&2; fi
+	[ -z "${GITHUB_STEP_SUMMARY:-}" ] || printf -- '- %s\n' "$*" >> "$GITHUB_STEP_SUMMARY"
+}
+
+# The targets of the right form, de-duplicated without case, as GitHub resolves
+# names, first occurrence wins. The others are left out, and the run fails once
+# it has committed what it sampled.
+wrong=0
+targets=''
+declare -A target_seen=()
+while IFS=$'\t' read -r src target; do
+	[ -n "$target" ] || continue
+	why="$(target_form "$src" "$target")"
+	if [ -n "$why" ]; then
+		left_out "$src holds $target, $why"
+		wrong=$((wrong + 1))
+	elif [ -z "${target_seen[${target,,}]:-}" ]; then
+		target_seen[${target,,}]=1
+		targets+="$target"$'\n'
+	fi
+done < <(collect_targets)
+
 # Expand a target into slugs: a plain owner lists all its non-archived repos
-# on GitHub, an "owner/repo" or "host/owner/repo" passes through unchanged. An
-# owner is listed whole on GitHub only.
+# on GitHub, an "owner/repo" or "host/owner/repo" passes through unchanged.
 list_repos() {
 	local t="$1"
-	if [[ "${t%%/*}" == *.* && "$t" != */*/* ]]; then
-		echo "ERROR: $t names no repository; owners are listed whole on GitHub only" >&2
-		return 1
-	elif [[ "$t" == */* ]]; then
+	if [[ "$t" == */* ]]; then
 		printf '%s\n' "$t"
 	else
 		"$GH" repo list "$t" --no-archived --limit 1000 --json nameWithOwner --jq '.[].nameWithOwner'
@@ -420,14 +472,14 @@ collect_slugs() {
 	while read -r target; do
 		[ -n "$target" ] || continue
 		list_repos "$target" || { echo "ERROR: cannot list the repositories of $target" >&2; exit 1; }
-	done <<< "$(collect_targets)" \
+	done <<< "$targets" \
 		| awk -F'\t' 'FILENAME == ARGV[1] { known[$1] = $2; next } FILENAME == ARGV[2] { removed[$1]; next }
 			NF && !seen[k = tolower($0)]++ && !(k in removed) { print ((k in known) ? known[k] : $0) }' \
 			<(known_spellings) <(removed_slugs) -
 }
 
 slugs="$(collect_slugs)"
-[ -n "$slugs" ] || { echo "ERROR: no targets found in $CONFIG or $TARGETS_DIR/*.json" >&2; exit 1; }
+[ -n "$slugs" ] || { echo "ERROR: no targets found in $CONFIG, $TARGETS_DIR/*.json, SAMPLER_TARGETS or UNLISTED_TOOLS" >&2; exit 1; }
 
 # A forge host is sampled only when it answers its version as Forgejo and Gitea
 # do. Another host, or one that hides its API behind a bot check, cannot be
@@ -468,7 +520,8 @@ for p in "${!next_page[@]}"; do
 done
 if [ "$remaining" -lt "$needed" ]; then
 	echo "skipped: $remaining API requests left, the run needs up to $needed; the budget resets at $(date -u -d "@$reset" +%H:%M) UTC" >&2
-	exit 0
+	# A target left out above still fails the run.
+	exit $(( wrong > 0 ))
 fi
 sampled=$(grep -c . <<<"$slugs" || true)
 asked=$(grep -c . <<<"$unasked" || true)
@@ -615,3 +668,4 @@ if [ ${#failed[@]} -gt 0 ]; then
 	list_requests "${failed[@]}"
 	exit 1
 fi
+[ "$wrong" = 0 ] || { echo "ERROR: $wrong targets of the wrong form were left out" >&2; exit 1; }
