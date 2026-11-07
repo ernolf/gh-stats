@@ -400,17 +400,106 @@ async function siteRebuilt() {
 }
 
 // Says in status that what was asked for could not be loaded, with a way to
-// try again, or to reload the page when the site has been rebuilt since.
+// try again. When the site has been rebuilt since, the page reloads by itself
+// and opens again what was open; only when it did so a moment ago, and the
+// files of the new build are still missing, it asks instead of reloading again.
 async function loadFailed(status, what, e, retry) {
 	if (await siteRebuilt()) {
-		const reload = el('button', { type: 'button', class: 'quiet' }, 'Reload')
-		reload.addEventListener('click', () => location.reload())
-		status.replaceChildren('The site has been rebuilt since this page was loaded. ', reload)
+		const reload = () => {
+			carryOver(status)
+			location.reload()
+		}
+		if (Date.now() - reopenedAt > REOPEN_PAUSE) {
+			status.replaceChildren('The site has been rebuilt since this page was loaded. Reloading.')
+			reload()
+			return
+		}
+		const button = el('button', { type: 'button', class: 'quiet' }, 'Reload')
+		button.addEventListener('click', reload)
+		status.replaceChildren('The site has been rebuilt since this page was loaded. ', button)
 		return
 	}
 	const again = el('button', { type: 'button', class: 'quiet' }, 'Try again')
 	again.addEventListener('click', retry)
 	status.replaceChildren(`${what} could not be loaded (${e.message}). `, again)
+}
+
+// == Reload ==
+
+// What is open outlasts the reload a rebuilt site needs: the check reports,
+// older lines and comparisons, the ticked rows, and where the part that asked
+// for the reload sits in the window. The tab keeps it in sessionStorage for the
+// one load that follows; without storage the page reloads with all closed.
+const REOPEN_KEY = 'gh-stats.reopen'
+const REOPEN_PAUSE = 60000
+let reopenedAt = 0
+
+// The checks of a release can open in the table, below a comparison and on the
+// page of its app.
+function reopenPlace(tr) {
+	return tr.closest('#app') ? 'app' : tr.previousElementSibling?.classList.contains('compare') ? 'compare' : 'table'
+}
+
+function reopenRow(kind, key, place) {
+	return [...document.querySelectorAll(`tr.${kind}[data-reopen]`)].find((tr) => tr.dataset.reopen === key && reopenPlace(tr) === place)
+}
+
+function carryOver(status) {
+	const open = (kind) => [...document.querySelectorAll(`tr.${kind}[data-reopen]:not([hidden])`)]
+	const anchor = status.closest('tr[data-reopen]')
+	const s = {
+		at: Date.now(),
+		older: [...document.querySelectorAll('button.toggle[data-reopen][aria-expanded="true"]')].map((b) => b.dataset.reopen),
+		compare: open('compare').map((tr) => [tr.dataset.reopen, tr.dataset.tag]),
+		checks: open('checks').map((tr) => [tr.dataset.reopen, reopenPlace(tr)]),
+		ticks: (startTicks ?? [...picked.values()]).map((r) => `${r.project}\n${r.line}`),
+		anchor: anchor ? [anchor.classList.contains('checks') ? 'checks' : 'compare', anchor.dataset.reopen, reopenPlace(anchor)] : null,
+		top: (anchor ?? document.getElementById('charts')).getBoundingClientRect().top,
+	}
+	try {
+		sessionStorage.setItem(REOPEN_KEY, JSON.stringify(s))
+	} catch {
+		// Without storage the page reloads with all closed.
+	}
+}
+
+// Comparisons open before the checks, as a comparison brings the row its checks
+// open in. A part the rebuilt site no longer has stays closed.
+function reopenCarried() {
+	let s
+	try {
+		s = JSON.parse(sessionStorage.getItem(REOPEN_KEY))
+		sessionStorage.removeItem(REOPEN_KEY)
+	} catch {
+		return
+	}
+	if (!s || typeof s !== 'object') {
+		return
+	}
+	reopenedAt = s.at
+	const lines = new Map([...projectLines.values()].flat().map((r) => [`${r.project}\n${r.line}`, r]))
+	const ticked = s.ticks.map((k) => lines.get(k)).filter(Boolean)
+	// The page of an app charts the lines of its app; the start page gets the
+	// ticks back when it closes.
+	if (startTicks) {
+		startTicks = ticked
+	} else {
+		swapPicks(ticked)
+	}
+	const toggles = [...document.querySelectorAll('button.toggle[data-reopen]')]
+	for (const key of s.older) {
+		toggles.find((b) => b.dataset.reopen === key)?.reopen()
+	}
+	for (const [key, tag] of s.compare) {
+		reopenRow('compare', key, 'table')?.reopen(tag)
+	}
+	for (const [key, place] of s.checks) {
+		reopenRow('checks', key, place)?.reopen()
+	}
+	const anchor = s.anchor ? reopenRow(...s.anchor) : document.getElementById('charts')
+	if (anchor) {
+		scrollBy(0, anchor.getBoundingClientRect().top - s.top)
+	}
 }
 
 // The samples of a project, from the file beside the database, into the table,
@@ -800,6 +889,7 @@ function compareSelect(row) {
 	select.addEventListener('change', () => {
 		row.compare.replaceChildren()
 		row.compare.hidden = !select.value
+		row.compare.dataset.tag = select.value
 		const runs = select.value && measured.get(`${row.project}\n${select.value}`)
 		const [checks, checksRow, sec] = checksCell(runs, 11)
 		row.compareChecks.replaceWith(checksRow)
@@ -828,6 +918,15 @@ function compareSelect(row) {
 	const none = () => {
 		select.value = ''
 		select.dispatchEvent(new Event('change'))
+	}
+	// A release the rebuilt site no longer offers leaves the comparison closed.
+	row.compare.dataset.reopen = `${row.project}\n${row.line}`
+	row.compare.reopen = (tag) => {
+		fill()
+		select.value = tag
+		if (select.value) {
+			select.dispatchEvent(new Event('change'))
+		}
 	}
 	return select
 }
@@ -1211,6 +1310,9 @@ function checksCell(runs, span, version = null) {
 		}
 	}
 	button.addEventListener('click', () => show(checks.hidden))
+	// A rebuild keeps the directory of a release and only adds runs to it.
+	checks.dataset.reopen = [...new Set(runs.map((m) => m.dir.replace(/\/[^/]*$/, '')))].join(' ')
+	checks.reopen = () => show(true)
 	return [el('td', { class: 'check-col' }, button, ...(version ? [' ', el('span', { class: 'check-of' }, version)] : [])), checks,
 		securityResults ? [securityCell(runs, () => show(checks.hidden), version)] : []]
 }
@@ -1455,9 +1557,10 @@ function unlistedRow(u) {
 	return p
 }
 
-// The button opens and closes the lines below the row of a project.
-function olderToggle(p) {
-	const toggle = el('button', { type: 'button', class: 'toggle', 'aria-expanded': 'false' })
+// The button opens and closes the lines below the row of a project; key names
+// the project across a reload.
+function olderToggle(p, key) {
+	const toggle = el('button', { type: 'button', class: 'toggle', 'aria-expanded': 'false', 'data-reopen': key })
 	const show = (open) => {
 		p.older.hidden = !open
 		toggle.setAttribute('aria-expanded', String(open))
@@ -1469,6 +1572,7 @@ function olderToggle(p) {
 	}
 	const close = () => show(false)
 	toggle.addEventListener('click', () => show(p.older.hidden))
+	toggle.reopen = () => show(true)
 	return toggle
 }
 
@@ -1515,7 +1619,7 @@ function shippedRow(releases) {
 	}
 	p.main = el('tbody', {}, row.tr, row.checks)
 	p.older = el('tbody', { class: 'older', hidden: '' })
-	p.toggle = olderToggle(p)
+	p.toggle = olderToggle(p, `shipped\n${main.id}`)
 	head.append(p.toggle)
 	return p
 }
@@ -1568,7 +1672,7 @@ function initOverview() {
 		p.abandoned = main.abandoned
 		p.older = el('tbody', { class: 'older', hidden: '' },
 			...older.flatMap((r) => lineRows(r, el('td', { class: 'line-label' }, `line ${lineLabel(r.line)}`))))
-		p.toggle = olderToggle(p)
+		p.toggle = olderToggle(p, project)
 		head.append(p.toggle)
 		return p
 	})
@@ -1802,6 +1906,7 @@ function initOverview() {
 	render()
 	addEventListener('hashchange', route)
 	route()
+	reopenCarried()
 }
 
 // == Scrolling ==
