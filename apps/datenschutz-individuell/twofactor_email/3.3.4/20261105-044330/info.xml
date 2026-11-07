@@ -1,0 +1,90 @@
+<?xml version="1.0"?>
+<!--
+  - SPDX-FileCopyrightText: 2025 Olav and Niklas Seyfarth, Contributors <https://github.com/datenschutz-individuell/twofactor_email/blob/main/CONTRIBUTORS.md>
+  - SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+    <id>twofactor_email</id>
+    <name>Two-Factor Email</name>
+    <summary>A login code sent to the user's email address</summary>
+    <description><![CDATA[### A two-factor provider using email
+
+Nextcloud can ask for a second factor after the password (two-factor
+authentication, 2FA). Each kind of second factor comes from a provider app
+that a server admin installs. This one emails a one-time code (OTP) - six
+digits by default - and asks for it on a second login page.
+
+### Installation and setup
+
+An admin installs and enables this app. The server needs a working mail
+setup, because the code travels by email.
+
+A user then switches it on under "Personal settings / Security", which needs
+an email address in "Personal info". An admin can switch it on for someone
+instead: "occ twofactorauth:enable USERID email".
+
+Nextcloud can also enforce a second factor for everyone or per group, though
+never one particular method. Email is a low-friction choice there: the user
+confirms one code and is done, with no device to enrol. Check first that
+every account has a working address - a user whose address does not work
+cannot log in.
+
+Any second factor stops desktop and mobile clients from signing in with the
+normal password. Each of them needs an app password instead, created under
+"Personal settings / Security".]]></description>
+    <version>3.3.4</version>
+    <licence>agpl</licence>
+    <author mail="twofactor-email@datenschutz-individuell.de">
+        Olav Seyfarth (datenschutz-individuell) [see CONTRIBUTORS.md for more]
+    </author>
+    <namespace>TwoFactorEMail</namespace>
+    <documentation>
+        <user>https://github.com/datenschutz-individuell/twofactor_email/blob/main/doc/users.md</user>
+        <admin>https://github.com/datenschutz-individuell/twofactor_email/blob/main/doc/admins.md</admin>
+        <developer>https://github.com/datenschutz-individuell/twofactor_email/blob/main/doc/developers.md</developer>
+    </documentation>
+    <category>security</category>
+
+    <website>https://github.com/datenschutz-individuell/twofactor_email</website>
+    <bugs>https://github.com/datenschutz-individuell/twofactor_email/issues</bugs>
+    <repository>https://github.com/datenschutz-individuell/twofactor_email.git</repository>
+    <screenshot
+            small-thumbnail="https://raw.githubusercontent.com/datenschutz-individuell/twofactor_email/release/3.3/screenshots/select-auth_thumb.webp">
+        https://raw.githubusercontent.com/datenschutz-individuell/twofactor_email/release/3.3/screenshots/challenge.png
+    </screenshot>
+    <dependencies>
+        <php min-version="8.1" max-version="8.5"/>
+        <nextcloud min-version="32" max-version="34"/>
+    </dependencies>
+    <background-jobs>
+        <job>OCA\TwoFactorEMail\BackgroundJob\CleanUpExpiredCodes</job>
+    </background-jobs>
+    <repair-steps>
+        <!-- The step uses classes of this app, so it must not run in the process that
+             performed the update: that process still has the previous version's classes
+             loaded. A live migration runs as a background job, in a fresh process. -->
+        <live-migration>
+            <step>OCA\TwoFactorEMail\Migration\RemovePersistedDefaultTemplate</step>
+        </live-migration>
+    </repair-steps>
+    <two-factor-providers>
+        <provider>OCA\TwoFactorEMail\Provider\TwoFactorEMail</provider>
+    </two-factor-providers>
+    <commands>
+        <command>OCA\TwoFactorEMail\Command\CleanUp</command>
+        <command>OCA\TwoFactorEMail\Command\DeleteCodes</command>
+        <command>OCA\TwoFactorEMail\Command\Settings</command>
+    </commands>
+    <settings>
+        <admin>OCA\TwoFactorEMail\Settings\AdminSettings</admin>
+    </settings>
+    <activity>
+        <settings>
+            <setting>OCA\TwoFactorEMail\Activity\Setting</setting>
+        </settings>
+        <providers>
+            <provider>OCA\TwoFactorEMail\Activity\Provider</provider>
+        </providers>
+    </activity>
+</info>

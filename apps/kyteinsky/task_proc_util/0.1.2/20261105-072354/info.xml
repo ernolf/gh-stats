@@ -1,0 +1,83 @@
+<?xml version="1.0"?>
+<!--
+  - SPDX-FileCopyrightText: 2026 Nextcloud contributors
+  - SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>task_proc_util</id>
+	<name>Task Processing Utility</name>
+	<summary>Auto-scales Task Processing workers based on the queue</summary>
+	<description><![CDATA[
+**Disclaimer: this project has been vibe coded.**
+
+This application changes the number of Nextcloud Task Processing workers
+automatically. It calculates the number of workers from the number of tasks in
+the queue. The number of workers stays under a maximum value. The administrator
+sets this value.
+
+The application gives workers to all the task types. Thus a large number of
+tasks of one type does not prevent the operation of the other types.
+
+The Nextcloud administrator manual gives this method in "Improve AI task pickup
+speed". This application uses the same method. But it calculates the number of
+workers from the queue. It does not use a constant number of workers.
+
+A supervisor service does the work. The supervisor is one static binary,
+written in Go. It reads the task queue and its configuration directly from the
+Nextcloud database. Then it starts workers with the command
+`occ taskprocessing-util:run`. Each worker operates on one task type only. Each
+worker stops after a time limit, and the supervisor starts a new one. Thus the
+workers get the new configuration.
+
+## Setup
+
+The application has two parts: this application, and a supervisor service that
+you must start yourself. **The application does nothing until the service
+operates.**
+
+1. Enable the application: `occ app:enable task_proc_util`
+2. Write a systemd unit that starts
+   `apps/task_proc_util/bin/task_proc_util-supervisor` and gives it the path to
+   your `config.php`. The service must operate on the same computer as
+   Nextcloud. It must also operate as the user that owns `config.php`, usually
+   `www-data`, because `occ` does not operate as a different user. An
+   application password is not necessary. HTTP credentials are not necessary.
+   Set `TimeoutStopSec=3600`, so the workers can complete the current task
+   when the service stops.
+3. Start the service, then examine its log. If `occ` does not operate, the
+   supervisor shows the cause and stops immediately.
+4. Adjust the settings in **Administration → Artificial Intelligence**: the
+   main switch, the maximum number of workers, the poll interval, and the
+   config reload interval.
+
+The README file gives the complete systemd unit, the requirements, and all the
+flags and environment variables:
+https://github.com/kyteinsky/task_proc_util#setup
+	]]></description>
+	<version>0.1.2</version>
+	<licence>agpl</licence>
+	<author mail="kyteinsky@gmail.com">Anupam Kumar</author>
+	<namespace>TaskProcUtil</namespace>
+	<documentation>
+		<admin>https://github.com/kyteinsky/task_proc_util#readme</admin>
+	</documentation>
+	<category>ai</category>
+	<category>integration</category>
+	<category>tools</category>
+	<website>https://github.com/kyteinsky/task_proc_util</website>
+	<bugs>https://github.com/kyteinsky/task_proc_util/issues</bugs>
+	<repository>https://github.com/kyteinsky/task_proc_util.git</repository>
+	<!-- The app store fetches this over HTTPS, so it must be an absolute URL
+	     on a pushed branch. A relative path shows a broken image. -->
+	<screenshot>https://raw.githubusercontent.com/kyteinsky/task_proc_util/main/assets/screenshot1.png</screenshot>
+	<dependencies>
+		<nextcloud min-version="33" max-version="36"/>
+	</dependencies>
+	<commands>
+		<command>OCA\TaskProcUtil\Command\Run</command>
+	</commands>
+	<settings>
+		<admin>OCA\TaskProcUtil\Settings\AdminSettings</admin>
+	</settings>
+</info>

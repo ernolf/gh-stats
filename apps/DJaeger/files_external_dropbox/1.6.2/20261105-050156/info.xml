@@ -1,0 +1,89 @@
+<?xml version="1.0"?>
+<info xmlns:xsi= "http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>files_external_dropbox</id>
+	<name>External Storage backend for Dropbox</name>
+	<summary>Integrate Dropbox as an external storage</summary>
+	<description><![CDATA[
+This application enables integrating Dropbox external storages via the Dropbox API v2.
+Once a Dropbox account is integrated by an administrator or the user in self-service, users see a folder structure that mirrors their Dropbox hierarchy.
+Users can then selectively sync files to their desktop or access them on mobile devices like any other file in Nextcloud.
+The files will remain in the Dropbox storage but are now accessible in a secure and fully logged and traceable way through Nextcloud.
+
+Administrators and users (when enabled) can find external storage configuration options in the 'Storage' section of admin and user settings, respectively.
+
+**Important**:
+Connecting Dropbox with OAuth 2 is a little more work because you have to create a Dropbox app.
+- Log into the [Dropbox Developers](http://www.dropbox.com/developers) page and click Create Your App
+- Choose if you want to share a single folder or your complete Dropbox with your Nextcloud.
+- Name your new app and click "Create app"
+- In the tab "Settings" of your Dropbox app
+  - If you have chosen to use a single folder, you may want to change the "App folder name"
+  - Add new "Redirect URIs" under section "OAuth 2"
+    - For adding global storages:
+    
+      ```https://mynextcloud.example.com/index.php/settings/admin/externalstorages```
+    - For user storages:
+    
+      ```https://mynextcloud.example.com/index.php/settings/user/externalstorages```
+    
+    _Replace `https://mynextcloud.example.com/` with your valid Nextcloud installation path_
+    
+    _If you have set `htaccess.RewriteBase` in your config.php you may need to remove `/index.php`_
+    
+    _If your Nextcloud is in a subdirectory you need to add this subdirectory here too_
+    
+- In the tab "Permissions" of your Dropbox app
+  - Check all checkboxes under section "Files and folders"
+  - If there is a section "Team Scopes", you may want to uncheck all of them, if you do not want to login with a Dropbox work account
+
+- Then go to nextcloud ```/settings/admin/externalstorages``` and add a new storage **Dropbox V2**
+  > ⚠️ **Warning:** There is a bug introduced in Nextcloud v24.0.0 but only fixed in v27.0.0 and up.
+  > 
+  > This bug prevents any interactive authorisation for external storages like its required for OAuth2,
+  > 
+  > but any existing authorization remains in place as long as it is not revoked.
+  > 
+  > If you know what you are doing, you may fix it yourself, like it has been done in core version 27.0.0:
+  > 
+  > https://github.com/nextcloud/server/commit/da83464459d4fc2fd4965b805354933f8e6fbdf6
+  > 
+  > You need to reapply this patch after any update of the files_external app and the Nextcloud core until core version 27.0.0.
+- Fill the details "Client ID" and "Client secret" from your Dropbox App page (search for "App key" and "App secret")
+- Choose users the external storage should be "Available for"
+- Click "Grant access" and then you will be redirected to the OAuth login
+- After completing the authorization you will be redirect back to the "External storage" page of yout Nextcloud instance and should see a **green** mark along your storage configuration
+- That's it
+	]]></description>
+	<version>1.6.2</version>
+	<licence>agpl</licence>
+	<author>Daniel Jäger</author>
+	<author>Robin Appelman</author>
+	<author>Hemant Mann</author>
+
+	<namespace>Files_external_dropbox</namespace>
+	<types>
+		<filesystem/>
+	</types>
+	<category>files</category>
+	<category>tools</category>
+
+	<website>https://github.com/DJaeger/files_external_dropbox/</website>
+	<bugs>https://github.com/DJaeger/files_external_dropbox/issues</bugs>
+	<repository type="git">https://github.com/DJaeger/files_external_dropbox.git</repository>
+	<screenshot>
+		https://raw.githubusercontent.com/DJaeger/files_external_dropbox/master/screenshots/screenshots-app-external-storage-dropbox.jpg
+	</screenshot>
+	<screenshot>
+		https://raw.githubusercontent.com/DJaeger/files_external_dropbox/master/screenshots/settings.png
+	</screenshot>
+
+	<dependencies>
+		<nextcloud min-version="26.0" max-version="30.0"/>
+	</dependencies>
+
+	<background-jobs>
+		<job>OCA\Files_external_dropbox\BackgroundJob\MetaData</job>
+	</background-jobs>
+
+</info>

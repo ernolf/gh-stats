@@ -1,0 +1,205 @@
+<?xml version="1.0"?>
+<!--
+  - SPDX-FileCopyrightText: 2026 kubed-io
+  - SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+  <id>penpot_sync</id>
+  <name>Penpot Sync</name>
+  <summary>Your Penpot designs as native, organisable, backed-up Nextcloud files</summary>
+  <description><![CDATA[
+Penpot Sync turns a Nextcloud folder into a live mirror of a Penpot team.
+
+Map a Penpot **team** to a folder and everything in it shows up: projects become folders, designs become real `.penpot` files with the Penpot icon. Click one and the live design opens in Penpot.
+
+Nothing is matched on filename. Every file carries its design's id, so renaming, moving, copying, trashing and restoring never break the link — and re-running a sync never duplicates anything.
+
+## ✨ What you can do
+
+- 📁 **File your designs however you like** — the folder a design lands in becomes its Penpot project, at any depth
+- 🚚 **Move** a design between projects, or into another team — same design, same history
+- 🍝 **Copy** one, and get a real new design in Penpot
+- 🗑️ **Trash, restore and purge**, mirrored into Penpot's own trash
+- ➕ **Create** a design from the Files app, or drop a `.penpot` archive in to import it
+- 🖱️ **Open in Penpot** with a click
+- ⌨️ **Script all of it** — every admin action has an `occ` command
+
+## 🗂️ The folder *is* the project
+
+Penpot's hierarchy is rigid: team, then project, then design, with no sub-projects. Nextcloud is a file manager. So rather than force Penpot's flatness onto your folders, this teaches Penpot yours — a folder becomes a project the moment a design lands in it, and the path spells the name. A project called `Brand/2026` arrives here as two nested folders.
+
+**Drafts is a state, not a folder.** A design that belongs to a team but no project simply sits at the root of the mapped folder. Filing it is a drag; un-filing it is a drag back.
+
+## 🖌 It never edits a design Penpot already has
+
+A `.penpot` export is an opaque archive of nested design data, so there is no "Edit as text" action and no content writeback. Design happens in Penpot; Nextcloud holds the archive and the click-through.
+
+The one thing that travels upward is an archive Penpot has **never seen**: drop a `.penpot` into a mapped folder, or press **Sync to Penpot**, and it becomes a new design. Nothing existing is touched.
+
+## 🗑️ Two trashes, and only one irreversible gesture
+
+Penpot has a trash of its own, so trashing a design in Nextcloud is reversible on both sides — restore the file and the design comes back with its id, revision and history intact. Delete a design in Penpot and its mirror lands in your Nextcloud trash, never a hard delete.
+
+Only emptying your Nextcloud trash destroys anything, and even then only a design still sitting in Penpot's trash.
+
+## 🧭 Sync or Link — the folder decides
+
+| Mode | The file holds | Keeps a copy? |
+|---|---|---|
+| **Link** *(default)* | A pointer — zero bytes | No — clicking it opens Penpot |
+| **Sync** | The real `.penpot` archive | Yes — yours to open offline |
+
+The mode decides whether the bytes live on your Nextcloud, never whether the design can be opened. A `sync` mapping is therefore also a real backup: every design in the team, exported and versioned by Nextcloud.
+
+## 🎨 Honest icons, honest dates
+
+Designs register their own mimetype, so they wear the real Penpot icon instead of a generic archive glyph. And each file carries **the design's** created and modified dates rather than the sync's — so Recent, Popular files and sorting a folder by date all tell you the truth about your work.
+
+📖 **[Full documentation, screenshots and the `occ` reference on GitHub](https://github.com/kubed-io/nextcloud-penpot#readme)**
+
+Requires the `enable-access-tokens` flag on your Penpot instance — it is off by default upstream. This app is in early development: it works end to end and is covered by tests against a real Penpot, but has not yet been run widely.
+
+---
+
+This is a community integration and is not affiliated with, endorsed by, or sponsored by Penpot (Kaleidos Ventures SL). "Penpot" and the Penpot logo are trademarks of their respective owner, used here only to identify the service this app integrates with.
+  ]]></description>
+  <version>1.0.1</version>
+  <!-- SPDX identifier, not the `agpl` shorthand. The store's XSD still accepts the
+       shorthand but marks it deprecated, and its docs scope it to apps targeting
+       Nextcloud 30 or lower. This app requires 32. -->
+  <licence>AGPL-3.0-or-later</licence>
+  <author>kubed-io</author>
+  <namespace>PenpotSync</namespace>
+  <category>integration</category>
+  <category>files</category>
+  <!--
+    DECLARED SO THE APP IS LOADED ON WEBDAV REQUESTS (saga §C6.13).
+
+    `register()` runs for every enabled app during bootstrap, but `boot()` only
+    runs when an app is actually LOADED — and remote.php, the WebDAV entry point,
+    loads a restricted set:
+
+        $appManager->loadApps(['authentication']);
+        $appManager->loadApps(['extended_authentication']);
+        $appManager->loadApps(['filesystem', 'logging']);
+
+    With no <types>, this app was never in that set, so boot() never ran on a DAV
+    request. Everything wired in register() — the copy, move, rename, create and
+    soft-delete listeners — worked fine, which is what made the gap so hard to
+    see: only the ONE thing wired in boot(), the legacy trash-purge hook, was
+    silently dead. Emptying the trash left the design in Penpot forever.
+
+    `filesystem` is the type for apps that must be present when the filesystem is
+    in play, which is exactly what a file-event-driven mirror is.
+  -->
+  <types>
+    <filesystem/>
+  </types>
+  <documentation>
+    <user>https://github.com/kubed-io/nextcloud-penpot#readme</user>
+    <admin>https://github.com/kubed-io/nextcloud-penpot#-setup-in-three-moves</admin>
+    <developer>https://github.com/kubed-io/nextcloud-penpot/blob/main/CONTRIBUTING.md</developer>
+  </documentation>
+  <website>https://github.com/kubed-io/nextcloud-penpot</website>
+  <bugs>https://github.com/kubed-io/nextcloud-penpot/issues</bugs>
+  <repository type="git">https://github.com/kubed-io/nextcloud-penpot.git</repository>
+  <!-- Order is the store's carousel order: the payoff first, the admin surface last.
+       Every file here must exist in screenshots/ on main — the store fetches them by
+       raw URL, so a rename that misses this list shows the listing a broken image. -->
+  <screenshot small-thumbnail="https://raw.githubusercontent.com/kubed-io/nextcloud-penpot/main/screenshots/thumbnails/penpot-files.png">https://raw.githubusercontent.com/kubed-io/nextcloud-penpot/main/screenshots/penpot-files.png</screenshot>
+  <screenshot small-thumbnail="https://raw.githubusercontent.com/kubed-io/nextcloud-penpot/main/screenshots/thumbnails/penpot-projects.png">https://raw.githubusercontent.com/kubed-io/nextcloud-penpot/main/screenshots/penpot-projects.png</screenshot>
+  <screenshot small-thumbnail="https://raw.githubusercontent.com/kubed-io/nextcloud-penpot/main/screenshots/thumbnails/team2folder-mapping.png">https://raw.githubusercontent.com/kubed-io/nextcloud-penpot/main/screenshots/team2folder-mapping.png</screenshot>
+  <screenshot small-thumbnail="https://raw.githubusercontent.com/kubed-io/nextcloud-penpot/main/screenshots/thumbnails/connection.png">https://raw.githubusercontent.com/kubed-io/nextcloud-penpot/main/screenshots/connection.png</screenshot>
+  <screenshot small-thumbnail="https://raw.githubusercontent.com/kubed-io/nextcloud-penpot/main/screenshots/thumbnails/admin-actions.png">https://raw.githubusercontent.com/kubed-io/nextcloud-penpot/main/screenshots/admin-actions.png</screenshot>
+  <dependencies>
+    <!-- The floor was raised to 32 for `OCP\SystemTag\TagAssignedEvent` (@since
+         32.0.0), which the project-folder tag opt-in needed. That opt-in is gone
+         (saga §D4.14) and with it the one API that forced the floor.
+
+         32 STAYS ANYWAY, because nothing has been run below it. CI tests the
+         advertised range on main and the ceiling on a PR; lowering the floor would
+         advertise support for two server versions no leg has ever exercised.
+         Widening it is a deliberate change with a matrix line behind it, not a
+         side effect of deleting a listener. (Live is 33.) -->
+    <nextcloud min-version="32" max-version="35"/>
+  </dependencies>
+  <settings>
+    <!-- Section order (by priority), deliberately identical to nextcloud-n8n and
+         nextcloud-grafana so an admin who has configured one already knows where
+         to look here:
+
+           Instance (5)      base URL + service-account token, one card
+           Sync Settings (20) the scheduled pull
+           Team mappings (30) the repeating mapping cards
+           Sync Actions (45)  every button in the section, rendered last
+
+         Instance and Sync Settings are DECLARATIVE forms, registered in
+         AppInfo\Application::register(). Team mappings and Sync Actions are
+         classic panels (declarative settings can host neither an
+         array-of-objects nor a button), so they are listed here.
+
+         AdminTest is NOT listed: it exists only as the #[AuthorizedAdminSetting]
+         target for the test endpoint, and renders nothing. Same arrangement as
+         nextcloud-grafana. -->
+    <admin>OCA\PenpotSync\Settings\MappingSettings</admin>
+    <admin>OCA\PenpotSync\Settings\SyncSettings</admin>
+    <admin-section>OCA\PenpotSync\Settings\AdminSection</admin-section>
+    <!-- HIDDEN FOR THE FIRST RELEASE (saga §D4.13). The personal-token card is
+         unfinished and every scenario covering it is still @todo, so its entry
+         points are commented out rather than removed. See the block in
+         lib/AppInfo/Application.php::register() for the full reasoning and the
+         four lines that switch it back on.
+    <personal-section>OCA\PenpotSync\Settings\PersonalSection</personal-section>
+    -->
+  </settings>
+  <commands>
+    <!-- CLI-first is the house style: every control on the admin surface has a
+         headless twin, which is what the integration suite drives and what makes
+         declarative cluster config possible. -->
+    <command>OCA\PenpotSync\Command\SetUrl</command>
+    <command>OCA\PenpotSync\Command\SetToken</command>
+    <!-- HIDDEN FOR THE FIRST RELEASE (saga §D4.13) — the `occ` twin of the
+         personal-token card above. Hiding the card but leaving its CLI would
+         ship exactly half the feature.
+    <command>OCA\PenpotSync\Command\SetPersonalToken</command>
+    -->
+    <command>OCA\PenpotSync\Command\ShowConfig</command>
+    <command>OCA\PenpotSync\Command\Probe</command>
+    <command>OCA\PenpotSync\Command\TestConnection</command>
+    <command>OCA\PenpotSync\Command\ListTeams</command>
+    <command>OCA\PenpotSync\Command\AddMapping</command>
+    <command>OCA\PenpotSync\Command\ListMappings</command>
+    <command>OCA\PenpotSync\Command\RemoveMapping</command>
+    <command>OCA\PenpotSync\Command\SetGroups</command>
+    <command>OCA\PenpotSync\Command\Sync</command>
+    <command>OCA\PenpotSync\Command\Status</command>
+  </commands>
+  <repair-steps>
+    <!--
+      Installs the application/vnd.penpot mimetype + icon mapping on every
+      install/upgrade. Idempotent; see lib/Migration/RegisterMimetype.php.
+    -->
+    <install>
+      <step>OCA\PenpotSync\Migration\RegisterMimetype</step>
+    </install>
+    <post-migration>
+      <step>OCA\PenpotSync\Migration\RegisterMimetype</step>
+      <!--
+        Re-stores `schedule_enabled` as a bool for instances that ran the RADIO
+        version of the toggle. IAppConfig refuses to change a key's type, so a
+        string `yes` there makes every save from the settings panel throw. Runs
+        on upgrade only — a fresh install has no key to fix. Idempotent; see
+        lib/Migration/RetypeScheduleToggle.php.
+      -->
+      <step>OCA\PenpotSync\Migration\RetypeScheduleToggle</step>
+    </post-migration>
+    <uninstall>
+      <!-- Mirror image of RegisterMimetype: reverts the core-tree mimetype/icon
+           registration so removing the app leaves core as it found it. Never
+           touches the user's .penpot files, their metadata, or Penpot.
+           See lib/Migration/UnregisterMimetype.php + lifecycle.feature. -->
+      <step>OCA\PenpotSync\Migration\UnregisterMimetype</step>
+    </uninstall>
+  </repair-steps>
+</info>

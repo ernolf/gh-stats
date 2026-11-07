@@ -1,0 +1,250 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+    <id>keepiq</id>
+    <name lang="en">Keepiq</name>
+    <name lang="nl">Keepiq</name>
+    <summary lang="en">Encrypted secrets manager for Nextcloud — password manager and key store for users and applications</summary>
+    <summary lang="nl">Versleutelde geheimenbeheerder voor Nextcloud — wachtwoordmanager en sleutelopslag voor gebruikers en applicaties</summary>
+    <description lang="en"><![CDATA[A zero-knowledge encrypted secrets manager for Nextcloud — a personal vault for users and a write-without-read credential store for applications, using end-to-end RSA-4096/AES-256 encryption backed by a private Certificate Authority. Your master password is never stored: not even the server administrator can read your secrets.
+
+**Key Features**
+
+- **End-to-end encryption** — RSA-4096 + AES-256 private-key protection with a private Certificate Authority (root + intermediate, auto-renewal)
+- **Personal vault** — folder organisation, fuzzy search, Nextcloud unified search integration
+- **Secret sharing** — share with Nextcloud users and groups, password-protected link sharing, secret requests (write-without-read), temporary ownership delegation
+- **Application management** — register applications with CSR-based onboarding, write-without-read application secrets, OAuth-style application tokens (RFC 7523 JWT Bearer)
+- **Admin settings** — CA health monitoring, password policies, application approval queue
+- **NL Design System ready** — CSS variables, WCAG AA, government theming
+
+Free and open source under the EUPL-1.2 license.
+
+**Support:** For support, contact support@conduction.nl.
+    ]]></description>
+    <description lang="nl"><![CDATA[Een versleutelde geheimenbeheerder voor Nextcloud volgens het zero-knowledge principe — een persoonlijke kluis voor gebruikers en een schrijven-zonder-lezen credential store voor applicaties, met end-to-end RSA-4096/AES-256-versleuteling ondersteund door een privé-certificaatautoriteit. Je hoofdwachtwoord wordt nooit opgeslagen: zelfs de serverbeheerder kan je geheimen niet lezen.
+
+**Belangrijkste functies**
+
+- **End-to-end versleuteling** — RSA-4096 + AES-256 privésleutelbescherming met een privé-certificaatautoriteit (root + intermediate, automatische vernieuwing)
+- **Persoonlijke kluis** — mapstructuur, fuzzy search, integratie met Nextclouds unified search
+- **Geheimen delen** — delen met Nextcloud-gebruikers en -groepen, linkdeling met wachtwoordbeveiliging, geheimeaanvragen (schrijven-zonder-lezen), tijdelijke eigenaarsoverdracht
+- **Applicatiebeheer** — registreer applicaties met CSR-onboarding, schrijven-zonder-lezen applicatiegeheimen, OAuth-achtige applicatietokens (RFC 7523 JWT Bearer)
+- **Beheerdersinstellingen** — CA-gezondheid, wachtwoordbeleid, goedkeuringswachtrij
+- **NL Design System klaar** — CSS-variabelen, WCAG AA, overheidsthema
+
+Vrij en open source onder de EUPL-1.2-licentie.
+
+**Ondersteuning:** Voor ondersteuning, neem contact op via support@conduction.nl.
+    ]]></description>
+    <version>0.3.10</version>
+    <licence>EUPL-1.2</licence>
+    <author mail="info@conduction.nl" homepage="https://www.conduction.nl/">Conduction</author>
+    <namespace>Keepiq</namespace>
+    <documentation>
+        <user>https://github.com/ConductionNL/keepiq</user>
+        <admin>https://github.com/ConductionNL/keepiq</admin>
+        <developer>https://github.com/ConductionNL/keepiq</developer>
+    </documentation>
+    <category>security</category>
+    <website>https://github.com/ConductionNL/keepiq</website>
+    <bugs>https://github.com/ConductionNL/keepiq/issues</bugs>
+    <repository>https://github.com/ConductionNL/keepiq</repository>
+
+    <screenshot>https://raw.githubusercontent.com/ConductionNL/keepiq/development/img/app-store.svg</screenshot>
+
+    <!--
+        The <database> entries are load-bearing, not decoration.
+
+        Nextcloud's OC\DB\MigrationService sets `checkOracle = true` for any app
+        whose <dependencies> block declares NO <database> at all. With that flag
+        on, every migration is validated against ensureOracleConstraints(), and
+        that rule rejects a default-named primary key on any table whose
+        unprefixed name is 23 characters or longer. Ten Keepiq tables are, among
+        them keepiq_certificate_metadata (27), keepiq_passkey_credentials (26)
+        and keepiq_team_folder_members (26).
+
+        Without these entries `occ app:enable keepiq` ABORTS on a fresh install:
+        the app is not installable from scratch on a stock Nextcloud at all. It
+        survives on long-lived dev instances only because the checks apply
+        exclusively to tables that do not exist yet.
+
+        Declaring the databases the app actually supports is Nextcloud's own
+        mechanism for this, and it is simply true: Keepiq has never supported
+        Oracle, and its docker-compose, CI and every deployment run PostgreSQL,
+        MySQL/MariaDB or SQLite. It also matches the rest of the fleet, where
+        openregister and opencatalogi ship exactly these three entries.
+
+        The table prefix moved from `doriath_` to `keepiq_` on 2026-09-08,
+        together with the 78 index names, in the single consolidated migration
+        lib/Migration/Version001000Date20260908000000.php. That migration renames
+        the tables in place before the schema comparison runs, so existing
+        installs keep their rows; on PostgreSQL it also renames the sequences and
+        primary-key constraints, which a table rename leaves behind.
+
+        An earlier revision of this comment argued the prefix should stay frozen.
+        That reasoning was sound while the tables were merely inconsistent with
+        the app id. It was overtaken by the decision to ship the fleet with one
+        name per app, taken ahead of the App Store launch.
+    -->
+    <dependencies>
+        <php min-version="8.3"/>
+        <database min-version="10">pgsql</database>
+        <database>sqlite</database>
+        <database min-version="8.0">mysql</database>
+        <!--
+            Floor is 32, fleet-wide, so PHP 8.3 is guaranteed by the platform.
+
+            31 was never actually deliverable: the CI matrix is derived from
+            this `<nextcloud>` range (no leg below 32), and OpenRegister, whose
+            integrations this app offers when it is present, declares
+            `min-version="32"` itself. Advertising 31 in the App Store promised
+            a range no test leg covered.
+
+            max-version is 35 as of 2026-09-15: verified against Nextcloud 35
+            (35.0.0 dev) on the shared dev instance — keepiq enabled, its DB
+            migrations ran cleanly under `occ upgrade`, and the log showed no
+            deprecations or errors. The optional openregister and integriq also
+            declare 35 on development (verified 2026-09-24); Keepiq does not
+            need either (ADR-006).
+        -->
+        <nextcloud min-version="32" max-version="35"/>
+    </dependencies>
+
+    <background-jobs>
+        <job>OCA\Keepiq\BackgroundJob\RenewIntermediateCertificate</job>
+        <job>OCA\Keepiq\BackgroundJob\CheckRootCertificateExpiry</job>
+        <job>OCA\Keepiq\BackgroundJob\PurgeAuditLogJob</job>
+        <job>OCA\Keepiq\BackgroundJob\ExpireSecretRequestsJob</job>
+        <job>OCA\Keepiq\BackgroundJob\ExpireSharesJob</job>
+        <job>OCA\Keepiq\BackgroundJob\ExpireDeviceApprovalsJob</job>
+        <job>OCA\Keepiq\BackgroundJob\ExpireRecoveryRequestsJob</job>
+        <job>OCA\Keepiq\BackgroundJob\ApproveElapsedEmergencyRequests</job>
+        <job>OCA\Keepiq\BackgroundJob\PruneSecretVersionsJob</job>
+        <job>OCA\Keepiq\BackgroundJob\RetryFederatedNotificationsJob</job>
+        <job>OCA\Keepiq\BackgroundJob\PurgeTrashedSecretsJob</job>
+        <job>OCA\Keepiq\BackgroundJob\ScanExpiringSecretsJob</job>
+        <job>OCA\Keepiq\BackgroundJob\ExpireMachineLeasesJob</job>
+        <job>OCA\Keepiq\BackgroundJob\EphemeralSendPurgeJob</job>
+        <job>OCA\Keepiq\BackgroundJob\RefreshComplianceMetricsJob</job>
+        <job>OCA\Keepiq\BackgroundJob\DeliverSiemEventsJob</job>
+        <job>OCA\Keepiq\BackgroundJob\ScanCertificateExpiryJob</job>
+        <job>OCA\Keepiq\BackgroundJob\ScheduledVaultBackupJob</job>
+    </background-jobs>
+
+    <!--
+        ORDERING: the two Migrate* steps come FIRST in both lists.
+
+        The doriath -> keepiq rename is not an upgrade as far as Nextcloud is
+        concerned — `oc_appconfig.appid` and `oc_preferences.appid` are both
+        namespaced by app id, so the new id simply cannot see anything the old
+        id stored. MigrateAppConfigKeys and MigrateUserPreferences copy those
+        two stores across, and they must run before any step that READS
+        configuration, or that step will act on defaults and then persist them:
+
+          - BootstrapCertificateAuthority reads the `ca_status` app-config
+            value; without the copy it sees a blank status on an instance that
+            already has a live CA in `keepiq_ca_certs`.
+          - InitializeSettings seeds DEFAULT_CONFIG into any key that reads
+            back empty — i.e. it would overwrite the admin's real settings with
+            defaults if the copy had not happened yet.
+
+        They are registered under <install> as well as <post-migration> because
+        <install> is the path a real deployment takes: Nextcloud discovers
+        `keepiq` as a DIFFERENT app, not as an upgrade of `doriath`, so only
+        the install path is guaranteed to run.
+    -->
+    <repair-steps>
+        <!--
+            MoveAttachmentBlobs runs PRE-migration, and that is deliberate.
+
+            The blob relocation lands as an ORDINARY UPGRADE of `keepiq` — same
+            app id, new version — so Installer::installAppLastSteps() takes the
+            `$previousVersion !== ''` branch and runs pre-migration steps BEFORE
+            MigrationService::migrate(). AttachmentService is repointed at the
+            new AppData namespace in the same change, so the blobs must have
+            moved before anything reads them.
+
+            It is NOT registered under <install>. A genuinely fresh install has
+            no blobs to move, and on the install path pre-migration repair does
+            not run at all — the step would be a no-op registered where it can
+            never help.
+
+            Note this is the same ordering the consolidated schema migration
+            relies on for the table rename, which it performs in its own
+            preSchemaChange() rather than as a repair step.
+        -->
+        <pre-migration>
+            <step>OCA\Keepiq\Repair\MoveAttachmentBlobs</step>
+        </pre-migration>
+        <post-migration>
+            <step>OCA\Keepiq\Repair\MigrateAppConfigKeys</step>
+            <step>OCA\Keepiq\Repair\MigrateUserPreferences</step>
+            <!--
+                Removes the empty register, schema and per-schema data table
+                that earlier Keepiq versions created in OpenRegister (both the
+                `keepiq` and the pre-rename `doriath` ids). Keepiq imports
+                nothing into OpenRegister any more (ADR-006), so nothing reads
+                them. Deletes only what holds zero objects, touches OpenRegister
+                tables through IDBConnection only, does nothing when they do
+                not exist, and never throws: an escaping exception in <install>
+                aborts the install.
+            -->
+            <step>OCA\Keepiq\Repair\RemoveLegacyRegisterRows</step>
+            <step>OCA\Keepiq\Repair\BootstrapCertificateAuthority</step>
+            <step>OCA\Keepiq\Repair\InitializeSettings</step>
+            <step>OCA\Keepiq\Repair\SeedSecretTypes</step>
+            <step>OCA\Keepiq\Repair\SeedDevelopmentData</step>
+            <step>OCA\Keepiq\Repair\SeedDevelopmentSecrets</step>
+            <step>OCA\Keepiq\Repair\SeedDevelopmentApplications</step>
+            <step>OCA\Keepiq\Repair\SeedDevelopmentSecretRequests</step>
+            <step>OCA\Keepiq\Repair\SeedDevelopmentLinkShares</step>
+            <step>OCA\Keepiq\Repair\SeedDevelopmentShares</step>
+            <step>OCA\Keepiq\Repair\SeedDevelopmentSecretDelegations</step>
+        </post-migration>
+        <install>
+            <step>OCA\Keepiq\Repair\MigrateAppConfigKeys</step>
+            <step>OCA\Keepiq\Repair\MigrateUserPreferences</step>
+            <!-- Same step as in <post-migration>. An app-id rename presents
+                 to Nextcloud as a FRESH INSTALL, so the doriath leftovers are
+                 only reached from this block on that path. -->
+            <step>OCA\Keepiq\Repair\RemoveLegacyRegisterRows</step>
+            <step>OCA\Keepiq\Repair\BootstrapCertificateAuthority</step>
+            <step>OCA\Keepiq\Repair\InitializeSettings</step>
+            <step>OCA\Keepiq\Repair\SeedSecretTypes</step>
+            <step>OCA\Keepiq\Repair\SeedDevelopmentData</step>
+            <step>OCA\Keepiq\Repair\SeedDevelopmentSecrets</step>
+            <step>OCA\Keepiq\Repair\SeedDevelopmentApplications</step>
+            <step>OCA\Keepiq\Repair\SeedDevelopmentSecretRequests</step>
+            <step>OCA\Keepiq\Repair\SeedDevelopmentLinkShares</step>
+            <step>OCA\Keepiq\Repair\SeedDevelopmentShares</step>
+            <step>OCA\Keepiq\Repair\SeedDevelopmentSecretDelegations</step>
+        </install>
+    </repair-steps>
+
+    <!-- Vault backups (admin-scheduled-vault-backups D4). -->
+    <commands>
+        <command>OCA\Keepiq\Command\BackupCreate</command>
+        <command>OCA\Keepiq\Command\BackupList</command>
+        <command>OCA\Keepiq\Command\BackupVerify</command>
+        <command>OCA\Keepiq\Command\BackupRestore</command>
+    </commands>
+
+    <settings>
+        <!-- Five delegable admin areas (admin-scoped-roles D1). -->
+        <admin>OCA\Keepiq\Settings\AdminSettings</admin>
+        <admin>OCA\Keepiq\Settings\PolicyAdminSettings</admin>
+        <admin>OCA\Keepiq\Settings\ApplicationAdminSettings</admin>
+        <admin>OCA\Keepiq\Settings\PeopleAdminSettings</admin>
+        <admin>OCA\Keepiq\Settings\AuditAdminSettings</admin>
+        <admin-section>OCA\Keepiq\Sections\SettingsSection</admin-section>
+    </settings>
+
+    <navigations>
+        <navigation>
+            <id>keepiq</id>
+            <name>Keepiq</name>
+            <route>keepiq.dashboard.page</route>
+            <icon>app.svg</icon>
+        </navigation>
+    </navigations>
+</info>

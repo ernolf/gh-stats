@@ -1,0 +1,175 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	  xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>folder_retention</id>
+	<name>Folder Retention</name>
+	<name lang="de">Ordner-Aufbewahrung</name>
+	<summary>Retention periods attached directly to folders — no tags, no flows</summary>
+	<summary lang="de">Aufbewahrungsfristen direkt an Ordnern — ohne Tags, ohne Flows</summary>
+	<description><![CDATA[
+**Retention periods attached to folders: expired files go to the trash bin, automatically.**
+Admins attach a retention period ("delete after 2 weeks", "never delete") to
+folders — personal folders, folders of shared work accounts and Team folders
+(groupfolders). Subfolders inherit the rule or carry their own exceptions. A
+daily background job looks at every file in its current location and moves
+expired files to the trash bin.
+
+### Safe by default
+- **Simulation mode is on after installation.** Expired files are only logged;
+  nothing is deleted until an admin switches simulation off (with password
+  confirmation).
+- **Both default rules start with "never delete".** Files are only deleted once
+  a period has been set on purpose.
+- **Trash bin only, never a permanent delete.** After each deletion the app
+  checks that the file has arrived in the trash bin. If it cannot verify the
+  trash entry, it logs the file as permanently deleted and blocks that area:
+  nothing is deleted there again until an admin has looked into it.
+- **Real deletion only with system cron or occ.** With the AJAX or Webcron
+  background job modes the app neither deletes nor simulates and says so on
+  its settings page; `occ folder_retention:run` keeps working.
+- Location, rule and date are checked again right before each deletion; a file
+  that was moved or changed in the meantime stays.
+
+### How the date is counted
+By default a period counts from the moment the file **arrived in Nextcloud**
+(uploaded, or first seen by the app) — not from the creation date a sync client
+sends along, which could lie years back. Alternatively it counts from the last
+modification. A file restored from the trash bin starts a new period.
+
+### Also included
+- Folder tree with the rule that applies to each folder, preview of the
+  affected files, a log by day and folder with CSV export
+- The deletion date in the Files app: next to the file name ("Oct 29", "in 3
+  days") and in a sidebar tab with the rule and where it is set
+- Optional system tags such as "Retention: 2 weeks" on files and folders — for
+  information only, they do not control anything; in a shipped language or
+  neutral ("⌛ 2 w")
+- occ commands for a run (also as a dry run) and for the tags
+
+### How it differs from "Retention" (files_retention)
+Nextcloud's own Retention app deletes files by collaborative tags and Flow
+rules. Folder Retention attaches the periods to folders instead and checks
+that every file arrives in the trash bin. Do not let both delete on the same
+instance.
+
+### Requirements
+Nextcloud 34 or 35, the "Deleted files" app (files_trashbin) and system cron.
+Team folders are supported but not required. External storages are not
+evaluated.
+
+### How this app was built
+Folder Retention is vibe-coded: its code, tests, documentation and German
+translation were written by AI coding agents (Anthropic's Claude Code); the
+maintainer set the goals, made the product decisions and tested the app. There
+has been no independent human code review and no security audit, so please
+evaluate the app yourself before relying on it, and keep simulation mode on
+until the log shows what you expect. Details in the
+[README](https://github.com/hotochan123/nextcloud-folder-retention#how-this-app-was-built-ai-disclosure).
+	]]></description>
+	<description lang="de"><![CDATA[
+**Aufbewahrungsfristen an Ordnern: abgelaufene Dateien wandern automatisch in den Papierkorb.**
+Admins hängen eine Frist („nach 2 Wochen löschen“, „nie löschen“) an Ordner —
+persönliche Ordner, Ordner geteilter Arbeitsbereich-Konten und Team-Ordner
+(groupfolders). Unterordner erben die Regel oder bekommen eigene Ausnahmen.
+Ein täglicher Hintergrundjob bewertet jede Datei anhand ihres aktuellen
+Speicherorts und verschiebt abgelaufene Dateien in den Papierkorb.
+
+### Sicher voreingestellt
+- **Nach der Installation ist der Simulationsmodus aktiv.** Fällige Dateien
+  werden nur protokolliert; gelöscht wird erst, wenn ein Admin die Simulation
+  ausschaltet (mit Passwortbestätigung).
+- **Beide Standardregeln stehen zunächst auf „Nie löschen“.** Gelöscht wird erst,
+  wenn eine Frist bewusst gesetzt wird.
+- **Nur in den Papierkorb, nie endgültig.** Nach jeder Löschung prüft die App,
+  ob die Datei im Papierkorb angekommen ist. Lässt sich der Eintrag nicht
+  nachweisen, protokolliert sie die Datei als endgültig gelöscht und sperrt
+  den Bereich: Dort wird nichts mehr gelöscht, bis ein Admin die Ursache
+  geklärt hat.
+- **Echte Löschungen nur mit System-Cron oder occ.** In den Modi „AJAX“ und
+  „Webcron“ löscht und simuliert die App nicht und zeigt das auf ihrer
+  Einstellungsseite; `occ folder_retention:run` funktioniert weiterhin.
+- Unmittelbar vor jeder Löschung werden Ort, Regel und Datum neu geprüft; eine
+  inzwischen verschobene oder geänderte Datei bleibt liegen.
+
+### Ab wann die Frist zählt
+Standardmäßig ab dem Zeitpunkt, zu dem die Datei **in Nextcloud abgelegt** wurde
+(Upload oder erstes Sehen durch die App) — nicht ab dem Erstelldatum, das ein
+Sync-Client mitschickt und das Jahre zurückliegen kann. Alternativ ab der letzten
+Änderung. Eine aus dem Papierkorb wiederhergestellte Datei beginnt eine neue Frist.
+
+### Außerdem
+- Ordnerbaum mit der jeweils geltenden Regel, Vorschau der betroffenen Dateien,
+  Protokoll nach Tag und Ordner mit CSV-Export
+- Das Löschdatum in der Dateien-App: neben dem Dateinamen („29. Okt.“, „in 3
+  Tagen“) und in einem Seitenleisten-Reiter mit Regel und Herkunft
+- Optionale Systemtags wie „Aufbewahrung: 2 Wochen“ an Dateien und Ordnern —
+  rein informativ, sie steuern nichts; in einer mitgelieferten Sprache oder
+  neutral („⌛ 2 w“)
+- occ-Befehle für einen Lauf (auch als Probelauf) und für die Tags
+
+### Unterschied zu „Retention“ (files_retention)
+Die Nextcloud-eigene App „Retention“ löscht Dateien anhand von kollaborativen
+Tags und Flow-Regeln. Ordner-Aufbewahrung hängt die Fristen stattdessen an
+Ordner und prüft, dass jede Datei im Papierkorb ankommt. Beide
+sollten auf derselben Instanz nicht gleichzeitig löschen.
+
+### Voraussetzungen
+Nextcloud 34 oder 35, die App „Gelöschte Dateien“ (files_trashbin) und
+System-Cron. Team-Ordner werden unterstützt, sind aber nicht nötig. Externe
+Speicher werden nicht bewertet.
+
+### Wie die App entstanden ist
+Ordner-Aufbewahrung ist „vibe-coded“: Code, Tests, Dokumentation und deutsche
+Übersetzung haben KI-Coding-Agenten geschrieben (Claude Code von Anthropic);
+hotochan123 hat die Ziele gesetzt, die Produktentscheidungen getroffen und die
+App getestet. Es gab keine unabhängige menschliche Code-Prüfung und kein
+Sicherheitsaudit — bitte vor dem Einsatz selbst prüfen und den Simulationsmodus
+anlassen, bis das Protokoll zeigt, was erwartet wird. Details in der
+[README](https://github.com/hotochan123/nextcloud-folder-retention#how-this-app-was-built-ai-disclosure)
+(englisch).
+	]]></description>
+	<version>0.9.2</version>
+	<licence>AGPL-3.0-or-later</licence>
+	<author homepage="https://github.com/hotochan123">hotochan123</author>
+	<namespace>FolderRetention</namespace>
+	<documentation>
+		<admin>https://github.com/hotochan123/nextcloud-folder-retention#readme</admin>
+	</documentation>
+	<category>files</category>
+	<website>https://github.com/hotochan123/nextcloud-folder-retention</website>
+	<bugs>https://github.com/hotochan123/nextcloud-folder-retention/issues</bugs>
+	<repository type="git">https://github.com/hotochan123/nextcloud-folder-retention.git</repository>
+	<screenshot>https://raw.githubusercontent.com/hotochan123/nextcloud-folder-retention/main/screenshots/01-folder-tree.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/hotochan123/nextcloud-folder-retention/main/screenshots/02-preview.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/hotochan123/nextcloud-folder-retention/main/screenshots/03-upcoming.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/hotochan123/nextcloud-folder-retention/main/screenshots/04-log.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/hotochan123/nextcloud-folder-retention/main/screenshots/05-settings.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/hotochan123/nextcloud-folder-retention/main/screenshots/06-files-tags.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/hotochan123/nextcloud-folder-retention/main/screenshots/07-files-deletion-date.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/hotochan123/nextcloud-folder-retention/main/screenshots/08-files-sidebar.png</screenshot>
+	<dependencies>
+		<nextcloud min-version="34" max-version="35"/>
+	</dependencies>
+	<background-jobs>
+		<job>OCA\FolderRetention\BackgroundJob\RetentionJob</job>
+	</background-jobs>
+	<repair-steps>
+		<post-migration>
+			<step>OCA\FolderRetention\Migration\InstallDefaults</step>
+		</post-migration>
+		<install>
+			<step>OCA\FolderRetention\Migration\InstallDefaults</step>
+		</install>
+		<uninstall>
+			<step>OCA\FolderRetention\Migration\SimulationOnDisable</step>
+		</uninstall>
+	</repair-steps>
+	<commands>
+		<command>OCA\FolderRetention\Command\Run</command>
+		<command>OCA\FolderRetention\Command\Tags</command>
+	</commands>
+	<settings>
+		<admin>OCA\FolderRetention\Settings\Admin</admin>
+		<admin-section>OCA\FolderRetention\Settings\Section</admin-section>
+	</settings>
+</info>
