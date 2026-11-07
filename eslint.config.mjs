@@ -30,6 +30,7 @@ export default [
 				DOMPurify: 'readonly',
 				drawCharts: 'readonly',
 				initCharts: 'readonly',
+				picked: 'readonly',
 				pickRow: 'readonly',
 				swapPicks: 'readonly',
 			},
