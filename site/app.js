@@ -1120,21 +1120,24 @@ function defectNotes(fields) {
 	})
 }
 
-// The findings of a lint target with a file come as one entry per file and
-// level, which opens into its messages, numbered; the first line of a message
-// drops the file the entry names already. Other findings stay as they are.
+// The findings of a lint or security target with a file come as one entry per
+// file, level and whether they are security findings, which opens into its
+// messages, numbered; the first line of a message drops the file the entry
+// names already. Other findings stay as they are.
 function findingEntries(tool, fs) {
-	if (!baseTool(tool).startsWith('lint-')) {
+	const security = tool.startsWith('security/')
+	if (!security && !baseTool(tool).startsWith('lint-')) {
 		return fs.map(finding)
 	}
-	return [...Map.groupBy(fs, (f) => (f.file === null ? f : `${f.level}\n${f.file}`)).values()].map((group) => {
+	return [...Map.groupBy(fs, (f) => (f.file === null ? f : `${f.level}\n${f.security === true}\n${f.file}`)).values()].map((group) => {
 		const f = group[0]
 		if (f.file === null) {
 			return finding(f)
 		}
+		const noun = security ? `${f.security === true ? 'security ' : ''}finding` : 'message'
 		return el('details', { class: `finding ${f.level ?? ''}` },
 			el('summary', {}, el('span', { class: 'level' }, f.level ?? ''), ' ', el('code', {}, f.file),
-				` ${group.length} message${group.length === 1 ? '' : 's'}`),
+				` ${group.length} ${noun}${group.length === 1 ? '' : 's'}`),
 			el('ol', {}, ...group.map((g) => el('li', {}, el('pre', {}, g.text.startsWith(`${g.file}:`) ? g.text.slice(g.file.length + 1) : g.text)))))
 	})
 }
