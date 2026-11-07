@@ -323,9 +323,10 @@ OPEN="$FINDINGS"'[(.targets[] | .name as $t | .result.findings[]? | select(.leve
 # the table gh-stats-site-db fills, numbered per tool, and whether the target
 # marks a finding as one of security. A target that ended with another exit
 # than 0 and left no result fails, as gh-stats-site-db has it for the public
-# targets, with the last line its log has before the error of make.
+# targets, with the last line its log has before the error of make. q doubles
+# each quote with split and join, as gh-stats-site-db does, not with gsub.
 # shellcheck disable=SC2016 # jq variables
-EXPORT='def q: ([39] | implode) as $s | $s + gsub($s; $s + $s) + $s;
+EXPORT='def q: ([39] | implode) as $s | $s + (split($s) | join($s + $s)) + $s;
 	def v: if . == null then "NULL" elif type == "string" then q
 		elif type == "boolean" then (if . then "1" else "0" end) else tostring end;
 	def stopped: (.log // "" | split("\n")) as $l

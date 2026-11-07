@@ -272,7 +272,7 @@ for e in $ASSETS; do asset_flt+="${asset_flt:+ OR }asset GLOB '*.$e'"; done
 release_url='
 	def release_url: .[5] == "releases" and (.[2] == "github.com" or .[6] == "download");'
 apps_sql="$(jq -r "$release_url"'
-	def q: "'\''" + gsub("'\''"; "'\'''\''") + "'\''";
+	def q: "'\''" + (split("'\''") | join("'\'''\''")) + "'\''";
 	(if type == "array" then . else .data end)[]
 	| .id as $id | (.translations.en.name // $id) as $name
 	| [ .releases[]? | .download // empty | split("/")
@@ -286,7 +286,7 @@ apps_sql="$(jq -r "$release_url"'
 # The tag is the path segment after releases/download, percent-encoded in the
 # URL (v5.1.4%2B1); tags are ASCII, so each escape decodes to one character.
 links_sql="$(jq -r "$release_url"'
-	def q: "'\''" + gsub("'\''"; "'\'''\''") + "'\''";
+	def q: "'\''" + (split("'\''") | join("'\'''\''")) + "'\''";
 	def hex: ascii_downcase | explode | map(if . > 57 then . - 87 else . - 48 end) | .[0] * 16 + .[1];
 	def urldecode: gsub("%(?<h>[0-9A-Fa-f]{2})"; [.h | hex] | implode);
 	(if type == "array" then . else .data end)[]
@@ -309,10 +309,12 @@ links_sql="$(jq -r "$release_url"'
 # those result_fields names are kept, the ones the badges and notes of a run
 # read; a badge or note that needs another field adds it there. A field of a finding is kept
 # where finding_fields names it by the id of the finding, as <id>/<field>.
+# q doubles each quote with split and join, not gsub: a finding may quote a
+# whole minified line of megabytes, and gsub takes minutes and gigabytes on it.
 result_fields='{"build-audit": ["toolchain", "frameworks", "libraries", "defects"], "php-compat": ["range", "next"]}'
 finding_fields='{"deps-audit": {"licence-summary": ["licences"]}}'
 sql_defs='
-	def q: "'\''" + gsub("'\''"; "'\'''\''") + "'\''";
+	def q: "'\''" + (split("'\''") | join("'\'''\''")) + "'\''";
 	def v: if . == null then "NULL" elif type == "string" then q
 		elif type == "boolean" then (if . then "1" else "0" end) else tostring end;'
 # A result jq cannot read is left out and named in unreadable. sql_of runs jq
