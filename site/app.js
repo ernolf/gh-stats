@@ -990,6 +990,14 @@ const BADGES = [
 	{ id: 'changelog', of: (run) => run.pass('changelog-lint', 'changelog-section', 'Changelog') },
 	{ id: 'versions-agree', of: (run) => run.pass('consistency-audit', 'versions-agree', 'Versions agree') },
 	{ id: 'lean-bundle', of: (run) => run.passAll('bundle-report', ['no-duplicated-modules', 'no-stale-files'], 'Lean bundle') },
+	// A signature that holds, issued by the code signing root of the server; a
+	// release that carries none, or one with errors, shows nothing here.
+	{ id: 'signed', of: (run) => {
+		if (run.field('integrity-check', 'state') !== 'valid') return null
+		const files = run.field('integrity-check', 'files')
+		return { label: 'Signed', title: `appinfo/signature.json holds for ${files?.signed ?? 'all'} files; `
+			+ `the certificate CN=${run.field('integrity-check', 'certificate')} was issued by the code signing root of the server.` }
+	} },
 ]
 
 // The bundlers build-audit names, with the package whose version stands for
