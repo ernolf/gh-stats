@@ -76,8 +76,10 @@ TARGETS_ASK="${NC_APPSDIAG_TARGETS_ASK:-help}"
 # Targets whose --json result is worth keeping. The ncmake analysers write it with
 # JSON=<file> in the run that prints their report, so keeping it costs nothing.
 # reuse, changelog-lint and the linters are kept too: their exit code says only
-# that something is missing, the JSON says what.
-JSON_TARGETS="${NC_APPSDIAG_JSON:-consistency-audit build-audit bundle-report reuse changelog-lint lint-containerfiles lint-markdown lint-php-syntax lint-shell lint-vue-imports lint-web lint-yaml deps-audit build-verify php-compat}"
+# that something is missing, the JSON says what. integrity-check is no target of
+# the list: the release comparison runs it on a shipped tree that carries
+# appinfo/signature.json.
+JSON_TARGETS="${NC_APPSDIAG_JSON:-consistency-audit build-audit bundle-report reuse changelog-lint lint-containerfiles lint-markdown lint-php-syntax lint-shell lint-vue-imports lint-web lint-yaml deps-audit build-verify php-compat integrity-check}"
 # Of those, the ones that cannot write the file in that run and run a second time
 # with ARGS=--json for it. The REUSE tool prints text or JSON, never both; its
 # second run costs seconds.
@@ -270,7 +272,10 @@ a repository on another host below a directory of that host:
                           consistency-audit, reuse, changelog-lint, the
                           lint-* targets, deps-audit (without advisories),
                           build-audit, bundle-report, build-verify and
-                          php-compat
+                          php-compat, and for a shipped tree that carries
+                          appinfo/signature.json integrity-check, its
+                          signature held against
+                          resources/codesigning/root.crt of SERVER_REPO
       security.json.age   the output and the results of the security targets
                           (secrets-audit, lint-actions, lint-actions-security
                           and deps-audit with advisories), and every finding
@@ -358,7 +363,9 @@ Environment (or /etc/gh-stats/gh-stats.env):
   SOURCES_CACHE              sources.json of gh-nc-sources, optional
                              (default: next to APPSTORE_CACHE)
   SHIPPED_BIN                gh-nc-shipped (default: the one beside this script)
-  SERVER_REPO                the server repository (default: nextcloud/server)
+  SERVER_REPO                the server repository (default: nextcloud/server),
+                             whose resources/codesigning/root.crt integrity-check
+                             holds a signature against
   SERVER_BUILD_CANDIDATES    for master, the commits held against the archive
                              (default: 50)
   RUNTIME                    the container runtime ncmake uses (default: podman,
@@ -605,6 +612,8 @@ build_name=""
 build_kind=""
 rel_tarball=""
 rel_bytes=""
+integrity_dir=""
+integrity_root=""
 summary_written=0
 end_reason=""
 # Set once the apps below the root run in runs of their own: this run then measures
@@ -925,6 +934,9 @@ run_target() {
 	# the app's own build.
 	if [ "$t" = build-audit ]; then
 		args+=(PROVE=1)
+	fi
+	if [ "$t" = integrity-check ]; then
+		args+=("DIR=$integrity_dir" "ROOT_CERT=$integrity_root")
 	fi
 	if ( cd "$APP_DIR" && make "$t" "${args[@]}" ) 2>&1 | tee_plain "$LOG"; then rc=0; else rc=$?; fi
 	[ "$rc" = 0 ] || stopped_lines[$t]="$(tail -n "+$from" "$LOG" | stopped_line)"
@@ -1552,6 +1564,7 @@ release_diff() {
 	fi
 	shipped="$dir/shipped/$app_id"
 	[ -d "$shipped" ] || shipped="$(find "$dir/shipped" -mindepth 1 -maxdepth 1 -type d | head -1)"
+	signature_check "$dir" "$shipped"
 	staged="$APP_DIR/build/stage/$app_id"
 	# A dist that ran and staged nothing fails the same way a second time.
 	if [ ! -d "$staged" ] && [ ${#results[@]} -gt 0 ] && printf '%s\n' "${results[@]}" | grep -q '^dist	'; then
@@ -1568,6 +1581,25 @@ release_diff() {
 	log "   $n differences between the shipped tree and build/stage/$app_id, in $dir/diff.txt"
 	classify_diff "$shipped" "$staged" <"$dir/diff.txt" >"$dir/diff.tsv"
 	diff_report "$dir" "$shipped"
+}
+
+# The signature of the shipped tree, held against resources/codesigning/root.crt
+# of the server repository as the server holds an installed app against it: the
+# hashes and the signature agree with each other in any signature.json, so only
+# the issuer says Nextcloud signed it. The root is fetched for the check and
+# removed after it. A tree without appinfo/signature.json is not checked.
+signature_check() {
+	local dir="$1" shipped="$2" ref="${SERVER_REF:-master}"
+	[ -f "$shipped/appinfo/signature.json" ] || return 0
+	integrity_root="$dir/root.crt"
+	if ! "$CURL" -fsSL "https://raw.githubusercontent.com/$SERVER_REPO/$ref/resources/codesigning/root.crt" -o "$integrity_root"; then
+		warn "cannot fetch resources/codesigning/root.crt of $SERVER_REPO at $ref, so the signature is not checked"
+		rm -f "$integrity_root"
+		return 0
+	fi
+	integrity_dir="$shipped"
+	run_target integrity-check
+	rm -f "$integrity_root"
 }
 
 # One line of diff -qr per path, as kind, class and path relative to the app root.
