@@ -75,8 +75,24 @@
 # left no outcome. collect dispatches those as a new run with
 # client_payload.attempt raised by one. After MAX_ATTEMPTS they go into one open
 # issue assigned to the repository owner, so a notification goes out only then.
+#
+# Each run is named after what it measures: the versions or the scope of a run
+# started by hand, the request issue, the new versions of the catalogue, the
+# versions without a result the catalogue sends, the rest a run passed on, or
+# the attempt of a repeat. Without the name a dispatched run shows only its
+# event type.
 
 name: Measure app versions
+run-name: >-
+  Measure app versions: ${{
+  github.event_name == 'workflow_dispatch' && (inputs.versions != '' && inputs.versions || format('scope {0}', inputs.scope))
+  || github.event.client_payload.issue && format('request #{0}', github.event.client_payload.issue)
+  || github.event.client_payload.versions && 'new versions of the catalogue'
+  || github.event.client_payload.apps_run && github.event.client_payload.attempt > 1 && format('rest of run {0}, attempt {1}', github.event.client_payload.apps_run, github.event.client_payload.attempt)
+  || github.event.client_payload.apps_run && github.event.client_payload.attempt && format('rest of run {0}', github.event.client_payload.apps_run)
+  || github.event.client_payload.apps_run && 'versions without a result'
+  || format('repeat, attempt {0}', github.event.client_payload.attempt)
+  }}
 
 on:
   repository_dispatch:
