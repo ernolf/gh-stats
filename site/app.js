@@ -998,6 +998,21 @@ const BADGES = [
 		return { label: 'Signed', title: `appinfo/signature.json holds for ${files?.signed ?? 'all'} files; `
 			+ `the certificate CN=${run.field('integrity-check', 'certificate')} was issued by the code signing root of the server.` }
 	} },
+	// Set up for the Nextcloud translation sync: translated once l10n/ holds the
+	// languages it brought, ready while none has arrived and l10n-lint found no
+	// source string the translation team rejects.
+	{ id: 'transifex', of: (run) => {
+		const tx = run.field('summary', 'transifex')
+		if (!tx?.config) return null
+		const n = tx.languages.length
+		if (n) {
+			return { label: 'Transifex', value: 'translated',
+				title: `.tx/config sets the app up for the Nextcloud translation sync, and l10n/ holds ${n} language${n === 1 ? '' : 's'}.` }
+		}
+		if (run.field('l10n-lint', 'strings') === null || run.warns('l10n-lint')) return null
+		return { label: 'Transifex', value: 'ready',
+			title: '.tx/config sets the app up for the Nextcloud translation sync, and l10n-lint found no source string the translation team rejects; no translation has arrived yet.' }
+	} },
 ]
 
 // The bundlers build-audit names, with the package whose version stands for
@@ -1038,6 +1053,7 @@ function runView(fs, fields) {
 			const hits = ids.map((id) => passed(tool, id))
 			return hits.every(Boolean) ? { label, title: hits.map((f) => f.text).join('\n') } : null
 		},
+		warns: (tool) => fs.some((f) => f.tool === tool && f.level === 'warn'),
 	}
 }
 

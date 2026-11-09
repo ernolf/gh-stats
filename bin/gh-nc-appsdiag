@@ -65,7 +65,7 @@ BUILD_FILES="GNUmakefile makefile Makefile"
 # lint-actions-security: the output of a run is public, and their findings show
 # where an app can be attacked (actionlint reports untrusted input in a run step).
 # They run among SECURITY_TARGETS instead.
-TARGETS="${NC_APPSDIAG_TARGETS:-help consistency-audit reuse changelog-lint lint-containerfiles lint-markdown lint-php-syntax lint-shell lint-vue-imports lint-web lint-yaml build deps-audit build-audit bundle-report build-verify php-compat dist}"
+TARGETS="${NC_APPSDIAG_TARGETS:-help consistency-audit reuse changelog-lint lint-containerfiles lint-markdown lint-php-syntax lint-shell lint-vue-imports lint-web lint-yaml l10n-lint build deps-audit build-audit bundle-report build-verify php-compat dist}"
 # Offered after the release comparison, because both of them remove what it reads.
 CLEAN_TARGETS="${NC_APPSDIAG_CLEAN_TARGETS:-clean dist-clean}"
 # These have to be said yes to; everything else runs on the empty answer, because
@@ -79,7 +79,7 @@ TARGETS_ASK="${NC_APPSDIAG_TARGETS_ASK:-help}"
 # that something is missing, the JSON says what. integrity-check is no target of
 # the list: the release comparison runs it on a shipped tree that carries
 # appinfo/signature.json.
-JSON_TARGETS="${NC_APPSDIAG_JSON:-consistency-audit build-audit bundle-report reuse changelog-lint lint-containerfiles lint-markdown lint-php-syntax lint-shell lint-vue-imports lint-web lint-yaml deps-audit build-verify php-compat integrity-check}"
+JSON_TARGETS="${NC_APPSDIAG_JSON:-consistency-audit build-audit bundle-report reuse changelog-lint lint-containerfiles lint-markdown lint-php-syntax lint-shell lint-vue-imports lint-web lint-yaml l10n-lint deps-audit build-verify php-compat integrity-check}"
 # Of those, the ones that cannot write the file in that run and run a second time
 # with ARGS=--json for it. The REUSE tool prints text or JSON, never both; its
 # second run costs seconds.
@@ -260,17 +260,20 @@ a repository on another host below a directory of that host:
                           -s, head, ncmake ref, the machine (host),
                           the build file make read before the stub and its
                           kind, every target with exit code and duration
-                          (and, for a reuse that never linted, why it has no
-                          JSON), whether it is one of the analysers with a
-                          JSON result, for one that failed the line it
-                          stopped with (stopped), and for one whose result
+                          (and, for a reuse that never linted or a skipped
+                          target, why it has no JSON), whether it is one of
+                          the analysers with a JSON result, for one that
+                          failed the line it stopped with (stopped), and for one whose result
                           jq cannot read, which is not kept and counts as
-                          failed, the jq error (json_invalid), the result files
+                          failed, the jq error (json_invalid), whether the
+                          app has .tx/config and the languages l10n/ holds
+                          (transifex), the result files
       info.xml            appinfo/info.xml of the measured tree, the one the
                           analysers read
       <target>.json      the machine-readable analyser results, by default of
                           consistency-audit, reuse, changelog-lint, the
-                          lint-* targets, deps-audit (without advisories),
+                          lint-* targets, l10n-lint where the app has
+                          .tx/config, deps-audit (without advisories),
                           build-audit, bundle-report, build-verify and
                           php-compat, and for a shipped tree that carries
                           appinfo/signature.json integrity-check, its
@@ -658,6 +661,15 @@ ask_target() {
 	esac
 	read -r -p "${MARK}   make $t? [Y/n/q] " a || true
 	case "${a,,}" in q|quit) return 2 ;; n|no|nein) return 1 ;; *) return 0 ;; esac
+}
+
+# A target with nothing to measure in this app, and why. l10n-lint holds the
+# source strings against the review of the translation team, which only an app
+# set up for the Transifex sync goes through, so an app without .tx/config costs
+# no run of the image of the translation bot.
+skip_reason() {
+	[ "$1" = l10n-lint ] && [ ! -f "$APP_DIR/.tx/config" ] || return 1
+	echo "no .tx/config, the app is not set up for the Transifex sync"
 }
 
 # == Result layout ==
@@ -1681,7 +1693,7 @@ release_compare() {
 # console.log is for people. It is written once: by summary() at the end of a run,
 # or by the exit trap of a run that ended before, and its status says which.
 write_summary_json() {
-	local status="$1" code="$2" head="" host cpus mem cpu inv files diff stopped invalid
+	local status="$1" code="$2" head="" host cpus mem cpu inv files diff stopped invalid tx_config transifex=null
 	[ -n "$RUN_DIR" ] || return 0
 	summary_written=1
 	security_strip
@@ -1699,6 +1711,14 @@ write_summary_json() {
 		|| warn "could not keep appinfo/info.xml in $RUN_DIR"
 	files="$(cd "$RUN_DIR" && find . -path ./release/shipped -prune -o \( -name '*.json' -o -path ./info.xml \) ! -name summary.json -print \
 		| sed 's:^\./::' | sort | "$JQ" -R -s -c 'split("\n") | map(select(length > 0))')"
+	# Whether the app is set up for the Nextcloud translation sync, and the languages
+	# l10n/ holds; a run without info.xml never got to the app.
+	if [ -f "$APP_DIR/appinfo/info.xml" ]; then
+		tx_config=false
+		[ ! -f "$APP_DIR/.tx/config" ] || tx_config=true
+		transifex="$( { [ ! -d "$APP_DIR/l10n" ] || find "$APP_DIR/l10n" -maxdepth 1 -type f -name '*.json' -printf '%f\n'; } \
+			| sed 's/\.json$//' | sort | "$JQ" -R -s -c --argjson config "$tx_config" '{config: $config, languages: (split("\n") | map(select(length > 0)))}')"
+	fi
 	diff=null
 	[ -s "$RUN_DIR/release/diff.json" ] && diff="$("$JQ" -c '{signed, counts}' "$RUN_DIR/release/diff.json")" || true
 	stopped="$(for t in "${!stopped_lines[@]}"; do printf '%s\t%s\n' "$t" "${stopped_lines[$t]}"; done \
@@ -1712,7 +1732,7 @@ write_summary_json() {
 		--arg head "$head" --arg tag "$head_tag" --arg stub "$STUB_URL" \
 		--arg ncmain "$ncmake_main" --arg ncdiffers "$ncmake_differs" --argjson ncchecked "$ncmake_checked" \
 		--arg host "$host" --arg cpus "$cpus" --arg mem "$mem" --arg cpu "$cpu" \
-		--argjson inv "$inv" --arg bname "$build_name" --arg bkind "$build_kind" --argjson files "$files" \
+		--argjson inv "$inv" --argjson transifex "$transifex" --arg bname "$build_name" --arg bkind "$build_kind" --argjson files "$files" \
 		--arg tarball "$rel_tarball" --arg bytes "$rel_bytes" --argjson diff "$diff" \
 		--argjson stopped "$stopped" --argjson invalid "$invalid" --arg analysers " $JSON_TARGETS " '
 		def nul($s): if $s == "" then null else $s end;
@@ -1730,6 +1750,7 @@ write_summary_json() {
 		 host: {name: $host, cpus: num($cpus), mem_mb: num($mem), cpu_model: nul($cpu)},
 		 inventory: {files: $inv,
 		            build_file: (if $bname == "" then null else {name: $bname, kind: $bkind} end)},
+		 transifex: $transifex,
 		 targets: [split("\n")[] | select(length > 0) | split("\t") | {name: .[0], exit: (.[1] | tonumber), seconds: (.[2] | tonumber), json_skipped: nul(.[3] // ""),
 		          analyser: ((" " + .[0] + " ") as $n | $analysers | contains($n)), stopped: ($stopped[.[0]] // null),
 		          json_invalid: ($invalid[.[0]] // null)}],
@@ -1892,6 +1913,11 @@ install_stub
 log ""
 log "== targets: the offered answer is in brackets, q stops asking"
 for t in $TARGETS; do
+	if reason="$(skip_reason "$t")"; then
+		results+=("$t	0	0	$reason")
+		log "   make $t skipped: $reason"
+		continue
+	fi
 	rc=0
 	ask_target "$t" || rc=$?
 	case "$rc" in
