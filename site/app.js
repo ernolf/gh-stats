@@ -988,7 +988,9 @@ const BADGES = [
 		return next ? run.pass('php-compat', 'php-next', `PHP ${next} ready`) : null
 	} },
 	{ id: 'changelog', of: (run) => run.pass('changelog-lint', 'changelog-section', 'Changelog') },
-	{ id: 'versions-agree', of: (run) => run.pass('consistency-audit', 'versions-agree', 'Versions agree') },
+	// The versions agree only where lint-version, which compares the same files,
+	// finds nothing either.
+	{ id: 'versions-agree', of: (run) => (run.warns('lint-version') ? null : run.pass('consistency-audit', 'versions-agree', 'Versions agree')) },
 	{ id: 'lean-bundle', of: (run) => run.passAll('bundle-report', ['no-duplicated-modules', 'no-stale-files'], 'Lean bundle') },
 	// A signature that holds, issued by the code signing root of the server; a
 	// release that carries none, or one with errors, shows nothing here.
@@ -1083,9 +1085,41 @@ function badge(b, fact) {
 
 // == Checks ==
 
-function finding(f) {
+// A finding that groups files ends in their paths, as many as it counts, which
+// fold away beneath its text. The findings of other targets it covers fold
+// beneath it, by target.
+function finding(f, under = new Map()) {
+	const lines = f.count ? f.text.split('\n') : []
+	const text = f.count
+		? [el('pre', {}, lines.slice(0, -f.count).join('\n')),
+			el('details', {}, el('summary', {}, `${f.count} files`), el('pre', {}, lines.slice(-f.count).join('\n')))]
+		: [el('pre', {}, f.text)]
+	const covered = under.get(f) ?? []
+	const more = covered.length
+		? [el('details', { class: 'covered' }, el('summary', {}, `Also reported by ${[...new Set(covered.map((c) => c.tool))].join(', ')}`),
+			...[...Map.groupBy(covered, (c) => c.tool)].flatMap(([tool, xs]) => [el('h6', {}, tool), ...findingEntries(tool, xs)]))]
+		: []
 	return el('div', { class: `finding ${f.level ?? ''}` },
-		el('span', { class: 'level' }, f.level ?? ''), ' ', el('code', {}, f.id ?? ''), el('pre', {}, f.text))
+		el('span', { class: 'level' }, f.level ?? ''), ' ', el('code', {}, f.id ?? ''), ...text, ...more)
+}
+
+// Which findings of a run another finding covers: one that names the target,
+// or the target and the id, of a finding of another target in its covers, and
+// is of the same level or a higher one. Each covered finding goes under the
+// first finding that covers it.
+function coverage(fs) {
+	const LEVELS = { ok: 0, info: 1, warn: 2 }
+	const under = new Map()
+	const covered = new Set()
+	for (const c of fs.filter((x) => x.covers?.length)) {
+		const xs = fs.filter((f) => f.tool !== c.tool && !covered.has(f) && LEVELS[c.level] >= LEVELS[f.level]
+			&& c.covers.some((k) => k === f.tool || k === `${f.tool}/${f.id}`))
+		if (xs.length) {
+			xs.forEach((f) => covered.add(f))
+			under.set(c, xs)
+		}
+	}
+	return { under, covered }
 }
 
 // The release diff compares the tarball the App Store ships, or the directory
@@ -1148,15 +1182,15 @@ function defectNotes(fields) {
 // file, level and whether they are security findings, which opens into its
 // messages, numbered; the first line of a message drops the file the entry
 // names already. Other findings stay as they are.
-function findingEntries(tool, fs) {
+function findingEntries(tool, fs, under = new Map()) {
 	const security = tool.startsWith('security/')
 	if (!security && !baseTool(tool).startsWith('lint-')) {
-		return fs.map(finding)
+		return fs.map((f) => finding(f, under))
 	}
 	return [...Map.groupBy(fs, (f) => (f.file === null ? f : `${f.level}\n${f.security === true}\n${f.file}`)).values()].map((group) => {
 		const f = group[0]
 		if (f.file === null) {
-			return finding(f)
+			return finding(f, under)
 		}
 		const noun = security ? `${f.security === true ? 'security ' : ''}finding` : 'message'
 		return el('details', { class: `finding ${f.level ?? ''}` },
@@ -1180,6 +1214,18 @@ function securityTargets(m) {
 	return [el('p', { class: 'security-targets' }, 'Security targets: ', ...targets.flatMap((t, i) => [i ? ', ' : '',
 		el('code', {}, t.name), ` exit ${t.exit ?? '?'} `,
 		el('a', { href: `security/${m.dir}/${encodeURIComponent(t.name)}.log` }, 'log')]))]
+}
+
+// The warnings of a lint target are one warning, folded: its summary counts
+// the messages and the files they are in, and it opens into the hint and the
+// entries per file.
+function lintFold(tool, warns) {
+	const noun = tool.startsWith('security/') ? 'finding' : 'message'
+	const files = new Set(warns.filter((f) => f.file !== null).map((f) => f.file)).size
+	return el('details', { class: 'finding warn' },
+		el('summary', {}, el('span', { class: 'level' }, 'warn'), ' ', `${warns.length} ${noun}${warns.length === 1 ? '' : 's'}`,
+			files ? ` in ${files} file${files === 1 ? '' : 's'}` : ''),
+		lintHint(baseTool(tool)), ...findingEntries(tool, warns))
 }
 
 // Where a lint target warns, the page names the ncmake target the warnings come
@@ -1214,7 +1260,9 @@ function infoXmlLink(m) {
 // first, those with a security finding before the others, then the tools with
 // warnings; within a tool the security findings come first, ok and info only as
 // counts that open on demand. A security target names how many of its warnings
-// are security findings, counted as its column counts them. The head of a measurement, its name and badges, stays in view while
+// are security findings, counted as its column counts them. A finding that
+// another one covers shows beneath that one only, and a target all of whose
+// findings are covered has no section. The head of a measurement, its name and badges, stays in view while
 // its findings scroll beneath it, with the button that collapses the row and,
 // while it sticks, the one back to the start of the measurement. The findings,
 // and the badges taken from them, follow once their file has arrived.
@@ -1243,7 +1291,8 @@ function checksBlock(m, collapse) {
 		status.replaceChildren('Loading the findings of this run.')
 		findingsOf(m).then((fs) => {
 			head.append(...badgeRow(fs, fields))
-			const tools = [...Map.groupBy(fs, (f) => f.tool)].sort((a, b) => rank(b) - rank(a))
+			const { under, covered } = coverage(fs)
+			const tools = [...Map.groupBy(fs.filter((f) => !covered.has(f)), (f) => f.tool)].sort((a, b) => rank(b) - rank(a))
 			status.replaceWith(...tools.map(([tool, fs]) => {
 				const warns = fs.filter((f) => f.level === 'warn').sort((a, b) => Number(b.security === true) - Number(a.security === true))
 				const rest = fs.filter((f) => f.level !== 'warn')
@@ -1253,10 +1302,9 @@ function checksBlock(m, collapse) {
 						`${counted(tool, warns.filter((f) => f.security))} security, ${counted(tool, warns.filter((f) => !f.security))} other`)]
 					: []
 				return el('div', { class: tool.startsWith('security/') ? 'tool security' : 'tool' }, el('h5', {}, tool, ...split),
-					...(warns.length && baseTool(tool).startsWith('lint-') ? [lintHint(baseTool(tool))] : []),
-					...findingEntries(tool, warns),
+					...(warns.length && baseTool(tool).startsWith('lint-') ? [lintFold(tool, warns)] : findingEntries(tool, warns, under)),
 					...(rest.length
-						? [el('details', {}, el('summary', {}, counts.map(([l, n]) => `${n} ${l}`).join(', ')), ...findingEntries(tool, rest))]
+						? [el('details', {}, el('summary', {}, counts.map(([l, n]) => `${n} ${l}`).join(', ')), ...findingEntries(tool, rest, under))]
 						: []))
 			}))
 		}, (e) => loadFailed(status, 'The findings of this run', e, load))
@@ -1376,10 +1424,10 @@ function securityWarnings(runs, count = 'sec') {
 	return known.length ? known.reduce((n, m) => n + (m[count] ?? 0), 0) : null
 }
 
-// The warnings of a tool as its counts have them: those of a lint target once
-// per file.
+// The warnings of a tool as its counts have them: those of a lint target as
+// one.
 function counted(tool, fs) {
-	return new Set(fs.map((f) => (baseTool(tool).startsWith('lint-') && f.file !== null ? `file ${f.file}` : f))).size
+	return baseTool(tool).startsWith('lint-') ? Math.min(fs.length, 1) : fs.length
 }
 
 // The column head of the security results, where the database has them.

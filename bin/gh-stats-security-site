@@ -142,11 +142,11 @@ old_db="$("$JQ" -r '.db' "$build/config.json")"
 
 # The export fills the findings table of gh-stats-site-db, which the database
 # no longer has; it serves here only to count the warnings of each run, as the
-# public ones are counted, and to write the file of its findings into the
-# directory of its logs, which moves into the build with them. sec counts the
-# warnings a target marks as ones of security, sec_other the rest of its
-# warnings, such as a warning of shellcheck in a run: script or a target
-# that failed.
+# public ones are counted, a lint target once, and to write the file of its
+# findings into the directory of its logs, which moves into the build with them.
+# sec counts the warnings a target marks as ones of security, sec_other the
+# rest of its warnings, such as a warning of shellcheck in a run: script or a
+# target that failed.
 sq="'"
 logs="$work/export/logs"
 {
@@ -169,9 +169,9 @@ EOF
 DELETE FROM security_targets WHERE dir NOT IN (SELECT dir FROM measurements);
 DELETE FROM security_runs WHERE dir NOT IN (SELECT dir FROM measurements);
 UPDATE measurements AS m SET
-  sec = (SELECT count(DISTINCT f.tool || char(10) || CASE WHEN f.tool LIKE 'security/lint-%' AND f.file IS NOT NULL THEN 'file ' || f.file ELSE f.n END)
+  sec = (SELECT count(DISTINCT f.tool || char(10) || CASE WHEN f.tool LIKE 'security/lint-%' THEN '' ELSE f.n END)
            FROM findings f WHERE f.dir = m.dir AND f.level = 'warn' AND f.security),
-  sec_other = (SELECT count(DISTINCT f.tool || char(10) || CASE WHEN f.tool LIKE 'security/lint-%' AND f.file IS NOT NULL THEN 'file ' || f.file ELSE f.n END)
+  sec_other = (SELECT count(DISTINCT f.tool || char(10) || CASE WHEN f.tool LIKE 'security/lint-%' THEN '' ELSE f.n END)
            FROM findings f WHERE f.dir = m.dir AND f.level = 'warn' AND NOT f.security)
  WHERE m.dir IN (SELECT dir FROM security_runs);
 CREATE TEMP TABLE exported AS

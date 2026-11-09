@@ -148,7 +148,9 @@ repository under its current name, plus
              security-overdue.json
 
 Beside <file>, findings/<run dir>.json holds the findings of each run as a JSON
-array: the findings of the analysers with the file and line they name, and one
+array: the findings of the analysers with the file and line they name, the
+findings of other targets with the same cause they name in covers and, for a
+finding that lists files, how many of its last lines are paths, and one
 finding per aborted run, failed target, skipped JSON result and REUSE lint. An
 app of the server tree runs no REUSE lint of its own: its REUSE finding comes
 from the reuse.json of the newest run of nextcloud/server at the same server
@@ -357,7 +359,7 @@ if [ -n "$results" ]; then
 		(if $name == "" then input_filename else $name end | ltrimstr($root) | rtrimstr(".gz") | rtrimstr(".json")) as $p
 		| ($p | sub("/[^/]*$"; "") | q) as $dir | ($p | sub("^.*/"; "")) as $tool | . as $r
 		| ((.findings? // []) | to_entries[]
-		  | "INSERT INTO findings VALUES (\($dir), \($tool | q), \(.key + 1), \(.value.level | v), \(.value.id | v), \(.value.lines // [] | join("\n") | q), \(.value.file | v), \(.value.line | v));"),
+		  | "INSERT INTO findings VALUES (\($dir), \($tool | q), \(.key + 1), \(.value.level | v), \(.value.id | v), \(.value.lines // [] | join("\n") | q), \(.value.file | v), \(.value.line | v), \(.value.covers | if . == null then null else tojson end | v), \(.value.count | v));"),
 		  (($fields[$tool] // [])[] as $f | ($r | objects | .[$f]) // empty
 		  | "INSERT INTO fields VALUES (\($dir), \($tool | q), \($f | q), \(tojson | q));"),
 		  ((.findings? // [])[] as $x | ($finding_fields[$tool][$x.id]? // [])[] as $f | $x[$f] // empty
@@ -790,6 +792,8 @@ CREATE TABLE findings (
   text  TEXT    NOT NULL,
   file  TEXT,
   line  INTEGER,
+  covers TEXT,
+  count INTEGER,
   PRIMARY KEY (dir, tool, n)
 ) WITHOUT ROWID;
 CREATE TABLE fields (
@@ -817,23 +821,23 @@ DELETE FROM measurements WHERE EXISTS (
 DELETE FROM targets WHERE dir NOT IN (SELECT dir FROM measurements);
 DELETE FROM findings WHERE dir NOT IN (SELECT dir FROM measurements);
 DELETE FROM fields WHERE dir NOT IN (SELECT dir FROM measurements);
-INSERT INTO findings
+INSERT INTO findings (dir, tool, n, level, id, text, file, line)
 SELECT dir, 'gh-nc-appsdiag', 0, 'warn', 'aborted',
        'The run ended with status ' || coalesce(status, 'unknown') || coalesce(': ' || reason, '.'), NULL, NULL
   FROM measurements WHERE status IS NOT 'completed';
-INSERT INTO findings
+INSERT INTO findings (dir, tool, n, level, id, text, file, line)
 SELECT dir, name, 0, 'info', 'skipped', skipped, NULL, NULL FROM targets WHERE skipped IS NOT NULL;
-INSERT INTO findings
+INSERT INTO findings (dir, tool, n, level, id, text, file, line)
 SELECT dir, name, 0, 'warn', 'failed', 'make ' || name || ' ended with exit ' || exit || ' and left no result.'
        || CASE WHEN analyser THEN char(10) || 'This is no finding in the app: the check did not run, and the cause lies with ncmake or the run.' ELSE '' END
        || coalesce(char(10) || 'It stopped with: ' || stopped, ''), NULL, NULL
   FROM targets WHERE exit <> 0 AND skipped IS NULL AND NOT json AND invalid IS NULL;
-INSERT INTO findings
+INSERT INTO findings (dir, tool, n, level, id, text, file, line)
 SELECT dir, name, 0, 'warn', 'failed', 'make ' || name || ' wrote a result jq cannot read, so it was not kept.'
        || CASE WHEN analyser THEN char(10) || 'This is no finding in the app: the cause lies with ncmake or the run.' ELSE '' END
        || char(10) || 'jq stopped with: ' || invalid, NULL, NULL
   FROM targets WHERE invalid IS NOT NULL;
-INSERT INTO findings
+INSERT INTO findings (dir, tool, n, level, id, text, file, line)
 SELECT dir, name, 0, CASE exit WHEN 0 THEN 'ok' ELSE 'warn' END, 'compliance',
        CASE exit WHEN 0 THEN 'The checkout is REUSE compliant.'
             ELSE 'The checkout is not REUSE compliant; reuse.json in the run directory lists the files.' END, NULL, NULL
@@ -851,7 +855,7 @@ SELECT a.dir, a.subdir, a.server, s.dir AS source, s.tag AS source_tag
    AND EXISTS (SELECT 1 FROM targets t WHERE t.dir = s.dir AND t.name = 'reuse' AND t.json AND t.skipped IS NULL)
  WHERE a.owner = 'nextcloud' AND a.repo = 'server' AND a.subdir IS NOT NULL AND a.server IS NOT NULL;
 DELETE FROM findings WHERE tool = 'reuse' AND dir IN (SELECT dir FROM tree_reuse);
-INSERT INTO findings
+INSERT INTO findings (dir, tool, n, level, id, text, file, line)
 SELECT r.dir, 'reuse', 0,
        CASE WHEN r.source IS NULL THEN 'info' WHEN b.files IS NULL THEN 'ok' ELSE 'warn' END,
        CASE WHEN r.source IS NULL THEN 'no-result' ELSE 'compliance' END,
@@ -1082,9 +1086,11 @@ UPDATE findings AS f SET
   FROM shipped_runs r
  WHERE f.dir = r.dir AND r.tree AND f.tool = 'consistency-audit' AND f.level = 'warn' AND f.id = 'app-name';
 
--- The counts of the overview, so the page needs no findings to show them. A
--- lint target warns once per file, however many messages the file has, as the
--- run block shows them. abandoned stays NULL for a run without the JSON of
+-- The counts of the overview, so the page needs no findings to show them. One
+-- cause is one warning: a lint target warns once, however many messages it
+-- has, as the run block shows it, and a warning that another warning of the run
+-- names in covers, as <target> or <target>/<id>, does not count, as the run block
+-- shows it under that one. abandoned stays NULL for a run without the JSON of
 -- deps-audit, which says nothing about the packages; sec and sec_other are the
 -- counts of the security targets, which only the private copy of
 -- gh-stats-security-site has.
@@ -1092,9 +1098,17 @@ ALTER TABLE measurements ADD COLUMN warn INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE measurements ADD COLUMN sec INTEGER;
 ALTER TABLE measurements ADD COLUMN sec_other INTEGER;
 ALTER TABLE measurements ADD COLUMN abandoned INTEGER;
+-- What the warnings of a run cover, looked up once per warning; a run of a lint
+-- target can have thousands of them.
+CREATE TEMP TABLE covered AS
+SELECT DISTINCT c.dir, c.tool, j.value AS name FROM findings c, json_each(c.covers) j
+ WHERE c.covers IS NOT NULL AND c.level = 'warn';
+CREATE INDEX temp.covered_name ON covered (dir, name);
 UPDATE measurements AS m SET
-  warn = (SELECT count(DISTINCT f.tool || char(10) || CASE WHEN f.tool LIKE 'lint-%' AND f.file IS NOT NULL THEN 'file ' || f.file ELSE f.n END)
-            FROM findings f WHERE f.dir = m.dir AND f.level = 'warn'),
+  warn = (SELECT count(DISTINCT f.tool || char(10) || CASE WHEN f.tool LIKE 'lint-%' THEN '' ELSE f.n END)
+            FROM findings f WHERE f.dir = m.dir AND f.level = 'warn'
+             AND NOT EXISTS (SELECT 1 FROM covered c
+                              WHERE c.dir = f.dir AND c.name IN (f.tool, f.tool || '/' || f.id) AND c.tool <> f.tool)),
   abandoned = CASE WHEN EXISTS (SELECT 1 FROM targets t WHERE t.dir = m.dir AND t.name = 'deps-audit' AND t.json)
     THEN (SELECT count(*) FROM findings f WHERE f.dir = m.dir AND f.tool = 'deps-audit' AND f.id = 'abandoned-dependency') END;
 -- The findings of a measurement, by tool and in the order of the analyser, as
@@ -1103,7 +1117,8 @@ UPDATE measurements AS m SET
 CREATE TEMP TABLE exported AS
 SELECT (SELECT count(*) FROM findings) AS findings, sum(writefile('${findings//$sq/$sq$sq}/' || m.dir || '.json',
   (SELECT json_group_array(json(o)) FROM (
-     SELECT json_object('tool', f.tool, 'level', f.level, 'id', f.id, 'text', f.text, 'file', f.file, 'line', f.line) AS o
+     SELECT json_object('tool', f.tool, 'level', f.level, 'id', f.id, 'text', f.text, 'file', f.file, 'line', f.line,
+                        'covers', json(f.covers), 'count', f.count) AS o
        FROM findings f WHERE f.dir = m.dir ORDER BY f.tool, f.n)))) AS bytes
   FROM measurements m;
 DROP TABLE findings;
