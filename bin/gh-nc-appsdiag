@@ -1542,9 +1542,11 @@ pick_tag() {
 }
 
 # What the App Store ships, else, on GitHub, what the app or the Nextcloud release
-# mirror attached to the tag of this version.
+# mirror attached to the tag of this version. Not every app puts a v in front of
+# its tags, so the tag the run checked out comes first, then the version with and
+# without the v.
 fetch_tarball() {
-	local dest="$1" cache url name r f pattern='*.tar.gz'
+	local dest="$1" cache url name r t v f pattern='*.tar.gz'
 	# The release of a repository with several apps carries a tarball for each.
 	[ -z "$subdir" ] || pattern="*${app_id}*.tar.gz"
 	if cache="$(appstore_catalogue)"; then
@@ -1556,10 +1558,13 @@ fetch_tarball() {
 		fi
 	fi
 	[ "$repo_host" = github.com ] || return 1
+	v="$(measured_version)"
 	for r in "$owner/$repo" "nextcloud-releases/$repo"; do
-		"$GH" release download "v$(measured_version)" --repo "$r" --pattern "$pattern" --dir "$dest" >/dev/null 2>&1 || continue
-		f="$(find "$dest" -maxdepth 1 -name "$pattern" | head -1)"
-		[ -n "$f" ] && { printf '%s\n' "$f"; return 0; }
+		for t in $(printf '%s\n' "$head_tag" "v$v" "$v" | awk 'NF && !seen[$0]++'); do
+			"$GH" release download "$t" --repo "$r" --pattern "$pattern" --dir "$dest" >/dev/null 2>&1 || continue
+			f="$(find "$dest" -maxdepth 1 -name "$pattern" | head -1)"
+			[ -n "$f" ] && { printf '%s\n' "$f"; return 0; }
+		done
 	done
 	return 1
 }
