@@ -1771,6 +1771,7 @@ function initOverview() {
 	const sinceHelpToggle = document.getElementById('since-help-toggle')
 	const appFilters = document.getElementById('app-filters')
 	const nc = document.getElementById('nc')
+	const ncNewer = document.getElementById('nc-newer')
 	const category = document.getElementById('category')
 	const store = document.getElementById('store')
 	const enabled = document.getElementById('enabled')
@@ -1806,8 +1807,10 @@ function initOverview() {
 		// A line counts by the release it shows; a project stays while any of
 		// its lines does, with the row of its newest line.
 		const from = t ?? 0
-		// The Other tab has no Nextcloud versions to compare.
+		// The Other tab has no Nextcloud versions to compare. With and newer, a
+		// release that needs a later major counts as well.
 		const major = Number(nc.value)
+		const newer = ncNewer.checked
 		const counts = (r) => {
 			if (r.published < from) {
 				return false
@@ -1816,7 +1819,7 @@ function initOverview() {
 				return true
 			}
 			const m = ncMajors(r.nc)
-			return m !== null && m[0] <= major && m[1] >= major
+			return m !== null && (newer || m[0] <= major) && m[1] >= major
 		}
 		// Empty periods sort last in either direction, as do the rows of the
 		// other tabs, which lack the columns of the tab Shipped Apps.
@@ -1942,7 +1945,15 @@ function initOverview() {
 	for (let v = Math.max(...firsts); v >= Math.min(...firsts); v--) {
 		nc.append(el('option', { value: v }, String(v)))
 	}
-	nc.addEventListener('change', render)
+	// and newer has nothing to extend while any is picked.
+	const syncNewer = () => {
+		ncNewer.disabled = !nc.value
+	}
+	nc.addEventListener('change', () => {
+		syncNewer()
+		render()
+	})
+	ncNewer.addEventListener('change', render)
 	sinceHelpToggle.addEventListener('click', () => {
 		sinceHelp.hidden = !sinceHelp.hidden
 		sinceHelpToggle.setAttribute('aria-expanded', String(!sinceHelp.hidden))
@@ -1955,6 +1966,7 @@ function initOverview() {
 		restoreControls(s)
 		showFilters()
 		syncRange()
+		syncNewer()
 		const keys = [...document.querySelectorAll('th[data-sort]')].map((th) => th.dataset.sort)
 		const sorted = keys.includes(s.sort?.key) && typeof s.sort.desc === 'boolean'
 		sortKey = sorted ? s.sort.key : 'total'
@@ -2014,7 +2026,7 @@ function initScrolling() {
 // differs from the defaults under one key. Without storage, in a private
 // window or with the site data blocked, the page starts from the defaults.
 const SETTINGS_KEY = 'gh-stats.settings'
-const OVERVIEW_SETTINGS = ['filter', 'invert', 'since', 'category', 'nc', 'store', 'enabled', 'source']
+const OVERVIEW_SETTINGS = ['filter', 'invert', 'since', 'category', 'nc', 'nc-newer', 'store', 'enabled', 'source']
 const CHART_SETTINGS = ['scope', 'split', 'share-figure', 'measure', 'bucket', 'range', 'style', 'log']
 
 // The defaults are those the page is written with.
