@@ -64,7 +64,8 @@ BUILD_FILES="GNUmakefile makefile Makefile"
 # act outside the checkout. Neither are secrets-audit, lint-actions and
 # lint-actions-security: the output of a run is public, and their findings show
 # where an app can be attacked (actionlint reports untrusted input in a run step).
-# They run among SECURITY_TARGETS instead.
+# They run among SECURITY_TARGETS instead, which leave their other findings
+# public.
 TARGETS="${NC_APPSDIAG_TARGETS:-help consistency-audit reuse changelog-lint lint-containerfiles lint-markdown lint-php-syntax lint-shell lint-version lint-vue-imports lint-web lint-yaml l10n-lint build deps-audit build-audit bundle-report build-verify php-compat dist}"
 # Offered after the release comparison, because both of them remove what it reads.
 CLEAN_TARGETS="${NC_APPSDIAG_CLEAN_TARGETS:-clean dist-clean}"
@@ -88,7 +89,8 @@ JSON_RERUN_TARGETS="${NC_APPSDIAG_JSON_RERUN:-reuse}"
 # The targets whose findings show where an app can be attacked. They run after the
 # others with their output kept out of the screen and the log, and what they print
 # and write leaves the run only as security.json.age, encrypted to the age
-# recipient of the site maintainer; without a recipient they do not run.
+# recipient of the site maintainer; without a recipient they do not run. Only
+# their findings that are not marked "security": true go beside the log as well.
 # deps-audit runs here a second time, with the advisories.
 SECURITY_TARGETS="${NC_APPSDIAG_SECURITY_TARGETS:-secrets-audit lint-actions lint-actions-security deps-audit}"
 # A run of the server repository at its root, with -s, measures no app: it runs
@@ -278,7 +280,10 @@ a repository on another host below a directory of that host:
                           php-compat, and for a shipped tree that carries
                           appinfo/signature.json integrity-check, its
                           signature held against
-                          resources/codesigning/root.crt of SERVER_REPO
+                          resources/codesigning/root.crt of SERVER_REPO, and
+                          of secrets-audit, lint-actions and
+                          lint-actions-security only the findings that are
+                          neither marked "security": true nor at level ok
       security.json.age   the output and the results of the security targets
                           (secrets-audit, lint-actions, lint-actions-security
                           and deps-audit with advisories), and every finding
@@ -1070,6 +1075,20 @@ security_make() {
 	[ -s "$SECURITY_TMP/$t.json" ] && "$JQ" -e . "$SECURITY_TMP/$t.json" >/dev/null 2>&1 || echo null >"$SECURITY_TMP/$t.json"
 }
 
+# The findings of a security target that are not marked "security": true are
+# public like those of any other target, as <target>.json beside the log, which
+# holds nothing else of the result: the other fields of a report of secrets-audit
+# or lint-actions-security describe what was scanned and matched. A finding at
+# level ok is left out as well, since its presence would say that the target
+# found nothing. The file is written whatever the target left, so its presence
+# says nothing either. deps-audit keeps the public result of its run without
+# advisories.
+security_public() {
+	[ "$1" != deps-audit ] || return 0
+	"$JQ" '{findings: [if type == "object" then .findings[]? else empty end | select(.security != true and .level != "ok")]}' \
+		"$SECURITY_TMP/$1.json" >"$RUN_DIR/$1.json"
+}
+
 # Trailing blanks keep the JSON what it is.
 security_pad() {
 	local size
@@ -1166,7 +1185,8 @@ secrets_history() {
 
 # The security targets write into a directory outside the run directory, which
 # neither the log nor the artifact of a CI run reads, and their output leaves the
-# run only as security.json.age. Their exit codes stay out of summary.json too:
+# run only as security.json.age, but for the findings security_public keeps
+# beside the log. Their exit codes stay out of summary.json too:
 # one that is not 0 says that something was found. Every run with a recipient
 # writes the file, whatever it holds, so its presence says nothing either.
 security_run() {
@@ -1199,6 +1219,7 @@ security_run() {
 		fi
 		"$JQ" -n -c --arg t "$t" --argjson rc "$rc" --rawfile log "$dir/$t.log" --slurpfile r "$dir/$t.json" \
 			'{name: $t, exit: $rc, result: $r[0], log: $log}' >>"$dir/targets.jsonl"
+		security_public "$t"
 	done
 	security_strip "$dir/flagged.jsonl"
 	bundle="$dir/security.json"
