@@ -233,10 +233,87 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+  # deploy-pages names a deployment after its commit and asks Pages for the
+  # status of that name. Every build of one commit shares it, so a deployment
+  # Pages never serves still reports the success of an earlier one. This job
+  # asks the site itself until its config.json names the database of this run.
+  # Each try logs what the site and its cache answer, and the job summary keeps
+  # them as a table, so a deployment that never arrives shows where it stops.
+  verify:
+    name: verify
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      # Reads the status Pages keeps for the deployment.
+      pages: read
+      # Reads the statuses of the deployment to github-pages.
+      deployments: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PAGE_URL: ${{ needs.deploy.outputs.page_url }}
+    steps:
+      # Pages lets its cache keep config.json for 10 minutes, so a try within
+      # that time can still see the deployment before. The database is asked
+      # for only once config.json names it: its cache keeps a 404 far longer.
+      - name: Check that Pages serves this build
+        run: |
+          base="${PAGE_URL%/}"
+          db="db/$GITHUB_RUN_ID/gh-stats.sqlite"
+          hdr() { tr -d '\r' < "$1" | sed -n "s/^$2: //Ip" | tail -n 1; }
+
+          echo "::group::What GitHub reports for the deployment of $GITHUB_SHA"
+          gh api "repos/$GH_REPO/pages/deployments/$GITHUB_SHA" --jq '"Pages status: \(.status)"' || :
+          id="$(gh api "repos/$GH_REPO/deployments?environment=github-pages&sha=$GITHUB_SHA&per_page=1" --jq '.[0].id // empty' || :)"
+          if [ -n "$id" ]; then
+            gh api "repos/$GH_REPO/deployments/$id/statuses" \
+              --jq '.[] | "\(.created_at) \(.state) \(.log_url // "")"' || :
+          fi
+          echo "::endgroup::"
+
+          {
+            echo "### Pages and $db"
+            echo
+            echo "| Try | Time | HTTP | config.json names | Last-Modified | X-Cache | Age | Served by |"
+            echo "| --- | --- | --- | --- | --- | --- | --- | --- |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          deadline=$((SECONDS + 900))
+          try=0
+          while :; do
+            try=$((try + 1))
+            status="$(curl -sS -D "$RUNNER_TEMP/config.h" -o "$RUNNER_TEMP/config.json" -w '%{http_code}' \
+              --max-time 60 "$base/config.json" || :)"
+            served="$(jq -r '.db // "?"' "$RUNNER_TEMP/config.json" 2>/dev/null || echo '?')"
+            row=("$try" "$(date -u +%T)" "${status:-000}" "$served" \
+              "$(hdr "$RUNNER_TEMP/config.h" Last-Modified)" "$(hdr "$RUNNER_TEMP/config.h" X-Cache)" \
+              "$(hdr "$RUNNER_TEMP/config.h" Age)" "$(hdr "$RUNNER_TEMP/config.h" X-Served-By)")
+            echo "try ${row[0]} at ${row[1]}: config.json answers ${row[2]} and names ${row[3]}" \
+              "(Last-Modified ${row[4]}, X-Cache ${row[5]}, Age ${row[6]}, ${row[7]}," \
+              "request $(hdr "$RUNNER_TEMP/config.h" X-GitHub-Request-Id))"
+            (IFS='|'; echo "|${row[*]}|") >> "$GITHUB_STEP_SUMMARY"
+            [ "$served" = "$db" ] && break
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo "::error::Pages does not serve this build 15 minutes after the deployment; config.json names $served"
+              exit 1
+            fi
+            sleep 30
+          done
+          status="$(curl -sS -I -o /dev/null -D "$RUNNER_TEMP/db.h" -w '%{http_code}' --max-time 60 "$base/$db" || :)"
+          echo "$db answers ${status:-000} (X-Cache $(hdr "$RUNNER_TEMP/db.h" X-Cache)," \
+            "Age $(hdr "$RUNNER_TEMP/db.h" Age), request $(hdr "$RUNNER_TEMP/db.h" X-GitHub-Request-Id))"
+          echo >> "$GITHUB_STEP_SUMMARY"
+          echo "$db answers ${status:-000}" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$status" != 200 ]; then
+            echo "::error::config.json names $db, but it answers ${status:-000}"
+            exit 1
+          fi
 
   report:
     name: report
