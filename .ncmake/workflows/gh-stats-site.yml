@@ -220,11 +220,16 @@ jobs:
         with:
           path: ${{ env.SITE }}
 
+  # Pages sometimes keeps a deployment in syncing_files until deploy-pages gives
+  # up, while the same artifact goes through on a later try within minutes.
+  # deploy-pages waits 10 minutes at most and cancels the deployment when the
+  # time runs out, so each try gets 4 minutes and the next starts afresh after a
+  # pause. The job fails only when the third try fails.
   deploy:
     name: deploy
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 16
     permissions:
       # Deploys the site.
       pages: write
@@ -232,13 +237,39 @@ jobs:
       id-token: write
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.try1.outputs.page_url || steps.try2.outputs.page_url || steps.try3.outputs.page_url }}
     outputs:
-      page_url: ${{ steps.deployment.outputs.page_url }}
+      page_url: ${{ steps.try1.outputs.page_url || steps.try2.outputs.page_url || steps.try3.outputs.page_url }}
     steps:
       - name: Deploy to GitHub Pages
-        id: deployment
+        id: try1
+        continue-on-error: true
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        with:
+          timeout: 240000
+
+      - name: Wait before the second try
+        if: steps.try1.outcome == 'failure'
+        run: sleep 30
+
+      - name: Deploy to GitHub Pages, second try
+        id: try2
+        if: steps.try1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        with:
+          timeout: 240000
+
+      - name: Wait before the third try
+        if: steps.try2.outcome == 'failure'
+        run: sleep 30
+
+      - name: Deploy to GitHub Pages, third try
+        id: try3
+        if: steps.try2.outcome == 'failure'
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        with:
+          timeout: 240000
 
   # deploy-pages names a deployment after its commit and asks Pages for the
   # status of that name. Every build of one commit shares it, so a deployment
