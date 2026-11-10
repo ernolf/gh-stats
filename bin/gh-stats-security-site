@@ -148,7 +148,21 @@ old_db="$("$JQ" -r '.db' "$build/config.json")"
 # rest of the warnings the export has of it: those of a target that failed, of
 # deps-audit, and of a run from before the security targets kept their other
 # findings public, such as a warning of shellcheck in a run: script.
+#
+# A secret in the history is found again by every run of the app that reads
+# the history, so it counts only in the newest of them, by the version the run
+# measured, as gh-stats-site-db sorts tags, then by when it ran; a master run
+# reads its version from info.xml as well. The others keep it in their findings
+# with the release it counts in, and that one with every release it was found
+# in. It is the same secret where rule, file, line and commit are, all of which
+# the first line of the finding names.
 sq="'"
+nver="(CASE WHEN instr(m.version, '-') > 0 THEN substr(m.version, 1, instr(m.version, '-') - 1) ELSE coalesce(m.version, '') END || '.')"
+nr1="substr($nver, instr($nver, '.') + 1)"
+nr2="substr($nr1, instr($nr1, '.') + 1)"
+nr3="substr($nr2, instr($nr2, '.') + 1)"
+vpad() { printf "substr('000000' || CAST(substr(%s, 1, instr(%s, '.') - 1) AS INTEGER), -6)" "$1" "$1"; }
+vkey="$(vpad "$nver") || $(vpad "$nr1") || $(vpad "$nr2") || $(vpad "$nr3")"
 logs="$work/export/logs"
 {
 	cat <<'EOF'
@@ -169,18 +183,41 @@ EOF
 	cat <<EOF
 DELETE FROM security_targets WHERE dir NOT IN (SELECT dir FROM measurements);
 DELETE FROM security_runs WHERE dir NOT IN (SELECT dir FROM measurements);
+CREATE TEMP TABLE history AS
+SELECT dir, tool, n, k, release, row_number() OVER (PARTITION BY k ORDER BY o DESC, stamp DESC) AS r FROM (
+  SELECT f.dir, f.tool, f.n, m.stamp, $vkey AS o,
+         coalesce(m.app_id, m.host || '/' || lower(m.owner) || '/' || lower(m.repo) || '/' || coalesce(m.subdir, ''))
+           || char(10) || substr(f.text, 1, instr(f.text || char(10), char(10)) - 1) AS k,
+         coalesce(m.version, m.dir) || CASE WHEN m.server IS NULL THEN '' WHEN m.server = 'master' THEN ' in master'
+           ELSE ' in Nextcloud ' || ltrim(m.server, 'v') END AS release
+    FROM findings f JOIN measurements m ON m.dir = f.dir
+   WHERE f.tool = 'security/secrets-audit' AND f.id = 'secret-in-history');
+CREATE INDEX temp.history_k ON history (k, r);
+CREATE TEMP TABLE counted_in AS
+SELECT h.dir, h.tool, h.n, c.release FROM history h JOIN history c ON c.k = h.k AND c.r = 1 WHERE h.r > 1;
+CREATE UNIQUE INDEX temp.counted_in_finding ON counted_in (dir, tool, n);
+CREATE TEMP TABLE found_in AS
+SELECT c.dir, c.tool, c.n, (SELECT json_group_array(release) FROM (SELECT release FROM history h WHERE h.k = c.k ORDER BY h.r)) AS releases
+  FROM history c WHERE c.r = 1 AND EXISTS (SELECT 1 FROM history h WHERE h.k = c.k AND h.r > 1);
+CREATE UNIQUE INDEX temp.found_in_finding ON found_in (dir, tool, n);
 UPDATE measurements AS m SET
   sec = (SELECT count(DISTINCT f.tool || char(10) || CASE WHEN f.tool LIKE 'security/lint-%' THEN '' ELSE f.n END)
-           FROM findings f WHERE f.dir = m.dir AND f.level = 'warn' AND f.security),
+           FROM findings f WHERE f.dir = m.dir AND f.level = 'warn' AND f.security
+            AND NOT EXISTS (SELECT 1 FROM counted_in e WHERE e.dir = f.dir AND e.tool = f.tool AND e.n = f.n)),
   sec_other = (SELECT count(DISTINCT f.tool || char(10) || CASE WHEN f.tool LIKE 'security/lint-%' THEN '' ELSE f.n END)
-           FROM findings f WHERE f.dir = m.dir AND f.level = 'warn' AND NOT f.security)
+           FROM findings f WHERE f.dir = m.dir AND f.level = 'warn' AND NOT f.security
+            AND NOT EXISTS (SELECT 1 FROM counted_in e WHERE e.dir = f.dir AND e.tool = f.tool AND e.n = f.n))
  WHERE m.dir IN (SELECT dir FROM security_runs);
 CREATE TEMP TABLE exported AS
 SELECT sum(writefile('${logs//$sq/$sq$sq}/' || r.dir || '/findings.json',
   (SELECT json_group_array(json(o)) FROM (
-     SELECT json_object('tool', f.tool, 'level', f.level, 'id', f.id, 'text', f.text, 'file', f.file, 'line', f.line,
-                        'security', json(CASE WHEN f.security THEN 'true' ELSE 'false' END)) AS o
-       FROM findings f WHERE f.dir = r.dir ORDER BY f.tool, f.n)))) AS bytes
+     SELECT json_patch(json_object('tool', f.tool, 'level', f.level, 'id', f.id, 'text', f.text, 'file', f.file, 'line', f.line,
+                        'security', json(CASE WHEN f.security THEN 'true' ELSE 'false' END)),
+                       json_object('counted_in', e.release, 'found_in', json(i.releases))) AS o
+       FROM findings f
+       LEFT JOIN counted_in e ON e.dir = f.dir AND e.tool = f.tool AND e.n = f.n
+       LEFT JOIN found_in i ON i.dir = f.dir AND i.tool = f.tool AND i.n = f.n
+      WHERE f.dir = r.dir ORDER BY f.tool, f.n)))) AS bytes
   FROM security_runs r;
 DROP TABLE findings;
 VACUUM;

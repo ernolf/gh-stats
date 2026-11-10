@@ -122,7 +122,7 @@ async function load() {
 	}
 	securityResults = query("SELECT count(*) AS n FROM sqlite_master WHERE type = 'table' AND name = 'security_runs'")[0].n > 0
 	if (securityResults) {
-		const head = el('th', { 'data-sort': 'sec', class: 'num check-col', title: 'security findings the security targets found in the release shown' }, 'Security')
+		const head = el('th', { 'data-sort': 'sec', class: 'num check-col', title: 'security findings the security targets found in the release shown, a secret in the history in the newest release it was found in only' }, 'Security')
 		document.querySelector('#overview th[data-sort="warn"]').before(head)
 	}
 	// The SQLite that sql.js compiled in, as the engine itself reports it.
@@ -1179,15 +1179,17 @@ function defectNotes(fields) {
 }
 
 // The findings of a lint or security target with a file come as one entry per
-// file, level and whether they are security findings, which opens into its
-// messages, numbered; the first line of a message drops the file the entry
-// names already. Other findings stay as they are.
+// file, level, whether they are security findings and the release they count
+// in, which opens into its messages, numbered; the first line of a message
+// drops the file the entry names already. A secret in the history names the
+// releases it was found in where it counts, and the release it counts in where
+// it does not. Other findings stay as they are.
 function findingEntries(tool, fs, under = new Map()) {
 	const security = tool.startsWith('security/')
 	if (!security && !baseTool(tool).startsWith('lint-')) {
 		return fs.map((f) => finding(f, under))
 	}
-	return [...Map.groupBy(fs, (f) => (f.file === null ? f : `${f.level}\n${f.security === true}\n${f.file}`)).values()].map((group) => {
+	return [...Map.groupBy(fs, (f) => (f.file === null ? f : `${f.level}\n${f.security === true}\n${f.counted_in ?? ''}\n${f.file}`)).values()].map((group) => {
 		const f = group[0]
 		if (f.file === null) {
 			return finding(f, under)
@@ -1195,8 +1197,9 @@ function findingEntries(tool, fs, under = new Map()) {
 		const noun = security ? `${f.security === true ? 'security ' : ''}finding` : 'message'
 		return el('details', { class: `finding ${f.level ?? ''}` },
 			el('summary', {}, el('span', { class: 'level' }, f.level ?? ''), ' ', el('code', {}, f.file),
-				` ${group.length} ${noun}${group.length === 1 ? '' : 's'}`),
-			el('ol', {}, ...group.map((g) => el('li', {}, el('pre', {}, g.text.startsWith(`${g.file}:`) ? g.text.slice(g.file.length + 1) : g.text)))))
+				` ${group.length} ${noun}${group.length === 1 ? '' : 's'}`, f.counted_in ? `, counted in ${f.counted_in}` : ''),
+			el('ol', {}, ...group.map((g) => el('li', {}, el('pre', {}, g.text.startsWith(`${g.file}:`) ? g.text.slice(g.file.length + 1) : g.text),
+				...(g.found_in ? [el('p', { class: 'hint' }, `Found in ${g.found_in.join(', ')}.`)] : [])))))
 	})
 }
 
@@ -1260,14 +1263,15 @@ function infoXmlLink(m) {
 // first, those with a security finding before the others, then the tools with
 // warnings; within a tool the security findings come first, ok and info only as
 // counts that open on demand. A security target names how many of its warnings
-// are security findings, counted as its column counts them. A finding that
+// are security findings, counted as its column counts them, without a secret
+// in the history that counts in another release. A finding that
 // another one covers shows beneath that one only, and a target all of whose
 // findings are covered has no section. The head of a measurement, its name and badges, stays in view while
 // its findings scroll beneath it, with the button that collapses the row and,
 // while it sticks, the one back to the start of the measurement. The findings,
 // and the badges taken from them, follow once their file has arrived.
 function checksBlock(m, collapse) {
-	const rank = ([tool, fs]) => (tool.startsWith('security/') ? 4 : 0) + (fs.some((f) => f.level === 'warn' && f.security) ? 2 : 0)
+	const rank = ([tool, fs]) => (tool.startsWith('security/') ? 4 : 0) + (fs.some((f) => f.level === 'warn' && f.security && !f.counted_in) ? 2 : 0)
 		+ (fs.some((f) => f.level === 'warn') ? 1 : 0)
 	const fields = fieldsOf(m.dir)
 	const run = el('section', { class: 'run' })
@@ -1297,9 +1301,11 @@ function checksBlock(m, collapse) {
 				const warns = fs.filter((f) => f.level === 'warn').sort((a, b) => Number(b.security === true) - Number(a.security === true))
 				const rest = fs.filter((f) => f.level !== 'warn')
 				const counts = ['ok', 'info'].map((l) => [l, rest.filter((f) => f.level === l).length]).filter(([, n]) => n)
+				const elsewhere = warns.filter((f) => f.counted_in).length
 				const split = tool.startsWith('security/') && warns.length
 					? [' ', el('span', { class: 'check-of' },
-						`${counted(tool, warns.filter((f) => f.security))} security, ${counted(tool, warns.filter((f) => !f.security))} other`)]
+						`${counted(tool, warns.filter((f) => f.security && !f.counted_in))} security, ${counted(tool, warns.filter((f) => !f.security && !f.counted_in))} other`,
+						elsewhere ? `, ${elsewhere} counted in another release` : '')]
 					: []
 				return el('div', { class: tool.startsWith('security/') ? 'tool security' : 'tool' }, el('h5', {}, tool, ...split),
 					...(warns.length && baseTool(tool).startsWith('lint-') ? [lintFold(tool, warns)] : findingEntries(tool, warns, under)),
@@ -1432,7 +1438,7 @@ function counted(tool, fs) {
 
 // The column head of the security results, where the database has them.
 function securityHead() {
-	return securityResults ? [el('th', { class: 'num', title: 'security findings the security targets found in the release shown' }, 'Security')] : []
+	return securityResults ? [el('th', { class: 'num', title: 'security findings the security targets found in the release shown, a secret in the history in the newest release it was found in only' }, 'Security')] : []
 }
 
 // The abandoned packages deps-audit found in the measurements of a release,
