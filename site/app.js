@@ -286,7 +286,7 @@ function categories() {
 // warn, sec, sec_other and abandoned are the counts gh-stats-site-db and
 // gh-stats-security-site take from the findings.
 const MEASUREMENT = `m.dir, m.host, m.owner, m.repo, m.subdir, m.app_id, m.version, m.restrictable, m.server, m.tag, m.tarball, m.signed, m.diff, m.info_xml,
-	m.warn, m.sec, m.sec_other, m.abandoned,
+	m.declared, m.shipped_version, m.warn, m.sec, m.sec_other, m.abandoned,
 	(SELECT s.repo FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_repo,
 	(SELECT s.path FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_path,
 	(SELECT s.app_ref FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_ref`
@@ -1124,17 +1124,38 @@ function coverage(fs) {
 
 // The release diff compares the tarball the App Store ships, or the directory
 // of the app in the server archive, with the tree the build stages, by kind of
-// difference and class of file.
+// difference and class of file, and names the version its info.xml declares.
 function diffText(m) {
 	const archive = m.server ? `apps/${m.app_id}/ of the server archive ${m.tarball}` : `Release tarball ${m.tarball}`
+	const declares = m.shipped_version ? ` Its appinfo/info.xml declares ${m.shipped_version}.` : ''
 	if (m.diff === null) {
-		return m.tarball ? `${archive} not compared.` : m.server ? 'No server archive.' : 'No release tarball.'
+		return m.tarball ? `${archive} not compared.${declares}` : m.server ? 'No server archive.' : 'No release tarball.'
 	}
 	const kinds = Object.entries(JSON.parse(m.diff)).map(([kind, classes]) => {
 		const n = Object.values(classes).reduce((a, b) => a + b, 0)
 		return `${kind} ${n} (${Object.entries(classes).map(([c, k]) => `${c} ${k}`).join(', ')})`
 	})
-	return `${archive}${m.signed ? ', signed' : ''}: ${kinds.join(', ') || 'no entries'}.`
+	return `${archive}${m.signed ? ', signed' : ''}: ${kinds.join(', ') || 'no entries'}.${declares}`
+}
+
+// The checks read the info.xml of the tag, the servers that of the tarball. A
+// tarball that declares the release while the tag does not was not packaged
+// from the tag as it stands, which version-drift cannot tell from a forgotten
+// bump; a tarball that does not declare the release ships a wrong version.
+function shippedVersionNote(m) {
+	if (m.server || !m.shipped_version || !m.version) {
+		return []
+	}
+	if (m.shipped_version !== m.version) {
+		return [el('p', { class: 'hint' }, `The tarball declares ${m.shipped_version} in its appinfo/info.xml, not ${m.version}: this release ships a wrong version.`)]
+	}
+	if (m.declared === null || m.declared === m.version) {
+		return []
+	}
+	return [el('p', { class: 'hint' }, `The tarball declares ${m.version}, the appinfo/info.xml of the tag ${m.declared}: the tarball was not packaged from the tag as it stands, `
+		+ `the version is set when the release is packaged or the tarball comes from another commit. Either way the tag does not hold the source that ships: `
+		+ `a build from the tag declares ${m.declared}, and the tag cannot be compared with the tarball file by file. `
+		+ 'What version-drift finds in the other files of the tag stands as it is.')]
 }
 
 // The shipped packages by licence as they state it, most packages first, as
@@ -1287,7 +1308,7 @@ function checksBlock(m, collapse) {
 	const status = el('p', { class: 'hint' })
 	run.append(head,
 		...defectNotes(fields),
-		...(isServerRun(m) ? [] : [el('p', {}, diffText(m))]),
+		...(isServerRun(m) ? [] : [el('p', {}, diffText(m)), ...shippedVersionNote(m)]),
 		...licenceText(fields),
 		...(securityResults ? securityTargets(m) : []),
 		status)

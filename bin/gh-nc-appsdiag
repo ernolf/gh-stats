@@ -303,7 +303,8 @@ a repository on another host below a directory of that host:
       release/diff.txt    the staged tree against the shipped tarball, as diff
                           wrote it
       release/diff.tsv    the same, one path per line: kind, class, path
-      release/diff.json   the same with tarball, signature and counts
+      release/diff.json   the same with tarball, signature and counts, and
+                          the version the shipped appinfo/info.xml declares
 
 A difference is of the kind shipped-only, staged-only or differ, and of the
 class signature (appinfo/signature.json, only the store signs), composer-autoload
@@ -620,6 +621,7 @@ build_name=""
 build_kind=""
 rel_tarball=""
 rel_bytes=""
+rel_version=""
 integrity_dir=""
 integrity_root=""
 summary_written=0
@@ -1597,6 +1599,13 @@ release_diff() {
 	fi
 	shipped="$dir/shipped/$app_id"
 	[ -d "$shipped" ] || shipped="$(find "$dir/shipped" -mindepth 1 -maxdepth 1 -type d | head -1)"
+	# An app that sets its version when it packages the release keeps a
+	# placeholder in the info.xml of its tags, so only the shipped one says what
+	# version reaches the servers.
+	if [ -f "$shipped/appinfo/info.xml" ]; then
+		rel_version="$(sed -n 's:.*<version>\(.*\)</version>.*:\1:p' "$shipped/appinfo/info.xml" | head -1)"
+		log "   the shipped appinfo/info.xml declares ${rel_version:-no version}"
+	fi
 	signature_check "$dir" "$shipped"
 	staged="$APP_DIR/build/stage/$app_id"
 	# A dist that ran and staged nothing fails the same way a second time.
@@ -1685,9 +1694,9 @@ diff_report() {
 	done
 	log "   by class: $(cut -f2 "$dir/diff.tsv" | sort | uniq -c | awk '{ printf "%s%s %s", (NR > 1 ? ", " : ""), $2, $1 }')"
 	[ -x "$JQ" ] || return 0
-	"$JQ" -R -s --arg tarball "$rel_tarball" --argjson bytes "${rel_bytes:-null}" --argjson signed "$signed" '
+	"$JQ" -R -s --arg tarball "$rel_tarball" --argjson bytes "${rel_bytes:-null}" --argjson signed "$signed" --arg version "$rel_version" '
 		[split("\n")[] | select(length > 0) | split("\t") | {kind: .[0], class: .[1], path: .[2]}] as $e
-		| {tarball: $tarball, bytes: $bytes, signed: $signed,
+		| {tarball: $tarball, bytes: $bytes, signed: $signed, version: (if $version == "" then null else $version end),
 		   counts: ($e | group_by(.kind) | map({key: .[0].kind, value: (group_by(.class) | map({key: .[0].class, value: length}) | from_entries)}) | from_entries),
 		   entries: $e}' "$dir/diff.tsv" >"$dir/diff.json" \
 		&& log "   json  $dir/diff.json" || warn "could not write $dir/diff.json"
@@ -1754,7 +1763,7 @@ write_summary_json() {
 		--arg ncmain "$ncmake_main" --arg ncdiffers "$ncmake_differs" --argjson ncchecked "$ncmake_checked" \
 		--arg host "$host" --arg cpus "$cpus" --arg mem "$mem" --arg cpu "$cpu" \
 		--argjson inv "$inv" --argjson transifex "$transifex" --arg bname "$build_name" --arg bkind "$build_kind" --argjson files "$files" \
-		--arg tarball "$rel_tarball" --arg bytes "$rel_bytes" --argjson diff "$diff" \
+		--arg tarball "$rel_tarball" --arg bytes "$rel_bytes" --arg shipped_version "$rel_version" --argjson diff "$diff" \
 		--argjson stopped "$stopped" --argjson invalid "$invalid" --arg analysers " $JSON_TARGETS " '
 		def nul($s): if $s == "" then null else $s end;
 		def num($s): if $s == "" then null else ($s | tonumber) end;
@@ -1777,7 +1786,7 @@ write_summary_json() {
 		          json_invalid: ($invalid[.[0]] // null)}],
 		 files: $files,
 		 release: (if $tarball == "" then null else
-			{tarball: $tarball, bytes: num($bytes), diff: (if $diff == null then null else "release/diff.json" end),
+			{tarball: $tarball, bytes: num($bytes), version: nul($shipped_version), diff: (if $diff == null then null else "release/diff.json" end),
 			 signed: $diff.signed, counts: $diff.counts} end)}' >"$RUN_DIR/summary.json" \
 		|| { warn "could not write $RUN_DIR/summary.json"; return 0; }
 	log "   json  $RUN_DIR/summary.json"
