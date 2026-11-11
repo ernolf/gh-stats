@@ -1142,8 +1142,7 @@ function diffText(m) {
 // tarball that declares the release while the tag does not was not packaged
 // from the tag as it stands, which version-drift cannot tell from a forgotten
 // bump; a tarball that does not declare the release ships a wrong version. The
-// note stands beneath the version-drift finding of the run, and in the release
-// block where the run has none.
+// note stands beneath the version-drift finding of the run.
 function shippedVersionNote(m) {
 	if (m.server || !m.shipped_version || !m.version) {
 		return []
@@ -1308,10 +1307,9 @@ function checksBlock(m, collapse) {
 			? el('h4', {}, `${SERVER_REPO} ${m.server} `, el('a', { href: `${results}/${m.dir}` }, 'run directory'))
 			: el('h4', {}, `${m.app_id ?? m.dir} ${m.version ?? ''} `, el('a', { href: `${results}/${m.dir}` }, 'run directory'), ...infoXmlLink(m)))
 	const status = el('p', { class: 'hint' })
-	const diff = el('p', {}, diffText(m))
 	run.append(head,
 		...defectNotes(fields),
-		...(isServerRun(m) ? [] : [diff]),
+		...(isServerRun(m) ? [] : [el('p', {}, diffText(m))]),
 		...licenceText(fields),
 		...(securityResults ? securityTargets(m) : []),
 		status)
@@ -1324,8 +1322,6 @@ function checksBlock(m, collapse) {
 			const notes = new Map()
 			if (drift) {
 				notes.set(drift, shippedVersionNote(m))
-			} else if (!isServerRun(m)) {
-				diff.after(...shippedVersionNote(m))
 			}
 			const tools = [...Map.groupBy(fs.filter((f) => !covered.has(f)), (f) => f.tool)].sort((a, b) => rank(b) - rank(a))
 			status.replaceWith(...tools.map(([tool, fs]) => {
