@@ -1086,9 +1086,9 @@ function badge(b, fact) {
 // == Checks ==
 
 // A finding that groups files ends in their paths, as many as it counts, which
-// fold away beneath its text. The findings of other targets it covers fold
-// beneath it, by target.
-function finding(f, under = new Map()) {
+// fold away beneath its text. A note on it follows its text. The findings of
+// other targets it covers fold beneath it, by target.
+function finding(f, under = new Map(), notes = new Map()) {
 	const lines = f.count ? f.text.split('\n') : []
 	const text = f.count
 		? [el('pre', {}, lines.slice(0, -f.count).join('\n')),
@@ -1100,7 +1100,7 @@ function finding(f, under = new Map()) {
 			...[...Map.groupBy(covered, (c) => c.tool)].flatMap(([tool, xs]) => [el('h6', {}, tool), ...findingEntries(tool, xs)]))]
 		: []
 	return el('div', { class: `finding ${f.level ?? ''}` },
-		el('span', { class: 'level' }, f.level ?? ''), ' ', el('code', {}, f.id ?? ''), ...text, ...more)
+		el('span', { class: 'level' }, f.level ?? ''), ' ', el('code', {}, f.id ?? ''), ...text, ...(notes.get(f) ?? []), ...more)
 }
 
 // Which findings of a run another finding covers: one that names the target,
@@ -1141,7 +1141,9 @@ function diffText(m) {
 // The checks read the info.xml of the tag, the servers that of the tarball. A
 // tarball that declares the release while the tag does not was not packaged
 // from the tag as it stands, which version-drift cannot tell from a forgotten
-// bump; a tarball that does not declare the release ships a wrong version.
+// bump; a tarball that does not declare the release ships a wrong version. The
+// note stands beneath the version-drift finding of the run, and in the release
+// block where the run has none.
 function shippedVersionNote(m) {
 	if (m.server || !m.shipped_version || !m.version) {
 		return []
@@ -1205,15 +1207,15 @@ function defectNotes(fields) {
 // drops the file the entry names already. A secret in the history names the
 // releases it was found in where it counts, and the release it counts in where
 // it does not. Other findings stay as they are.
-function findingEntries(tool, fs, under = new Map()) {
+function findingEntries(tool, fs, under = new Map(), notes = new Map()) {
 	const security = tool.startsWith('security/')
 	if (!security && !baseTool(tool).startsWith('lint-')) {
-		return fs.map((f) => finding(f, under))
+		return fs.map((f) => finding(f, under, notes))
 	}
 	return [...Map.groupBy(fs, (f) => (f.file === null ? f : `${f.level}\n${f.security === true}\n${f.counted_in ?? ''}\n${f.file}`)).values()].map((group) => {
 		const f = group[0]
 		if (f.file === null) {
-			return finding(f, under)
+			return finding(f, under, notes)
 		}
 		const noun = security ? `${f.security === true ? 'security ' : ''}finding` : 'message'
 		return el('details', { class: `finding ${f.level ?? ''}` },
@@ -1241,15 +1243,15 @@ function securityTargets(m) {
 }
 
 // The warnings of a lint target are one warning, folded: its summary counts
-// the messages and the files they are in, and it opens into the hint and the
-// entries per file.
-function lintFold(tool, warns) {
+// the messages and the files they are in, and it opens into the hint, the notes
+// on its warnings and the entries per file.
+function lintFold(tool, warns, notes = new Map()) {
 	const noun = tool.startsWith('security/') ? 'finding' : 'message'
 	const files = new Set(warns.filter((f) => f.file !== null).map((f) => f.file)).size
 	return el('details', { class: 'finding warn' },
 		el('summary', {}, el('span', { class: 'level' }, 'warn'), ' ', `${warns.length} ${noun}${warns.length === 1 ? '' : 's'}`,
 			files ? ` in ${files} file${files === 1 ? '' : 's'}` : ''),
-		lintHint(baseTool(tool)), ...findingEntries(tool, warns))
+		lintHint(baseTool(tool)), ...warns.flatMap((f) => notes.get(f) ?? []), ...findingEntries(tool, warns))
 }
 
 // Where a lint target warns, the page names the ncmake target the warnings come
@@ -1306,9 +1308,10 @@ function checksBlock(m, collapse) {
 			? el('h4', {}, `${SERVER_REPO} ${m.server} `, el('a', { href: `${results}/${m.dir}` }, 'run directory'))
 			: el('h4', {}, `${m.app_id ?? m.dir} ${m.version ?? ''} `, el('a', { href: `${results}/${m.dir}` }, 'run directory'), ...infoXmlLink(m)))
 	const status = el('p', { class: 'hint' })
+	const diff = el('p', {}, diffText(m))
 	run.append(head,
 		...defectNotes(fields),
-		...(isServerRun(m) ? [] : [el('p', {}, diffText(m)), ...shippedVersionNote(m)]),
+		...(isServerRun(m) ? [] : [diff]),
 		...licenceText(fields),
 		...(securityResults ? securityTargets(m) : []),
 		status)
@@ -1317,6 +1320,13 @@ function checksBlock(m, collapse) {
 		findingsOf(m).then((fs) => {
 			head.append(...badgeRow(fs, fields))
 			const { under, covered } = coverage(fs)
+			const drift = fs.find((f) => f.id === 'version-drift' && f.level === 'warn' && !covered.has(f))
+			const notes = new Map()
+			if (drift) {
+				notes.set(drift, shippedVersionNote(m))
+			} else if (!isServerRun(m)) {
+				diff.after(...shippedVersionNote(m))
+			}
 			const tools = [...Map.groupBy(fs.filter((f) => !covered.has(f)), (f) => f.tool)].sort((a, b) => rank(b) - rank(a))
 			status.replaceWith(...tools.map(([tool, fs]) => {
 				const warns = fs.filter((f) => f.level === 'warn').sort((a, b) => Number(b.security === true) - Number(a.security === true))
@@ -1329,9 +1339,9 @@ function checksBlock(m, collapse) {
 						elsewhere ? `, ${elsewhere} counted in another release` : '')]
 					: []
 				return el('div', { class: tool.startsWith('security/') ? 'tool security' : 'tool' }, el('h5', {}, tool, ...split),
-					...(warns.length && baseTool(tool).startsWith('lint-') ? [lintFold(tool, warns)] : findingEntries(tool, warns, under)),
+					...(warns.length && baseTool(tool).startsWith('lint-') ? [lintFold(tool, warns, notes)] : findingEntries(tool, warns, under, notes)),
 					...(rest.length
-						? [el('details', {}, el('summary', {}, counts.map(([l, n]) => `${n} ${l}`).join(', ')), ...findingEntries(tool, rest, under))]
+						? [el('details', {}, el('summary', {}, counts.map(([l, n]) => `${n} ${l}`).join(', ')), ...findingEntries(tool, rest, under, notes))]
 						: []))
 			}))
 		}, (e) => loadFailed(status, 'The findings of this run', e, load))
