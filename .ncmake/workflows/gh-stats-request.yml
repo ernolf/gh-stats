@@ -219,8 +219,8 @@ jobs:
               gh issue close "$NUMBER" --reason "not planned" --comment "The catalogue lists no app \`$APP\` in the archive of Nextcloud $SERVER."
               exit 1
             fi
-            jq -r --arg ref "$ref" '"-s \($ref) \(.repo)" + (if .path != "" then ":" + .path else "" end)' "$state/app.json" \
-              | tr '[:upper:]' '[:lower:]' > "$state/lines"
+            jq -r --arg ref "$ref" '"-s \($ref) \(.repo)" + (if .path != "" then ":" + .path else "" end)' "$state/app.json" > "$state/apps"
+            tr '[:upper:]' '[:lower:]' < "$state/apps" > "$state/lines"
             # The directory of its runs below apps/ of the data branch, as
             # gh-nc-appsdiag names it: an app below the root of its repository
             # has its id between the repository and the server release.
@@ -243,8 +243,8 @@ jobs:
           gh release download "$CATALOGUE_TAG" -p sources.json -D "$state" 2>/dev/null || :
           export SOURCES_CACHE="$state/sources.json"
           printf '%s %s\n' "$APP" "$VERSION" > "$state/versions"
-          bin/gh-nc-appslist -v "$state/versions" -o - | sed '/^#/d' | tr '[:upper:]' '[:lower:]' \
-            | LC_ALL=C sort -u > "$state/lines"
+          bin/gh-nc-appslist -v "$state/versions" -o - | sed '/^#/d' | LC_ALL=C sort -u > "$state/apps"
+          tr '[:upper:]' '[:lower:]' < "$state/apps" | LC_ALL=C sort -u > "$state/lines"
           if [ ! -s "$state/lines" ]; then
             # An unlisted app is measured from its tag, as long as no release
             # carries a tarball to measure instead.
@@ -255,8 +255,7 @@ jobs:
               | select(any($vs[]; . == $v))
               | (if .host == "github.com" then "" else .host + "/" end) + .repo
                 + (if .path != "" then ":" + .path else "" end) + " " + $v
-                + (if $vs[0] == $v then " newest" else "" end)' "$state/unlisted.json" \
-              | tr '[:upper:]' '[:lower:]' > "$state/unlisted"
+                + (if $vs[0] == $v then " newest" else "" end)' "$state/unlisted.json" > "$state/unlisted"
             if [ ! -s "$state/unlisted" ]; then
               gh issue close "$NUMBER" --reason "not planned" --comment "The catalogue ships no stable release $VERSION of \`$APP\` from a repository gh-stats measures, and lists no app \`$APP\` outside the App Store with a tag of $VERSION and no release tarball that is no ExApp."
               exit 1
@@ -265,7 +264,8 @@ jobs:
               gh issue close "$NUMBER" --reason "not planned" --comment "$VERSION is the newest tag of \`$APP\`, its check stays."
               exit 1
             fi
-            cut -d ' ' -f 1,2 "$state/unlisted" > "$state/lines"
+            cut -d ' ' -f 1,2 "$state/unlisted" > "$state/apps"
+            tr '[:upper:]' '[:lower:]' < "$state/apps" > "$state/lines"
             exit 0
           fi
           if [ "$KIND" = remove ]; then
@@ -366,11 +366,14 @@ jobs:
           exit 1
 
       # gh-stats-measure.yml comments on the issue with a link to its run and closes it.
+      # It gets the lines as the catalogue writes the repository: gh-nc-appsdiag
+      # names the run directory after it, and in another case the runs of the
+      # version would lie apart from those of every other measurement.
       - name: Send the version to the measurement
         if: env.KIND == 'measure'
         run: |
           jq -R -n -c --arg type "$EVENT_TYPE" --argjson issue "$NUMBER" \
-            '{event_type: $type, client_payload: {apps: [inputs | select(length > 0)], issue: $issue}}' "$STATE/lines" \
+            '{event_type: $type, client_payload: {apps: [inputs | select(length > 0)], issue: $issue}}' "$STATE/apps" \
             | gh api --method POST "repos/$GH_REPO/dispatches" --input -
           echo "::notice::Sent $APP $WHICH to the measurement"
 
