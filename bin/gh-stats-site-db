@@ -663,7 +663,9 @@ CREATE INDEX projects_project ON projects (project);
 -- assets are not published yet. A repository may tag more than its app, a
 -- desktop client, a server or a branch, so the lines of a project with an app
 -- come from the releases the catalogue links; the others still count as older
--- releases of the project.
+-- releases of the project. Stars, forks and watchers belong to the project,
+-- not to a release: the newest snapshot of each of its repositories, summed,
+-- and NULL while the sampler has none.
 CREATE TEMP TABLE linked AS
 SELECT DISTINCT j.project FROM apps a JOIN projects j ON a.host = j.host AND a.owner = j.owner AND a.repo = j.repo;
 CREATE TABLE summary (
@@ -679,6 +681,9 @@ CREATE TABLE summary (
   d1        INTEGER,
   d7        INTEGER,
   d30       INTEGER,
+  stars     INTEGER,
+  forks     INTEGER,
+  watchers  INTEGER,
   PRIMARY KEY (project, line)
 ) WITHOUT ROWID;
 INSERT INTO summary
@@ -733,6 +738,15 @@ pivot AS (
          sum(CASE WHEN d = 7 THEN v END) AS v7, sum(CASE WHEN d = 30 THEN v END) AS v30
     FROM (SELECT project, line, d, coalesce(downloads, 0) AS v FROM at)
    GROUP BY project, line
+),
+popular AS (
+  SELECT j.project, sum(x.stars) AS stars, sum(x.forks) AS forks, sum(x.watchers) AS watchers
+    FROM projects j JOIN (
+      SELECT host, owner, repo, stars, forks, watchers,
+             row_number() OVER (PARTITION BY host, owner, repo ORDER BY ts DESC) AS n
+        FROM repo_stats) x ON x.host = j.host AND x.owner = j.owner AND x.repo = j.repo
+   WHERE x.n = 1
+   GROUP BY j.project
 )
 SELECT p.project, p.line, h.host, h.owner, h.repo, p.tag, p.published,
        (SELECT f.spec FROM platforms f JOIN projects j ON f.host = j.host AND f.owner = j.owner AND f.repo = j.repo
@@ -740,11 +754,13 @@ SELECT p.project, p.line, h.host, h.owner, h.repo, p.tag, p.published,
        coalesce(v.v0, 0),
        CASE WHEN max(p.published, s.first) <= now.t - 86400 THEN coalesce(v.v0 - v.v1, 0) END,
        CASE WHEN max(p.published, s.first) <= now.t - 7 * 86400 THEN coalesce(v.v0 - v.v7, 0) END,
-       CASE WHEN max(p.published, s.first) <= now.t - 30 * 86400 THEN coalesce(v.v0 - v.v30, 0) END
+       CASE WHEN max(p.published, s.first) <= now.t - 30 * 86400 THEN coalesce(v.v0 - v.v30, 0) END,
+       y.stars, y.forks, y.watchers
   FROM picked p
   JOIN since s ON s.project = p.project AND s.line = p.line
   JOIN home h ON h.project = p.project AND h.line = p.line AND h.n = 1
   LEFT JOIN pivot v ON v.project = p.project AND v.line = p.line
+  LEFT JOIN popular y ON y.project = p.project
   CROSS JOIN now;
 
 -- The version is the one the run was asked for, the version of the App Store
