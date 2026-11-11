@@ -58,8 +58,20 @@
 
 name: Act on a measurement request
 # Every issue starts this workflow, and without the name its run shows the
-# title of the issue, as if it were a measurement.
-run-name: 'Act on a measurement request: #${{ github.event.issue.number }}'
+# title of the issue, as if it were a measurement. A request opened with a label
+# starts it twice, on opened and on labeled, so the name says which run acts:
+# the title shows only where the permission job takes the issue as a request,
+# the conditions are the same.
+run-name: >-
+  ${{
+  github.event.issue.state == 'open'
+  && (github.event.action == 'opened' || github.event.label.name == 'approved')
+  && (startsWith(github.event.issue.title, 'Measure ') || startsWith(github.event.issue.title, 'Remove the check of ')
+    || (startsWith(github.event.issue.title, 'Remove ') && endsWith(github.event.issue.title, ' from the database')))
+  && format('Request #{0}: {1}', github.event.issue.number, github.event.issue.title)
+  || github.event.action == 'labeled' && format('Issue #{0}: label {1}, nothing to do', github.event.issue.number, github.event.label.name)
+  || format('Issue #{0}: no request, nothing to do', github.event.issue.number)
+  }}
 
 on:
   issues:
