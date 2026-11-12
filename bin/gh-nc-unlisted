@@ -9,8 +9,11 @@
 # empty, and keeps every tracked appinfo/info.xml outside a test or example
 # directory that declares a <nextcloud> dependency. The repositories
 # UNLISTED_TOOLS names hold templates and developer tools, whose apps are
-# marked as such. The result replaces its previous copy, from which a
-# repository not pushed since is taken over instead of being read again.
+# marked as such. The members of the organisations UNLISTED_ORGS names are
+# owners as well; the repositories of one that has no app and that nothing else
+# names stay out of the result, in a file of their own that is not published.
+# The result replaces its previous copy, from which a repository not pushed
+# since is taken over instead of being read again.
 
 # == Config ==
 # Optional site config shared with gh-stats and gh-release-sampler. If
@@ -32,6 +35,10 @@ UNLISTED_FILE="${UNLISTED_FILE:-${STATE_DIR}/unlisted.json}"
 APPSTORE_CACHE="${APPSTORE_CACHE:-${STATE_DIR}/apps.json}"
 APPSTORE_APPAPI_CACHE="${APPSTORE_APPAPI_CACHE:-$(dirname "$APPSTORE_CACHE")/appapi_apps.json}"
 SHIPPED_CACHE="${SHIPPED_CACHE:-$(dirname "$APPSTORE_CACHE")/shipped.json}"
+# The members UNLISTED_ORGS added and their repositories that stay out of
+# UNLISTED_FILE. It names who is a member of which organisation, so it is kept
+# beside the state and never published.
+UNLISTED_ORGS_CACHE="${UNLISTED_ORGS_CACHE:-${STATE_DIR}/unlisted-orgs.json}"
 
 # More owners or repositories to scan, and owners, repositories or app ids to
 # leave out, separated by spaces or line breaks.
@@ -40,6 +47,9 @@ UNLISTED_EXCLUDE="${UNLISTED_EXCLUDE:-}"
 # The repositories of templates and developer tools, separated by spaces or line
 # breaks; they are read as those of UNLISTED_INCLUDE are.
 UNLISTED_TOOLS="${UNLISTED_TOOLS:-}"
+# Organisations whose members are scanned as owners as well, separated by
+# spaces or line breaks.
+UNLISTED_ORGS="${UNLISTED_ORGS:-}"
 # How many repositories a run reads before it leaves the rest to the next run;
 # one takes about two seconds. The most recently pushed are read first.
 UNLISTED_MAX_READS="${UNLISTED_MAX_READS:-3000}"
@@ -93,8 +103,9 @@ shipped by the server to <file>, as JSON:
 The owners are every owner the catalogue (apps.json and appapi_apps.json)
 names on GitHub, through the download URL of a release, the website or the
 issue tracker of an app, every owner of a repository in shipped.json, every
-owner it names on another host that answers the Forgejo and Gitea API, and
-those UNLISTED_INCLUDE names. Every repository of these owners that is no
+owner it names on another host that answers the Forgejo and Gitea API, those
+UNLISTED_INCLUDE names and every member of an organisation UNLISTED_ORGS
+names. Every repository of these owners that is no
 fork, no mirror, not archived and not empty is read, as is every repository
 UNLISTED_INCLUDE names, whatever it is; those UNLISTED_EXCLUDE names are left
 out. Of each, the tree of the default branch is fetched without its blobs and
@@ -119,6 +130,15 @@ and leaves the rest to the next run. The repositories of an owner whose
 listing fails are taken over, those of an owner that no longer exists are
 dropped.
 
+UNLISTED_ORGS names organisations as org or host/org. On GitHub their members
+are listed with the token of gh, which names the concealed ones as well when
+it belongs to a member and has the scope read:org; a Forgejo or Gitea host
+names the public ones. An owner only UNLISTED_ORGS adds is in repos with all
+its repositories once one of them has an app. Until then its repositories are
+kept in UNLISTED_ORGS_CACHE instead, with the members of each organisation, so
+<file> does not tell who is a member, and a warning does not name it. The
+members of an organisation whose listing fails are those of the previous run.
+
 apps holds the apps of repos whose id is neither one of the catalogue nor one
 of shipped.json, nor named by UNLISTED_EXCLUDE; a repository that holds an app
 of either lists none, since its other apps are its test and helper apps. Of
@@ -131,7 +151,8 @@ UNLISTED_INCLUDE and UNLISTED_EXCLUDE take owners and repositories as owner,
 owner/repo, host/owner or host/owner/repo, separated by spaces or line breaks;
 a first part with a dot is a host, without one the host is github.com.
 UNLISTED_EXCLUDE also takes app ids, as id:<app-id>. UNLISTED_TOOLS takes
-repositories only, in the same forms. An entry of another form is left out
+repositories only, in the same forms, UNLISTED_ORGS organisations only, as
+org or host/org. An entry of another form is left out
 and reported, and the others are used; once <file> is written, the run exits
 with 1. gh-release-sampler leaves out the same entries of UNLISTED_TOOLS.
 
@@ -151,6 +172,9 @@ Environment (or /etc/gh-stats/gh-stats.env):
   UNLISTED_INCLUDE       owners and repositories to scan as well
   UNLISTED_EXCLUDE       owners, repositories and app ids to leave out
   UNLISTED_TOOLS         the repositories of templates and developer tools
+  UNLISTED_ORGS          organisations whose members are scanned as well
+  UNLISTED_ORGS_CACHE    the members and their repositories that stay out of
+                         <file> (default: $GH_STATS_DIR/unlisted-orgs.json)
   UNLISTED_MAX_READS     the repositories a run reads (default: 3000)
   UNLISTED_JOBS          the listings and reads that run at once (default: 8)
   UNLISTED_RELEASES      the releases looked at for a tarball (default: 10)
@@ -182,11 +206,14 @@ prev="$tmp/prev.json"
 shipped="$tmp/shipped.json"
 echo '{}' > "$prev"
 echo '{}' > "$shipped"
+cache="$tmp/cache.json"
+echo '{}' > "$cache"
 [ ! -r "$UNLISTED_FILE" ] || cp "$UNLISTED_FILE" "$prev"
 [ ! -r "$SHIPPED_CACHE" ] || cp "$SHIPPED_CACHE" "$shipped"
+[ ! -r "$UNLISTED_ORGS_CACHE" ] || cp "$UNLISTED_ORGS_CACHE" "$cache"
 
 # == Settings ==
-# spec: one entry of UNLISTED_INCLUDE, UNLISTED_EXCLUDE or UNLISTED_TOOLS as {host, owner, repo}
+# spec: one entry of UNLISTED_INCLUDE, UNLISTED_EXCLUDE, UNLISTED_TOOLS or UNLISTED_ORGS as {host, owner, repo}
 # or {id}, keyed as the repositories are, or null when it has another form.
 # why: why the entry is left out from the variable $var, or null.
 # directory: the repository of an entry that names a directory in it, or null.
@@ -205,7 +232,8 @@ SPEC_JQ='
 		| if ($p | length) > $n and all($p[]; test("^[A-Za-z0-9_.-]+$")) then $p[:$n] | join("/") else null end;
 	def why:
 		(if .spec == null then .entry | directory else null end) as $r
-		| if $r then "a directory of a repository, it takes the repository, \($r)"
+		| if $var == "UNLISTED_ORGS" then (if .spec == null or .spec.id or .spec.repo then "it takes organisations only, org or host/org" else null end)
+		  elif $r then "a directory of a repository, it takes the repository, \($r)"
 		  elif $var == "UNLISTED_TOOLS" and .spec.repo == null then "it takes repositories only, owner/repo or host/owner/repo"
 		  elif .spec == null then "it takes owner, owner/repo, host/owner or host/owner/repo" + (if $var == "UNLISTED_EXCLUDE" then ", or id:<app-id>" else "" end)
 		  elif $var == "UNLISTED_INCLUDE" and .spec.id then "it takes no app id"
@@ -214,7 +242,7 @@ SPEC_JQ='
 # An entry of the wrong form is left out and the others are used; the run fails
 # only after the result is written, so one typo costs no other entry its apps.
 wrong=0
-for var in UNLISTED_INCLUDE UNLISTED_EXCLUDE UNLISTED_TOOLS; do
+for var in UNLISTED_INCLUDE UNLISTED_EXCLUDE UNLISTED_TOOLS UNLISTED_ORGS; do
 	"$JQ" -n -c --arg v "${!var}" --arg var "$var" "$SPEC_JQ" > "$tmp/$var.all"
 	while IFS=$'\t' read -r entry why; do
 		left_out "$var holds $entry, $why"
@@ -248,7 +276,51 @@ while read -r host; do
 		| "$JQ" -e '.version | strings' >/dev/null 2>&1; then
 		printf '%s\n' "$host" >> "$tmp/hosts"
 	fi
-done < <(awk '$1 != "github.com" { print $1 }' "$tmp/owners.all" | sort -u)
+done < <({ awk '$1 != "github.com" { print $1 }' "$tmp/owners.all"; "$JQ" -r '.[].spec.host | select(. != "github.com")' "$tmp/UNLISTED_ORGS"; } | sort -u)
+
+# members <host> <org>: the login of every member of the organisation. GitHub
+# names the concealed ones as well to the token of a member, a forge the public
+# ones.
+members() {
+	local host="$1" org="$2" page
+	if [ "$host" = github.com ]; then
+		"$GH" api --paginate "orgs/$org/members?per_page=100" --jq '.[].login'
+		return
+	fi
+	for ((page = 1; ; page++)); do
+		curl -fsS --retry "$RETRIES" --max-time 60 "https://$host/api/v1/orgs/$org/public_members?limit=50&page=$page" > "$tmp/members.page" || return 1
+		"$JQ" -r '.[].login' "$tmp/members.page"
+		[ "$("$JQ" length "$tmp/members.page")" -ge 50 ] || break
+	done
+}
+
+# The members of every organisation of UNLISTED_ORGS as "<host> <owner>", and
+# per organisation for the cache. One that cannot be listed keeps the members
+# the cache holds, so a failed request drops no owner.
+: > "$tmp/owners.members"
+: > "$tmp/orgs"
+while read -r host org key; do
+	if { [ "$host" = github.com ] || grep -qxF "$host" "$tmp/hosts"; } && members "$host" "$org" > "$tmp/members" 2>/dev/null; then
+		:
+	else
+		warn "UNLISTED_ORGS: $key was not listed, its members of the previous run are scanned"
+		"$JQ" -r --arg k "$key" '.orgs[$k][]?' "$cache" > "$tmp/members"
+	fi
+	awk -v host="$host" '{ print host " " $0 }' "$tmp/members" >> "$tmp/owners.members"
+	"$JQ" -R -s -c --arg k "$key" '{key: $k, members: (split("\n") | map(select(. != "")))}' "$tmp/members" >> "$tmp/orgs"
+done < <("$JQ" -r '.[].spec | "\(.host) \(.owner) \(.key)"' "$tmp/UNLISTED_ORGS")
+# added: the key of every owner only UNLISTED_ORGS names. hidden: those of them
+# the previous file holds no repository of, whose names stay out of the
+# warnings of this run as well.
+awk 'FILENAME == ARGV[1] { seen[tolower($0)]; next } { k = tolower($0) } !(k in seen) { seen[k]; print }' \
+	"$tmp/owners.all" "$tmp/owners.members" > "$tmp/owners.added"
+cat "$tmp/owners.added" >> "$tmp/owners.all"
+awk '{ print tolower(($1 == "github.com" ? "" : $1 "/") $2) }' "$tmp/owners.added" > "$tmp/added"
+"$JQ" -r '.repos // {} | keys[] | split("/")[:-1] | join("/")' "$prev" | sort -u > "$tmp/published"
+grep -vxFf "$tmp/published" "$tmp/added" > "$tmp/hidden" || :
+# From here on the previous file holds the repositories of the cache as well.
+"$JQ" -c -s '.[0] + {repos: ((.[1].repos // {}) + (.[0].repos // {}))}' "$prev" "$cache" > "$tmp/prev.all"
+prev="$tmp/prev.all"
 awk -v ex="$("$JQ" -r 'join(" ")' <<<"$excluded")" '
 	FILENAME == ARGV[1] { forge[$1]; next }
 	BEGIN { n = split(ex, e, " "); for (i = 1; i <= n; i++) x[e[i]] }
@@ -264,12 +336,17 @@ UTC_JQ='
 		     | (.t + "Z" | fromdate) - (if .s == "+" then 1 else -1 end) * ((.h | tonumber) * 3600 + (.m | tonumber) * 60)
 		     | todate end;'
 
-# list <n> <host> <owner>: every repository of the owner into list/<n>.json as
+# trouble <name> <detail> <unnamed>: a warning that names an owner or a
+# repository and the detail, or <unnamed> alone when <name> is empty.
+trouble() { if [ -n "$1" ]; then warn "$1: $2"; else warn "$3"; fi; }
+
+# list <n> <host> <owner> <hidden>: every repository of the owner into list/<n>.json as
 # {key, host, repo, fork, mirror, archived, empty, private, created, pushed},
 # or an empty list/<n>.gone when the owner does not exist; nothing when the
-# listing failed.
+# listing failed. A warning does not name an owner whose <hidden> is 1.
 list() {
-	local n="$1" host="$2" owner="$3" out="$tmp/list/$1" page code i
+	local n="$1" host="$2" owner="$3" out="$tmp/list/$1" name="$2/$3" unnamed="an owner UNLISTED_ORGS adds was not listed" page code i
+	[ "$4" = 0 ] || name=""
 	if [ "$host" = github.com ]; then
 		for ((i = 0; i <= RETRIES; i++)); do
 			if "$GH" repo list "$owner" --limit 100000 --json nameWithOwner,isFork,isMirror,isArchived,isEmpty,isPrivate,createdAt,pushedAt \
@@ -284,7 +361,7 @@ list() {
 				return 0
 			fi
 		done
-		warn "$host/$owner: $(tail -n 1 "$out.err")"
+		trouble "$name" "$(tail -n 1 "$out.err")" "$unnamed"
 		return 0
 	fi
 	: > "$out.raw"
@@ -294,7 +371,7 @@ list() {
 		case "$code" in
 			200) ;;
 			404) : > "$out.gone"; return 0 ;;
-			*) warn "$host/$owner: HTTP $code"; return 0 ;;
+			*) trouble "$name" "HTTP $code" "$unnamed"; return 0 ;;
 		esac
 		cat "$out.page" >> "$out.raw"
 		[ "$("$JQ" length "$out.page")" -ge 50 ] || break
@@ -311,20 +388,23 @@ element() {
 	sed -n "s:.*<$1>\([^<]*\)</$1>.*:\1:p" "$2" | sed -n "s/&lt;/</g; s/&gt;/>/g; s/&quot;/\"/g; s/&apos;/'/g; s/&amp;/\&/g; p; q"
 }
 
-# read_repo <n> <key> <host> <owner/repo>: the apps of the repository into
-# read/<n>.json as {key, apps, tag, tags, tarball}; nothing when it could not be
-# read. An info.xml with <external-app> makes an ExApp, one below a test or
-# example directory none.
+# read_repo <n> <key> <host> <owner/repo> <hidden>: the apps of the repository
+# into read/<n>.json as {key, apps, tag, tags, tarball}; nothing when it could
+# not be read. An info.xml with <external-app> makes an ExApp, one below a test
+# or example directory none. A warning does not name a repository whose
+# <hidden> is 1.
 read_repo() {
 	local test_dir='/((tests?|fixtures?|examples?|e2e)([-_][^/]*)?|[^/]*[-_](tests?|fixtures?|examples?|e2e))/'
 	local n="$1" key="$2" host="$3" slug="$4" dir="$tmp/clone/$1" f path parent nc exapp tags tarball i
 	local url="https://$host/$slug.git"
+	local name="$url"
+	[ "$5" = 0 ] || name=""
 	for ((i = 0; i <= RETRIES; i++)); do
 		rm -rf "$dir"
 		"$GIT" clone -q --depth 1 --filter=blob:none --no-checkout "$url" "$dir" 2> "$dir.err" && break
 	done
 	if [ "$i" -gt "$RETRIES" ]; then
-		warn "$url: $(tail -n 1 "$dir.err")"
+		trouble "$name" "$(tail -n 1 "$dir.err")" "a repository of an owner UNLISTED_ORGS adds was not read"
 		rm -rf "$dir" "$dir.err"
 		return 0
 	fi
@@ -384,10 +464,11 @@ read_repo() {
 
 # shellcheck disable=SC2090 # UTC_JQ is a jq definition, never split as words
 export tmp JQ GIT GH RETRIES UNLISTED_RELEASES UNLISTED_TAGS UTC_JQ
-export -f warn list element read_repo
+export -f warn trouble list element read_repo
 
-awk '{ printf "%d\0%s\0%s\0", NR, $1, $2 }' "$tmp/owners" \
-	| xargs -0 -r -n 3 -P "$UNLISTED_JOBS" bash -c 'list "$@"' _
+awk 'FILENAME == ARGV[1] { hidden[$0]; next }
+	{ k = tolower(($1 == "github.com" ? "" : $1 "/") $2); printf "%d\0%s\0%s\0%d\0", FNR, $1, $2, (k in hidden) }' "$tmp/hidden" "$tmp/owners" \
+	| xargs -0 -r -n 4 -P "$UNLISTED_JOBS" bash -c 'list "$@"' _
 # The included repositories and those of the tools, each listed on its own.
 "$JQ" -r '.[].spec | select(.repo) | "\(.host) \(.owner)/\(.repo)"' "$tmp/UNLISTED_INCLUDE" "$tmp/UNLISTED_TOOLS" > "$tmp/included"
 included_n=0
@@ -433,8 +514,9 @@ find "$tmp/list" -name '[0-9]*.json' -exec cat {} + > "$tmp/listed.json"
 	| select(($o.pushed // null) != .pushed or (($o.apps // []) != [] and (($o | has("tags") | not) or any($o.apps[]; has("exapp") | not))))
 	| [(if .key | IN($first[]) then 1 else 0 end), .pushed, .key, .host, .repo] | @tsv' "$tmp/repos" \
 	| sort -r | cut -f3- > "$tmp/stale"
-head -n "$UNLISTED_MAX_READS" "$tmp/stale" | awk -F '\t' '{ printf "%d\0%s\0%s\0%s\0", NR, $1, $2, $3 }' \
-	| xargs -0 -r -n 4 -P "$UNLISTED_JOBS" bash -c 'read_repo "$@"' _
+head -n "$UNLISTED_MAX_READS" "$tmp/stale" | awk -F '\t' 'FILENAME == ARGV[1] { hidden[$0]; next }
+	{ o = $1; sub(/\/[^\/]*$/, "", o); printf "%d\0%s\0%s\0%s\0%d\0", FNR, $1, $2, $3, (o in hidden) }' "$tmp/hidden" - \
+	| xargs -0 -r -n 5 -P "$UNLISTED_JOBS" bash -c 'read_repo "$@"' _
 find "$tmp/read" -name '*.json' -exec cat {} + > "$tmp/read.json"
 reads="$(wc -l < "$tmp/read.json")"
 left="$(($(wc -l < "$tmp/stale") - UNLISTED_MAX_READS))"
@@ -445,9 +527,11 @@ left="$(($(wc -l < "$tmp/stale") - UNLISTED_MAX_READS))"
 # one, and so does every repository of an owner whose listing failed. A
 # repository that was due but could not be read keeps its previous entry with
 # the pushed time it had, so the next run reads it again. A repository with an
-# app of the catalogue or the server lists none of its apps.
+# app of the catalogue or the server lists none of its apps. quiet names the
+# owners only UNLISTED_ORGS adds that have no app in any repository; their
+# repositories go to the cache instead of the file.
 "$JQ" -n --slurpfile prev "$prev" --slurpfile shipped "$shipped" --slurpfile repos "$tmp/repos" --slurpfile read "$tmp/read.json" \
-	--rawfile failed "$tmp/failed" --argjson excluded "$excluded_ids" --argjson tools "$tools" --arg scanned "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '
+	--rawfile failed "$tmp/failed" --rawfile added "$tmp/added" --argjson excluded "$excluded_ids" --argjson tools "$tools" --arg scanned "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '
 	([inputs[] | .id] + [$shipped[0].releases[]?.apps[]?.id] | map(ascii_downcase)) as $known
 	| ($prev[0].repos // {}) as $old
 	| ($read | map({(.key): del(.key)}) | add // {}) as $fresh
@@ -456,13 +540,22 @@ left="$(($(wc -l < "$tmp/stale") - UNLISTED_MAX_READS))"
 	                else {key, value: $old[.key]} | select(.value) end]
 	   + [$old | to_entries[] | select(.key as $k | any($f[]; . as $o | $k | startswith($o + "/")))]
 	   | unique_by(.key) | from_entries) as $all
+	| (reduce ($all | to_entries[]) as $e ({}; ($e.key | split("/")[:-1] | join("/")) as $o | .[$o] = (.[$o] or ($e.value.apps // []) != []))) as $has
 	| [$all | to_entries[] | .key as $k | .value as $r
 	   | select(any($r.apps[]; .id | ascii_downcase | IN($known[])) | not) | $r.apps[]
 	   | {id, name, version, nextcloud, exapp, tool: ($k | IN($tools[])), host: $r.host, repo: $r.repo, path,
 	                                tag: $r.tag, tags: $r.tags, tarball: $r.tarball, pushed: $r.pushed, created: $r.created}
 	   | select(.id | ascii_downcase | IN($known[], $excluded[]) | not)]
 	| group_by(.id | ascii_downcase) | map(min_by(.created, .host, .repo, .path) | del(.created)) | sort_by(.id | ascii_downcase)
-	| {scanned: $scanned, apps: ., repos: $all}' "$APPSTORE_CACHE" "$APPSTORE_APPAPI_CACHE" > "$UNLISTED_FILE.new"
+	| {scanned: $scanned, apps: ., repos: $all, quiet: [$added | split("\n")[] | select(. != "" and ($has[.] | not))]}' \
+	"$APPSTORE_CACHE" "$APPSTORE_APPAPI_CACHE" > "$tmp/result.json"
+SPLIT_JQ='(.quiet | map({key: ., value: true}) | from_entries) as $q | def quiet: split("/")[:-1] | join("/") | in($q);'
+if [ -s "$tmp/orgs" ]; then
+	"$JQ" -c --slurpfile orgs "$tmp/orgs" "$SPLIT_JQ"'
+		{orgs: ($orgs | map({(.key): .members}) | add), repos: (.repos | with_entries(select(.key | quiet)))}' "$tmp/result.json" > "$UNLISTED_ORGS_CACHE.new"
+	mv "$UNLISTED_ORGS_CACHE.new" "$UNLISTED_ORGS_CACHE"
+fi
+"$JQ" "$SPLIT_JQ"' del(.quiet) | .repos |= with_entries(select(.key | quiet | not))' "$tmp/result.json" > "$UNLISTED_FILE.new"
 mv "$UNLISTED_FILE.new" "$UNLISTED_FILE"
 echo "unlisted apps written to $UNLISTED_FILE ($("$JQ" -r '"\(.apps | length) apps in \(.repos | length) repositories"' "$UNLISTED_FILE"), $(wc -l < "$tmp/owners") owners, $(wc -l < "$tmp/failed") not listed, $reads repositories read, $left left to the next run)"
 [ "$wrong" = 0 ] || die "$wrong list entries of the wrong form were left out"
