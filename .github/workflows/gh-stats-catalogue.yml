@@ -40,6 +40,10 @@
 # issue tracker or the website, and keeps them as sources.json in the release
 # catalogue, from which gh-nc-appslist lists these versions as well. An app is
 # resolved again when its releases changed or its entry is older than a week.
+# In the same file gh-nc-sources keeps the repository each app is developed in
+# when that is not the one its releases are downloaded from, confirmed by a tag
+# both have at the same object; the sampler reads it from there to sample that
+# repository as well, and the site puts it into the project of the app.
 #
 # The same holds for the apps that are neither in the catalogue nor shipped by
 # the server and publish no release tarball, as the unlisted.json of the
@@ -219,10 +223,11 @@ jobs:
 
       # Before the versions are sought and sent, so gh-nc-appslist and the
       # measurement read the same file. An app that was rechecked without a
-      # result keeps no other change, so only its time does not count as one.
+      # result keeps no other change, so only its time does not count as one;
+      # a development repository is checked again by its time, so that counts.
       - name: Find the sources of the releases
         run: |
-          entries() { jq -S '[.apps[] | if .repo then . else del(.checked) end]' "$1" 2>/dev/null || true; }
+          entries() { jq -S '{apps: [.apps[] | if .repo then . else del(.checked) end], developed}' "$1" 2>/dev/null || true; }
           gh release download "$CATALOGUE_TAG" -p sources.json -D "$STATE" \
             || echo "::warning::No sources yet, resolving every app"
           cp "$STATE/sources.json" "$STATE/sources.json.before" 2>/dev/null || true

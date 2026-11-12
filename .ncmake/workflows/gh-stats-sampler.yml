@@ -10,7 +10,9 @@
 #               the ETag of its last answer in a .etag beside it, so an
 #               unchanged file costs one conditional request, and
 #               categories.json, the names of the App Store categories, which
-#               only the site reads
+#               only the site reads; gh-stats-catalogue.yml keeps sources.json
+#               there, from which the repositories the apps are developed in
+#               are sampled as well
 #   sampler-db  downloads.sqlite.zst, the sampler database, and tools.json,
 #               the versions of the tools the last run sampled with, which
 #               the site lists under "Built with"
@@ -110,6 +112,10 @@ jobs:
           # restores the two files the targets come from.
           gh release download "$CATALOGUE_TAG" -p categories.json -p categories.json.etag -D "$STATE/catalogue" \
             || echo "::warning::No cached categories, fetching them in full"
+          # The development repositories gh-nc-sources confirmed; the targets
+          # take them from beside the catalogue.
+          gh release download "$CATALOGUE_TAG" -p sources.json -D "$STATE/catalogue" \
+            || echo "::warning::No release sources, the development repositories are not sampled"
           for f in apps.json appapi_apps.json categories.json; do
             cp "$STATE/catalogue/$f.etag" "$STATE/$f.etag.before" 2>/dev/null || true
           done

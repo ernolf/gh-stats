@@ -10,6 +10,16 @@
 # that repository has the tag its download URL names, v<version> or <version>.
 # gh-nc-appslist lists these releases for gh-nc-appsdiag, which checks the tag
 # out, and gh-stats-site-db shows which tag the checks of a version come from.
+#
+# It also finds the repository an app is developed in when that is not the one
+# its releases are downloaded from, as nextcloud-releases/<app> publishes what
+# nextcloud/<app> develops. The issue tracker and the website of the app name
+# the candidates; one is confirmed when the tag of a listed release names the
+# same object there as in the repository of the download, so no list of
+# release owners has to be kept. gh-nc-appstore-targets samples the confirmed
+# repositories as well, and gh-stats-site-db puts each into the project of its
+# app, so the start page links it and counts its stars.
+#
 # The result replaces its previous copy, from which an app whose releases are
 # unchanged is taken over until it is due again.
 
@@ -38,6 +48,11 @@ APPSTORE_SINCE_YEAR="${APPSTORE_SINCE_YEAR:-$(($(date -u +%Y) - 1))}"
 # app whose releases changed and one that did not resolve are resolved on every
 # run.
 SOURCES_RECHECK_DAYS="${SOURCES_RECHECK_DAYS:-7}"
+# How many seconds a run spends on confirming development repositories. The
+# apps it does not reach wait for the next run, so the first run with many of
+# them and the day their entries age out together stay within the time of the
+# workflow that calls it.
+SOURCES_CONFIRM_SECONDS="${SOURCES_CONFIRM_SECONDS:-300}"
 # How often a request that times out or fails transiently is repeated.
 RETRIES=3
 
@@ -56,7 +71,8 @@ usage() {
 Usage: gh-nc-sources [-f <file>]
 
 Writes the repository and the tag of every App Store release that is no
-release asset to <file>, as JSON:
+release asset, and the repository every app is developed in when that is not
+the one its releases are downloaded from, to <file>, as JSON:
 
   {
     "scanned": "2026-11-01T00:20:00Z",
@@ -64,14 +80,18 @@ release asset to <file>, as JSON:
               "repo": "group/passwords", "checked": "2026-11-01T00:20:00Z",
               "versions": [{"version": "2026.10.20",
                             "download": "https://...", "tag": "2026.10.0"},
-                           ...]}, ...]
+                           ...]}, ...],
+    "developed": [{"id": "mail", "host": "github.com", "repo": "nextcloud/mail",
+                   "tag": "v5.13.2", "checked": "2026-11-01T00:20:00Z",
+                   "download": "https://github.com/nextcloud-releases/mail/...",
+                   "candidates": ["github.com/nextcloud/mail"]}, ...]
   }
 
-A release counts when it is stable, no nightly and a version of numbers only,
-and its download is no release asset: neither one on GitHub nor one under
-/releases/download/ of another host. An app counts when the newest of these
-releases is from APPSTORE_SINCE_YEAR or later. Its versions are all of these
-releases.
+Under apps, a release counts when it is stable, no nightly and a version of
+numbers only, and its download is no release asset: neither one on GitHub nor
+one under /releases/download/ of another host. An app counts when the newest
+of these releases is from APPSTORE_SINCE_YEAR or later. Its versions are all
+of these releases.
 
 The repository is the first of these candidates that has a tag for one of the
 versions, at most one of each:
@@ -100,8 +120,30 @@ for a version without a tag.
 A resolved app is taken over from the previous <file> while its versions and
 downloads are unchanged and it was checked less than SOURCES_RECHECK_DAYS days
 ago. Every other app is resolved again; one that resolved before with the same
-releases and does not now keeps its previous entry. The time is UTC
-throughout.
+releases and does not now keeps its previous entry.
+
+Under developed, an app counts when its releases that are stable, no nightly
+and a version of numbers only are downloaded as release assets, from GitHub or
+from under /releases/download/ of another host, the newest of them from
+APPSTORE_SINCE_YEAR or later, and its issue tracker or its website names a
+repository other than the one that newest release is downloaded from, read as
+above. The candidates are tried in that order and the first one confirmed is
+the repository the app is developed in: a listed release, newest first, whose
+download is from another repository than the candidate names a tag that both
+repositories have at the same object, the commit of an annotated tag. tag is
+that tag, download the one of the newest release, candidates the repositories
+tried; host, repo and tag are null for an app no candidate confirmed. A candidate
+that is the repository of the newest release under an older name, which its
+host redirects, is none, and a renamed candidate is entered under its current
+name.
+
+An entry is taken over from the previous <file> while its download and its
+candidates are unchanged and it was checked less than SOURCES_RECHECK_DAYS
+days ago, confirmed or not; every other one is checked again, and one that was
+confirmed before with the same download and does not confirm now keeps its
+previous entry. A run checks for SOURCES_CONFIRM_SECONDS seconds; the apps it
+does not reach keep the entry they had and are checked by the next run. The
+time is UTC throughout.
 
 Options:
   -f, --file <file>  the file to read and replace (default: next to APPSTORE_CACHE)
@@ -114,7 +156,11 @@ Environment (or /etc/gh-stats/gh-stats.env):
                         (default: $GH_STATS_DIR/apps.json)
   APPSTORE_SINCE_YEAR   the year the newest release is from at least
                         (default: last year)
-  SOURCES_RECHECK_DAYS  the days a resolved app is taken over (default: 7)
+  SOURCES_RECHECK_DAYS  the days a resolved app or a development repository
+                        is taken over (default: 7)
+  SOURCES_CONFIRM_SECONDS
+                        the seconds a run spends on confirming development
+                        repositories (default: 300)
 EOF
 }
 
@@ -129,6 +175,7 @@ done
 
 [[ "$APPSTORE_SINCE_YEAR" =~ ^[0-9]{4}$ ]] || die "APPSTORE_SINCE_YEAR is $APPSTORE_SINCE_YEAR, it takes a year"
 [[ "$SOURCES_RECHECK_DAYS" =~ ^[0-9]+$ ]] || die "SOURCES_RECHECK_DAYS is $SOURCES_RECHECK_DAYS, it takes a number"
+[[ "$SOURCES_CONFIRM_SECONDS" =~ ^[0-9]+$ ]] || die "SOURCES_CONFIRM_SECONDS is $SOURCES_CONFIRM_SECONDS, it takes a number"
 [ -r "$APPSTORE_CACHE" ] || die "no catalogue at $APPSTORE_CACHE"
 
 tmp="$(mktemp -d)"
@@ -140,10 +187,8 @@ echo '{}' > "$prev"
 now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 # == Candidates ==
-# One line per app: {id, versions: [{version, download, url_tag}], candidates},
-# a candidate being {host, repo} or {api} for a GitLab project still to be read.
-# A tag in a URL is percent-encoded.
-"$JQ" -c --arg since "$APPSTORE_SINCE_YEAR" '
+# What both passes read from a URL. A tag in a URL is percent-encoded.
+jq_url='
 	def url: capture("^[A-Za-z][A-Za-z0-9+.-]*://(?<h>[^/?#]+)(?<p>[^?#]*)")
 		| .h |= (ascii_downcase | sub("^www\\."; ""))
 		| .p |= (split("/") | map(select(. != "")));
@@ -172,18 +217,42 @@ now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 	def decode: if . == null then null
 		else gsub("%(?<x>[0-9A-Fa-f]{2})"; .x | ascii_downcase | explode | map(if . >= 97 then . - 87 else . - 48 end) | [.[0] * 16 + .[1]] | implode) end;
 	def key: if .api then .api else (.host + "/" + .repo | ascii_downcase) end;
+	def stable: select(.download != null and (.isNightly | not) and (.version | test("^[0-9]+(\\.[0-9]+)*$")));
+	def by_version: sort_by(.version | split(".") | map(tonumber)) | reverse;
+'
+# One line per app: {id, versions: [{version, download, url_tag}], candidates},
+# a candidate being {host, repo} or {api} for a GitLab project still to be read.
+"$JQ" -c --arg since "$APPSTORE_SINCE_YEAR" "$jq_url"'
 	(if type == "array" then . else .data end)[] | . as $a
-	| [.releases[]? | select(.download != null and (.isNightly | not)
-	                         and (.version | test("^[0-9]+(\\.[0-9]+)*$")))
+	| [.releases[]? | stable
 	   | (.download | split("/")) as $p
 	   | select(($p[5] == "releases" and ($p[2] == "github.com" or $p[6] == "download")) | not)]
 	| select(length > 0 and (max_by(.created) | .created[0:4]) >= $since)
 	| map(. + {dl: (.download | try download catch {})})
 	| {id: $a.id,
-	   versions: (map({version, download, url_tag: (.dl.tag | decode)}) | sort_by(.version | split(".") | map(tonumber)) | reverse),
+	   versions: (map({version, download, url_tag: (.dl.tag | decode)}) | by_version),
 	   candidates: ([.[].dl | del(.tag) | select(. != {})] + [$a.issueTracker, $a.website | strings | try page catch empty]
 	                | reduce .[] as $c ([]; if any(.[]; key == ($c | key)) then . else . + [$c] end))}
 ' "$APPSTORE_CACHE" > "$tmp/apps"
+
+# One line per app whose releases are release assets and whose issue tracker
+# or website names another repository than its newest release is downloaded
+# from: {id, releases: [{host, repo, tag, download}], candidates: [{host,
+# repo}]}, the releases newest first.
+"$JQ" -c --arg since "$APPSTORE_SINCE_YEAR" "$jq_url"'
+	(if type == "array" then . else .data end)[] | . as $a
+	| [.releases[]? | stable
+	   | (.download | split("/")) as $p
+	   | select($p[5] == "releases" and ($p[2] == "github.com" or $p[6] == "download") and ($p[7] // "") != "")
+	   | {version, download, created, host: ($p[2] | ascii_downcase), repo: ($p[3] + "/" + $p[4]), tag: ($p[7] | decode)}]
+	| select(length > 0 and (max_by(.created) | .created[0:4]) >= $since)
+	| by_version | (.[0] | key) as $newest
+	| {id: $a.id,
+	   releases: map({host, repo, tag, download}),
+	   candidates: ([$a.issueTracker, $a.website | strings | try page catch empty | select(key != $newest)]
+	                | reduce .[] as $c ([]; if any(.[]; key == ($c | key)) then . else . + [$c] end))}
+	| select(.candidates | length > 0)
+' "$APPSTORE_CACHE" > "$tmp/developed"
 
 # == Resolving ==
 # resolve <app>: the entry of the app, with the first candidate whose tags
@@ -233,7 +302,117 @@ while IFS= read -r app; do
 	printf '%s\n' "$entry" >> "$tmp/entries"
 done < "$tmp/apps"
 
+# == Development repositories ==
+# tags_of <host> <repo>: the file with the tags of the repository, one
+# "<object>\t<tag>" per line, the object of an annotated tag being the commit it
+# peels to, so a lightweight and an annotated tag of one commit agree. Each
+# repository is asked once per run. Fails when the host does not answer or has
+# no such repository.
+mkdir -p "$tmp/objects"
+tags_of() {
+	local url="https://$1/$2.git" f
+	f="$tmp/objects/$(printf '%s' "${url,,}" | tr -c 'a-z0-9.-' '_')"
+	if [ ! -e "$f" ]; then
+		timeout 60 "$GIT" ls-remote --tags "$url" 2>/dev/null \
+			| awk -F'\t' '{ t = substr($2, 11); if (sub(/\^\{\}$/, "", t)) peeled[t] = $1; else plain[t] = $1 }
+				END { for (t in plain) print (t in peeled ? peeled[t] : plain[t]) "\t" t }' > "$f" \
+			|| { rm -f "$f"; return 1; }
+	fi
+	printf '%s\n' "$f"
+}
+
+# current_name <host> <repo>: the repository as its host names it now, as
+# <host>/<path>. The page of a renamed or transferred repository is redirected
+# to the one it became, on GitHub as on the forges. Asked once per run; fails
+# when the host does not answer.
+mkdir -p "$tmp/names"
+current_name() {
+	local url="https://$1/$2" f
+	f="$tmp/names/$(printf '%s' "${url,,}" | tr -c 'a-z0-9.-' '_')"
+	if [ ! -e "$f" ]; then
+		curl -fsSIL --retry "$RETRIES" --max-time 30 -o /dev/null -w '%{url_effective}\n' "$url" 2>/dev/null \
+			| sed -E 's|^https?://||; s|[?#].*$||; s|/+$||; s|\.git$||' > "$f" \
+			|| { rm -f "$f"; return 1; }
+	fi
+	cat "$f"
+}
+
+# object_of <file of tags_of> <tag>: the object the tag names there.
+object_of() { tag="$2" awk -F'\t' '$2 == ENVIRON["tag"] { print $1; exit }' "$1"; }
+
+# resolve_developed <app>: the entry of the app, with the first candidate that
+# has a tag of a listed release at the object the repository of that release
+# has it, or host, repo and tag null. The repositories of the releases are
+# tried from the newest release on. A candidate that is the repository of the
+# newest release under an older name is none, and no release of its own under
+# an older name confirms it; one that was renamed is entered under its current
+# name, once that has the tag at the same object.
+resolve_developed() {
+	local app="$1" chost crepo rhost rrepo nhost nrepo dev own tag name newest other
+	IFS=$'\t' read -r nhost nrepo < <("$JQ" -r '.releases[0] | [.host, .repo] | @tsv' <<<"$app")
+	while IFS=$'\t' read -r chost crepo; do
+		dev="$(tags_of "$chost" "$crepo")" || continue
+		while IFS=$'\t' read -r rhost rrepo; do
+			own="$(tags_of "$rhost" "$rrepo")" || continue
+			tag="$("$JQ" -r --arg host "$rhost" --arg repo "$rrepo" --rawfile dev "$dev" --rawfile own "$own" '
+				def objects: split("\n") | map(select(. != "") | split("\t") | {key: .[1], value: .[0]}) | from_entries;
+				($dev | objects) as $d | ($own | objects) as $o
+				| first(.releases[] | select(.host == $host and .repo == $repo and $o[.tag] != null and $o[.tag] == $d[.tag]) | .tag)' <<<"$app")"
+			[ -n "$tag" ] || continue
+			name="$(current_name "$chost" "$crepo")" || continue 2
+			newest="$(current_name "$nhost" "$nrepo")" || continue 2
+			[ "${name,,}" != "${newest,,}" ] || continue 2
+			other="$(current_name "$rhost" "$rrepo")" || continue
+			[ "${name,,}" != "${other,,}" ] || continue
+			if [ "${name,,}" != "${chost,,}/${crepo,,}" ]; then
+				chost="${name%%/*}" crepo="${name#*/}"
+				dev="$(tags_of "$chost" "$crepo")" || continue 2
+				[ "$(object_of "$dev" "$tag")" = "$(object_of "$own" "$tag")" ] || continue 2
+			fi
+			"$JQ" -c --arg host "${chost,,}" --arg repo "$crepo" --arg tag "$tag" --arg now "$now" '
+				{id, host: $host, repo: $repo, tag: $tag, checked: $now, download: .releases[0].download,
+				 candidates: [.candidates[] | .host + "/" + .repo]}' <<<"$app"
+			return 0
+		done < <("$JQ" -r --arg c "${chost,,}/${crepo,,}" '
+			reduce (.releases[] | [.host, .repo] | select((.[0] + "/" + (.[1] | ascii_downcase)) != $c)) as $r
+				([]; if any(.[]; . == $r) then . else . + [$r] end) | .[] | @tsv' <<<"$app")
+	done < <("$JQ" -r '.candidates[] | [.host, .repo] | @tsv' <<<"$app")
+	"$JQ" -c --arg now "$now" '{id, host: null, repo: null, tag: null, checked: $now, download: .releases[0].download,
+		candidates: [.candidates[] | .host + "/" + .repo]}' <<<"$app"
+}
+
+confirmed=0 kept_developed=0 waiting=0
+deadline=$((SECONDS + SOURCES_CONFIRM_SECONDS))
+: > "$tmp/developed_entries"
+while IFS= read -r app; do
+	prior="$("$JQ" -c --argjson app "$app" '[.developed[]? | select(.id == $app.id)][0] // empty' "$prev")"
+	old=''
+	[ -z "$prior" ] || old="$("$JQ" -c --argjson app "$app" 		'select(.download == $app.releases[0].download and .candidates == [$app.candidates[] | .host + "/" + .repo])' <<<"$prior")"
+	if [ -n "$old" ] && "$JQ" -e --arg now "$now" --argjson days "$SOURCES_RECHECK_DAYS" \
+		'($now | fromdate) - (.checked | fromdate) < $days * 86400' <<<"$old" >/dev/null; then
+		printf '%s\n' "$old" >> "$tmp/developed_entries"
+		kept_developed=$((kept_developed + 1))
+		continue
+	fi
+	# Out of time: the app waits for the next run with the entry it had, which
+	# is still due then.
+	if [ "$SECONDS" -ge "$deadline" ]; then
+		[ -z "$prior" ] || printf '%s
+' "$prior" >> "$tmp/developed_entries"
+		waiting=$((waiting + 1))
+		continue
+	fi
+	entry="$(resolve_developed "$app")"
+	confirmed=$((confirmed + 1))
+	# A host that is down for a run does not lose what it confirmed before.
+	if [ -n "$old" ] && "$JQ" -e '.repo == null' <<<"$entry" >/dev/null && "$JQ" -e '.repo != null' <<<"$old" >/dev/null; then
+		entry="$old"
+	fi
+	printf '%s\n' "$entry" >> "$tmp/developed_entries"
+done < "$tmp/developed"
+
 # == Result ==
-"$JQ" -s --arg scanned "$now" '{scanned: $scanned, apps: sort_by(.id | ascii_downcase)}' "$tmp/entries" > "$SOURCES_FILE.new"
+"$JQ" -n --arg scanned "$now" --slurpfile apps "$tmp/entries" --slurpfile developed "$tmp/developed_entries" \
+	'{scanned: $scanned, apps: ($apps | sort_by(.id | ascii_downcase)), developed: ($developed | sort_by(.id | ascii_downcase))}' > "$SOURCES_FILE.new"
 mv "$SOURCES_FILE.new" "$SOURCES_FILE"
-echo "sources written to $SOURCES_FILE ($("$JQ" -r '"\([.apps[] | select(.repo != null)] | length) of \(.apps | length) apps resolved"' "$SOURCES_FILE"), $resolved resolved, $kept taken over)"
+echo "sources written to $SOURCES_FILE ($("$JQ" -r '"\([.apps[] | select(.repo != null)] | length) of \(.apps | length) apps resolved"' "$SOURCES_FILE"), $resolved resolved, $kept taken over; $("$JQ" -r '"\([.developed[] | select(.repo != null)] | length) of \(.developed | length) development repositories confirmed"' "$SOURCES_FILE"), $confirmed checked, $kept_developed taken over, $waiting waiting for the next run)"
