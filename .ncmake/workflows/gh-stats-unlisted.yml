@@ -7,7 +7,8 @@
 # the catalogue and shipped.json name, on GitHub and on the Forgejo and Gitea
 # hosts among them, together with the owners and repositories UNLISTED_INCLUDE
 # names and without those UNLISTED_EXCLUDE names. The apps of the repositories
-# UNLISTED_TOOLS names are marked as templates and developer tools.
+# UNLISTED_TOOLS names are marked as templates and developer tools. The members
+# of the organisations UNLISTED_ORGS names are owners as well.
 #
 # The catalogue workflow dispatches this one when gh-nc-shipped finds a new
 # daily build of master, so it runs once a day. Each run starts from the
@@ -15,9 +16,17 @@
 # taken over unread; the first run, and one after many pushes, reads at most
 # UNLISTED_MAX_READS repositories and leaves the rest to the next.
 #
-# The listings run with GITHUB_TOKEN, which is limited to 1,000 requests per
-# hour and repository. The clones need no token. Every run reports how much of
-# the limits of the token it used.
+# The listings run with the secret UNLISTED_TOKEN when it is set: a personal
+# access token with the scope read:org, which has the limits of its user and
+# lists every member of an organisation that user belongs to. Without it they
+# run with GITHUB_TOKEN, which is limited to 1,000 requests per hour and
+# repository, and UNLISTED_ORGS is left out. The clones need no token. Every
+# run reports how much of the limits of the token was used while it ran.
+#
+# The repositories of a member that has no app tell who is a member, so they
+# stay out of unlisted.json. They are kept in the release as
+# unlisted-orgs.json.gz.enc, encrypted with UNLISTED_TOKEN; a new token starts
+# that file anew.
 
 name: List the unlisted apps
 
@@ -44,6 +53,8 @@ env:
   # The repositories of templates and developer tools, which the site lists in
   # a tab of their own, separated by spaces or line breaks.
   UNLISTED_TOOLS: ${{ vars.UNLISTED_TOOLS }}
+  # The repositories of the members that have no app, encrypted.
+  ORGS_ASSET: unlisted-orgs.json.gz.enc
 
 jobs:
   unlisted:
@@ -68,25 +79,54 @@ jobs:
             || echo "::warning::No shipped apps yet, only the catalogue is left out"
           gh release download "$CATALOGUE_TAG" -p unlisted.json -D "$state" \
             || echo "::warning::No unlisted apps yet, every repository is read"
-          gh api rate_limit --jq .resources > "$state/rate.before"
+
+      # A copy the token does not decrypt was written with another one.
+      - name: Fetch the repositories of the members
+        if: ${{ vars.UNLISTED_ORGS != '' }}
+        env:
+          UNLISTED_TOKEN: ${{ secrets.UNLISTED_TOKEN }}
+        run: |
+          if [ -z "$UNLISTED_TOKEN" ]; then
+            echo "::warning::The repository secret UNLISTED_TOKEN is not set, UNLISTED_ORGS is left out"
+          elif ! gh release download "$CATALOGUE_TAG" -p "$ORGS_ASSET" -D "$STATE"; then
+            echo "::warning::No repositories of members yet, every one is read"
+          elif ! { openssl enc -d -aes-256-cbc -pbkdf2 -pass env:UNLISTED_TOKEN -in "$STATE/$ORGS_ASSET" -out "$STATE/unlisted-orgs.json.gz" \
+            && gunzip -f "$STATE/unlisted-orgs.json.gz"; }; then
+            rm -f "$STATE/unlisted-orgs.json" "$STATE/unlisted-orgs.json.gz"
+            echo "::warning::The repositories of the members were not decrypted, every one is read"
+          fi
 
       - name: List the unlisted apps
         id: list
         env:
           GH_STATS_DIR: ${{ runner.temp }}/catalogue
-        run: bin/gh-nc-unlisted
+          GH_TOKEN: ${{ secrets.UNLISTED_TOKEN || github.token }}
+          UNLISTED_ORGS: ${{ secrets.UNLISTED_TOKEN && vars.UNLISTED_ORGS || '' }}
+        run: |
+          gh api rate_limit --jq .resources > "$STATE/rate.before"
+          bin/gh-nc-unlisted
 
       # Also after a listing that left out a list entry of the wrong form: it
       # fails only after it has written unlisted.json. A listing that failed
       # before leaves the copy fetched above, which is kept unchanged.
       - name: Keep the unlisted apps
         if: ${{ !cancelled() && (steps.list.outcome == 'success' || steps.list.outcome == 'failure') }}
-        run: gh release upload "$CATALOGUE_TAG" "$STATE/unlisted.json" --clobber
+        env:
+          UNLISTED_TOKEN: ${{ secrets.UNLISTED_TOKEN }}
+        run: |
+          gh release upload "$CATALOGUE_TAG" "$STATE/unlisted.json" --clobber
+          if [ -n "$UNLISTED_TOKEN" ] && [ -e "$STATE/unlisted-orgs.json" ]; then
+            gzip -c "$STATE/unlisted-orgs.json" > "$STATE/unlisted-orgs.json.gz"
+            openssl enc -aes-256-cbc -pbkdf2 -pass env:UNLISTED_TOKEN -in "$STATE/unlisted-orgs.json.gz" -out "$STATE/$ORGS_ASSET"
+            gh release upload "$CATALOGUE_TAG" "$STATE/$ORGS_ASSET" --clobber
+          fi
 
       - name: Report the rate limits
         if: always()
+        env:
+          GH_TOKEN: ${{ secrets.UNLISTED_TOKEN || github.token }}
         run: |
           gh api rate_limit --jq .resources > "$STATE/rate.after"
           jq -r -n --slurpfile before "$STATE/rate.before" --slurpfile after "$STATE/rate.after" '
             ("core", "graphql") as $r | $before[0][$r] as $b | $after[0][$r] as $a
-            | "::notice::\($r): \(if $a.reset == $b.reset then $a.used - $b.used else $a.used end) of \($a.limit) used by this run, \($a.remaining) left until \($a.reset | todate)"'
+            | "::notice::\($r): \(if $a.reset == $b.reset then $a.used - $b.used else $a.used end) of \($a.limit) used while this run listed, \($a.remaining) left until \($a.reset | todate)"'
