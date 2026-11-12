@@ -11,6 +11,11 @@
 # keeps the list current: new apps (and new owners) appear, apps gone stale drop
 # out.
 #
+# The repository an app is developed in, when gh-nc-sources confirmed one apart
+# from the repository of its releases, is a target as well, so its stars count
+# for the app: read from the sources.json beside the catalogue, when there is
+# one, for every host the release assets come from.
+#
 # The App Store serves the AppAPI apps (ExApps) in appapi_apps.json and leaves
 # them out of apps.json, so an ExApp becomes a target only through the second
 # file.
@@ -64,6 +69,8 @@ APPSTORE_APPAPI_CACHE="${APPSTORE_APPAPI_CACHE:-$(dirname "$APPSTORE_CACHE")/app
 APPSTORE_CATEGORIES_URL="${APPSTORE_CATEGORIES_URL:-${APPSTORE_URL%/*}/categories.json}"
 APPSTORE_CATEGORIES_CACHE="${APPSTORE_CATEGORIES_CACHE:-$(dirname "$APPSTORE_CACHE")/categories.json}"
 APPSTORE_INCLUDE_ENTERPRISE="${APPSTORE_INCLUDE_ENTERPRISE:-true}"
+# The development repositories gh-nc-sources confirmed, optional.
+SOURCES_CACHE="${SOURCES_CACHE:-$(dirname "$APPSTORE_CACHE")/sources.json}"
 
 # -- appdata source -- explicit file, or derive it from a working occ command.
 APPSTORE_APPDATA_FILE="${APPSTORE_APPDATA_FILE:-}"
@@ -186,8 +193,13 @@ trap 'rm -f "$tmp_out"' EXIT
 # release is recent enough, then the pairs are sorted so an owner's repos stay
 # together and the list reads alphabetically. The hosts resolve names without
 # case, and the catalogue links some repositories under several spellings; each
-# becomes one pair, spelled as its newest release.
-jq -n --argjson whole "$whole_json" --arg since "$APPSTORE_SINCE_YEAR" '
+# becomes one pair, spelled as its newest release. The development repositories
+# join the pairs on the hosts the release assets come from, since the sampler
+# asks no other host, and only as owner/repo, the form it samples;
+# gh-nc-sources applies the cutoff to them itself.
+developed='[]'
+[ ! -r "$SOURCES_CACHE" ] || developed="$(jq -c '[.developed[]? | select(.repo != null)]' "$SOURCES_CACHE")"
+jq -n --argjson whole "$whole_json" --arg since "$APPSTORE_SINCE_YEAR" --argjson developed "$developed" '
 	[inputs | if type == "array" then . else .data end] | add as $apps
 	| ($whole | map(ascii_downcase)) as $whole_lc
 	| [ $apps[] | .releases[]? | select(.download != null)
@@ -196,12 +208,17 @@ jq -n --argjson whole "$whole_json" --arg since "$APPSTORE_SINCE_YEAR" '
 	    | ($p[2] | ascii_downcase) as $host
 	    | {host: $host, slug: ((if $host == "github.com" then "" else $host + "/" end) + $p[3] + "/" + $p[4]),
 	       owner: $p[3], created: $r.created} ]
+	| ([.[].host] | unique) as $hosts
 	| ( [ .[] | select(.host != "github.com" or (.owner | ascii_downcase | IN($whole_lc[]) | not)) ]
 	    | group_by(.slug | ascii_downcase)
 	    | map(max_by(.created) | { slug, last: .created })
 	    | map(select(.last[0:4] >= $since))
-	    | sort_by(.slug | ascii_downcase)
-	    | map(.slug) ) as $pairs
+	    | map(.slug)
+	    + [ $developed[] | select((.host | IN($hosts[])) and (.repo | split("/") | length) == 2)
+	        | select(.host != "github.com" or (.repo | split("/")[0] | ascii_downcase | IN($whole_lc[]) | not))
+	        | (if .host == "github.com" then "" else .host + "/" end) + .repo ]
+	    | unique_by(ascii_downcase)
+	    | sort_by(ascii_downcase) ) as $pairs
 	| {targets: ($whole + $pairs)}
 ' "${catalogue_files[@]}" > "$tmp_out"
 

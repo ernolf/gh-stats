@@ -11,7 +11,8 @@
 # (ExApps) of appapi_apps.json, the apps the server ships, as gh-nc-shipped
 # lists them, the apps outside both, as gh-nc-unlisted lists them, the
 # repository and tag gh-nc-sources found for each release that is no release
-# asset, and the Nextcloud versions of the catalogue releases, the
+# asset and the repository it confirmed each app is developed in, and the
+# Nextcloud versions of the catalogue releases, the
 # version key and strict pre-release flag of gh-stats on every release, the
 # projects the repositories form, one summary row per project and release line
 # for the start page, the measurement results of the data branch, and what the
@@ -84,7 +85,8 @@ repository under its current name, plus
   projects   the project every repository belongs to that the sampler still
              samples or the catalogue lists, when its sampling began and, for
              one the sampler counts as unreachable, the run of its first 404:
-             repositories the catalogue lists for one app, and
+             repositories the catalogue lists for one app, the repository
+             gh-nc-sources confirmed an app is developed in with them, and
              repositories of one name under two owners the catalogue lists for
              one app under that name, form one project; a repository on
              another host than GitHub has the host in front of its key
@@ -145,6 +147,10 @@ repository under its current name, plus
   sources    every App Store release that is no release asset whose tag
              gh-nc-sources found: app id, version, host, repository, tag;
              empty without sources.json
+  developed  every app gh-nc-sources confirmed is developed in another
+             repository than its releases are downloaded from: app id, host,
+             owner, repository and the tag that confirmed it; empty without
+             sources.json
   security_overdue  every app with a security finding reported to its
              maintainer that no measured release has fixed within the
              deadline, and the day it was reported; empty without
@@ -198,9 +204,9 @@ Environment (or /etc/gh-stats/gh-stats.env):
                   (default: next to apps.json)
   UNLISTED_CACHE  the unlisted apps unlisted.json of gh-nc-unlisted, optional
                   (default: next to apps.json)
-  SOURCES_CACHE   the tags of the releases that are no release asset,
-                  sources.json of gh-nc-sources, optional (default: next to
-                  apps.json)
+  SOURCES_CACHE   the tags of the releases that are no release asset and the
+                  development repositories, sources.json of gh-nc-sources,
+                  optional (default: next to apps.json)
   SECURITY_OVERDUE_CACHE  the overdue apps security-overdue.json of
                   gh-stats-security --overdue, optional (default: next to
                   apps.json)
@@ -468,11 +474,17 @@ if [ -r "$UNLISTED_CACHE" ]; then
 fi
 # The catalogue workflow keeps the repository and tag of each release that is no
 # release asset; without them the site marks none as measured from a tag.
-sources_sql=''
+sources_sql='' developed_sql=''
 if [ -r "$SOURCES_CACHE" ]; then
 	sources_sql="$(jq -r "$sql_defs"'
 		.apps[] | select(.repo != null) | . as $a | .versions[] | select(.tag != null)
 		| "INSERT OR IGNORE INTO sources VALUES (\($a.id | q), \(.version | q), \($a.host | q), \($a.repo | q), \(.tag | q));"
+	' "$SOURCES_CACHE")"
+	# The repository an app is developed in; without it the project of the app
+	# holds the repositories of its releases only.
+	developed_sql="$(jq -r "$sql_defs"'
+		.developed[]? | select(.repo != null) | (.repo | split("/")) as $s
+		| "INSERT OR IGNORE INTO developed VALUES (\(.id | q), \(.host | q), \($s[:-1] | join("/") | q), \($s[-1] | q), \(.tag | q));"
 	' "$SOURCES_CACHE")"
 fi
 # The security workflow keeps the apps whose reported finding is overdue;
@@ -601,20 +613,50 @@ CREATE TEMP TABLE counted AS
 SELECT DISTINCT host, owner, repo, tag, asset FROM samples WHERE $asset_flt;
 CREATE INDEX temp.counted_release ON counted (host, owner, repo, tag);
 
+-- The repository an app is developed in when that is not the one its releases
+-- are downloaded from, as gh-nc-sources confirmed it by a tag both have at the
+-- same object. owner is the path in front of the last element of the
+-- repository, which on a host with groups holds them.
+CREATE TABLE developed (
+  id    TEXT NOT NULL PRIMARY KEY,
+  host  TEXT NOT NULL,
+  owner TEXT NOT NULL,
+  repo  TEXT NOT NULL,
+  tag   TEXT NOT NULL
+) WITHOUT ROWID;
+BEGIN;
+$developed_sql
+COMMIT;
+
 -- A project is a connected set of repositories. Two repositories are connected
--- when the catalogue lists both for one app, or when they share a name and the
--- catalogue lists one app under that name for both owners elsewhere: such
--- owners publish the same projects, also those that are no App Store app. An
--- owner is one owner on one host. Keys are lowercase, as the hosts compare
+-- when the catalogue lists both for one app, when one is the repository an app
+-- the catalogue lists for the other is developed in, or when they share a name
+-- and the catalogue lists one app under that name for both owners elsewhere:
+-- such owners publish the same projects, also those that are no App Store app.
+-- An owner is one owner on one host. Keys are lowercase, as the hosts compare
 -- names; the apps columns stand on the left so their collation applies. A
 -- repository the sampler no longer samples and the catalogue does not list is
--- no project any more; its samples stay.
+-- no project any more; its samples stay. A development repository is a node
+-- also before the sampler has sampled it, so the page links it from the first
+-- build on, in the spelling of its releases or else of its snapshots when the
+-- sampler holds any, which the sums of the summary join by.
 CREATE TEMP TABLE nodes AS
 SELECT host, owner, repo, k FROM (
   SELECT host, owner, repo, $host_k || lower(owner) || '/' || lower(repo) AS k
     FROM (SELECT DISTINCT host, owner, repo FROM releases)) r
  WHERE k IN (SELECT k FROM targeted)
     OR EXISTS (SELECT 1 FROM apps a WHERE a.host = r.host AND a.owner = r.owner AND a.repo = r.repo);
+CREATE TEMP TABLE dev AS
+SELECT d.id, coalesce(r.host, d.host) AS host, coalesce(r.owner, d.owner) AS owner,
+       coalesce(r.repo, d.repo) AS repo, d.k
+  FROM (SELECT id, host, owner, repo, $host_k || lower(owner) || '/' || lower(repo) AS k FROM developed) d
+  LEFT JOIN (SELECT host, owner, repo, k, min(n)
+               FROM (SELECT host, owner, repo, $host_k || lower(owner) || '/' || lower(repo) AS k, 0 AS n FROM releases
+                     UNION
+                     SELECT host, owner, repo, $host_k || lower(owner) || '/' || lower(repo), 1 FROM repo_stats)
+              GROUP BY k) r ON r.k = d.k;
+INSERT INTO nodes
+SELECT host, owner, repo, k FROM dev WHERE k NOT IN (SELECT k FROM nodes) GROUP BY k;
 CREATE TEMP TABLE owner_pairs AS
 SELECT DISTINCT a.host AS h1, lower(a.owner) AS o1, b.host AS h2, lower(b.owner) AS o2
   FROM apps a JOIN apps b ON a.id = b.id AND a.repo = b.repo AND (a.host <> b.host OR a.owner <> b.owner);
@@ -627,7 +669,17 @@ SELECT x.k AS a, y.k AS b
 UNION
 SELECT x.k, y.k
   FROM nodes x JOIN nodes y ON lower(x.repo) = lower(y.repo)
-  JOIN owner_pairs o ON o.h1 = x.host AND o.o1 = lower(x.owner) AND o.h2 = y.host AND o.o2 = lower(y.owner);
+  JOIN owner_pairs o ON o.h1 = x.host AND o.o1 = lower(x.owner) AND o.h2 = y.host AND o.o2 = lower(y.owner)
+UNION
+SELECT d.k, y.k
+  FROM dev d JOIN apps q ON q.id = d.id
+  JOIN nodes y ON q.host = y.host AND q.owner = y.owner AND q.repo = y.repo
+ WHERE d.k <> y.k
+UNION
+SELECT y.k, d.k
+  FROM dev d JOIN apps q ON q.id = d.id
+  JOIN nodes y ON q.host = y.host AND q.owner = y.owner AND q.repo = y.repo
+ WHERE d.k <> y.k;
 CREATE INDEX temp.edges_a ON edges (a);
 CREATE TEMP TABLE components AS
 WITH RECURSIVE reach(k, r) AS (
@@ -1176,6 +1228,7 @@ UNION ALL SELECT 'categories', count(*) FROM categories
 UNION ALL SELECT 'shipped', count(DISTINCT id) FROM shipped
 UNION ALL SELECT 'unlisted', count(*) FROM unlisted
 UNION ALL SELECT 'sources', count(*) FROM sources
+UNION ALL SELECT 'developed', count(*) FROM developed
 UNION ALL SELECT 'security_overdue', count(*) FROM security_overdue;
 SQL
 trap - ERR
