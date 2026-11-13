@@ -10,13 +10,17 @@
 # The extract, catalogue/releases.jsonl, holds one line per release: app id,
 # version, whether it is a nightly, release date and download URL, sorted, so
 # that two extracts compare line by line. It mirrors the current catalogue; a
-# removed app or version leaves it.
+# removed app or version leaves it. A release gh-nc-platforms added to the
+# catalogue from a platform list, one apps.json leaves out, carries
+# "platform": true.
 #
 # A stable release whose app id and version were not in the previous extract is
-# new. The new ones go out as repository_dispatch events of the type measure,
-# at most 256 per event, the most jobs one matrix holds. A nightly is not sent:
-# it is replaced under the same version. The first extract sends nothing, since
-# every version would count as new.
+# new, unless a platform list added it: such a release is an older one that
+# shares its ranges with a higher version. The new ones go out as
+# repository_dispatch events of the type measure, at most 256 per event, the
+# most jobs one matrix holds. A nightly is not sent: it is replaced under the
+# same version. The first extract sends nothing, since every version would
+# count as new.
 #
 # A version that was in the catalogue before it could be measured is never new:
 # one from a release host gh-stats learned to handle later, or one whose
@@ -201,7 +205,8 @@ jobs:
           fi
           mkdir -p "${out%/*}"
           jq -c '.[] | .id as $id | .releases[]
-                 | {id: $id, version, nightly: .isNightly, created, download}' "$STATE/apps.json" \
+                 | {id: $id, version, nightly: .isNightly, created, download}
+                   + (if .platformOnly == true then {platform: true} else {} end)' "$STATE/apps.json" \
             | LC_ALL=C sort > "$out"
           # Kept for a write that starts over from a newer branch.
           cp "$out" "$STATE/releases.after"
@@ -209,12 +214,14 @@ jobs:
       - name: Find the new versions
         run: |
           keys() { jq -r 'select(.nightly | not) | "\(.id) \(.version)"' "$1" | LC_ALL=C sort -u; }
+          # Without the releases a platform list added, which are never new.
+          listed() { jq -r 'select(.nightly or .platform | not) | "\(.id) \(.version)"' "$1" | LC_ALL=C sort -u; }
           if [ ! -r "$STATE/releases.before" ]; then
             echo "::notice::First extract, no versions are sent"
             : > "$STATE/new"
             message='catalogue: first extract'
           else
-            LC_ALL=C comm -13 <(keys "$STATE/releases.before") <(keys "$DATA/$EXTRACT") > "$STATE/new"
+            LC_ALL=C comm -13 <(keys "$STATE/releases.before") <(listed "$DATA/$EXTRACT") > "$STATE/new"
             message="catalogue: $(wc -l < "$STATE/new") new versions"
           fi
           {

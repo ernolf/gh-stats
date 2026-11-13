@@ -1,0 +1,339 @@
+#!/usr/bin/env -S LC_CTYPE=C.UTF-8 LC_MESSAGES=C bash
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# gh-nc-platforms - add the releases the App Store's apps.json leaves out to
+# the catalogue. apps.json lists, of the releases of an app that declare the
+# same Nextcloud range, PHP range and stability, only the highest version, the
+# one a server can pick. The platform lists, platform/<version>/apps.json, name
+# every release that runs on one server version, so read for each major they
+# name the others together. Each such release is added to its app in the
+# catalogue file, marked with "platformOnly": true, so every reader of the
+# catalogue finds it where it finds the others.
+#
+# The lists of the end-of-life majors come from a mirror, when one is set: the
+# one tools/update_appstore_platforms of ebtb keeps, one list per major at its
+# last release, as LATEST_EOL in modules/nc/versions of ebtb names them. A
+# mirror answers a conditional request without a limit, so every run asks it
+# for each of its lists and reads only the changed ones. The lists of the other
+# majors, the newest release of each major shipped.json holds above them and
+# master, come from the App Store, which limits these requests: a run asks for
+# PLATFORM_APPSTORE_READS of them, in turn by the time of the run, so no state
+# decides which. Without a mirror the end-of-life majors take their turn there
+# as well.
+#
+# A list is not kept. platforms.json keeps, beside the catalogue, the ETag of
+# each list and for every release the majors whose lists name it. The release
+# itself is kept in the catalogue file, and in the copy of that file the run
+# before left, since gh-nc-appstore-targets replaces the catalogue file with
+# the answer of the App Store when it changed. A release stays in the catalogue
+# until the list of every major that named it was read again without it. A
+# list that cannot be read, does not parse or names no release changes nothing:
+# it is asked for again by the next run.
+
+# == Config ==
+# Optional site config shared with gh-stats and gh-release-sampler. If
+# /etc/gh-stats/gh-stats.env exists it is sourced here, so its assignments feed
+# the ${VAR:-default} reads below. Precedence is built-in default <
+# gh-stats.env < environment. Point GH_STATS_ENV at another path to use a
+# different file.
+GH_STATS_ENV="${GH_STATS_ENV:-/etc/gh-stats/gh-stats.env}"
+# shellcheck disable=SC1090 # the site config is a run-time path
+if [ -r "$GH_STATS_ENV" ]; then
+	_env_snapshot="$(export -p)"
+	set -a; . "$GH_STATS_ENV"; set +a
+	eval "$_env_snapshot"
+	unset _env_snapshot
+fi
+
+# The catalogue file, read and replaced, and the files kept beside it.
+APPSTORE_CACHE="${APPSTORE_CACHE:-/var/lib/gh-stats/apps.json}"
+PLATFORMS_FILE="${PLATFORMS_FILE:-$(dirname "$APPSTORE_CACHE")/platforms.json}"
+# The catalogue file as the run before left it.
+PLATFORMS_PREVIOUS="${PLATFORMS_PREVIOUS:-${APPSTORE_CACHE}.before}"
+SHIPPED_FILE="${SHIPPED_FILE:-$(dirname "$APPSTORE_CACHE")/shipped.json}"
+
+APPSTORE_URL="${APPSTORE_URL:-https://apps.nextcloud.com/api/v1/apps.json}"
+# <PLATFORM_URL>/<version>/apps.json is the list of one server version.
+PLATFORM_URL="${PLATFORM_URL:-${APPSTORE_URL%/*}/platform}"
+# The base URL of a mirror that serves the lists of the end-of-life majors
+# under the same path; empty for none.
+PLATFORM_MIRROR="${PLATFORM_MIRROR:-}"
+# The file whose LATEST_EOL array names the versions the mirror holds.
+GITHUB_RAW_URL="${GITHUB_RAW_URL:-https://raw.githubusercontent.com}"
+PLATFORM_VERSIONS_URL="${PLATFORM_VERSIONS_URL:-${GITHUB_RAW_URL}/ernolf/ebtb/main/modules/nc/versions}"
+# How many lists a run asks the App Store for, which allows 10 such requests
+# in 10 minutes and blocks the address for an hour beyond them.
+PLATFORM_APPSTORE_READS="${PLATFORM_APPSTORE_READS:-1}"
+# The seconds between two runs, by which the lists of the App Store take turns.
+PLATFORM_RUN_INTERVAL="${PLATFORM_RUN_INTERVAL:-1800}"
+# How often a request that fails transiently is repeated, and the seconds one
+# may take.
+RETRIES=3
+REQUEST_TIMEOUT=300
+
+JQ="${JQ_BIN:-jq}"
+
+set -euo pipefail
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+warn() { echo "WARNING: $*" >&2; }
+note() { echo "gh-nc-platforms: $*" >&2; }
+
+usage() {
+	cat <<'EOF'
+Usage: gh-nc-platforms
+
+Adds the releases only the platform lists of the App Store name to the
+catalogue file APPSTORE_CACHE, each marked with "platformOnly": true, and
+keeps PLATFORMS_FILE beside it:
+
+  {
+    "eol": ["11.0.8", ..., "32.0.15"],
+    "lists": {"32": {"version": "32.0.15", "source": "mirror", "etag": "..."}, ...},
+    "releases": {"<app id> <version> <nightly>": ["31", "32"], ...}
+  }
+
+eol are the versions the mirror holds, kept for a run that cannot read them,
+lists the list read for each major with the ETag of its answer, and releases
+the majors whose lists name each release.
+
+Run it after gh-nc-appstore-targets fetched the catalogue, and derive the
+targets from the result with APPSTORE_SOURCE=appdata. PLATFORMS_PREVIOUS is the
+catalogue file as the run before left it; this run replaces it with its own
+result, so a host keeps it by itself, and a runner that keeps nothing copies
+the restored catalogue file there before the fetch.
+
+Settings, from the environment or gh-stats.env:
+  APPSTORE_CACHE           the catalogue file (default: /var/lib/gh-stats/apps.json)
+  PLATFORMS_FILE           (default: platforms.json beside the catalogue file)
+  PLATFORMS_PREVIOUS       (default: <APPSTORE_CACHE>.before)
+  SHIPPED_FILE             the shipped.json of gh-nc-shipped, for the majors
+                           that are not end of life (default: beside the
+                           catalogue file)
+  PLATFORM_MIRROR          base URL of a mirror of the lists of the end-of-life
+                           majors, <base>/<version>/apps.json (default: none)
+  PLATFORM_VERSIONS_URL    the file whose LATEST_EOL names the versions of the
+                           mirror (default: modules/nc/versions of ernolf/ebtb)
+  PLATFORM_URL             (default: https://apps.nextcloud.com/api/v1/platform)
+  PLATFORM_APPSTORE_READS  lists a run asks the App Store for (default: 1)
+  PLATFORM_RUN_INTERVAL    seconds between two runs (default: 1800)
+EOF
+}
+
+case "${1:-}" in
+	-h|--help) usage; exit 0 ;;
+	"") ;;
+	*) usage >&2; exit 2 ;;
+esac
+
+[[ "$PLATFORM_APPSTORE_READS" =~ ^[0-9]+$ ]] || die "PLATFORM_APPSTORE_READS is $PLATFORM_APPSTORE_READS, it takes a number"
+[[ "$PLATFORM_RUN_INTERVAL" =~ ^[1-9][0-9]*$ ]] || die "PLATFORM_RUN_INTERVAL is $PLATFORM_RUN_INTERVAL, it takes a number of seconds"
+[ -r "$APPSTORE_CACHE" ] || die "no catalogue at $APPSTORE_CACHE"
+PLATFORM_MIRROR="${PLATFORM_MIRROR%/}"
+
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+
+# One request, conditional with an ETag, repeated while the connection fails
+# or the server answers with an error of its own. Prints the HTTP code.
+request() {
+	local url="$1" etag="$2" body="$3" headers="$4" i code args
+	for ((i = 1; ; i++)); do
+		args=(-sSL --compressed --max-time "$REQUEST_TIMEOUT" -A "gh-nc-platforms" -D "$headers" -o "$body")
+		[ -z "$etag" ] || args+=(-H "If-None-Match: $etag")
+		if code="$(curl "${args[@]}" -w '%{http_code}' "$url")" && [[ "$code" != 5?? ]]; then
+			printf '%s\n' "$code"
+			return 0
+		fi
+		[ "$i" -lt "$RETRIES" ] || return 1
+		sleep $((i * 10))
+	done
+}
+
+# == The lists ==
+state="$work/state.json"
+if [ -s "$PLATFORMS_FILE" ] && "$JQ" -e 'type == "object"' "$PLATFORMS_FILE" >/dev/null 2>&1; then
+	cp "$PLATFORMS_FILE" "$state"
+else
+	echo '{}' > "$state"
+fi
+
+# The versions of the mirror, from the run before when the file cannot be read.
+eol=()
+if request "$PLATFORM_VERSIONS_URL" "" "$work/versions" "$work/headers" > "$work/code" && [ "$(<"$work/code")" = 200 ]; then
+	read -r -a eol <<< "$(sed -n 's/^LATEST_EOL=(\(.*\))[[:space:]]*$/\1/p' "$work/versions" | head -n 1)"
+fi
+for v in "${eol[@]}"; do
+	[[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { eol=(); break; }
+done
+if [ ${#eol[@]} -eq 0 ]; then
+	mapfile -t eol < <("$JQ" -r '.eol[]?' "$state")
+	warn "the versions of the end-of-life majors cannot be read, using the ${#eol[@]} of the run before"
+fi
+
+# "<major> <version> <source>", one line per list.
+eol_source=appstore
+[ -z "$PLATFORM_MIRROR" ] || eol_source=mirror
+top=0
+: > "$work/lists"
+for v in "${eol[@]}"; do
+	printf '%s %s %s\n' "${v%%.*}" "$v" "$eol_source" >> "$work/lists"
+	[ "${v%%.*}" -le "$top" ] || top="${v%%.*}"
+done
+# Of each major above them the newest release, for a major without a release
+# and for master its first.
+if [ -s "$SHIPPED_FILE" ]; then
+	"$JQ" -r --argjson top "$top" '
+		[.releases[]? | select(.major > $top)] | group_by(.major)[]
+		| max_by([.latest == true] + (.version | [scan("[0-9]+") | tonumber][0:3]))
+		| "\(.major) \(if .version | test("^[0-9]+\\.[0-9]+\\.[0-9]+$") then .version else "\(.major).0.0" end) appstore"' \
+		"$SHIPPED_FILE" >> "$work/lists" || warn "$SHIPPED_FILE cannot be read, the majors that are not end of life have no list"
+else
+	warn "no $SHIPPED_FILE, the majors that are not end of life have no list"
+fi
+
+# The ETag of a list holds only for the version and the source it was read at.
+declare -A known=()
+while IFS=$'\t' read -r major version source etag; do
+	known["$major $version $source"]="$etag"
+done < <("$JQ" -r '.lists // {} | to_entries[] | [.key, .value.version, .value.source, .value.etag // ""] | @tsv' "$state")
+
+# The key of a release, in the lists and in the catalogue.
+key='def key($id): "\($id) \(.version) \(.isNightly == true)";'
+
+# Reads one list. A changed one goes to $work/new as one line per release,
+# "<key> <major> <release>", and every list to $work/result as
+# "<major> <version> <source> <read> <etag>", both separated by tabs.
+read_list() {
+	local major="$1" version="$2" source="$3" base="$PLATFORM_URL" from="App Store" etag code new
+	[ "$source" != mirror ] || { base="$PLATFORM_MIRROR"; from=mirror; }
+	etag="${known["$major $version $source"]:-}"
+	if ! code="$(request "$base/$version/apps.json" "$etag" "$work/body" "$work/headers")"; then
+		warn "the list of $version cannot be read from the $from"
+		code=0
+	fi
+	case "$code" in
+		200)
+			new="$(sed -n 's/^[Ee][Tt][Aa][Gg]: *//p' "$work/headers" | tr -d '\r' | tail -n 1)"
+			if "$JQ" -r --arg m "$major" "$key"'
+				if type != "array" then error("no list") else . end
+				| .[] | select(.id | type == "string" and test("^[!-~]+$")) | .id as $id
+				| .releases[]? | select(.version | type == "string" and test("^[!-~]+$"))
+				| "\(key($id))\t\($m)\t\(tojson)"' \
+				"$work/body" > "$work/lines" 2>/dev/null && [ -s "$work/lines" ] && [ -n "$new" ]; then
+				cat "$work/lines" >> "$work/new"
+				note "$version from the $from: $(wc -l < "$work/lines") releases"
+				printf '%s\t%s\t%s\ttrue\t%s\n' "$major" "$version" "$source" "$new" >> "$work/result"
+				return 0
+			fi
+			warn "the list of $version from the $from does not parse, names no release or has no ETag, skipped" ;;
+		304) ;;
+		404) warn "the $from holds no list of $version" ;;
+		429) warn "the $from limits the requests, the list of $version waits" ;;
+		0) ;;
+		*) warn "the $from answers $code for the list of $version" ;;
+	esac
+	printf '%s\t%s\t%s\tfalse\t%s\n' "$major" "$version" "$source" "$etag" >> "$work/result"
+}
+
+: > "$work/new"
+: > "$work/result"
+while read -r major version source; do
+	[ "$source" = mirror ] || continue
+	read_list "$major" "$version" "$source"
+done < "$work/lists"
+
+# The lists of the App Store take turns by the time of the run.
+mapfile -t store < <(awk '$3 == "appstore"' "$work/lists" | sort -n)
+turn=$(($(date +%s) / PLATFORM_RUN_INTERVAL))
+for ((i = 0; i < ${#store[@]}; i++)); do
+	read -r major version source <<< "${store[i]}"
+	if [ $(((i - turn % ${#store[@]} + ${#store[@]}) % ${#store[@]})) -lt "$PLATFORM_APPSTORE_READS" ]; then
+		read_list "$major" "$version" "$source"
+	else
+		printf '%s\t%s\t%s\tfalse\t%s\n' "$major" "$version" "$source" "${known["$major $version $source"]:-}" >> "$work/result"
+	fi
+done
+
+# == The catalogue ==
+previous="$work/previous.json"
+if [ -r "$PLATFORMS_PREVIOUS" ] && "$JQ" -e 'type == "array"' "$PLATFORMS_PREVIOUS" >/dev/null 2>&1; then
+	cp "$PLATFORMS_PREVIOUS" "$previous"
+else
+	echo '[]' > "$previous"
+fi
+
+lists="$("$JQ" -R -n -c '[inputs | split("\t") | {major: .[0], version: .[1], source: .[2], read: (.[3] == "true"), etag: (.[4] // "")}]' "$work/result")"
+eol_json="$(printf '%s\n' "${eol[@]}" | "$JQ" -R . | "$JQ" -s -c 'map(select(length > 0))')"
+
+# Nothing to do when no list changed, the catalogue file is the one the run
+# before left and the lists are those it knew.
+if [ ! -s "$work/new" ] && cmp -s "$APPSTORE_CACHE" "$PLATFORMS_PREVIOUS" \
+	&& "$JQ" -e --argjson lists "$lists" --argjson eol "$eol_json" '
+		.eol == $eol
+		and (.lists // {} | to_entries | map([.key, .value.version, .value.source]) | sort)
+		    == ($lists | map(select(.etag != "") | [.major, .version, .source]) | sort)' "$state" >/dev/null; then
+	note "no list changed"
+	exit 0
+fi
+
+# What the App Store lists is the catalogue file without the releases a run
+# before added.
+"$JQ" -r "$key"'
+	if type == "array" then . else error("the catalogue is no list") end
+	| .[] | .id as $id | .releases[]? | select(.platformOnly != true) | key($id)' "$APPSTORE_CACHE" \
+	| LC_ALL=C sort -u > "$work/listed"
+"$JQ" -r '.[].id' "$APPSTORE_CACHE" | LC_ALL=C sort -u > "$work/ids"
+
+# "<key> <major>" for every release a list names: of the lists not read now
+# what the run before knew, of the others what they name now.
+{
+	"$JQ" -r '.releases // {} | to_entries[] | .key as $k | .value[] | "\($k)\t\(.)"' "$state" \
+		| awk -F '\t' 'FILENAME == ARGV[1] { if ($4 == "false") keep[$1]; next } $2 in keep' "$work/result" -
+	cut -f 1,2 "$work/new"
+} | LC_ALL=C sort -u > "$work/names"
+
+# The releases to add: named by a list, not listed, of an app that is.
+cut -f 1 "$work/names" | LC_ALL=C sort -u | LC_ALL=C comm -23 - "$work/listed" \
+	| awk 'FILENAME == ARGV[1] { ids[$0]; next } { split($0, k, " ") } k[1] in ids' "$work/ids" - > "$work/gap"
+
+# Each of them from the list read now, else as the catalogue kept it.
+{
+	cut -f 1,3 "$work/new"
+	"$JQ" -r "$key"' .[] | .id as $id | .releases[]? | "\(key($id))\t\(tojson)"' "$previous" "$APPSTORE_CACHE"
+} | awk -F '\t' 'FILENAME == ARGV[1] { want[$0]; next } ($1 in want) && !seen[$1]++' "$work/gap" - > "$work/objects"
+
+# A release a list names that is neither listed nor kept anywhere: the lists
+# that name it lose their ETag, so the next run reads them in full.
+cut -f 1 "$work/objects" | LC_ALL=C sort | LC_ALL=C comm -13 - "$work/gap" > "$work/missing"
+again="$(awk -F '\t' 'FILENAME == ARGV[1] { missing[$0]; next } $1 in missing { print $2 }' "$work/missing" "$work/names" | sort -u | tr '\n' ' ')"
+[ ! -s "$work/missing" ] || warn "$(wc -l < "$work/missing") releases are named by a list and kept nowhere, the next run reads their lists in full"
+
+"$JQ" -R -n -c --argjson lists "$lists" --argjson eol "$eol_json" --arg again "$again" '
+	($again | split(" ")) as $again
+	| {eol: $eol,
+	   lists: ($lists | map(select(.etag != "") | {key: .major, value: ({version, source}
+	           + (if .major | IN($again[]) then {} else {etag} end))}) | from_entries),
+	   releases: (reduce ([inputs | split("\t")] | group_by(.[0])[]) as $g ({}; .[$g[0][0]] = ($g | map(.[1]))))}' \
+	"$work/names" > "$work/platforms.json"
+
+# The objects reach jq as JSON, not as raw lines: jq before 1.7 damages a
+# multibyte character that crosses a read buffer boundary of its raw input.
+cut -d ' ' -f 1 "$work/objects" > "$work/object-ids"
+cut -f 2- "$work/objects" | "$JQ" -n -c --slurpfile cat "$APPSTORE_CACHE" --rawfile ids "$work/object-ids" '
+	($ids | split("\n")) as $ids
+	| ([inputs] | to_entries | map({id: $ids[.key], r: (.value + {platformOnly: true})})
+	   | group_by(.id) | map({key: .[0].id, value: (map(.r) | sort_by(.created, .version) | reverse)}) | from_entries) as $added
+	| $cat[0] | map(.id as $id | .releases |= map(select(.platformOnly != true)) + ($added[$id] // []))' > "$work/catalogue.json"
+"$JQ" -e 'type == "array" and length > 0' "$work/catalogue.json" >/dev/null || die "the catalogue did not come out as a list"
+
+mkdir -p "$(dirname "$PLATFORMS_FILE")"
+tmp="$(mktemp "${APPSTORE_CACHE}.XXXXXX")"
+cp "$work/catalogue.json" "$tmp" && chmod 644 "$tmp" && mv "$tmp" "$APPSTORE_CACHE"
+tmp="$(mktemp "${PLATFORMS_FILE}.XXXXXX")"
+cp "$work/platforms.json" "$tmp" && chmod 644 "$tmp" && mv "$tmp" "$PLATFORMS_FILE"
+tmp="$(mktemp "${PLATFORMS_PREVIOUS}.XXXXXX")"
+cp "$work/catalogue.json" "$tmp" && chmod 644 "$tmp" && mv "$tmp" "$PLATFORMS_PREVIOUS"
+
+note "$(wc -l < "$work/objects") releases of $(cut -d ' ' -f 1 "$work/objects" | sort -u | wc -l) apps from the platform lists"
