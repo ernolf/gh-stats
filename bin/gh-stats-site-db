@@ -147,10 +147,10 @@ repository under its current name, plus
   sources    every App Store release that is no release asset whose tag
              gh-nc-sources found: app id, version, host, repository, tag;
              empty without sources.json
-  developed  every app gh-nc-sources confirmed is developed in another
-             repository than its releases are downloaded from: app id, host,
-             owner, repository and the tag that confirmed it; empty without
-             sources.json
+  developed  every app a release of which is downloaded from another
+             repository than the one gh-nc-sources confirmed it is developed
+             in: app id, host, owner, repository and the tag that confirmed
+             it; empty without sources.json
   security_overdue  every app with a security finding reported to its
              maintainer that no measured release has fixed within the
              deadline, and the day it was reported; empty without
@@ -613,8 +613,8 @@ CREATE TEMP TABLE counted AS
 SELECT DISTINCT host, owner, repo, tag, asset FROM samples WHERE $asset_flt;
 CREATE INDEX temp.counted_release ON counted (host, owner, repo, tag);
 
--- The repository an app is developed in when that is not the one its releases
--- are downloaded from, as gh-nc-sources confirmed it by a tag both have at the
+-- The repository an app is developed in when a release of it is downloaded
+-- from another one, as gh-nc-sources confirmed it by a tag both have at the
 -- same object. owner is the path in front of the last element of the
 -- repository, which on a host with groups holds them.
 CREATE TABLE developed (
@@ -818,9 +818,13 @@ SELECT p.project, p.line, h.host, h.owner, h.repo, p.tag, p.published,
 -- The version is the one the run was asked for, the version of the App Store
 -- release, since an app that sets its version only when it builds a release
 -- declares the same one in the info.xml of every tag. A version measured again
--- keeps only its newest run. A shipped app keeps its version over several
--- server releases, so the run of one server release never replaces that of
--- another, nor the run of the same version from the App Store.
+-- keeps only its newest run, also when the runs lie under two repositories of
+-- one project: gh-nc-appslist names an app under the repository of its
+-- releases until gh-nc-sources confirmed the one it is developed in, and under
+-- that one from then on. The project of a run is the one of its repository or
+-- of a repository the catalogue lists for its app. A shipped app keeps its
+-- version over several server releases, so the run of one server release never
+-- replaces that of another, nor the run of the same version from the App Store.
 -- Each target that left no result of its own becomes a finding, so a release
 -- with a failed build or an aborted run never looks clean. A REUSE lint carries
 -- no findings; its exit code tells whether the checkout is compliant.
@@ -891,6 +895,19 @@ DELETE FROM measurements WHERE EXISTS (
      AND m.subdir IS measurements.subdir
      AND m.version IS measurements.version AND m.server IS measurements.server
      AND m.stamp > measurements.stamp);
+CREATE TEMP TABLE run_project AS
+SELECT m.dir, j.project FROM measurements m
+  JOIN projects j ON m.host = j.host AND m.owner = j.owner AND m.repo = j.repo
+ WHERE m.server IS NULL
+UNION
+SELECT m.dir, j.project FROM measurements m JOIN apps a ON a.id = m.app_id
+  JOIN projects j ON a.host = j.host AND a.owner = j.owner AND a.repo = j.repo
+ WHERE m.server IS NULL;
+DELETE FROM measurements WHERE dir IN (
+  SELECT o.dir FROM measurements o JOIN run_project p ON p.dir = o.dir
+    JOIN run_project q ON q.project = p.project
+    JOIN measurements n ON n.dir = q.dir
+   WHERE n.app_id = o.app_id AND n.version = o.version AND n.stamp > o.stamp);
 DELETE FROM targets WHERE dir NOT IN (SELECT dir FROM measurements);
 DELETE FROM findings WHERE dir NOT IN (SELECT dir FROM measurements);
 DELETE FROM fields WHERE dir NOT IN (SELECT dir FROM measurements);

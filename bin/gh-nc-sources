@@ -13,7 +13,8 @@
 #
 # It also finds the repository an app is developed in when that is not the one
 # its releases are downloaded from, as nextcloud-releases/<app> publishes what
-# nextcloud/<app> develops. The issue tracker and the website of the app name
+# nextcloud/<app> develops, also for an app that releases from the repository
+# it is developed in again. The issue tracker and the website of the app name
 # the candidates; one is confirmed when the tag of a listed release names the
 # same object there as in the repository of the download, so no list of
 # release owners has to be kept. gh-nc-appstore-targets samples the confirmed
@@ -71,8 +72,8 @@ usage() {
 Usage: gh-nc-sources [-f <file>]
 
 Writes the repository and the tag of every App Store release that is no
-release asset, and the repository every app is developed in when that is not
-the one its releases are downloaded from, to <file>, as JSON:
+release asset, and the repository every app is developed in when a release of
+it is downloaded from another one, to <file>, as JSON:
 
   {
     "scanned": "2026-11-01T00:20:00Z",
@@ -126,16 +127,18 @@ Under developed, an app counts when its releases that are stable, no nightly
 and a version of numbers only are downloaded as release assets, from GitHub or
 from under /releases/download/ of another host, the newest of them from
 APPSTORE_SINCE_YEAR or later, and its issue tracker or its website names a
-repository other than the one that newest release is downloaded from, read as
-above. The candidates are tried in that order and the first one confirmed is
-the repository the app is developed in: a listed release, newest first, whose
-download is from another repository than the candidate names a tag that both
-repositories have at the same object, the commit of an annotated tag. tag is
-that tag, download the one of the newest release, candidates the repositories
-tried; host, repo and tag are null for an app no candidate confirmed. A candidate
-that is the repository of the newest release under an older name, which its
-host redirects, is none, and a renamed candidate is entered under its current
-name.
+repository other than one of these releases from APPSTORE_SINCE_YEAR or later
+is downloaded from, read as above. So an app that releases from the repository
+it is developed in again counts as well, as long as such a release lies in the
+repository it left. The candidates are tried in that order and the first one
+confirmed is the repository the app is developed in: a listed release, newest
+first, whose download is from another repository than the candidate names a
+tag that both repositories have at the same object, the commit of an annotated
+tag. tag is that tag, download the one of the newest release, candidates the
+repositories tried; host, repo and tag are null for an app no candidate
+confirmed. A release from the candidate itself under an older name, which its
+host redirects, confirms nothing, and a renamed candidate is entered under its
+current name.
 
 An entry is taken over from the previous <file> while its download and its
 candidates are unchanged and it was checked less than SOURCES_RECHECK_DAYS
@@ -236,9 +239,9 @@ jq_url='
 ' "$APPSTORE_CACHE" > "$tmp/apps"
 
 # One line per app whose releases are release assets and whose issue tracker
-# or website names another repository than its newest release is downloaded
-# from: {id, releases: [{host, repo, tag, download}], candidates: [{host,
-# repo}]}, the releases newest first.
+# or website names another repository than one of its releases since the cutoff
+# is downloaded from: {id, releases: [{host, repo, tag, download}],
+# candidates: [{host, repo}]}, the releases newest first.
 "$JQ" -c --arg since "$APPSTORE_SINCE_YEAR" "$jq_url"'
 	(if type == "array" then . else .data end)[] | . as $a
 	| [.releases[]? | stable
@@ -246,10 +249,10 @@ jq_url='
 	   | select($p[5] == "releases" and ($p[2] == "github.com" or $p[6] == "download") and ($p[7] // "") != "")
 	   | {version, download, created, host: ($p[2] | ascii_downcase), repo: ($p[3] + "/" + $p[4]), tag: ($p[7] | decode)}]
 	| select(length > 0 and (max_by(.created) | .created[0:4]) >= $since)
-	| by_version | (.[0] | key) as $newest
+	| by_version | ([.[] | select(.created[0:4] >= $since) | key] | unique) as $from
 	| {id: $a.id,
 	   releases: map({host, repo, tag, download}),
-	   candidates: ([$a.issueTracker, $a.website | strings | try page catch empty | select(key != $newest)]
+	   candidates: ([$a.issueTracker, $a.website | strings | try page catch empty | select(key as $k | any($from[]; . != $k))]
 	                | reduce .[] as $c ([]; if any(.[]; key == ($c | key)) then . else . + [$c] end))}
 	| select(.candidates | length > 0)
 ' "$APPSTORE_CACHE" > "$tmp/developed"
@@ -343,13 +346,11 @@ object_of() { tag="$2" awk -F'\t' '$2 == ENVIRON["tag"] { print $1; exit }' "$1"
 # resolve_developed <app>: the entry of the app, with the first candidate that
 # has a tag of a listed release at the object the repository of that release
 # has it, or host, repo and tag null. The repositories of the releases are
-# tried from the newest release on. A candidate that is the repository of the
-# newest release under an older name is none, and no release of its own under
+# tried from the newest release on. No release of the candidate itself under
 # an older name confirms it; one that was renamed is entered under its current
 # name, once that has the tag at the same object.
 resolve_developed() {
-	local app="$1" chost crepo rhost rrepo nhost nrepo dev own tag name newest other
-	IFS=$'\t' read -r nhost nrepo < <("$JQ" -r '.releases[0] | [.host, .repo] | @tsv' <<<"$app")
+	local app="$1" chost crepo rhost rrepo dev own tag name other
 	while IFS=$'\t' read -r chost crepo; do
 		dev="$(tags_of "$chost" "$crepo")" || continue
 		while IFS=$'\t' read -r rhost rrepo; do
@@ -360,8 +361,6 @@ resolve_developed() {
 				| first(.releases[] | select(.host == $host and .repo == $repo and $o[.tag] != null and $o[.tag] == $d[.tag]) | .tag)' <<<"$app")"
 			[ -n "$tag" ] || continue
 			name="$(current_name "$chost" "$crepo")" || continue 2
-			newest="$(current_name "$nhost" "$nrepo")" || continue 2
-			[ "${name,,}" != "${newest,,}" ] || continue 2
 			other="$(current_name "$rhost" "$rrepo")" || continue
 			[ "${name,,}" != "${other,,}" ] || continue
 			if [ "${name,,}" != "${chost,,}/${crepo,,}" ]; then

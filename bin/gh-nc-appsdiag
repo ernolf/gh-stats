@@ -123,11 +123,9 @@ APPSTORE_SOURCE="${APPSTORE_SOURCE:-download}"
 APPSTORE_CACHE="${APPSTORE_CACHE:-/var/lib/gh-stats/apps.json}"
 APPSTORE_APPDATA_FILE="${APPSTORE_APPDATA_FILE:-}"
 APPSTORE_EBTB_DB="${APPSTORE_EBTB_DB:-}"
-# The repositories that publish the releases of an app developed in another one,
-# the same variable gh-nc-appslist maps such an app with.
-APPLIST_RELEASE_REPOS="${APPLIST_RELEASE_REPOS:-nextcloud-releases christianlupus-nextcloud/cookbook-releases}"
-# The tags gh-nc-sources found for the releases that are no release asset, the
-# file gh-nc-appslist lists them from.
+# The tags gh-nc-sources found for the releases that are no release asset and
+# the repository it confirmed each app is developed in, the file
+# gh-nc-appslist lists both from.
 SOURCES_CACHE="${SOURCES_CACHE:-$(dirname "$APPSTORE_CACHE")/sources.json}"
 
 # The app types the server never restricts to groups, its
@@ -368,7 +366,6 @@ Environment (or /etc/gh-stats/gh-stats.env):
   APPSTORE_CACHE             the catalogue of the download source
   APPSTORE_APPDATA_FILE      the catalogue of the appdata source
   APPSTORE_EBTB_DB           the nc-apps database of the ebtb source
-  APPLIST_RELEASE_REPOS      the release repositories, as in gh-nc-appslist
   SOURCES_CACHE              sources.json of gh-nc-sources, optional
                              (default: next to APPSTORE_CACHE)
   SHIPPED_BIN                gh-nc-shipped (default: the one beside this script)
@@ -1392,22 +1389,23 @@ release_versions() {
 }
 # The App Store download of a version is a release asset, on GitHub or on a
 # Forgejo or Gitea host under the same path, and its URL names
-# the tag the shipped tarball was built from. A release counts when it lies in this
-# repository, or when it comes from one of APPLIST_RELEASE_REPOS and the app's issue
-# tracker, else its website, names this repository: the mapping gh-nc-appslist
-# lists such an app under. A download that is no release asset names no tag of
+# the tag the shipped tarball was built from. A release counts when this is the
+# repository gh-nc-sources confirmed its app is developed in, developed in
+# SOURCES_CACHE, and without one when it lies in this repository: the mapping
+# gh-nc-appslist lists an app under. A download that is no release asset names no tag of
 # this repository; gh-nc-sources found its repository and tag, and SOURCES_CACHE
 # holds them. Several app ids of one repository can ship the same version from
 # the same tag, so each tag is named once. A nightly of the same version as a
 # stable release is left out, as in release_url.
 store_tags() {
-	local cache
+	local cache developed
 	cache="$(appstore_catalogue)" || return 0
-	{ "$JQ" -r --arg repo "${slug,,}" --arg v "$1" --arg rel "$APPLIST_RELEASE_REPOS" '
-		def gh: (. // "") | capture("^https?://github\\.com/(?<o>[^/#?]+)/(?<r>[^/#?]+)")
-			| "\(.o)/\(.r | sub("\\.git$"; ""))";
-		($rel | gsub(","; " ") | split(" ") | map(select(length > 0))) as $release
-		| [ (if type == "object" then .data else . end)[] | . as $a
+	developed="$("$JQ" -c '[.developed[]? | select(.repo != null)
+		| {key: .id, value: ((if .host == "github.com" then "" else .host + "/" end) + .repo)}] | from_entries' \
+		"$SOURCES_CACHE" 2>/dev/null)" || developed=
+	[ -n "$developed" ] || developed='{}'
+	{ "$JQ" -r --arg repo "${slug,,}" --arg v "$1" --argjson developed "$developed" '
+		[ (if type == "object" then .data else . end)[] | . as $a
 		    | [.releases[]? | select(.version == $v and .download != null)] as $all
 		    | ($all | map(select(.isNightly != true))) as $stable
 		    | (if ($stable | length) > 0 then $stable else $all end)[]
@@ -1416,9 +1414,7 @@ store_tags() {
 		    | ($p[2] | ascii_downcase) as $host
 		    | ($p[3] + "/" + $p[4]) as $gh
 		    | ((if $host == "github.com" then "" else $host + "/" end) + $gh) as $dl
-		    | (if $host == "github.com" and (($release | index($p[3])) or ($release | index($gh)))
-		       then ([$a.issueTracker, $a.website | gh] | first // $dl)
-		       else $dl end) as $src
+		    | ($developed[$a.id] // $dl) as $src
 		    | select(($src | ascii_downcase) == $repo)
 		    | $p[7] ]
 		| unique | .[]' "$cache" 2>/dev/null || true
