@@ -12,7 +12,9 @@
 #               categories.json, the names of the App Store categories, which
 #               only the site reads; gh-stats-catalogue.yml keeps sources.json
 #               there, from which the repositories the apps are developed in
-#               are sampled as well
+#               are sampled as well, and shipped.json, the server releases,
+#               from which gh-nc-platforms takes the versions whose platform
+#               lists it reads; platforms.json, what it read from those lists
 #   sampler-db  downloads.sqlite.zst, the sampler database, and tools.json,
 #               the versions of the tools the last run sampled with, which
 #               the site lists under "Built with"
@@ -24,6 +26,16 @@
 # The database is never started empty: without an intact copy in either release
 # the run stops, since a fresh database would replace the whole history. The
 # first asset is seeded once from an existing database with gh-stats-prune -o.
+#
+# apps.json lists, of the releases of an app that declare the same Nextcloud
+# range, PHP range and stability, only the highest version. After the fetch
+# gh-nc-platforms adds the others from the platform lists of the App Store, each
+# marked with "platformOnly", so the asset apps.json holds them as well, while
+# apps.json.etag stays the ETag of the answer of the App Store. The lists of the
+# end-of-life server versions come from the mirror the Actions variable
+# PLATFORM_MIRROR names, asked conditionally for each of them every run; of the
+# lists of the other versions a run asks the App Store for one, in turn. Without
+# the variable every list takes its turn at the App Store.
 #
 # The sampler runs with SAMPLER_TOKEN, a personal access token without scopes:
 # GITHUB_TOKEN is limited to 1,000 requests per hour and repository, which does
@@ -73,6 +85,10 @@ env:
   # both itself, so it names the variable of a target it leaves out.
   SAMPLER_TARGETS: ${{ vars.SAMPLER_TARGETS }}
   UNLISTED_TOOLS: ${{ vars.UNLISTED_TOOLS }}
+  # The base URL of a mirror of the platform lists of the end-of-life server
+  # versions, <PLATFORM_MIRROR>/<version>/apps.json; without it gh-nc-platforms
+  # reads every list from the App Store.
+  PLATFORM_MIRROR: ${{ vars.PLATFORM_MIRROR }}
 
 jobs:
   sample:
@@ -116,17 +132,37 @@ jobs:
           # take them from beside the catalogue.
           gh release download "$CATALOGUE_TAG" -p sources.json -D "$STATE/catalogue" \
             || echo "::warning::No release sources, the development repositories are not sampled"
+          # What the run before read from the platform lists, and the server
+          # releases, whose newest per major names a list of the App Store.
+          gh release download "$CATALOGUE_TAG" -p platforms.json -D "$STATE/catalogue" \
+            || echo "::warning::No platform lists read yet, reading every list in full"
+          gh release download "$CATALOGUE_TAG" -p shipped.json -D "$STATE/catalogue" \
+            || echo "::warning::No server releases, only the lists of the end-of-life versions are read"
+          # The catalogue as the run before left it: gh-nc-platforms takes the
+          # releases it added from this copy, since a changed apps.json replaces
+          # the file, and the upload below tells a change by the other two.
+          if [ -r "$STATE/catalogue/apps.json" ]; then
+            cp "$STATE/catalogue/apps.json" "$STATE/catalogue/apps.json.before"
+            sha256sum < "$STATE/catalogue/apps.json" > "$STATE/apps.json.sum"
+          fi
+          cp "$STATE/catalogue/platforms.json" "$STATE/platforms.json.before" 2>/dev/null || true
           for f in apps.json appapi_apps.json categories.json; do
             cp "$STATE/catalogue/$f.etag" "$STATE/$f.etag.before" 2>/dev/null || true
           done
 
+      # The first evaluation fetches the catalogue, the second one reads it with
+      # the releases gh-nc-platforms added. A run in which the lists cannot be
+      # read samples with the catalogue as it is.
       - name: Derive the App Store targets
-        env:
-          APPSTORE_SOURCE: download
         run: |
-          APPSTORE_CACHE="$STATE/catalogue/apps.json" \
-          APPSTORE_TARGETS_FILE="$GH_STATS_TARGETS_DIR/appstore.json" \
-            bin/gh-nc-appstore-targets
+          export APPSTORE_CACHE="$STATE/catalogue/apps.json"
+          export APPSTORE_TARGETS_FILE="$GH_STATS_TARGETS_DIR/appstore.json"
+          APPSTORE_SOURCE=download bin/gh-nc-appstore-targets
+          if bin/gh-nc-platforms; then
+            APPSTORE_SOURCE=appdata APPSTORE_APPDATA_FILE="$APPSTORE_CACHE" bin/gh-nc-appstore-targets
+          else
+            echo "::warning::The platform lists were not read, the catalogue stays without their changes"
+          fi
 
       - name: Keep a changed catalogue
         env:
@@ -135,9 +171,18 @@ jobs:
           for f in apps.json appapi_apps.json categories.json; do
             etag="$STATE/catalogue/$f.etag"
             test -r "$etag" || continue
-            cmp -s "$etag" "$STATE/$f.etag.before" && continue
+            if cmp -s "$etag" "$STATE/$f.etag.before"; then
+              # apps.json changes under an unchanged ETag when a platform list did.
+              [ "$f" = apps.json ] || continue
+              [ "$(sha256sum < "$STATE/catalogue/$f")" != "$(cat "$STATE/apps.json.sum" 2>/dev/null)" ] || continue
+            fi
             gh release upload "$CATALOGUE_TAG" "$STATE/catalogue/$f" "$etag" --clobber
           done
+          # After the catalogue it describes. A run that stops in between leaves
+          # the older file, by which the next run reads the changed lists again.
+          if [ -r "$STATE/catalogue/platforms.json" ] && ! cmp -s "$STATE/catalogue/platforms.json" "$STATE/platforms.json.before"; then
+            gh release upload "$CATALOGUE_TAG" "$STATE/catalogue/platforms.json" --clobber
+          fi
 
       # Also with an unchanged catalogue, which may hold versions that were
       # never measured.
