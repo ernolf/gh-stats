@@ -12,6 +12,8 @@
 # marked as such. The members of the organisations UNLISTED_ORGS names are
 # owners as well; the repositories of one that has no app and that nothing else
 # names stay out of the result, in a file of their own that is not published.
+# The owners the code search of GitHub names for such an info.xml are scanned
+# too, and stay in the scan once they are found.
 # The result replaces its previous copy, from which a repository not pushed
 # since is taken over instead of being read again.
 
@@ -62,6 +64,15 @@ UNLISTED_RELEASES="${UNLISTED_RELEASES:-10}"
 UNLISTED_TAGS="${UNLISTED_TAGS:-20}"
 # How often a request that times out or fails transiently is repeated.
 RETRIES=3
+# The code search of GitHub: the files it is asked for, the results it gives
+# for one query and on one page, the size in bytes from which it searches no
+# file, and the seconds between two requests, which keep a run within the ten
+# requests a minute it allows.
+SEARCH_QUERY='filename:info.xml path:appinfo nextcloud'
+SEARCH_CAP=1000
+SEARCH_PAGE=100
+SEARCH_SIZE=393216
+SEARCH_PAUSE=7
 
 JQ="${JQ_BIN:-jq}"
 GIT="${GIT_BIN:-git}"
@@ -97,15 +108,16 @@ shipped by the server to <file>, as JSON:
     "repos": {"nextcloud/files_gcs": {"host": "github.com",
               "repo": "nextcloud/files_gcs", "created": "...", "pushed": "...",
               "apps": [{"path": "", "id": "files_gcs", ...}],
-              "tag": "v1.0.0", "tags": ["v1.0.0", "v0.9.1"], "tarball": true}, ...}
+              "tag": "v1.0.0", "tags": ["v1.0.0", "v0.9.1"], "tarball": true}, ...},
+    "found": ["nextcloud", ...]
   }
 
 The owners are every owner the catalogue (apps.json and appapi_apps.json)
 names on GitHub, through the download URL of a release, the website or the
 issue tracker of an app, every owner of a repository in shipped.json, every
 owner it names on another host that answers the Forgejo and Gitea API, those
-UNLISTED_INCLUDE names and every member of an organisation UNLISTED_ORGS
-names. Every repository of these owners that is no
+UNLISTED_INCLUDE names, every member of an organisation UNLISTED_ORGS names
+and every owner in found. Every repository of these owners that is no
 fork, no mirror, not archived and not empty is read, as is every repository
 UNLISTED_INCLUDE names, whatever it is; those UNLISTED_EXCLUDE names are left
 out. Of each, the tree of the default branch is fetched without its blobs and
@@ -129,6 +141,16 @@ UNLISTED_INCLUDE and UNLISTED_TOOLS name first, then the most recently pushed,
 and leaves the rest to the next run. The repositories of an owner whose
 listing fails are taken over, those of an owner that no longer exists are
 dropped.
+
+found holds the owners the code search of GitHub has named, in this run or an
+earlier one: the owner of every repository with a file info.xml in a directory
+appinfo that mentions nextcloud. A hit only names an owner, whose repositories
+are then read as those of every other. A query gives 1000 results at most, so
+the files are asked for in ranges of their size, each halved until it holds no
+more, and two requests are seven seconds apart, which keeps a run within the
+ten a minute the search allows. The search does not return every repository on
+every request, so an owner stays in found until it no longer exists. A search
+that fails leaves the owners found so far.
 
 UNLISTED_ORGS names organisations as org or host/org. On GitHub their members
 are listed with the token of gh, which names the concealed ones as well when
@@ -254,9 +276,49 @@ tools="$("$JQ" -c '[.[].spec.key]' "$tmp/UNLISTED_TOOLS")"
 excluded="$("$JQ" -c '[.[].spec.key | strings]' "$tmp/UNLISTED_EXCLUDE")"
 excluded_ids="$("$JQ" -c '[.[].spec.id | strings | ascii_downcase]' "$tmp/UNLISTED_EXCLUDE")"
 
+# == Search ==
+# ask <query> <page>: one page of the code search into search.json. Every
+# request but the first of a run waits, so the run stays within the limit.
+asked=0
+ask() {
+	local i
+	for ((i = 0; i <= RETRIES; i++)); do
+		[ "$asked" = 0 ] || sleep "$SEARCH_PAUSE"
+		asked=1
+		"$GH" api -X GET search/code -f q="$1" -f per_page="$SEARCH_PAGE" -f page="$2" > "$tmp/search.json" 2> "$tmp/search.err" && return 0
+	done
+	return 1
+}
+
+# search <low> [<high>]: the owner of every repository with a file of the query
+# that has <low> to <high> bytes, or <low> and more, into search.owners. A
+# range with more files than one query gives is halved and asked for again.
+search() {
+	local low="$1" high="${2:-}" size total mid page
+	if [ -n "$high" ]; then size="$low..$high"; else size=">=$low"; fi
+	ask "$SEARCH_QUERY size:$size" 1 || return 1
+	total="$("$JQ" -r '.total_count' "$tmp/search.json")"
+	if [ "$total" -gt "$SEARCH_CAP" ] && [ "$low" != "$high" ] && [ "$low" -lt "$SEARCH_SIZE" ]; then
+		if [ -n "$high" ]; then mid=$(((low + high) / 2)); elif [ "$low" -gt 0 ]; then mid=$((low * 2)); else mid=1024; fi
+		search "$low" "$mid" && search "$((mid + 1))" "$high"
+		return
+	fi
+	for ((page = 1; ; page++)); do
+		"$JQ" -r '.items[].repository.owner.login' "$tmp/search.json" >> "$tmp/search.owners"
+		{ [ $((page * SEARCH_PAGE)) -lt "$total" ] && [ $((page * SEARCH_PAGE)) -lt "$SEARCH_CAP" ]; } || break
+		ask "$SEARCH_QUERY size:$size" $((page + 1)) || return 1
+	done
+}
+
+# found: the owners the previous file holds as found, then those of this run.
+: > "$tmp/search.owners"
+search 0 || warn "the code search failed, the owners found so far are scanned: $(tail -n 1 "$tmp/search.err")"
+"$JQ" -r '.found[]?' "$prev" | cat - "$tmp/search.owners" | awk '{ k = tolower($0) } !(k in seen) { seen[k]; print }' > "$tmp/found"
+
 # == Owners ==
-# "<host> <owner>" for every owner the catalogue and shipped.json name, and the
-# owners of UNLISTED_INCLUDE. A raw file on GitHub names its owner as well.
+# "<host> <owner>" for every owner the catalogue and shipped.json name, the
+# owners of UNLISTED_INCLUDE and those the code search found. A raw file on
+# GitHub names its owner as well.
 {
 	"$JQ" -r -s '
 		[.[][] | (.website, .issueTracker, .releases[]?.download) | strings
@@ -266,6 +328,7 @@ excluded_ids="$("$JQ" -c '[.[].spec.id | strings | ascii_downcase]' "$tmp/UNLIST
 		 | "\(.host) \(.owner)"] | .[]' "$APPSTORE_CACHE" "$APPSTORE_APPAPI_CACHE"
 	"$JQ" -r '.releases[]?.apps[]?.repo | "github.com " + split("/")[0]' "$shipped"
 	"$JQ" -r '.[].spec | select(.repo == null) | "\(.host) \(.owner)"' "$tmp/UNLISTED_INCLUDE"
+	awk '{ print "github.com " $0 }' "$tmp/found"
 } | awk '{ k = tolower($0) } !(k in seen) { seen[k]; print }' > "$tmp/owners.all"
 
 # A host besides GitHub counts only while its /api/v1/version answers as
@@ -488,10 +551,12 @@ while read -r host slug; do
 done < "$tmp/included"
 
 # The owners whose listing failed, as their keys, so their repositories are
-# taken over.
+# taken over, and those that no longer exist, which leave the owners found.
+: > "$tmp/gone"
 awk '{ print NR "\t" tolower(($1 == "github.com" ? "" : $1 "/") $2) }' "$tmp/owners" \
 	| while IFS=$'\t' read -r n k; do
-		[ -e "$tmp/list/$n.json" ] || [ -e "$tmp/list/$n.gone" ] || printf '%s\n' "$k"
+		if [ -e "$tmp/list/$n.gone" ]; then printf '%s\n' "$k" >> "$tmp/gone"
+		elif [ ! -e "$tmp/list/$n.json" ]; then printf '%s\n' "$k"; fi
 	done > "$tmp/failed"
 
 # Every repository to consider: those of the listings that are no fork, no
@@ -531,11 +596,12 @@ left="$(($(wc -l < "$tmp/stale") - UNLISTED_MAX_READS))"
 # owners only UNLISTED_ORGS adds that have no app in any repository; their
 # repositories go to the cache instead of the file.
 "$JQ" -n --slurpfile prev "$prev" --slurpfile shipped "$shipped" --slurpfile repos "$tmp/repos" --slurpfile read "$tmp/read.json" \
-	--rawfile failed "$tmp/failed" --rawfile added "$tmp/added" --argjson excluded "$excluded_ids" --argjson tools "$tools" --arg scanned "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '
+	--rawfile failed "$tmp/failed" --rawfile added "$tmp/added" --rawfile found "$tmp/found" --rawfile gone "$tmp/gone" --argjson excluded "$excluded_ids" --argjson tools "$tools" --arg scanned "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '
 	([inputs[] | .id] + [$shipped[0].releases[]?.apps[]?.id] | map(ascii_downcase)) as $known
 	| ($prev[0].repos // {}) as $old
 	| ($read | map({(.key): del(.key)}) | add // {}) as $fresh
 	| ($failed | split("\n") | map(select(. != ""))) as $f
+	| ($gone | split("\n") | map(select(. != ""))) as $g
 	| ([$repos[] | if $fresh[.key] then {key, value: ({host, repo, created, pushed} + $fresh[.key])}
 	                else {key, value: $old[.key]} | select(.value) end]
 	   + [$old | to_entries[] | select(.key as $k | any($f[]; . as $o | $k | startswith($o + "/")))]
@@ -547,7 +613,8 @@ left="$(($(wc -l < "$tmp/stale") - UNLISTED_MAX_READS))"
 	                                tag: $r.tag, tags: $r.tags, tarball: $r.tarball, pushed: $r.pushed, created: $r.created}
 	   | select(.id | ascii_downcase | IN($known[], $excluded[]) | not)]
 	| group_by(.id | ascii_downcase) | map(min_by(.created, .host, .repo, .path) | del(.created)) | sort_by(.id | ascii_downcase)
-	| {scanned: $scanned, apps: ., repos: $all, quiet: [$added | split("\n")[] | select(. != "" and ($has[.] | not))]}' \
+	| {scanned: $scanned, apps: ., repos: $all,
+	   found: ($found | split("\n") | map(select(. != "" and (ascii_downcase | IN($g[]) | not))) | sort_by(ascii_downcase)), quiet: [$added | split("\n")[] | select(. != "" and ($has[.] | not))]}' \
 	"$APPSTORE_CACHE" "$APPSTORE_APPAPI_CACHE" > "$tmp/result.json"
 SPLIT_JQ='(.quiet | map({key: ., value: true}) | from_entries) as $q | def quiet: split("/")[:-1] | join("/") | in($q);'
 if [ -s "$tmp/orgs" ]; then
@@ -557,5 +624,5 @@ if [ -s "$tmp/orgs" ]; then
 fi
 "$JQ" "$SPLIT_JQ"' del(.quiet) | .repos |= with_entries(select(.key | quiet | not))' "$tmp/result.json" > "$UNLISTED_FILE.new"
 mv "$UNLISTED_FILE.new" "$UNLISTED_FILE"
-echo "unlisted apps written to $UNLISTED_FILE ($("$JQ" -r '"\(.apps | length) apps in \(.repos | length) repositories"' "$UNLISTED_FILE"), $(wc -l < "$tmp/owners") owners, $(wc -l < "$tmp/failed") not listed, $reads repositories read, $left left to the next run)"
+echo "unlisted apps written to $UNLISTED_FILE ($("$JQ" -r '"\(.apps | length) apps in \(.repos | length) repositories"' "$UNLISTED_FILE"), $(wc -l < "$tmp/owners") owners, $("$JQ" -r '.found | length' "$UNLISTED_FILE") found by the code search, $(wc -l < "$tmp/failed") not listed, $reads repositories read, $left left to the next run)"
 [ "$wrong" = 0 ] || die "$wrong list entries of the wrong form were left out"
