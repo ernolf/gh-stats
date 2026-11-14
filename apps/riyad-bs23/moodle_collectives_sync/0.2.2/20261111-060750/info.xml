@@ -1,0 +1,72 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+    <id>moodle_collectives_sync</id>
+    <name>Moodle Collectives Sync</name>
+    <summary>Provisions Teams and Collectives from Moodle courses</summary>
+    <description><![CDATA[
+**Moodle Collectives Sync** connects course-driven learning in Moodle with real-time
+collaborative wikis in Nextcloud Collectives.
+
+## Why Moodle Collectives Sync?
+
+While Moodle excels at course management, grading, and enrolment, students often
+fall back on external, unmanaged tools — Google Docs, Notion — for shared notes and
+group documentation. Moodle Collectives Sync bridges that gap by bringing a
+dedicated, live-editable Nextcloud Collective into every activity, backed entirely
+by your own self-hosted Nextcloud.
+
+## Key Capabilities
+
+* **Automated Collective Provisioning:** Instantly creates a dedicated Nextcloud
+  Collective the moment a teacher adds the activity in Moodle — no manual setup.
+* **Roster-Synced Membership:** Every enrolled student becomes a Collective member
+  automatically, and membership stays in step as students join or leave the course.
+* **Embedded, Passwordless Access:** The wiki opens directly inside the Moodle
+  activity — students are recognised from their Moodle session, no separate
+  Nextcloud login required.
+* **Idempotent & Secure Sync:** HMAC-signed webhooks with replay protection between
+  Moodle and Nextcloud guarantee reliable synchronisation without duplicate
+  Collectives.
+* **Contribution Reporting:** Collaborative edits sync back to Moodle, so
+  completion tracking and reports reflect real participation, not just a click.
+* **Enterprise Privacy & Compliance:** All documents, discussions, and student data
+  stay inside your institution's own Nextcloud boundary (GDPR/FERPA friendly).
+
+## Requirements & Documentation
+
+* Nextcloud 32–34
+* Nextcloud Collectives app (compatible version)
+* Moodle instance with the companion `mod_nextcloudcollective` plugin
+    ]]></description>
+    <!-- Bump whenever lib/Migration/ gains a step OR <background-jobs> changes:
+         Nextcloud reads this file at app-upgrade time only, so a new Version…php
+         is never executed and a new <job> is never registered without a bump.
+         Both were confirmed the hard way on this branch — the job below stayed
+         absent from oc_jobs until the version moved.
+           0.2.1  Version000101, the page-keyed debounce index
+           0.2.2  the OutboxDrain job -->
+    <version>0.2.2</version>
+    <licence>AGPL-3.0-or-later</licence>
+    <author>Dev</author>
+    <namespace>MoodleCollectivesSync</namespace>
+    <category>integration</category>
+    <website>https://github.com/riyad-bs23/moodle_collectives_sync</website>
+    <bugs>https://github.com/riyad-bs23/moodle_collectives_sync/issues</bugs>
+    <repository type="git">https://github.com/riyad-bs23/moodle_collectives_sync.git</repository>
+    <screenshot>https://raw.githubusercontent.com/riyad-bs23/moodle_collectives_sync/main/img/screenshot-1.png</screenshot>
+    <dependencies>
+        <nextcloud min-version="32" max-version="34"/>
+    </dependencies>
+    <background-jobs>
+        <job>OCA\MoodleCollectivesSync\BackgroundJob\PruneDedupe</job>
+        <!-- Read at app-UPGRADE time, not per request: adding a job here without
+             bumping <version> above leaves it unregistered and silently never
+             run. -->
+        <job>OCA\MoodleCollectivesSync\BackgroundJob\OutboxDrain</job>
+    </background-jobs>
+    <settings>
+        <admin>OCA\MoodleCollectivesSync\Settings\AdminSettings</admin>
+        <admin-section>OCA\MoodleCollectivesSync\Settings\AdminSection</admin-section>
+    </settings>
+</info>

@@ -1,0 +1,107 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+    <id>ng_backup</id>
+    <name>NG Backup</name>
+    <summary>Encrypted, incremental backups of your Nextcloud — files, database and config — with restore from the web interface</summary>
+    <description><![CDATA[Back up your whole Nextcloud — data directory, database and configuration — encrypted and
+incremental, to storage you choose. Restore single files, folders, a user, or the whole server from
+the web interface or `occ`. No shell access or external tools needed, so it also runs on Nextcloud
+All-in-One and hosted Nextcloud.
+
+**Where to**
+- S3 and S3-compatible storage, SFTP, WebDAV, SMB, FTP, Swift or a local path (NFS mount), through
+  the connection code of the External storage app. A location is never mounted and never shows up
+  in Files.
+
+**How**
+- Deduplicated, compressed and encrypted (XChaCha20-Poly1305) on the server before upload, streamed
+  straight to the location: no local copy, no double disk space. Unchanged files are not read again.
+- Database dump through Nextcloud's own connection, in one consistent transaction (PostgreSQL,
+  MySQL/MariaDB, SQLite).
+- Runs in short steps from the background jobs, so a server or container restart does not lose a
+  running backup.
+- Daily schedule, retention policy, and `occ backup:verify` (optionally `--deep`) to check that a
+  backup can be read.
+
+**Safe**
+- Up to three passphrases plus a recovery kit; the passphrase is the actual key.
+- Deletion delay and append-only locations against ransomware or a compromised server; S3 object
+  lock supported.
+- Admin notifications on failures, stale backups and changes to keys and locations.
+
+**Restore**
+- Files and folders into a new folder, merged, or replacing the original — through Nextcloud, so
+  overwritten files keep a version and removed ones go to the trash.
+- One user (account, files, calendars, contacts) via user_migration.
+- The whole server onto a fresh installation (disaster recovery).
+
+NG Backup needs Nextcloud's background jobs on system cron (a real cron line, not only the setting).
+Read "Known limitations" in the README before you rely on it, and test a restore. Feedback is very
+welcome: use the "Share your experience" link on the admin page.
+
+If you like NG Backup, don't forget to give the app a star in the app store and the
+[repository](https://github.com/dillardblom/ng_backup) a star on GitHub!
+
+Developed and sponsored by [Ensembia](https://www.ensembia.com). We can offer (paid) assistance if
+you need help with restoring a backup after a crash.]]></description>
+    <version>1.0.1</version>
+    <licence>agpl</licence>
+    <author mail="dillard.blom@ensembia.com">Dillard Blom</author>
+    <namespace>NgBackup</namespace>
+    <documentation>
+        <admin>https://github.com/dillardblom/ng_backup/blob/main/docs/HOWTO.md</admin>
+    </documentation>
+    <category>tools</category>
+    <website>https://github.com/dillardblom/ng_backup</website>
+    <bugs>https://github.com/dillardblom/ng_backup/issues</bugs>
+    <repository type="git">https://github.com/dillardblom/ng_backup</repository>
+    <screenshot>https://raw.githubusercontent.com/dillardblom/ng_backup/v1.0.1/screenshots/1-backups.png</screenshot>
+    <screenshot>https://raw.githubusercontent.com/dillardblom/ng_backup/v1.0.1/screenshots/2-restore.png</screenshot>
+    <screenshot>https://raw.githubusercontent.com/dillardblom/ng_backup/v1.0.1/screenshots/3-settings.png</screenshot>
+    <dependencies>
+        <php min-version="8.1"/>
+        <lib>sodium</lib>
+        <nextcloud min-version="32" max-version="35"/>
+    </dependencies>
+    <background-jobs>
+        <job>OCA\NgBackup\BackgroundJob\BackupJob</job>
+    </background-jobs>
+    <commands>
+        <command>OCA\NgBackup\Command\KeyInit</command>
+        <command>OCA\NgBackup\Command\KeyKit</command>
+        <command>OCA\NgBackup\Command\KeyConfirm</command>
+        <command>OCA\NgBackup\Command\TargetBackends</command>
+        <command>OCA\NgBackup\Command\TargetAdd</command>
+        <command>OCA\NgBackup\Command\TargetEdit</command>
+        <command>OCA\NgBackup\Command\TargetList</command>
+        <command>OCA\NgBackup\Command\TargetRemove</command>
+        <command>OCA\NgBackup\Command\RunBackup</command>
+        <command>OCA\NgBackup\Command\CancelRun</command>
+        <command>OCA\NgBackup\Command\Status</command>
+        <command>OCA\NgBackup\Command\ListSnapshots</command>
+        <command>OCA\NgBackup\Command\Browse</command>
+        <command>OCA\NgBackup\Command\Restore</command>
+        <command>OCA\NgBackup\Command\Prune</command>
+        <command>OCA\NgBackup\Command\Retention</command>
+        <command>OCA\NgBackup\Command\TargetAppendOnly</command>
+        <command>OCA\NgBackup\Command\TargetTrustCurrent</command>
+        <command>OCA\NgBackup\Command\TargetLimit</command>
+        <command>OCA\NgBackup\Command\Trash</command>
+        <command>OCA\NgBackup\Command\TrashRestore</command>
+        <command>OCA\NgBackup\Command\KeySlots</command>
+        <command>OCA\NgBackup\Command\KeySlotAdd</command>
+        <command>OCA\NgBackup\Command\KeySlotReplace</command>
+        <command>OCA\NgBackup\Command\KeySlotRemove</command>
+        <command>OCA\NgBackup\Command\BackupUser</command>
+        <command>OCA\NgBackup\Command\RestoreUser</command>
+        <command>OCA\NgBackup\Command\ListUserExports</command>
+        <command>OCA\NgBackup\Command\KeyImport</command>
+        <command>OCA\NgBackup\Command\RestoreFull</command>
+        <command>OCA\NgBackup\Command\Verify</command>
+    </commands>
+    <settings>
+        <admin>OCA\NgBackup\Settings\Admin</admin>
+        <admin-section>OCA\NgBackup\Settings\AdminSection</admin-section>
+    </settings>
+</info>

@@ -1,0 +1,74 @@
+<?xml version="1.0"?>
+<info xmlns:xsi= "http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+  <id>journeys</id>
+  <name>Journeys</name>
+  <summary>cluster images by time and location</summary>
+    <description><![CDATA[
+Automatically clusters your photos by time and location into journeys (trips, vacations) and creates a Photos album for each. Only photos inside your Memories timeline path are used.
+
+**Requires the Memories and Photos apps.**
+
+- **Journey albums:** created daily in the background (opt-in), with place-and-date names like `Iceland — Aug 12–19, 2024`. Home-aware: local days and trips are clustered with separate thresholds; adjacent trips in the same country are merged.
+- **Journals:** a travel diary with day entries auto-filled from your photos. Share with users for co-editing or publish to a revocable public link with route map and travel stats.
+- **Videos:** render a journey into an MP4 highlight reel (requires `ffmpeg`), saved to `Documents/Journeys Movies/`. Optionally weaves in short clips, with their own sound, from the trip's videos.
+
+    php occ journeys:cluster-create-albums <user>
+]]></description>
+  <changelog><![CDATA[
+  <h3>0.36.1 (2026-10-17)</h3>
+    <ul>
+      <li><b>Journals:</b> photos shared with you (by a user, a group or a Team) now show up in the day photo picker and when a new day is filled in automatically (#43).</li>
+      <li><b>Clustering:</b> "Include shared images" now also picks up group and Team shares, not only direct user shares.</li>
+    </ul>
+  <h3>0.36.0 (2026-10-17)</h3>
+    <ul>
+      <li><b>Video rendering:</b> the trip's videos now appear as ~4 s excerpts that play with their own sound while the music dips smoothly underneath (#9). On by default; rendering takes about a third longer, and the personal setting "Include short clips (with sound) from videos" turns it off.</li>
+      <li><b>Video rendering:</b> 3-photo landscape stacks stay on screen a second longer.</li>
+      <li><b>Fixed:</b> the photo after a motion photo was cut to under a second.</li>
+      <li><b>Fixed:</b> long videos could fail when saving and leave an empty file in <code>Journeys Movies</code>.</li>
+      <li><b>Changed:</b> requires PHP 8.2.</li>
+    </ul>
+  <h3>0.35.2 (2026-10-15)</h3>
+    <ul>
+      <li><b>Fixed:</b> <code>occ</code> commands register again on Nextcloud 35. Thanks to @rauchc (#44).</li>
+    </ul>
+  <p>Full history: https://github.com/thrillfall/journeys/blob/main/CHANGELOG.md</p>
+]]></changelog>
+  <licence>agpl</licence>
+  <author mail="thrillfall@disroot.org">thrillfall</author>
+  <version>0.36.1</version>
+  <namespace>Journeys</namespace>
+  <category>integration</category>
+  <category>multimedia</category>
+  <screenshot>https://raw.githubusercontent.com/thrillfall/journeys/main/appinfo/journeys.png</screenshot>
+  <bugs>https://github.com/thrillfall/journeys/issues</bugs>
+  <dependencies>
+    <php min-version="8.2"/>
+    <nextcloud min-version="30" max-version="35"/>
+  </dependencies>
+  <bootstrap>OCA\Journeys\AppInfo\Application</bootstrap>
+  <commands>
+    <command>OCA\Journeys\Command\ClusterAndCreateAlbumsCommand</command>
+    <command>OCA\Journeys\Command\RemoveAllAlbumsCommand</command>
+    <command>OCA\Journeys\Command\ShowLatestClusterEndCommand</command>
+    <command>OCA\Journeys\Command\RenderClusterVideoCommand</command>
+    <command>OCA\Journeys\Command\RenderClusterVideoLandscapeCommand</command>
+    <command>OCA\Journeys\Command\ListClustersCommand</command>
+  </commands>
+  <background-jobs>
+    <job>OCA\Journeys\BackgroundJob\DailyClusteringJob</job>
+  </background-jobs>
+  <settings>
+    <personal>OCA\Journeys\Settings\PersonalSettings</personal>
+    <personal-section>OCA\Journeys\Sections\PersonalSection</personal-section>
+  </settings>
+  <navigations>
+    <navigation>
+      <name>Journeys</name>
+      <route>journeys.page.index</route>
+      <icon>app.svg</icon>
+      <order>80</order>
+    </navigation>
+  </navigations>
+</info>

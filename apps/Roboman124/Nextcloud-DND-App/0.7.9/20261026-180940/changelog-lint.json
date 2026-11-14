@@ -1,0 +1,39 @@
+{
+  "root": ".",
+  "app": {
+    "id": "grimoire",
+    "version": "0.7.9"
+  },
+  "version": "0.7.9",
+  "nightly": false,
+  "prerelease": false,
+  "section": "0.7.9",
+  "store": {
+    "languages": 96,
+    "asOf": "Django 4.2.30, 2026-10"
+  },
+  "files": [
+    {
+      "name": "CHANGELOG.md",
+      "read": "en",
+      "utf8": true,
+      "bom": false,
+      "headed": true,
+      "body": "Dice physics/render fixes found by testing 0.7.8 in the field. (Repackaged\nin place after field-testing caught the d4's rest pose — see below.)\n\n### Fixed\n- **The d4 roll crashed at spawn and froze the table.** Field-testing the\n  first 0.7.9 packaging showed the d4 \"spawning in the plane and doing\n  nothing\" (a half-buried wedge) in 3D and a frozen dice panel + stuck camera\n  in 2D. Root cause, found by running the real module: `_spawnDie` never\n  destructured `labelValues` — every d4 roll threw a ReferenceError AFTER the\n  mesh was created but BEFORE the physics body existed, leaving a bodyless\n  tetra at the scene origin (half of it below the floor — the wedge); the\n  per-frame mesh sync then threw on `d.body.position` every frame, killing the\n  render loop (room frozen at that frame; \"does nothing\"). Fixes: the\n  destructure is complete; physics bodies are now created BEFORE cosmetic\n  labels so a label failure can only log, never break the die or the loop;\n  the per-frame sync skips body-less entries defensively; and the settle-snap\n  block's stray `CANNON` reference (a second loop-killer at settle) now reads\n  the stored `this.CANNON`. Verified by running the real module: dice tumble,\n  settle at exact inradii (flush, apex up), sleep, and report values — d4,\n  d8, d10, d20 in one batch.\n- **Settled dice now rest like real dice.** The physics solver can stop a die\n  mid-tilt (a tetra balancing on an edge/vertex contact) which read as \"not a\n  d4 at all\" — and it leaves a small allowed penetration at rest (the d4 sank\n  ~4% of its size — the \"clips into the floor\" look). On settle each die's\n  most-downward face is rotated to exactly flat (apex straight up for the d4,\n  crisp kites for the d10), residual sink is lifted out, and the pose is\n  locked by sleeping the body. The result read runs on the snapped pose, so\n  what you see and what is reported always agree.\n- **The d10's \"wedge\"/\"no faces\" and leaning rest.** The trapezohedron's\n  winding fix flipped only the FIRST triangle of each quad, leaving the other\n  half of the kite faces wound inward. Consequences: cannon-es rejected those\n  faces as pointing into the shape (the die could only rest on half of them,\n  leaned/jittered and never went to sleep so rolls idled to the ~6s timeout),\n  and the renderer BACKFACE-CULLED the inverted faces — the die looked like a\n  half-missing \"boat\" wedge. The flip now reverses the entire quad cycle;\n  verified numerically: no cannon warnings, the die sleeps after settling, and\n  all faces render.\n- **Dice result view jumps back after ~half a second.** The camera goal was\n  dropped the moment it was reached, so the zoom snapped back to the overview\n  immediately. The zoom now HOLDS until the next roll.\n- **Only one die showed when several rolled.** The result camera now cycles\n  through every resting die (~2.5s each, wrapping around) until the next roll.\n- **d4 numbers bigger and edge-adjacent** to read like a physical d4.\n- **Striped/shadow-acne faces.** The main light self-shadowed dice at ~0.04\n  units/texel, rendering dark diagonal stripes across faces (\"texture\n  issues\"). Shadow bias + normalBias added.",
+      "own": {
+        "headed": true,
+        "body": "Dice physics/render fixes found by testing 0.7.8 in the field. (Repackaged\nin place after field-testing caught the d4's rest pose — see below.)\n\n### Fixed\n- **The d4 roll crashed at spawn and froze the table.** Field-testing the\n  first 0.7.9 packaging showed the d4 \"spawning in the plane and doing\n  nothing\" (a half-buried wedge) in 3D and a frozen dice panel + stuck camera\n  in 2D. Root cause, found by running the real module: `_spawnDie` never\n  destructured `labelValues` — every d4 roll threw a ReferenceError AFTER the\n  mesh was created but BEFORE the physics body existed, leaving a bodyless\n  tetra at the scene origin (half of it below the floor — the wedge); the\n  per-frame mesh sync then threw on `d.body.position` every frame, killing the\n  render loop (room frozen at that frame; \"does nothing\"). Fixes: the\n  destructure is complete; physics bodies are now created BEFORE cosmetic\n  labels so a label failure can only log, never break the die or the loop;\n  the per-frame sync skips body-less entries defensively; and the settle-snap\n  block's stray `CANNON` reference (a second loop-killer at settle) now reads\n  the stored `this.CANNON`. Verified by running the real module: dice tumble,\n  settle at exact inradii (flush, apex up), sleep, and report values — d4,\n  d8, d10, d20 in one batch.\n- **Settled dice now rest like real dice.** The physics solver can stop a die\n  mid-tilt (a tetra balancing on an edge/vertex contact) which read as \"not a\n  d4 at all\" — and it leaves a small allowed penetration at rest (the d4 sank\n  ~4% of its size — the \"clips into the floor\" look). On settle each die's\n  most-downward face is rotated to exactly flat (apex straight up for the d4,\n  crisp kites for the d10), residual sink is lifted out, and the pose is\n  locked by sleeping the body. The result read runs on the snapped pose, so\n  what you see and what is reported always agree.\n- **The d10's \"wedge\"/\"no faces\" and leaning rest.** The trapezohedron's\n  winding fix flipped only the FIRST triangle of each quad, leaving the other\n  half of the kite faces wound inward. Consequences: cannon-es rejected those\n  faces as pointing into the shape (the die could only rest on half of them,\n  leaned/jittered and never went to sleep so rolls idled to the ~6s timeout),\n  and the renderer BACKFACE-CULLED the inverted faces — the die looked like a\n  half-missing \"boat\" wedge. The flip now reverses the entire quad cycle;\n  verified numerically: no cannon warnings, the die sleeps after settling, and\n  all faces render.\n- **Dice result view jumps back after ~half a second.** The camera goal was\n  dropped the moment it was reached, so the zoom snapped back to the overview\n  immediately. The zoom now HOLDS until the next roll.\n- **Only one die showed when several rolled.** The result camera now cycles\n  through every resting die (~2.5s each, wrapping around) until the next roll.\n- **d4 numbers bigger and edge-adjacent** to read like a physical d4.\n- **Striped/shadow-acne faces.** The main light self-shadowed dice at ~0.04\n  units/texel, rendering dark diagonal stripes across faces (\"texture\n  issues\"). Shadow bias + normalBias added."
+      }
+    }
+  ],
+  "findings": [
+    {
+      "level": "ok",
+      "id": "changelog-section",
+      "lines": [
+        "The App Store finds the section for 0.7.9 in 1 changelog.",
+        "  CHANGELOG.md (en): 46 lines"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+<?xml version="1.0"?>
+<!--
+  - SPDX-FileCopyrightText: 2025 Olav and Niklas Seyfarth, Contributors <https://github.com/datenschutz-individuell/twofactor_email/blob/main/CONTRIBUTORS.md>
+  - SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+    <id>twofactor_email</id>
+    <name>Two-Factor email provider</name>
+    <summary>Email two-factor provider</summary>
+    <description><![CDATA[### A Two-Factor-Auth Provider using email
+
+Nextcloud supports web logins with a second factor (two-factor authentication,
+2FA). To support a certain type of 2FA, a "2FA provider" server app must be
+installed. 2FA kicks in after the primary authentication stage (typically
+username and password) were successful. This provider challenges the user to
+enter a randomly generated authentication code (aka one-time password, OTP,
+default: six digits). It sends that code to the user's primary email address
+and expects the user to enter it on an additional second step web login page.
+
+### Installation, activation and usage
+
+As with any 2FA provider, two-factor email must be installed and enabled by a
+Nextcloud server admin. Additionally, the Nextcloud must have a working email
+server configured.
+
+The user may set up any of the installed providers or even multiple. This
+provider uses email to send the code and thus can only be enabled if an email
+address is set in "Personal info". Mind that a user may not be able to log in
+if that email address is invalid (or email server setup of the Nextcloud is
+not working properly).
+
+Admins with console access may enable and disable this provider for specified
+users via "occ" command. Admins may also enforce 2FA for all users (or specific
+groups) via "Admin Settings". This is a Nextcloud feature and not specific to
+this provider. If enforced, users with no 2FA are prompted to enable any
+installed provider (if they support that feature). This provider supports it
+since v3. If the admin installs this provider and enforces 2FA, it should be
+ensured that each user does have a valid email address.
+
+Mind that, once a user enabled any 2FA provider, they can no longer use their
+password in applications that don't support the web-based 2FA login flow. For
+such applications, the user needs to create and use app passwords (to be found
+at the bottom of "Personal Settings/Security").]]></description>
+    <version>3.5.1</version>
+    <licence>agpl</licence>
+    <author mail="twofactor-email@datenschutz-individuell.de">
+        Olav Seyfarth (datenschutz-individuell) [see CONTRIBUTORS.md for more]
+    </author>
+    <namespace>TwoFactorEMail</namespace>
+    <documentation>
+        <user>https://github.com/datenschutz-individuell/twofactor_email/blob/main/doc/users.md</user>
+        <admin>https://github.com/datenschutz-individuell/twofactor_email/blob/main/doc/admins.md</admin>
+        <developer>https://github.com/datenschutz-individuell/twofactor_email/blob/main/doc/developers.md</developer>
+    </documentation>
+    <category>security</category>
+
+    <website>https://github.com/datenschutz-individuell/twofactor_email</website>
+    <bugs>https://github.com/datenschutz-individuell/twofactor_email/issues</bugs>
+    <repository>https://github.com/datenschutz-individuell/twofactor_email.git</repository>
+    <screenshot
+            small-thumbnail="https://raw.githubusercontent.com/datenschutz-individuell/twofactor_email/main/doc/store/challenge.webp">
+        https://raw.githubusercontent.com/datenschutz-individuell/twofactor_email/main/doc/store/challenge.png
+    </screenshot>
+    <dependencies>
+        <php min-version="8.2" max-version="8.5"/>
+        <nextcloud min-version="33" max-version="35"/>
+    </dependencies>
+    <background-jobs>
+        <job>OCA\TwoFactorEMail\BackgroundJob\CleanUpExpiredCodes</job>
+    </background-jobs>
+    <repair-steps>
+        <!-- Both steps use classes of this app, so they must not run in the process that
+             performed the update: that process still has the previous version's classes
+             loaded. A live migration runs as a background job, in a fresh process. -->
+        <live-migration>
+            <step>OCA\TwoFactorEMail\Migration\RemovePersistedDefaultTemplate</step>
+            <step>OCA\TwoFactorEMail\Migration\RepairEmailTexts</step>
+        </live-migration>
+    </repair-steps>
+    <two-factor-providers>
+        <provider>OCA\TwoFactorEMail\Provider\TwoFactorEMail</provider>
+    </two-factor-providers>
+    <commands>
+        <command>OCA\TwoFactorEMail\Command\CleanUp</command>
+        <command>OCA\TwoFactorEMail\Command\DeleteCodes</command>
+        <command>OCA\TwoFactorEMail\Command\Settings</command>
+    </commands>
+    <settings>
+        <admin>OCA\TwoFactorEMail\Settings\AdminSettings</admin>
+    </settings>
+    <activity>
+        <settings>
+            <setting>OCA\TwoFactorEMail\Activity\Setting</setting>
+        </settings>
+        <providers>
+            <provider>OCA\TwoFactorEMail\Activity\Provider</provider>
+        </providers>
+    </activity>
+</info>

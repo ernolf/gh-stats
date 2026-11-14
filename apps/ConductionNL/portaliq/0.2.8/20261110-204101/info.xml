@@ -1,0 +1,165 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+    <id>portaliq</id>
+    <name lang="en">Portaliq</name>
+    <name lang="nl">Portaliq</name>
+    <summary lang="en">One shared external portal for clients and suppliers.</summary>
+    <summary lang="nl">Eén gedeeld extern portaal voor klanten en leveranciers.</summary>
+    <description lang="en"><![CDATA[Portaliq is the fleet's shared external portal. Clients (citizens) and suppliers (companies) get one integrated, white-label portal to see and act on their records across every app. Portaliq reads the data through OpenRegister and renders each app's own portal contribution. It owns the external auth edge (DigiD / eHerkenning / eIDAS), the white-label portal shell, the unified inbox, and the portal-contribution registry. Employees stay internal. See ADR-046.]]></description>
+    <description lang="nl"><![CDATA[Portaliq is het gedeelde externe portaal voor de hele appsuite. Klanten (burgers) en leveranciers (bedrijven) krijgen één geïntegreerd, white-label portaal om hun gegevens over alle apps heen in te zien en er acties op te doen. De gegevens komen via OpenRegister en elke app levert zijn eigen portaalbijdrage. Portaliq verzorgt de externe authenticatie (DigiD / eHerkenning / eIDAS), de white-label portaalschil, de gebundelde berichtenbox en het register van portaalbijdragen. Medewerkers blijven intern. Zie ADR-046.]]></description>
+    <version>0.2.8</version>
+    <licence>EUPL-1.2</licence>
+    <author mail="info@conduction.nl" homepage="https://www.conduction.nl/">Conduction</author>
+    <namespace>Portaliq</namespace>
+    <!--
+        GitHub, not Codeberg. The fleet dropped Forgejo/Codeberg on
+        2026-08-19 and GitHub is the only forge again. The Codeberg URLs
+        these replace all still answer 200 from a stale mirror, so nothing
+        was broken enough to notice — but `bugs` pointed a reporter at an
+        issue tracker nobody reads, and this app's FIRST App Store
+        publication is what turns these links into its public identity.
+    -->
+    <documentation>
+        <user>https://github.com/ConductionNL/portaliq</user>
+        <admin>https://github.com/ConductionNL/portaliq</admin>
+        <developer>https://github.com/ConductionNL/portaliq</developer>
+    </documentation>
+    <category>tools</category>
+    <website>https://github.com/ConductionNL/portaliq</website>
+    <discussion>https://github.com/ConductionNL/portaliq/discussions</discussion>
+    <bugs>https://github.com/ConductionNL/portaliq/issues</bugs>
+    <repository>https://github.com/ConductionNL/portaliq</repository>
+
+    <!--
+        Served from `main` on raw.githubusercontent.com, verified 200
+        image/svg+xml. The App Store fetches this URL itself, so a link that
+        resolves only inside the repo would publish an app with no image.
+    -->
+    <screenshot>https://raw.githubusercontent.com/ConductionNL/portaliq/main/img/app-store.svg</screenshot>
+
+    <dependencies>
+        <!--
+        App dependency (not expressible in app-info.xsd — the `dependencies`
+        complexType in server/resources/app-info.xsd declares php, database,
+        command, lib, owncloud, nextcloud, architecture and backend, and NC's
+        own DependencyAnalyzer reads nothing from `dependencies.app`):
+        OpenRegister — every Portaliq entity is an OpenRegister object, and
+        src/manifest.json lists "openregister" as a required dependency.
+
+        min-version is 32 because 32 is the OLDEST NEXTCLOUD THIS REPO TESTS.
+        `nextcloud-test-refs` in .github/workflows/code-quality.yml is
+        ["stable32", "stable33"]; there is no stable31 leg and no stable28 leg.
+        Declaring 28 advertised NC 28-31 support in the App Store that not one
+        job in this repository exercises, which is the same "advertised a range
+        it cannot deliver" defect as openconnector#1172/#1173 — only reached
+        here through the CI matrix rather than through a dependency floor.
+        tests/Unit/AppInfoDependenciesTest.php now holds the two apart from
+        drifting again.
+
+        NOTE — this is NOT the ContextChat argument that #56 used and #58
+        reverted. That rationale is dead: openregister#2372 removed every eager
+        reference to its ContextChat provider and openregister#2380 restored
+        openregister's own 28 floor, so as of today openregister declares
+        min-version="28" and imposes no floor on this app at all. #58 then
+        reverted this value to 28 on the stated grounds that "this repo tests
+        stable31" — but #56 had already removed the stable31 leg, and #58
+        changed only this one line, so that reason was not true of this
+        repository when it was written.
+
+        The floor is 32 as a deliberate fleet policy (NC 32 is the PHP 8.3
+        baseline), matched by <php min-version="8.3"/> below. max-version is 35:
+        every new release of the WOO autumn release 2026 has to run on Nextcloud
+        35, and openregister, the data layer, declares 35 as well.
+        -->
+        <php min-version="8.3"/>
+        <nextcloud min-version="32" max-version="35"/>
+    </dependencies>
+
+    <!-- The resident task leg (portal-task-delivery): drains openregister's
+         portal delivery ledger into inbox messages and mails every 5 minutes. -->
+    <background-jobs>
+        <job>OCA\Portaliq\BackgroundJob\PortalTaskDeliveryJob</job>
+        <job>OCA\Portaliq\BackgroundJob\TrafficAggregationJob</job>
+        <!-- portal-traffic-visitors-and-geo: the visitor geography database,
+             refreshed monthly from DB-IP Lite or MaxMind. -->
+        <job>OCA\Portaliq\BackgroundJob\TrafficGeoRefreshJob</job>
+        <!-- portal-traffic-reporting: hourly, sends the reports whose period
+             ended and fires the alerts whose threshold was crossed. -->
+        <job>OCA\Portaliq\BackgroundJob\TrafficReportJob</job>
+        <!-- portal-intake-form-as-an-object: turns queued intake submissions
+             into cases after the citizen already has their reference. -->
+        <job>OCA\Portaliq\BackgroundJob\PortalIntakeDeliveryJob</job>
+        <!-- push-notifications-quiet-hours: every 5 minutes, delivers every
+             deferred push whose quiet-hours window has ended. -->
+        <job>OCA\Portaliq\BackgroundJob\PendingPushDeliveryJob</job>
+        <!-- operate-availability-report: every 5 minutes, checks each published
+             portal through the instance's own URL and keeps its availability
+             per day and its outages for thirteen months. -->
+        <job>OCA\Portaliq\BackgroundJob\AvailabilityProbeJob</job>
+    </background-jobs>
+
+    <!-- @spec openspec/architecture/adr-023-action-authorization.md -->
+    <repair-steps>
+        <post-migration>
+            <step>OCA\Portaliq\Repair\InitializeSettings</step>
+            <step>OCA\Portaliq\Repair\InitializeActions</step>
+            <step>OCA\Portaliq\Repair\RenameDutchColumns</step>
+            <step>OCA\Portaliq\Repair\MovePortalAuditEntries</step>
+            <step>OCA\Portaliq\Repair\BackfillNewsPublishedAt</step>
+        </post-migration>
+        <install>
+            <step>OCA\Portaliq\Repair\InitializeSettings</step>
+            <step>OCA\Portaliq\Repair\InitializeActions</step>
+            <!--
+                LAST, and INSTALL-ONLY.
+
+                Last because it writes objects into the register the two steps
+                above create — running it first would seed into a register that
+                does not exist yet and warn its way to a no-op.
+
+                Install-only because it is the one step here that creates
+                CONTENT rather than configuration. A post-migration entry would
+                re-run it on every upgrade, and its "only when no portals
+                exist" guard would then quietly re-seed an instance whose
+                author had deliberately deleted theirs.
+            -->
+            <step>OCA\Portaliq\Repair\InitializeDemoPortal</step>
+        </install>
+    </repair-steps>
+
+    <!-- portal-traffic-visitors-and-geo: fetch the geography database now
+         rather than on the monthly schedule. -->
+    <commands>
+        <command>OCA\Portaliq\Command\TrafficGeoRefresh</command>
+        <!-- portal-traffic-reporting: the server-side token, shown once, and
+             the access-log import. -->
+        <command>OCA\Portaliq\Command\TrafficToken</command>
+        <command>OCA\Portaliq\Command\TrafficImportLog</command>
+        <!-- portal-page-traffic: rebuild the retained days now, the same
+             back-fill the aggregation job runs once after an upgrade. -->
+        <command>OCA\Portaliq\Command\TrafficReaggregate</command>
+        <!-- example-site-zuiddrecht: put a shipped example site on the
+             instance, and take it off again. -->
+        <command>OCA\Portaliq\Command\ExampleSiteInstall</command>
+        <command>OCA\Portaliq\Command\ExampleSiteRemove</command>
+        <!-- example-resident-zuiddrecht: give an example site its resident,
+             so the area behind the sign-in button has something to show. -->
+        <command>OCA\Portaliq\Command\ExampleResidentInstall</command>
+        <command>OCA\Portaliq\Command\ExampleResidentRemove</command>
+    </commands>
+
+    <settings>
+        <admin>OCA\Portaliq\Settings\AdminSettings</admin>
+        <admin-section>OCA\Portaliq\Sections\SettingsSection</admin-section>
+    </settings>
+
+    <navigations>
+        <navigation>
+            <id>portaliq</id>
+            <name>Portaliq</name>
+            <route>portaliq.dashboard.page</route>
+            <icon>app.svg</icon>
+        </navigation>
+    </navigations>
+</info>

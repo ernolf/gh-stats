@@ -1,0 +1,111 @@
+<?xml version="1.0"?>
+<!--
+  Duyuru Panosu — Nextcloud app tanımı.
+
+  ⚠️ Bu sunucuda resmi `announcementcenter` (7.5.0) da KURULU. İkisi yan yana
+  çalışır, ama sol menüde iki ayrı "duyuru" girişi görünür. Navigasyon adı
+  bilinçli olarak "Duyuru Panosu" seçildi ki karışmasın.
+-->
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+    <id>noticeboard</id>
+
+    <!-- ⚠️ ETİKETSİZ öğe = İNGİLİZCE. App Store dilsiz name/summary/description'ı
+         "en" sayar; Türkçe etiketsiz kalırsa lang="en" ile çakışır ve mağaza
+         yüklemeyi reddeder (8 Kas 2026, mağazanın kendi şemasıyla ölçüldü).
+         Türkçe karşılıklar lang="tr" ile verilir; Nextcloud Türkçe kullanıcıya onu gösterir. -->
+    <name>Notice Board</name>
+    <name lang="tr">Duyuru Panosu</name>
+
+    <summary>Publish, target and showcase company announcements.</summary>
+    <summary lang="tr">Kurumsal duyuruları yayınlayın, hedefleyin ve panoda gösterin.</summary>
+
+    <description lang="tr"><![CDATA[
+Duyuru Panosu, Nextcloud'unuzu kurumsal bir duyuru kanalına dönüştürür.
+
+- **Özenli oluşturma ekranı** — zengin metin, kapak görseli, dosya eki ve canlı önizleme.
+- **Hedefleme** — duyuru ya tüm kullanıcılara ya da seçtiğiniz gruplara gider.
+- **Yayıncı rolü** — yöneticiler, belirli hesap ya da grupları duyuru yayınlamaya yetkilendirir.
+- **Zamanlama** — duyuru ileri bir tarihte yayına çıkar, verilen tarihte kendiliğinden düşer.
+- **Kanal seçimi** — her duyuru için bildirim, etkinlik akışı, e-posta, Talk mesajı ve yorum ayrı ayrı açılıp kapanır.
+- **Üç pano bileşeni** — Liste, Kart ve Vitrin tasarımlarından istediğinizi kontrol panelinize ekleyin.
+    ]]></description>
+    <description><![CDATA[
+Notice Board turns your Nextcloud into a company announcement channel.
+
+- **A careful composer** — rich text, cover image, attachments and a live preview.
+- **Targeting** — send an announcement to everyone or only to the groups you pick.
+- **Publisher role** — administrators grant selected accounts or groups the right to publish.
+- **Scheduling** — announcements can go live later and retire on their own.
+- **Per-announcement channels** — notifications, activities, email, Talk messages and comments toggle individually.
+- **Three dashboard widgets** — pick List, Card or Spotlight for your dashboard.
+    ]]></description>
+
+    <!-- ⚠️ Nextcloud, migration'ları YALNIZCA app sürümü yükselince çalıştırır.
+         AMA sürümü yükseltmek sunucuyu "yükseltme bekliyor" (needsDbUpgrade)
+         durumuna sokar ve bu ancak `occ upgrade` ile temizlenir — tüm sunucuyu
+         ilgilendiren bir işlem. Sürüm artışı ve `occ upgrade` BİRLİKTE, kullanıcı
+         onayıyla yapılır. Ayrıntı: CLAUDE.md → Hata Günlüğü #6. -->
+    <version>0.5.2</version>
+    <!-- SPDX adı; 'agpl' kısaltması mağazada eskimiş sayılıyor. -->
+    <licence>AGPL-3.0-or-later</licence>
+    <author mail="memoceylan712@gmail.com">Mehmet Safi Ceylan</author>
+
+    <namespace>NoticeBoard</namespace>
+    <category>organization</category>
+    <category>social</category>
+
+    <website>https://github.com/SafiCeylan/Notice-Board</website>
+    <bugs>https://github.com/SafiCeylan/Notice-Board/issues</bugs>
+    <repository type="git">https://github.com/SafiCeylan/Notice-Board.git</repository>
+
+    <dependencies>
+        <php min-version="8.1"/>
+        <!-- Vue 3 + @nextcloud/vue 9 NC 30 ve sonrasını hedefler.
+
+             max-version="36" (8 Kas 2026, App Store için GERİ EKLENDİ): mağaza şeması
+             (app-info.xsd) nextcloud/max-version'ı ZORUNLU tutuyor ve kural olarak en
+             fazla "son kararlı sürüm + 1" olabilir (o gün son kararlı: 35). NC 37 çıkınca
+             max-version artırılıp YENİ SÜRÜM yayınlanmalı; yoksa NC o büyük sürüme
+             yükselirken uygulamayı kapatır.
+             7 Eki 2026'da üst sınır kaldırılmıştı (NC kendisi max-version olmadan da
+             çalışıyor); mağaza yüklemesi bunu kabul etmediği için o karar geri alındı.
+             Kullanılan 70 OCP sembolü 32/33/34/35 kaynağına karşı doğrulandı; canlı test 35.0.1. -->
+        <nextcloud min-version="30" max-version="36"/>
+    </dependencies>
+
+    <navigations>
+        <navigation>
+            <name>Duyuru Panosu</name>
+            <route>noticeboard.page.index</route>
+            <order>15</order>
+        </navigation>
+    </navigations>
+
+    <!-- Yayıncı atama ekranı (K1). ⚠️ info.xml'e yeni <settings> / <navigations>
+         girişi eklersen Nextcloud önbellek yüzünden hemen görmez; deploy sonrası
+         `occ app:disable && occ app:enable` ile app yeniden yüklenmeli.
+         (Bu, sürüm artırıp `occ upgrade` çalıştırmaktan çok daha dar bir işlem.) -->
+    <settings>
+        <admin>OCA\NoticeBoard\Settings\Admin</admin>
+        <admin-section>OCA\NoticeBoard\Settings\AdminSection</admin-section>
+    </settings>
+
+    <!-- Zamanlanmış yayın ve otomatik arşivleme (K5).
+         ⚠️ Bu liste app ETKİNLEŞTİRİLİRKEN okunur; yeni iş eklenince
+         `occ app:disable && occ app:enable` gerekir, yoksa iş kuyruğa girmez. -->
+    <background-jobs>
+        <job>OCA\NoticeBoard\BackgroundJob\ScheduleJob</job>
+    </background-jobs>
+
+    <!-- Etkinlik akışı (K6 · opt_activity). Bildirimin aksine bu, kod içinden
+         değil yalnızca buradan kaydedilebilir. -->
+    <activity>
+        <settings>
+            <setting>OCA\NoticeBoard\Activity\Setting</setting>
+        </settings>
+        <providers>
+            <provider>OCA\NoticeBoard\Activity\Provider</provider>
+        </providers>
+    </activity>
+</info>
