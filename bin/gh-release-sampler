@@ -21,7 +21,10 @@
 # keeps its row in repos as a mark, so it is never sampled again.
 # A target host/owner/repo is a repository on a Forgejo or Gitea host, sampled
 # the same way through its API at https://<host>/api/v1. Every table keys its
-# rows by host, github.com for GitHub.
+# rows by host, github.com for GitHub. Where a release answers the download
+# counters of its source archives, as Forgejo does, they are two more assets of
+# it, archive/<tag>.zip and archive/<tag>.tar.gz: GitHub does not count its
+# archives, and a release without assets would have nothing to sample.
 # A target of the wrong form is left out and reported before the API is asked,
 # and the others are sampled; once they are committed, the run exits with 1.
 
@@ -552,7 +555,10 @@ while read -r slug; do
 		continue
 	fi
 	# One request per page; jq derives major from the tag. Forgejo and Gitea
-	# answer the release fields of GitHub, at most 50 items per page.
+	# answer the release fields of GitHub, at most 50 items per page. The archive
+	# counters are named after the tag of the archive URL; the / in the name
+	# keeps them apart from any uploaded asset. A release that hides its archive
+	# links offers none.
 	if [ "$host" = github.com ]; then per_page="per_page=100"; else per_page="limit=50"; fi
 	page=1
 	while :; do
@@ -568,8 +574,13 @@ while read -r slug; do
 			| .published_at as $pub
 			| (if .prerelease then 1 else 0 end) as $pre
 			| (($tag | capture("^[vV]?(?<m>[0-9]+)") | .m) // "") as $maj
-			| .assets[]
-			| [$h, $o, $r, $tag, .name, .download_count, $pub, $pre, $maj]
+			| ([.assets[] | [.name, .download_count]]
+			   + (if (.archive_download_count | type) == "object" and .hide_archive_links != true
+			      then [["archive/\($rawtag).zip", .archive_download_count.zip],
+			            ["archive/\($rawtag).tar.gz", .archive_download_count.tar_gz]]
+			      else [] end))[]
+			| select(.[1] != null)
+			| [$h, $o, $r, $tag, .[0], .[1], $pub, $pre, $maj]
 			| @tsv' "$body" >> "$tsv" || true
 		[ "$more" = 1 ] || break
 		page=$((page + 1))
