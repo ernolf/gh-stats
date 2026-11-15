@@ -2056,14 +2056,17 @@ function initOverview() {
 		document.getElementById(id).addEventListener('change', save)
 	}
 	// The defaults keep nothing, so the render after a reset removes the key.
-	// What was opened in the table closes as well.
+	// What was opened in the table closes as well, and the page loads anew, so
+	// a build published since shows without a reload by hand.
 	reset.addEventListener('click', () => {
 		closeOpened(['checks', 'older', 'compare'])
 		sinceHelp.hidden = true
 		sinceHelpToggle.setAttribute('aria-expanded', 'false')
 		restore({})
 		render()
+		reloadFresh()
 	})
+	reset.hidden = false
 	collapse.addEventListener('click', () => {
 		closeOpened({ all: ['checks', 'older'], older: ['older'], checks: ['checks'] }[collapseWhat.value])
 	})
@@ -2072,6 +2075,18 @@ function initOverview() {
 	addEventListener('hashchange', route)
 	route()
 	reopenCarried()
+}
+
+// A plain reload may take the page, its scripts and its styles from the cache
+// of the browser. Fetched with cache: 'reload' first, each of them replaces its
+// entry there, so the reload loads what the site serves now; the database and
+// config.json are fetched without the cache anyway.
+async function reloadFresh() {
+	const urls = [location.href.replace(/#.*$/, ''),
+		...[...document.querySelectorAll('script[src]')].map((s) => s.src),
+		...[...document.querySelectorAll('link[rel="stylesheet"]')].map((l) => l.href)]
+	await Promise.allSettled(urls.map((u) => fetch(u, { cache: 'reload' })))
+	location.reload()
 }
 
 // == Scrolling ==
