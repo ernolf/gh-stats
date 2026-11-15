@@ -64,11 +64,11 @@ BUILD_FILES="GNUmakefile makefile Makefile"
 # and read their logs, so a release that passes every static check and fails on
 # every request shows it. Release
 # and deploy targets (version, changelog, tag, rsync, cp) are not offered - they
-# act outside the checkout. Neither are secrets-audit, lint-actions and
-# lint-actions-security: the output of a run is public, and their findings show
-# where an app can be attacked (actionlint reports untrusted input in a run step).
-# They run among SECURITY_TARGETS instead, which leave their other findings
-# public.
+# act outside the checkout. Neither are secrets-audit, lint-actions,
+# lint-actions-security and php-audit: the output of a run is public, and their
+# findings show where an app can be attacked (actionlint reports untrusted input
+# in a run step, php-audit a route without CSRF protection). They run among
+# SECURITY_TARGETS instead, which leave their other findings public.
 TARGETS="${NC_APPSDIAG_TARGETS:-help consistency-audit reuse changelog-lint lint-containerfiles lint-markdown lint-php-syntax lint-shell lint-version lint-vue-imports lint-web lint-yaml l10n-lint build deps-audit build-audit bundle-report build-verify php-compat install-test runtime-audit dist}"
 # Offered after the release comparison, because both of them remove what it reads.
 CLEAN_TARGETS="${NC_APPSDIAG_CLEAN_TARGETS:-clean dist-clean}"
@@ -95,7 +95,7 @@ JSON_RERUN_TARGETS="${NC_APPSDIAG_JSON_RERUN:-reuse}"
 # recipient of the site maintainer; without a recipient they do not run. Only
 # their findings that are not marked "security": true go beside the log as well.
 # deps-audit runs here a second time, with the advisories.
-SECURITY_TARGETS="${NC_APPSDIAG_SECURITY_TARGETS:-secrets-audit lint-actions lint-actions-security deps-audit}"
+SECURITY_TARGETS="${NC_APPSDIAG_SECURITY_TARGETS:-secrets-audit lint-actions lint-actions-security php-audit deps-audit}"
 # A run of the server repository at its root, with -s, measures no app: it runs
 # these in place of TARGETS and SECURITY_TARGETS, the ones that read only the
 # tracked files of the repository.
@@ -283,15 +283,16 @@ a repository on another host below a directory of that host:
                           appinfo/signature.json integrity-check, its
                           signature held against
                           resources/codesigning/root.crt of SERVER_REPO, and
-                          of secrets-audit, lint-actions and
-                          lint-actions-security only the findings that are
-                          neither marked "security": true nor at level ok
+                          of secrets-audit, lint-actions,
+                          lint-actions-security and php-audit only the
+                          findings that are neither marked "security": true
+                          nor at level ok
       security.json.age   the output and the results of the security targets
-                          (secrets-audit, lint-actions, lint-actions-security
-                          and deps-audit with advisories), and every finding
-                          of another result marked "security": true, as JSON
-                          encrypted to NC_APPSDIAG_AGE_RECIPIENT; without a
-                          recipient the security targets do not run
+                          (secrets-audit, lint-actions, lint-actions-security,
+                          php-audit and deps-audit with advisories), and every
+                          finding of another result marked "security": true,
+                          as JSON encrypted to NC_APPSDIAG_AGE_RECIPIENT;
+                          without a recipient the security targets do not run
       secrets-history.json.age
                           with -s master, the result of the last secrets-audit
                           that read the whole history, encrypted like
