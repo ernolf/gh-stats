@@ -59,14 +59,17 @@ BUILD_FILES="GNUmakefile makefile Makefile"
 # the linters of the tracked files, then the build, then everything that reads the
 # build output, then the tarball. An analyser that prices what was built has
 # nothing to price before make build, so the build comes first; deps-audit follows
-# it, since make build writes the composer.lock of an app that ignores it. Release
+# it, since make build writes the composer.lock of an app that ignores it.
+# install-test and runtime-audit install what make build staged on real servers
+# and read their logs, so a release that passes every static check and fails on
+# every request shows it. Release
 # and deploy targets (version, changelog, tag, rsync, cp) are not offered - they
 # act outside the checkout. Neither are secrets-audit, lint-actions and
 # lint-actions-security: the output of a run is public, and their findings show
 # where an app can be attacked (actionlint reports untrusted input in a run step).
 # They run among SECURITY_TARGETS instead, which leave their other findings
 # public.
-TARGETS="${NC_APPSDIAG_TARGETS:-help consistency-audit reuse changelog-lint lint-containerfiles lint-markdown lint-php-syntax lint-shell lint-version lint-vue-imports lint-web lint-yaml l10n-lint build deps-audit build-audit bundle-report build-verify php-compat dist}"
+TARGETS="${NC_APPSDIAG_TARGETS:-help consistency-audit reuse changelog-lint lint-containerfiles lint-markdown lint-php-syntax lint-shell lint-version lint-vue-imports lint-web lint-yaml l10n-lint build deps-audit build-audit bundle-report build-verify php-compat install-test runtime-audit dist}"
 # Offered after the release comparison, because both of them remove what it reads.
 CLEAN_TARGETS="${NC_APPSDIAG_CLEAN_TARGETS:-clean dist-clean}"
 # These have to be said yes to; everything else runs on the empty answer, because
@@ -80,7 +83,7 @@ TARGETS_ASK="${NC_APPSDIAG_TARGETS_ASK:-help}"
 # that something is missing, the JSON says what. integrity-check is no target of
 # the list: the release comparison runs it on a shipped tree that carries
 # appinfo/signature.json.
-JSON_TARGETS="${NC_APPSDIAG_JSON:-consistency-audit build-audit bundle-report reuse changelog-lint lint-containerfiles lint-markdown lint-php-syntax lint-shell lint-version lint-vue-imports lint-web lint-yaml l10n-lint deps-audit build-verify php-compat integrity-check}"
+JSON_TARGETS="${NC_APPSDIAG_JSON:-consistency-audit build-audit bundle-report reuse changelog-lint lint-containerfiles lint-markdown lint-php-syntax lint-shell lint-version lint-vue-imports lint-web lint-yaml l10n-lint deps-audit build-verify php-compat install-test runtime-audit integrity-check}"
 # Of those, the ones that cannot write the file in that run and run a second time
 # with ARGS=--json for it. The REUSE tool prints text or JSON, never both; its
 # second run costs seconds.
@@ -274,8 +277,9 @@ a repository on another host below a directory of that host:
                           consistency-audit, reuse, changelog-lint, the
                           lint-* targets, l10n-lint where the app has
                           .tx/config, deps-audit (without advisories),
-                          build-audit, bundle-report, build-verify and
-                          php-compat, and for a shipped tree that carries
+                          build-audit, bundle-report, build-verify,
+                          php-compat, install-test and runtime-audit, and
+                          for a shipped tree that carries
                           appinfo/signature.json integrity-check, its
                           signature held against
                           resources/codesigning/root.crt of SERVER_REPO, and
