@@ -159,7 +159,9 @@ repository under its current name, plus
 Beside <file>, findings/<run dir>.json holds the findings of each run as a JSON
 array: the findings of the analysers with the file and line they name, the
 findings of other targets with the same cause they name in covers and, for a
-finding that lists files, how many of its last lines are paths, and one
+finding that lists files, how many of its last lines are paths, for a
+finding whose entries the analyser folds, where each fold starts in its lines
+and how many it holds, and one
 finding per aborted run, failed target, skipped JSON result and REUSE lint. An
 app of the server tree runs no REUSE lint of its own: its REUSE finding comes
 from the reuse.json of the newest run of nextcloud/server at the same server
@@ -238,6 +240,8 @@ findings="$(dirname "$out")/findings"
 samples_dir="$(dirname "$out")/samples"
 [ ! -e "$samples_dir" ] || die "$samples_dir exists"
 [ -z "$results" ] || [ -d "$results" ] || die "no results directory at $results"
+heads="$(dirname "$(readlink -f "$0")")/../site/tool-heads.json"
+[ -r "$heads" ] || die "no tool heads at $heads"
 
 # == Catalogue ==
 # Both catalogue files as one array, each app marked with the file it comes
@@ -368,7 +372,7 @@ if [ -n "$results" ]; then
 		(if $name == "" then input_filename else $name end | ltrimstr($root) | rtrimstr(".gz") | rtrimstr(".json")) as $p
 		| ($p | sub("/[^/]*$"; "") | q) as $dir | ($p | sub("^.*/"; "")) as $tool | . as $r
 		| ((.findings? // []) | to_entries[]
-		  | "INSERT INTO findings VALUES (\($dir), \($tool | q), \(.key + 1), \(.value.level | v), \(.value.id | v), \(.value.lines // [] | join("\n") | q), \(.value.file | v), \(.value.line | v), \(.value.covers | if . == null then null else tojson end | v), \(.value.count | v));"),
+		  | "INSERT INTO findings VALUES (\($dir), \($tool | q), \(.key + 1), \(.value.level | v), \(.value.id | v), \(.value.lines // [] | join("\n") | q), \(.value.file | v), \(.value.line | v), \(.value.covers | if . == null then null else tojson end | v), \(.value.count | v), \(.value.folds | if . == null then null else tojson end | v));"),
 		  (($fields[$tool] // [])[] as $f | ($r | objects | .[$f]) // empty
 		  | "INSERT INTO fields VALUES (\($dir), \($tool | q), \($f | q), \(tojson | q));"),
 		  ((.findings? // [])[] as $x | ($finding_fields[$tool][$x.id]? // [])[] as $f | $x[$f] // empty
@@ -871,6 +875,7 @@ CREATE TABLE findings (
   line  INTEGER,
   covers TEXT,
   count INTEGER,
+  folds TEXT,
   PRIMARY KEY (dir, tool, n)
 ) WITHOUT ROWID;
 CREATE TABLE fields (
@@ -1214,7 +1219,7 @@ CREATE TEMP TABLE exported AS
 SELECT (SELECT count(*) FROM findings) AS findings, sum(writefile('${findings//$sq/$sq$sq}/' || m.dir || '.json',
   (SELECT json_group_array(json(o)) FROM (
      SELECT json_object('tool', f.tool, 'level', f.level, 'id', f.id, 'text', f.text, 'file', f.file, 'line', f.line,
-                        'covers', json(f.covers), 'count', f.count) AS o
+                        'covers', json(f.covers), 'count', f.count, 'folds', json(f.folds)) AS o
        FROM findings f WHERE f.dir = m.dir ORDER BY f.tool, f.n)))) AS bytes
   FROM measurements m;
 DROP TABLE findings;
@@ -1254,5 +1259,14 @@ UNION ALL SELECT 'sources', count(*) FROM sources
 UNION ALL SELECT 'developed', count(*) FROM developed
 UNION ALL SELECT 'security_overdue', count(*) FROM security_overdue;
 SQL
+# Every tool the site shows a section for opens it with the head that
+# site/tool-heads.json gives it, so a tool without an entry there fails the
+# build instead of showing up without one.
+missing="$(find "$findings" -name '*.json' -print0 | xargs -0 -r jq -r '.[].tool | sub("^security/"; "")' | sort -u \
+	| jq -R -r --slurpfile heads "$heads" 'select(. as $t | $heads[0] | has($t) | not)' | paste -sd ' ')"
+if [ -n "$missing" ]; then
+	rm -rf "$out" "$findings" "$samples_dir"
+	die "no head in $heads for $missing"
+fi
 trap - ERR
 echo "site database written to $out ($(stat -c %s "$out") bytes)"

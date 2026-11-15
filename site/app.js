@@ -32,6 +32,9 @@ let securityResults = false
 let loadedDb
 let findingsBase
 let samplesBase
+// By tool, the head its section opens with: the commands that produce its
+// findings in a checkout, the project they come from and its wiki page.
+let toolHeads = {}
 // The samples of each project are fetched the first time a chart or a
 // comparison needs them: by project, the fetch while it runs and true once
 // its rows are in the table.
@@ -108,14 +111,21 @@ async function load() {
 		samplesBase = config.db.replace(/[^/]*$/, 'samples/')
 		showVersions(config.lib ?? {})
 		progress.max = config.bytes
-		const [SQL, bytes] = await Promise.all([
+		const [SQL, bytes, heads] = await Promise.all([
 			initSqlJs({ locateFile: (file) => `lib/sql.js/${file}` }),
 			fetchDatabase(config.db, config.bytes, (at) => {
 				progress.value = at
 				text.textContent = `${megabytes(at)} of ${megabytes(config.bytes)}`
 			}),
+			fetch('tool-heads.json', { cache: 'no-cache' }).then((r) => {
+				if (!r.ok) {
+					throw new Error(`tool-heads.json: HTTP ${r.status}`)
+				}
+				return r.json()
+			}),
 		])
 		db = new SQL.Database(bytes)
+		toolHeads = heads
 	} catch (e) {
 		text.textContent = `The database could not be loaded (${e.message}). Reload the page to try again.`
 		return
@@ -1099,14 +1109,12 @@ function badge(b, fact) {
 // == Checks ==
 
 // A finding that groups files ends in their paths, as many as it counts, which
-// fold away beneath its text. A note on it follows its text. The findings of
-// other targets it covers fold beneath it, by target.
+// fold away beneath its text; where the analyser folds the entries behind a
+// finding, those after the first ones fold away where it says. A note on it
+// follows its text. The findings of other targets it covers fold beneath it,
+// by target.
 function finding(f, under = new Map(), notes = new Map()) {
-	const lines = f.count ? f.text.split('\n') : []
-	const text = f.count
-		? [el('pre', {}, lines.slice(0, -f.count).join('\n')),
-			el('details', {}, el('summary', {}, `${f.count} files`), el('pre', {}, lines.slice(-f.count).join('\n')))]
-		: [el('pre', {}, f.text)]
+	const text = foldedText(f)
 	const covered = under.get(f) ?? []
 	const more = covered.length
 		? [el('details', { class: 'covered' }, el('summary', {}, `Also reported by ${[...new Set(covered.map((c) => c.tool))].join(', ')}`),
@@ -1114,6 +1122,27 @@ function finding(f, under = new Map(), notes = new Map()) {
 		: []
 	return el('div', { class: `finding ${f.level ?? ''}` },
 		el('span', { class: 'level' }, f.level ?? ''), ' ', el('code', {}, f.id ?? ''), ...text, ...(notes.get(f) ?? []), ...more)
+}
+
+// The text of a finding with its folds closed: a fold of the analyser opens
+// on the number of entries it holds, a fold of files on the number of files.
+function foldedText(f) {
+	const lines = f.text.split('\n')
+	const folds = f.folds ?? (f.count ? [{ at: lines.length - f.count, count: f.count, files: true }] : [])
+	const out = []
+	let at = 0
+	for (const fold of folds) {
+		if (fold.at > at) {
+			out.push(el('pre', {}, lines.slice(at, fold.at).join('\n')))
+		}
+		out.push(el('details', {}, el('summary', {}, `${fold.count} ${fold.files ? 'files' : 'more'}`),
+			el('pre', {}, lines.slice(fold.at, fold.at + fold.count).join('\n'))))
+		at = fold.at + fold.count
+	}
+	if (at < lines.length || !out.length) {
+		out.push(el('pre', {}, lines.slice(at).join('\n')))
+	}
+	return out
 }
 
 // Which findings of a run another finding covers: one that names the target,
@@ -1255,25 +1284,28 @@ function securityTargets(m) {
 }
 
 // The warnings of a lint target are one warning, folded: its summary counts
-// the messages and the files they are in, and it opens into the hint, the notes
-// on its warnings and the entries per file.
+// the messages and the files they are in, and it opens into the notes on its
+// warnings and the entries per file.
 function lintFold(tool, warns, notes = new Map()) {
 	const noun = tool.startsWith('security/') ? 'finding' : 'message'
 	const files = new Set(warns.filter((f) => f.file !== null).map((f) => f.file)).size
 	return el('details', { class: 'finding warn' },
 		el('summary', {}, el('span', { class: 'level' }, 'warn'), ' ', `${warns.length} ${noun}${warns.length === 1 ? '' : 's'}`,
 			files ? ` in ${files} file${files === 1 ? '' : 's'}` : ''),
-		lintHint(baseTool(tool)), ...warns.flatMap((f) => notes.get(f) ?? []), ...findingEntries(tool, warns))
+		...warns.flatMap((f) => notes.get(f) ?? []), ...findingEntries(tool, warns))
 }
 
-// Where a lint target warns, the page names the ncmake target the warnings come
-// from and the workflow of the same name that keeps them away. Both commands
-// are named as ncmake's, so they are not taken for targets of the app.
-function lintHint(tool) {
-	const ncmake = () => el('a', { href: 'https://github.com/ernolf/ncmake' }, 'ncmake')
-	return el('p', { class: 'hint lint-hint' }, 'Findings of ', ncmake(), '\'s ', el('code', {}, `make ${tool}`),
-		' in a checkout of the release; ', ncmake(), '\'s ', el('code', {}, `make workflows-install W=${tool}`),
-		' installs the workflow that runs the same check on every pull request.')
+// The head of the section of a tool: the commands that produce its findings in
+// a checkout of the release, named as those of the project that has them so
+// they are not taken for targets of the app, the workflow of the same name
+// where one keeps them away, and a link to the wiki page that explains them.
+function toolHead(tool) {
+	const head = toolHeads[baseTool(tool)]
+	const project = el('a', { href: `https://github.com/ernolf/${head.with}` }, head.with)
+	return el('div', { class: 'tool-head' },
+		el('p', {}, project, ': ', ...head.run.flatMap((c, i) => [i ? ' then ' : '', el('code', {}, c)]),
+			...(head.workflow ? ['; ', el('code', {}, `make workflows-install W=${head.workflow}`), ' installs the workflow that runs it on every pull request'] : []),
+			' ', el('a', { class: 'wiki', href: head.wiki, title: `What ${baseTool(tool)} checks` }, 'wiki')))
 }
 
 // The info.xml the analysers read: the copy the run kept, else, for a run from
@@ -1347,7 +1379,7 @@ function checksBlock(m, collapse) {
 						`${counted(tool, warns.filter((f) => f.security && !f.counted_in))} security, ${counted(tool, warns.filter((f) => !f.security && !f.counted_in))} other`,
 						elsewhere ? `, ${elsewhere} counted in another release` : '')]
 					: []
-				return el('div', { class: tool.startsWith('security/') ? 'tool security' : 'tool' }, el('h5', {}, tool, ...split),
+				return el('div', { class: tool.startsWith('security/') ? 'tool security' : 'tool' }, el('h5', {}, tool, ...split), toolHead(tool),
 					...(warns.length && baseTool(tool).startsWith('lint-') ? [lintFold(tool, warns, notes)] : findingEntries(tool, warns, under, notes)),
 					...(rest.length
 						? [el('details', {}, el('summary', {}, counts.map(([l, n]) => `${n} ${l}`).join(', ')), ...findingEntries(tool, rest, under, notes))]
