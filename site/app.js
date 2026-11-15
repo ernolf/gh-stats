@@ -997,6 +997,10 @@ const BADGES = [
 		return next ? run.pass('php-compat', 'php-next', `PHP ${next} ready`) : null
 	} },
 	{ id: 'changelog', of: (run) => run.pass('changelog-lint', 'changelog-section', 'Changelog') },
+	// Installed and used on real servers: a badge only where no server of the
+	// run warns, since each server reports its own ok.
+	{ id: 'installs', of: (run) => (run.warns('install-test') ? null : run.pass('install-test', 'install', 'Installs')) },
+	{ id: 'runtime', of: (run) => (run.warns('runtime-audit') ? null : run.pass('runtime-audit', 'runtime', 'Runs clean')) },
 	// The versions agree only where lint-version, which compares the same files,
 	// finds nothing either.
 	{ id: 'versions-agree', of: (run) => (run.warns('lint-version') ? null : run.pass('consistency-audit', 'versions-agree', 'Versions agree')) },
