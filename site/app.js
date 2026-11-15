@@ -2205,13 +2205,16 @@ function initOverview() {
 	}
 	// The defaults keep nothing, so the render after a reset removes the key.
 	// What was opened in the table closes as well, and the page loads anew, so
-	// a build published since shows without a reload by hand.
+	// a build published since shows without a reload by hand. The reload starts
+	// on the start page: a reload keeps the fragment, which would open the page
+	// of the app again.
 	reset.addEventListener('click', () => {
 		closeOpened(['checks', 'older', 'compare'])
 		sinceHelp.hidden = true
 		sinceHelpToggle.setAttribute('aria-expanded', 'false')
 		restore({})
 		render()
+		history.replaceState(null, '', location.pathname + location.search)
 		reloadFresh()
 	})
 	reset.hidden = false
