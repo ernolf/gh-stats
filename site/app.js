@@ -32,6 +32,7 @@ let securityResults = false
 let loadedDb
 let findingsBase
 let samplesBase
+let tablesBase
 // By tool, the head its section opens with: the commands that produce its
 // findings in a checkout, the project they come from and its wiki page.
 let toolHeads = {}
@@ -109,6 +110,7 @@ async function load() {
 		loadedDb = config.db
 		findingsBase = config.db.replace(/[^/]*$/, 'findings/')
 		samplesBase = config.db.replace(/[^/]*$/, 'samples/')
+		tablesBase = config.db.replace(/[^/]*$/, 'tables/')
 		showVersions(config.lib ?? {})
 		progress.max = config.bytes
 		const [SQL, bytes, heads] = await Promise.all([
@@ -1126,9 +1128,13 @@ function finding(f, under = new Map(), notes = new Map()) {
 
 // The text of a finding with its folds closed: a fold of the analyser opens
 // on the number of entries it holds, a fold of files on the number of files.
+// A finding shorter than FOLD_FROM lines shows whole, as the section it is in
+// has been opened already.
+const FOLD_FROM = 200
+
 function foldedText(f) {
 	const lines = f.text.split('\n')
-	const folds = f.folds ?? (f.count ? [{ at: lines.length - f.count, count: f.count, files: true }] : [])
+	const folds = lines.length < FOLD_FROM ? [] : f.folds ?? (f.count ? [{ at: lines.length - f.count, count: f.count, files: true }] : [])
 	const out = []
 	let at = 0
 	for (const fold of folds) {
@@ -1326,6 +1332,145 @@ function infoXmlLink(m) {
 	return href ? [' ', el('a', { href, title }, 'info.xml')] : []
 }
 
+// The runs of runtime-audit and install-test, from the file gh-stats-site-db
+// writes beside the database for a measurement with either result, as tables:
+// one block per server the run went to, with every route, command, job and
+// step and what each answered. A measurement with neither result has no file,
+// and the page does not ask for one.
+async function tablesOf(m) {
+	if (!query(`SELECT 1 FROM targets WHERE dir = $dir AND json AND name IN ('runtime-audit', 'install-test')`, { $dir: m.dir }).length) {
+		return {}
+	}
+	const url = `${tablesBase}${m.dir.split('/').map(encodeURIComponent).join('/')}.json`
+	const res = await fetch(url)
+	if (!res.ok) {
+		throw new Error(`${url}: HTTP ${res.status}`)
+	}
+	return res.json()
+}
+
+// The levels of the Nextcloud log, by number.
+const LOG_LEVELS = ['debug', 'info', 'warning', 'error', 'fatal']
+
+function auditTable(heads, rows) {
+	return el('div', { class: 'audit-scroll' }, el('table', { class: 'audit' },
+		el('thead', {}, el('tr', {}, ...heads.map((h) => el('th', {}, h)))),
+		el('tbody', {}, ...rows)))
+}
+
+function cell(content, cls) {
+	return el('td', cls ? { class: cls } : {}, ...[content ?? ''].flat())
+}
+
+function code(text) {
+	return el('code', {}, text ?? '')
+}
+
+// The log lines of a request or a step open in place: level, URL, message
+// and, where the log names one, the frame that threw.
+function logCell(entries) {
+	if (!entries?.length) {
+		return cell('')
+	}
+	return cell(el('details', {}, el('summary', {}, `${entries.length} log line${entries.length === 1 ? '' : 's'}`),
+		...entries.map((e) => el('pre', { class: e.level >= 3 ? 'fail' : '' },
+			[`[${LOG_LEVELS[e.level] ?? e.level}]`, e.url && e.url !== '--' ? e.url : '', e.message, e.frame ? `\n  at ${e.frame}` : '']
+				.filter(Boolean).join(' ')))))
+}
+
+// A 5xx status is a failure. A 2xx status without credentials on a route that
+// is no public page let in someone the route should have turned away.
+function statusCell(status, anonOnPrivate = false) {
+	if (status === null || status === undefined) {
+		return cell('–', 'muted')
+	}
+	const cls = status >= 500 ? 'fail' : anonOnPrivate && status >= 200 && status < 300 ? 'open' : ''
+	return cell(String(status), cls)
+}
+
+function yesNo(b, noIsBad = true) {
+	return b === null || b === undefined ? cell('–', 'muted') : cell(b ? 'yes' : 'no', !b && noIsBad ? 'open' : '')
+}
+
+// The routes of a run: those it requested and those it skipped for lack of a
+// value of a parameter, with the controller each one calls.
+function routeTable(run, skipped) {
+	const rows = run.requests.map((r) => el('tr', {},
+		cell(r.verb), cell(code(r.path)), cell(code(r.target)), cell(r.as), yesNo(r.public, false),
+		statusCell(r.anon, !r.public), statusCell(r.auth), yesNo(r.registered), logCell(r.log)))
+	rows.push(...skipped.map((s) => el('tr', { class: 'skipped' },
+		cell(s.verb), cell(code(s.path)), cell(code(s.target)), cell('–', 'muted'), yesNo(s.public, false),
+		el('td', { colspan: '3', class: 'muted' }, `skipped: no value for ${s.missing.join(', ')}`), cell(''))))
+	return auditTable(['Verb', 'Path', 'Controller', 'As', 'Public', 'Anonymous', 'Signed in', 'Registered', 'Log'], rows)
+}
+
+// A step whose result is an HTTP status failed with 5xx, any other with an
+// exit code other than 0; the setup checks exit with 1 for a warning of any
+// check of the server, so their exit code marks nothing.
+const HTTP_STEPS = new Set(['settings', 'capabilities', 'dav'])
+
+function stepRow(s) {
+	const n = Number(s.result)
+	const failed = HTTP_STEPS.has(s.kind) ? n >= 500 : s.kind !== 'setupchecks' && n !== 0
+	return el('tr', {}, cell(s.kind), cell(code(s.name)), cell(s.result, failed ? 'fail' : ''),
+		logCell(s.log), cell(s.foreign ? String(s.foreign) : '', 'muted'))
+}
+
+function stepTable(steps) {
+	return auditTable(['Step', 'Name', 'Result', 'Log of the app', 'Other log lines'], steps.map(stepRow))
+}
+
+function namedList(label, items) {
+	return items?.length ? [el('p', {}, `${label}: `, ...items.flatMap((x, i) => [i ? ', ' : '', code(x)]))] : []
+}
+
+function runHead(run) {
+	return `Nextcloud ${run.server ?? run.tag}, PHP ${run.php ?? '?'}`
+		+ `${run.failed !== null && run.failed !== undefined ? `, failed with ${run.failed}` : ''}${run.stopped ? `, stopped: ${run.stopped}` : ''}`
+}
+
+function runtimeAuditTables(data) {
+	return data.runs.map((run) => el('details', { class: 'audit-run' },
+		el('summary', {}, `${runHead(run)}: ${run.requests.length} routes, ${data.skipped.length} skipped, `
+			+ `${run.commands.length} commands, ${run.jobs.length} jobs, ${run.settings.length} settings forms`),
+		el('h6', {}, 'Routes'),
+		...(run.routesListed ? [] : [el('p', { class: 'muted' }, 'The server listed no routes, so whether it registers each one is not known.')]),
+		routeTable(run, data.skipped),
+		...(run.notRegistered.length
+			? [el('h6', {}, 'Routes of the inventory the server does not register'),
+				auditTable(['Verb', 'Path', 'Controller'], run.notRegistered.map((r) => el('tr', {}, cell(r.verb), cell(code(r.path)), cell(code(r.target)))))]
+			: []),
+		...(run.commands.length ? [el('h6', {}, 'Commands, occ <command> --help'), stepTable(run.commands)] : []),
+		...namedList('New commands', run.newCommands),
+		...(run.jobs.length ? [el('h6', {}, 'Background jobs, occ background-job:execute --force-execute'), stepTable(run.jobs)] : []),
+		...(run.settings.length ? [el('h6', {}, 'Settings forms'), stepTable(run.settings)] : []),
+		...(run.settingsRead ? [] : [el('p', { class: 'muted' }, 'The settings forms of the server were not read.')]),
+		...namedList('New settings', run.newSettings),
+		el('h6', {}, 'Steps'),
+		stepTable([run.enable, run.upgrade, ...run.repair, run.setupChecks, run.capabilities, run.dav].filter(Boolean)),
+		...namedList('New capabilities', run.newCapabilities),
+		...(run.enableOutput.length ? [el('h6', {}, 'occ app:enable'), el('pre', {}, run.enableOutput.join('\n'))] : []),
+		...(run.upgradeOutput.length ? [el('h6', {}, 'occ upgrade'), el('pre', {}, run.upgradeOutput.join('\n'))] : [])))
+}
+
+function installTestTables(data) {
+	return data.runs.map((run) => el('details', { class: 'audit-run' },
+		el('summary', {}, `${runHead(run)}: ${run.enabled ? 'enabled' : 'not enabled'}, ${run.requests.length} requests, ${run.log.entries.length} log lines`),
+		el('h6', {}, 'Requests'),
+		auditTable(['Name', 'Path', 'Status'], run.requests.map((r) => el('tr', {}, cell(r.name), cell(code(r.path)), statusCell(r.status)))),
+		el('h6', {}, 'Steps'),
+		auditTable(['Step', 'Exit code', 'Output'], [['occ app:enable', run.enable], ['cron.php', run.cron]].filter(([, s]) => s)
+			.map(([name, s]) => el('tr', {}, cell(name), cell(String(s.rc), s.rc ? 'fail' : ''), cell(el('pre', {}, (s.output ?? []).join('\n')))))),
+		el('h6', {}, `Log${run.log.unread ? `, ${run.log.unread} lines not read` : ''}`),
+		run.log.entries.length
+			? auditTable(['Level', 'App', 'URL', 'Message', 'Names the app'], run.log.entries.map((e) => el('tr', {},
+				cell(LOG_LEVELS[e.level] ?? String(e.level), e.level >= 3 ? 'fail' : ''), cell(e.app ?? ''), cell(e.url ?? ''),
+				cell(el('pre', {}, e.message ?? '')), yesNo(e.namesApp, false))))
+			: el('p', { class: 'muted' }, 'No log lines.')))
+}
+
+const RUN_TABLES = { 'runtime-audit': runtimeAuditTables, 'install-test': installTestTables }
+
 // Warnings in full, grouped by the tool that found them, the security targets
 // first, those with a security finding before the others, then the tools with
 // warnings; within a tool the security findings come first, ok and info only as
@@ -1336,7 +1481,9 @@ function infoXmlLink(m) {
 // findings are covered has no section. The head of a measurement, its name and badges, stays in view while
 // its findings scroll beneath it, with the button that collapses the row and,
 // while it sticks, the one back to the start of the measurement. The findings,
-// and the badges taken from them, follow once their file has arrived.
+// and the badges taken from them, follow once their file has arrived, and the
+// sections of runtime-audit and install-test show the tables of their runs
+// beneath their head.
 function checksBlock(m, collapse) {
 	const rank = ([tool, fs]) => (tool.startsWith('security/') ? 4 : 0) + (fs.some((f) => f.level === 'warn' && f.security && !f.counted_in) ? 2 : 0)
 		+ (fs.some((f) => f.level === 'warn') ? 1 : 0)
@@ -1360,7 +1507,7 @@ function checksBlock(m, collapse) {
 		status)
 	const load = () => {
 		status.replaceChildren('Loading the findings of this run.')
-		findingsOf(m).then((fs) => {
+		Promise.all([findingsOf(m), tablesOf(m)]).then(([fs, tables]) => {
 			head.append(...badgeRow(fs, fields))
 			const { under, covered } = coverage(fs)
 			const drift = fs.find((f) => f.id === 'version-drift' && f.level === 'warn' && !covered.has(f))
@@ -1380,6 +1527,7 @@ function checksBlock(m, collapse) {
 						elsewhere ? `, ${elsewhere} counted in another release` : '')]
 					: []
 				return el('div', { class: tool.startsWith('security/') ? 'tool security' : 'tool' }, el('h5', {}, tool, ...split), toolHead(tool),
+					...(tables[tool] ? RUN_TABLES[tool](tables[tool]) : []),
 					...(warns.length && baseTool(tool).startsWith('lint-') ? [lintFold(tool, warns, notes)] : findingEntries(tool, warns, under, notes)),
 					...(rest.length
 						? [el('details', {}, el('summary', {}, counts.map(([l, n]) => `${n} ${l}`).join(', ')), ...findingEntries(tool, rest, under, notes))]

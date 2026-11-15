@@ -168,6 +168,13 @@ from the reuse.json of the newest run of nextcloud/server at the same server
 release, by the files below the directory of the app, and says so where no
 such run has one.
 
+Beside <file>, tables/<run dir>.json holds the runs of runtime-audit and
+install-test of each run that has either result, as a JSON object by tool:
+per server the routes with their controller, statuses and log lines of the
+app, the routes skipped for a missing parameter, and every command, job,
+settings form and step with its result and the log lines of the app, without
+the setup checks and background jobs of the whole server.
+
 Beside <file>, samples/<project>.json holds the samples of each project, of
 the assets the summary counts, as a JSON array with one entry per asset:
 [host, owner, repo, tag, asset, [[ts, downloads], ...]]. A project without
@@ -185,8 +192,9 @@ at its start.
 
 Options:
   -o, --output <file>  the database to write; the findings of each measurement
-                       go to findings/<run dir>.json beside it, the samples of
-                       each project to samples/<project>.json
+                       go to findings/<run dir>.json beside it, the runs of
+                       runtime-audit and install-test to tables/<run dir>.json,
+                       the samples of each project to samples/<project>.json
   -r, --results <dir>  the directory apps/ of a checkout of the data branch;
                        without it the three measurement tables stay empty
                        and no findings are written
@@ -239,6 +247,8 @@ findings="$(dirname "$out")/findings"
 [ ! -e "$findings" ] || die "$findings exists"
 samples_dir="$(dirname "$out")/samples"
 [ ! -e "$samples_dir" ] || die "$samples_dir exists"
+tables_dir="$(dirname "$out")/tables"
+[ ! -e "$tables_dir" ] || die "$tables_dir exists"
 [ -z "$results" ] || [ -d "$results" ] || die "no results directory at $results"
 heads="$(dirname "$(readlink -f "$0")")/../site/tool-heads.json"
 [ -r "$heads" ] || die "no tool heads at $heads"
@@ -327,10 +337,36 @@ links_sql="$(jq -r "$release_url"'
 # where finding_fields names it by the id of the finding, as <id>/<field>.
 # The Transifex setup appsdiag records in summary.json is kept as the field
 # transifex of the tool summary.
+# Of runtime-audit and install-test the runs are kept as tables_jq projects
+# them, for the tables of the run block: every route with its controller, the
+# statuses and the log lines of the app, and every step with its result and the
+# log lines of the app, while the setup checks and background jobs of the whole
+# server, the larger part of the result, are left out.
 # q doubles each quote with split and join, not gsub: a finding may quote a
 # whole minified line of megabytes, and gsub takes minutes and gigabytes on it.
 result_fields='{"build-audit": ["toolchain", "frameworks", "libraries", "defects"], "php-compat": ["range", "next"], "integrity-check": ["state", "certificate", "files"], "l10n-lint": ["strings"]}'
 finding_fields='{"deps-audit": {"licence-summary": ["licences"]}}'
+tables_jq='
+	def entry: {level, url, message, frame};
+	def step: if . == null then null
+		else {kind, name, result, log: [(.log // [])[] | select(.ownsApp) | entry], foreign: [(.log // [])[] | select(.ownsApp | not)] | length} end;
+	def table($tool):
+		if $tool == "runtime-audit" then
+			{skipped: (.skipped // []), runs: [.runs[]? | {tag, server, php, failed, stopped,
+				enable: (.enable.step | step), enableOutput: (.enable.output // []),
+				upgrade: (.upgrade.step | step), upgradeOutput: (.upgrade.output // []),
+				routesListed, notRegistered: [(.notRegistered // [])[] | {verb, path, target}],
+				requests: [(.requests // [])[] | {verb, path, target, "as": .["as"], public, anon, auth, registered, log: [(.log // [])[] | entry]}],
+				commands: [(.commands // [])[] | step], newCommands: (.newCommands // []),
+				jobs: [(.jobs // [])[] | step],
+				settings: [(.settings // [])[] | step], settingsRead, newSettings: (.newSettings // []),
+				setupChecks: (.setupChecks.step | step),
+				capabilities: (.capabilities.step | step), newCapabilities: (.capabilities.added // []),
+				dav: (.dav | step), repair: [(.repair // [])[] | step]}]}
+		elif $tool == "install-test" then
+			{runs: [.runs[]? | {tag, server, php, failed, stopped, enable, enabled, requests: (.requests // []), cron,
+				log: {unread: .log.unread, entries: [(.log.entries // [])[] | {level, app, url, message, namesApp}]}}]}
+		else empty end;'
 sql_defs='
 	def q: "'\''" + (split("'\''") | join("'\'''\''")) + "'\''";
 	def v: if . == null then "NULL" elif type == "string" then q
@@ -368,7 +404,7 @@ if [ -n "$results" ]; then
 		  | "INSERT INTO targets VALUES (\($dir | q), \($n | v), \(.exit | v), \(.json_skipped | v), \($files | any(. == $n + ".json") | v), \(.analyser | v), \(.stopped | v), \(.json_invalid | v));"),
 		  (.transifex // empty | "INSERT INTO fields VALUES (\($dir | q), \("summary" | q), \("transifex" | q), \(tojson | q));")
 	'
-	findings_jq="$sql_defs"'
+	findings_jq="$sql_defs$tables_jq"'
 		(if $name == "" then input_filename else $name end | ltrimstr($root) | rtrimstr(".gz") | rtrimstr(".json")) as $p
 		| ($p | sub("/[^/]*$"; "") | q) as $dir | ($p | sub("^.*/"; "")) as $tool | . as $r
 		| ((.findings? // []) | to_entries[]
@@ -376,7 +412,8 @@ if [ -n "$results" ]; then
 		  (($fields[$tool] // [])[] as $f | ($r | objects | .[$f]) // empty
 		  | "INSERT INTO fields VALUES (\($dir), \($tool | q), \($f | q), \(tojson | q));"),
 		  ((.findings? // [])[] as $x | ($finding_fields[$tool][$x.id]? // [])[] as $f | $x[$f] // empty
-		  | "INSERT INTO fields VALUES (\($dir), \($tool | q), \($x.id + "/" + $f | q), \(tojson | q));")'
+		  | "INSERT INTO fields VALUES (\($dir), \($tool | q), \($x.id + "/" + $f | q), \(tojson | q));"),
+		  ($r | objects | table($tool) | "INSERT INTO tables VALUES (\($dir), \($tool | q), \(tojson | q));")'
 	mapfile -d '' files < <(find "$results" -name '*.json' ! -name summary.json ! -name reuse.json ! -path '*/release/*' -print0)
 	sql_of -r --arg root "$results/" --arg name '' --argjson fields "$result_fields" --argjson finding_fields "$finding_fields" "$findings_jq"
 	while IFS= read -r -d '' f; do
@@ -501,7 +538,7 @@ if [ -r "$SECURITY_OVERDUE_CACHE" ]; then
 fi
 
 # -bail stops at the first error; the half-written copy is removed then.
-trap 'rm -rf "$out" "$findings" "$samples_dir"' ERR
+trap 'rm -rf "$out" "$findings" "$samples_dir" "$tables_dir"' ERR
 # The key of a repository in the projects: owner/repo on GitHub, host/owner/repo
 # elsewhere, lowercase.
 host_k="CASE WHEN host = 'github.com' THEN '' ELSE host || '/' END"
@@ -885,6 +922,12 @@ CREATE TABLE fields (
   value TEXT NOT NULL,
   PRIMARY KEY (dir, tool, name)
 ) WITHOUT ROWID;
+CREATE TEMP TABLE tables (
+  dir   TEXT NOT NULL,
+  tool  TEXT NOT NULL,
+  data  TEXT NOT NULL,
+  PRIMARY KEY (dir, tool)
+) WITHOUT ROWID;
 CREATE TEMP TABLE reuse_files (
   dir     TEXT NOT NULL,
   path    TEXT NOT NULL,
@@ -1223,6 +1266,12 @@ SELECT (SELECT count(*) FROM findings) AS findings, sum(writefile('${findings//$
        FROM findings f WHERE f.dir = m.dir ORDER BY f.tool, f.n)))) AS bytes
   FROM measurements m;
 DROP TABLE findings;
+-- The runs of runtime-audit and install-test of a measurement, as the JSON
+-- object by tool the tables of the run block read; only a measurement with one
+-- of them has the file, and the page fetches it only then.
+CREATE TEMP TABLE exported_tables AS
+SELECT count(*) AS runs, sum(writefile('${tables_dir//$sq/$sq$sq}/' || t.dir || '.json', t.data)) AS bytes
+  FROM (SELECT dir, json_group_object(tool, json(data)) AS data FROM tables GROUP BY dir) t;
 -- The samples of a project, of the assets the summary counts, as the JSON array
 -- the charts and the comparison read: one entry per asset, [host, owner, repo,
 -- tag, asset, [[ts, downloads], ...]]. A project without any has an empty one,
@@ -1265,7 +1314,7 @@ SQL
 missing="$(find "$findings" -name '*.json' -print0 | xargs -0 -r jq -r '.[].tool | sub("^security/"; "")' | sort -u \
 	| jq -R -r --slurpfile heads "$heads" 'select(. as $t | $heads[0] | has($t) | not)' | paste -sd ' ')"
 if [ -n "$missing" ]; then
-	rm -rf "$out" "$findings" "$samples_dir"
+	rm -rf "$out" "$findings" "$samples_dir" "$tables_dir"
 	die "no head in $heads for $missing"
 fi
 trap - ERR
