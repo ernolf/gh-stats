@@ -1096,7 +1096,9 @@ security_make() {
 # result, which keeps the status of every request without credentials: on a
 # route that is no public page, a 2xx there is what route-open reports, so that
 # status is left out on every such route, and one left out says nothing. Its
-# findings at level ok stay, as the badge Runs clean reads them.
+# findings at level ok stay, as the badge Runs clean reads them. Of php-audit
+# the number of endpoints in its inventory is public as endpoints, without the
+# endpoints and their access; it is null where the run left no inventory.
 security_public() {
 	[ "$1" != deps-audit ] || return 0
 	if [ "$1" = runtime-audit ]; then
@@ -1105,7 +1107,8 @@ security_public() {
 			"$SECURITY_TMP/$1.json" >"$RUN_DIR/$1.json"
 		return 0
 	fi
-	"$JQ" '{findings: [if type == "object" then .findings[]? else empty end | select(.security != true and .level != "ok")]}' \
+	"$JQ" --arg t "$1" '{findings: [if type == "object" then .findings[]? else empty end | select(.security != true and .level != "ok")]}
+		+ if $t == "php-audit" then {endpoints: ([objects | .inventory.endpoints? | arrays | length][0])} else {} end' \
 		"$SECURITY_TMP/$1.json" >"$RUN_DIR/$1.json"
 }
 

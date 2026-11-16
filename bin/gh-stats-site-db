@@ -107,7 +107,9 @@ repository under its current name, plus
              declares, and
              warn and abandoned, the warnings of the run and the abandoned
              packages deps-audit found; sec and sec_other stay empty for
-             gh-stats-security-site
+             gh-stats-security-site; endpoints, loader and unreferenced, the
+             endpoints php-audit counted, optimized or the class loading
+             findings it made, and the routes it found unreferenced
   targets    the make targets of each run, with exit code, whether they left a
              JSON result and why one was skipped, whether they are analysers
              with a JSON result, the line a failed one stopped with, and the
@@ -344,8 +346,8 @@ links_sql="$(jq -r "$release_url"'
 # server, the larger part of the result, are left out.
 # q doubles each quote with split and join, not gsub: a finding may quote a
 # whole minified line of megabytes, and gsub takes minutes and gigabytes on it.
-result_fields='{"build-audit": ["toolchain", "frameworks", "libraries", "defects"], "php-compat": ["range", "next"], "integrity-check": ["state", "certificate", "files"], "l10n-lint": ["strings"]}'
-finding_fields='{"deps-audit": {"licence-summary": ["licences"]}}'
+result_fields='{"build-audit": ["toolchain", "frameworks", "libraries", "defects"], "php-compat": ["range", "next"], "integrity-check": ["state", "certificate", "files"], "l10n-lint": ["strings"], "php-audit": ["endpoints"]}'
+finding_fields='{"deps-audit": {"licence-summary": ["licences"]}, "php-audit": {"route-unreferenced": ["places"]}}'
 tables_jq='
 	def entry: {level, url, message, frame};
 	def step: if . == null then null
@@ -1216,6 +1218,15 @@ UPDATE findings AS f SET
   FROM shipped_runs r
  WHERE f.dir = r.dir AND f.tool = 'consistency-audit' AND f.level = 'warn' AND f.id = 'nextcloud-support'
    AND f.text LIKE 'Declares Nextcloud ' || r.major || ' to ' || r.major || ';%';
+-- A shipped app is replaced together with the server, so the upgrade of the
+-- app that an authoritative class map breaks does not happen to it; the apps
+-- of the server tree set classmap-authoritative in composer/composer.json.
+UPDATE findings AS f SET
+  level = 'info',
+  text = substr(f.text, 1, instr(f.text || char(10), char(10)) - 1) || char(10)
+    || '  The app ships with the server and is replaced together with it, so its class map cannot go stale on an upgrade of the app alone.'
+  FROM shipped_runs r
+ WHERE f.dir = r.dir AND f.tool = 'php-audit' AND f.level = 'warn' AND f.id = 'autoloader-authoritative';
 -- An app of the server tree has no repository of its own: its source is
 -- nextcloud/server. A missing <bugs> stays a warning, and so does a missing
 -- <repository> of a shipped app with a repository of its own.
@@ -1249,6 +1260,9 @@ ALTER TABLE measurements ADD COLUMN warn INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE measurements ADD COLUMN sec INTEGER;
 ALTER TABLE measurements ADD COLUMN sec_other INTEGER;
 ALTER TABLE measurements ADD COLUMN abandoned INTEGER;
+ALTER TABLE measurements ADD COLUMN endpoints INTEGER;
+ALTER TABLE measurements ADD COLUMN loader TEXT;
+ALTER TABLE measurements ADD COLUMN unreferenced INTEGER;
 -- What the warnings of a run cover, looked up once per warning; a run of a lint
 -- target can have thousands of them.
 CREATE TEMP TABLE covered AS
@@ -1262,6 +1276,20 @@ UPDATE measurements AS m SET
                               WHERE c.dir = f.dir AND c.name IN (f.tool, f.tool || '/' || f.id) AND c.tool <> f.tool)),
   abandoned = CASE WHEN EXISTS (SELECT 1 FROM targets t WHERE t.dir = m.dir AND t.name = 'deps-audit' AND t.json)
     THEN (SELECT count(*) FROM findings f WHERE f.dir = m.dir AND f.tool = 'deps-audit' AND f.id = 'abandoned-dependency') END;
+-- Of php-audit, only a run whose public result counts the endpoints says
+-- anything; the others keep NULL. loader is optimized where no class loading
+-- finding warns, which credits the class map of the Composer loader at level
+-- 1, else the ids of those findings. unreferenced stays NULL where routes
+-- that are no constants kept php-audit from looking for unreferenced ones.
+UPDATE measurements AS m SET
+  endpoints = CAST(e.value AS INTEGER),
+  loader = coalesce((SELECT group_concat(DISTINCT f.id) FROM findings f
+                      WHERE f.dir = m.dir AND f.tool = 'php-audit' AND f.level = 'warn' AND (f.id LIKE 'autoloader-%' OR f.id = 'psr-0')), 'optimized'),
+  unreferenced = CASE WHEN NOT EXISTS (SELECT 1 FROM findings f WHERE f.dir = m.dir AND f.tool = 'php-audit' AND f.id = 'routes-unreadable')
+    THEN coalesce((SELECT json_array_length(x.value) FROM fields x
+                    WHERE x.dir = m.dir AND x.tool = 'php-audit' AND x.name = 'route-unreferenced/places'), 0) END
+  FROM fields e
+ WHERE e.dir = m.dir AND e.tool = 'php-audit' AND e.name = 'endpoints';
 -- The findings of a measurement, by tool and in the order of the analyser, as
 -- the JSON array the run block reads; a measurement without any has an empty
 -- one, so a file that is missing is an error. The table itself is not shipped.

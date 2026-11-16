@@ -295,10 +295,10 @@ function categories() {
 	return new Map(query('SELECT id, name FROM categories ORDER BY name COLLATE NOCASE').map((r) => [r.id, r.name]))
 }
 
-// warn, sec, sec_other and abandoned are the counts gh-stats-site-db and
-// gh-stats-security-site take from the findings.
+// warn, sec, sec_other, abandoned, endpoints, loader and unreferenced are the
+// counts gh-stats-site-db and gh-stats-security-site take from the findings.
 const MEASUREMENT = `m.dir, m.host, m.owner, m.repo, m.subdir, m.app_id, m.version, m.restrictable, m.server, m.tag, m.tarball, m.signed, m.diff, m.info_xml,
-	m.declared, m.shipped_version, m.warn, m.sec, m.sec_other, m.abandoned,
+	m.declared, m.shipped_version, m.warn, m.sec, m.sec_other, m.abandoned, m.endpoints, m.loader, m.unreferenced,
 	(SELECT s.repo FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_repo,
 	(SELECT s.path FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_path,
 	(SELECT s.app_ref FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_ref`
@@ -912,7 +912,7 @@ function compareSelect(row) {
 		row.compare.hidden = !select.value
 		row.compare.dataset.tag = select.value
 		const runs = select.value && measured.get(`${row.project}\n${select.value}`)
-		const [checks, checksRow, sec] = checksCell(runs, 12)
+		const [checks, checksRow, sec] = checksCell(runs, 15)
 		row.compareChecks.replaceWith(checksRow)
 		row.compareChecks = checksRow
 		if (select.value) {
@@ -929,7 +929,7 @@ function compareSelect(row) {
 				loading.then(show, (e) => loadFailed(figures, 'The downloads of this project', e, show))
 			}
 			row.compare.append(el('td'), el('td', { class: 'compare-label' }, 'compared with'),
-				figures, el('td', { class: 'num' }), abandonedCell(abandoned(runs)), ...sec, checks, el('td'))
+				figures, el('td', { class: 'num' }), abandonedCell(abandoned(runs)), ...codeCells(setCode({}, runs)), ...sec, checks, el('td'))
 			show()
 			opened.compare.add(none)
 		} else {
@@ -1013,6 +1013,11 @@ const BADGES = [
 	// run warns, since each server reports its own ok.
 	{ id: 'installs', of: (run) => (run.warns('install-test') ? null : run.pass('install-test', 'install', 'Installs')) },
 	{ id: 'runtime', of: (run) => (run.warns('runtime-audit') ? null : run.pass('runtime-audit', 'runtime', 'Runs clean')) },
+	// The class map of the Composer loader at level 1, where php-audit read the
+	// app and none of its class loading findings warns.
+	{ id: 'class-map', of: (run) => (run.field('php-audit', 'endpoints') === null || run.warns('php-audit', (id) => id.startsWith('autoloader-') || id === 'psr-0')
+		? null
+		: { label: 'Class map', title: 'composer/autoload.php loads the classes of the app from an optimized class map, and php-audit found nothing to change in the class loading.' }) },
 	// The versions agree only where lint-version, which compares the same files,
 	// finds nothing either.
 	{ id: 'versions-agree', of: (run) => (run.warns('lint-version') ? null : run.pass('consistency-audit', 'versions-agree', 'Versions agree')) },
@@ -1080,7 +1085,7 @@ function runView(fs, fields) {
 			const hits = ids.map((id) => passed(tool, id))
 			return hits.every(Boolean) ? { label, title: hits.map((f) => f.text).join('\n') } : null
 		},
-		warns: (tool) => fs.some((f) => f.tool === tool && f.level === 'warn'),
+		warns: (tool, id = () => true) => fs.some((f) => f.tool === tool && f.level === 'warn' && id(f.id)),
 	}
 }
 
@@ -1680,6 +1685,42 @@ function abandonedCell(n, version = null) {
 	}, String(n))
 }
 
+// The figures of php-audit over the measurements of a release, kept on the row
+// to sort by: the endpoints and the unreferenced routes added up, and loader 1
+// where every measurement found the class loading optimized, 0 where one made
+// a class loading finding, whose ids loaderIds names; all null where no
+// measurement counted the endpoints, and unreferenced null as well where none
+// could read all routes.
+function setCode(row, runs) {
+	const known = (runs ?? []).filter((m) => m.endpoints !== null)
+	const ids = [...new Set(known.flatMap((m) => (m.loader === 'optimized' ? [] : m.loader.split(','))))]
+	row.endpoints = known.length ? known.reduce((n, m) => n + m.endpoints, 0) : null
+	const read = known.filter((m) => m.unreferenced !== null)
+	row.unreferenced = read.length ? read.reduce((n, m) => n + m.unreferenced, 0) : null
+	row.loader = known.length ? (ids.length ? 0 : 1) : null
+	row.loaderIds = ids
+	return row
+}
+
+// A version given names the release measured when it is another than the one
+// the row shows.
+function codeCells(row, version = null) {
+	const where = version ? `, in ${version}` : ''
+	if (row.endpoints === null) {
+		return [1, 2, 3].map(() => el('td', { class: 'num check-col', title: 'php-audit did not count the endpoints' }))
+	}
+	const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
+	return [
+		el('td', { class: 'num check-col', title: `${plural(row.endpoints, 'endpoint')} the release offers: routes, OCS routes, DAV plugins and capabilities, as php-audit counts them${where}` }, String(row.endpoints)),
+		row.loader
+			? el('td', { class: 'mark check-col', title: `the class loading is optimized: no class loading finding of php-audit${where}` }, '✓')
+			: el('td', { class: 'mark check-col', title: `class loading findings of php-audit${where}: ${row.loaderIds.join(', ')}` }, '[!]'),
+		row.unreferenced === null
+			? el('td', { class: 'num check-col', title: `php-audit could not read every route${where}, as some are no constants` })
+			: el('td', { class: 'num check-col', title: `${plural(row.unreferenced, 'route')} outside OCS that nothing in the release calls, as php-audit names them${where}` }, String(row.unreferenced)),
+	]
+}
+
 // The checks of a line row: those of the release it shows, else those of the
 // newest measured release of its line, with that release's version. The row
 // keeps the counts of the cells to sort by. The server is measured in
@@ -1694,14 +1735,16 @@ function lineChecks(row, span) {
 		row.warn = warnings(own)
 		row.sec = securityWarnings(own)
 		row.abandoned = abandoned(own)
-		return [abandonedCell(row.abandoned), ...checksCell(own, span)]
+		setCode(row, own)
+		return [[abandonedCell(row.abandoned), ...codeCells(row)], ...checksCell(own, span)]
 	}
 	const runs = measuredLines.get(`${row.project}\n${row.line}`)
 	const version = runs?.[0].version ?? runs?.[0].tag
 	row.warn = warnings(runs)
 	row.sec = securityWarnings(runs)
 	row.abandoned = abandoned(runs)
-	return [abandonedCell(row.abandoned, version), ...checksCell(runs, span, version)]
+	setCode(row, runs)
+	return [[abandonedCell(row.abandoned, version), ...codeCells(row, version)], ...checksCell(runs, span, version)]
 }
 
 function serverLineChecks(row, span) {
@@ -1714,7 +1757,8 @@ function serverLineChecks(row, span) {
 	row.warn = warnings(runs)
 	row.sec = securityWarnings(runs)
 	row.abandoned = abandoned(runs)
-	return [abandonedCell(row.abandoned, version), ...checksCell(runs, span, version)]
+	setCode(row, runs)
+	return [[abandonedCell(row.abandoned, version), ...codeCells(row, version)], ...checksCell(runs, span, version)]
 }
 
 // The run of nextcloud/server at master, below the row of its newest release,
@@ -1724,11 +1768,11 @@ function serverMasterRows() {
 	if (!runs) {
 		return []
 	}
-	const [checks, checksRow, sec] = checksCell(runs, 12)
+	const [checks, checksRow, sec] = checksCell(runs, 15)
 	const tr = el('tr', {}, el('td', { class: 'pick' }), el('td', { class: 'line-label' }, 'master'),
 		el('td', { class: 'tag' }, el('a', { href: `https://github.com/${SERVER_REPO}/tree/master` }, 'master')),
 		el('td'), el('td'), ...['total', ...PERIODS, 'stars'].map(() => el('td', { class: 'num' })),
-		abandonedCell(abandoned(runs)), ...sec, checks, el('td'))
+		abandonedCell(abandoned(runs)), ...codeCells(setCode({}, runs)), ...sec, checks, el('td'))
 	return [tr, checksRow]
 }
 
@@ -1736,9 +1780,9 @@ function serverMasterRows() {
 function lineRows(row, first, stars = el('td', { class: 'num' })) {
 	row.pick = el('input', { type: 'checkbox', 'aria-label': `Chart ${row.name} line ${lineLabel(row.line)}` })
 	row.pick.addEventListener('change', () => pickRow(row, row.pick.checked))
-	const [abandonedTd, checks, checksRow, sec] = lineChecks(row, 12)
+	const [abandonedTd, checks, checksRow, sec] = lineChecks(row, 15)
 	row.checks = checksRow
-	row.tr = el('tr', {}, el('td', { class: 'pick' }, row.pick), first, ...releaseCells(row, measured.get(`${row.project}\n${row.tag}`)), stars, abandonedTd, ...sec, checks, el('td'))
+	row.tr = el('tr', {}, el('td', { class: 'pick' }, row.pick), first, ...releaseCells(row, measured.get(`${row.project}\n${row.tag}`)), stars, ...abandonedTd, ...sec, checks, el('td'))
 	row.compare = el('tr', { class: 'compare', hidden: '' })
 	row.compareChecks = el('tr', { class: 'checks', hidden: '' })
 	row.tr.lastChild.append(compareSelect(row))
@@ -1794,8 +1838,9 @@ function catalogueRow(a) {
 	p.warn = warnings(runs)
 	p.sec = securityWarnings(runs)
 	p.abandoned = abandoned(runs)
+	setCode(p, runs)
 	const [label, reason] = downloadReason(a)
-	const [checks, checksRow, sec] = checksCell(runs, 12)
+	const [checks, checksRow, sec] = checksCell(runs, 15)
 	if (!runs) {
 		const [why, title] = released && !a.stable
 			? ['no stable release', 'the App Store lists only nightlies or pre-releases of this app, and only stable releases are measured']
@@ -1812,7 +1857,7 @@ function catalogueRow(a) {
 		el('td', {}, ncRange(a.platform)),
 		el('td', {}, a.published === null ? '' : date(a.published)),
 		...['total', ...PERIODS].map(() => el('td', empty)), el('td', { class: 'num' }),
-		abandonedCell(p.abandoned), ...sec, checks, el('td')), checksRow)
+		abandonedCell(p.abandoned), ...codeCells(p), ...sec, checks, el('td')), checksRow)
 	p.older = el('tbody', { class: 'older', hidden: '' })
 	p.toggle = el('button', { type: 'button', class: 'toggle', hidden: '' })
 	return p
@@ -1834,7 +1879,8 @@ function unlistedRow(u) {
 	p.warn = warnings(runs)
 	p.sec = securityWarnings(runs)
 	p.abandoned = abandoned(runs)
-	const [checks, checksRow, sec] = checksCell(runs, 12)
+	setCode(p, runs)
+	const [checks, checksRow, sec] = checksCell(runs, 15)
 	if (!runs) {
 		const [why, title] = u.exapp
 			? ['ExApp', EXAPP_TEXT]
@@ -1852,7 +1898,7 @@ function unlistedRow(u) {
 		el('td', {}, ncRange(u.platform)),
 		el('td'),
 		...['total', ...PERIODS].map(() => el('td', empty)), el('td', { class: 'num' }),
-		abandonedCell(p.abandoned), ...sec, checks, el('td')), checksRow)
+		abandonedCell(p.abandoned), ...codeCells(p), ...sec, checks, el('td')), checksRow)
 	p.older = el('tbody', { class: 'older', hidden: '' })
 	p.toggle = el('button', { type: 'button', class: 'toggle', hidden: '' })
 	return p
@@ -1889,9 +1935,9 @@ function shippedRow(releases) {
 	const main = releases.find((s) => s.ref === 'master') ?? releases[0]
 	const line = (s, first, since = null) => {
 		const runs = measuredShipped.get(`${s.id}\n${s.ref}`)
-		const [checks, checksRow, sec] = checksCell(runs, 10)
+		const [checks, checksRow, sec] = checksCell(runs, 13)
 		const r = {
-			published: s.published, nc: `>=${s.major} <=${s.major}`, warn: warnings(runs), sec: securityWarnings(runs), abandoned: abandoned(runs), checks: checksRow,
+			published: s.published, nc: `>=${s.major} <=${s.major}`, warn: warnings(runs), sec: securityWarnings(runs), abandoned: abandoned(runs), ...setCode({}, runs), checks: checksRow,
 			compare: el('tr', { class: 'compare', hidden: '' }), compareChecks: el('tr', { class: 'checks', hidden: '' }),
 		}
 		r.tr = el('tr', {}, el('td', { class: 'pick' }), first,
@@ -1902,7 +1948,7 @@ function shippedRow(releases) {
 			s.enabled ? el('td', { class: 'mark', title: ENABLED[s.enabled][0] }, ENABLED_CODE[s.enabled]) : el('td'),
 			el('td', { class: 'mark' }, s.restrictable === 0 ? 'X' : ''),
 			el('td', { class: 'mark' }, s.repo === SERVER_REPO ? 'X' : ''),
-			abandonedCell(r.abandoned), ...sec, checks)
+			abandonedCell(r.abandoned), ...codeCells(r), ...sec, checks)
 		return r
 	}
 	const head = el('td', {}, el('span', { class: 'name' }, el('a', { href: `#app/${encodeURIComponent(main.id)}` }, main.name)),
@@ -1913,7 +1959,7 @@ function shippedRow(releases) {
 	const row = line(main, head, since)
 	const p = {
 		tab: 'shipped', name: main.name, tag: main.version, published: main.published, nc: row.nc, enabled: main.enabled, tree: main.repo === SERVER_REPO,
-		total: null, d1: null, d7: null, d30: null, stars: null, since, warn: row.warn, sec: row.sec, abandoned: row.abandoned,
+		total: null, d1: null, d7: null, d30: null, stars: null, since, warn: row.warn, sec: row.sec, abandoned: row.abandoned, endpoints: row.endpoints, loader: row.loader, loaderIds: row.loaderIds, unreferenced: row.unreferenced,
 		lines: releases.filter((s) => s !== main)
 			.map((s) => line(s, el('td', { class: 'line-label' }, `Nextcloud ${s.major}`))),
 		search: `${main.name} ${main.id} ${main.repo}`.toLowerCase(), categories: new Set(JSON.parse(main.categories ?? '[]')),
@@ -1971,6 +2017,10 @@ function initOverview() {
 		p.warn = main.warn
 		p.sec = main.sec
 		p.abandoned = main.abandoned
+		p.endpoints = main.endpoints
+		p.loader = main.loader
+		p.loaderIds = main.loaderIds
+		p.unreferenced = main.unreferenced
 		p.older = el('tbody', { class: 'older', hidden: '' },
 			...older.flatMap((r) => lineRows(r, el('td', { class: 'line-label' }, `line ${lineLabel(r.line)}`))))
 		p.toggle = olderToggle(p, project)
@@ -2648,10 +2698,13 @@ function appLines(lines) {
 		el('thead', {}, el('tr', {}, ...['Line', 'Release', 'Nextcloud', 'Published'].map((h) => el('th', {}, h)),
 			...['Total', '1 day', '7 days', '30 days'].map((h) => el('th', { class: 'num' }, h)),
 			el('th', { class: 'num', title: 'abandoned packages that ship with the release shown, as deps-audit names them' }, 'Abandoned'),
+			el('th', { class: 'num', title: 'the endpoints the release offers, as php-audit counts them' }, 'Endpoints'),
+			el('th', { title: 'whether php-audit found the class loading optimized' }, 'Class loader'),
+			el('th', { class: 'num', title: 'routes that no code of the release refers to, as php-audit names them' }, 'Unreferenced routes'),
 			...securityHead(), el('th', { title: 'warnings the ncmake analysers found in the release shown' }, 'Checks'))),
 		...lines.map((r) => {
-			const [abandonedTd, checks, checksRow, sec] = lineChecks(r, 9)
-			return el('tbody', {}, el('tr', {}, el('td', {}, lineLabel(r.line)), ...releaseCells(r, measured.get(`${r.project}\n${r.tag}`)), abandonedTd, ...sec, checks), checksRow)
+			const [abandonedTd, checks, checksRow, sec] = lineChecks(r, 12)
+			return el('tbody', {}, el('tr', {}, el('td', {}, lineLabel(r.line)), ...releaseCells(r, measured.get(`${r.project}\n${r.tag}`)), ...abandonedTd, ...sec, checks), checksRow)
 		}))
 }
 
