@@ -34,7 +34,10 @@ beside it and the findings of the run in security/<run dir>/findings.json. A
 run that the database of the artifact does not hold is left out.
 
 Each build gets a database path of its own, so a browser never mixes a cached
-config.json with another database. One run at a time holds <site-dir>/.lock.
+config.json with another database. One run at a time holds <site-dir>/.lock;
+a run that finds it held ends without a word. A run whose site run, head of
+the data branch and tools are those of the current build ends as well, so cron
+may start it often.
 
   -i, --identity <file>  the age identity, passed to gh-stats-security
   -d, --dir <dir>        the clone of the data branch, passed to
@@ -48,6 +51,7 @@ Environment:
   GH_STATS_REPO          the repository, default https://github.com/ernolf/gh-stats.git
   GH_STATS_SITE_WORKFLOW the site workflow, default gh-stats-site.yml
   GH_STATS_SECURITY_BIN  default gh-stats-security beside this tool
+  GH_STATS_DATA_BRANCH   the data branch, default data, as for gh-stats-security
   GH_STATS_SITE_ATTEMPTS how often a call to GitHub is tried, default 5
   GH_STATS_SITE_CALL_TIMEOUT  seconds before a call is given up, default 600
   GH_BIN, JQ_BIN, SQLITE_BIN, TAR_BIN
@@ -56,6 +60,7 @@ EOF
 
 repo="${GH_STATS_REPO:-https://github.com/ernolf/gh-stats.git}"
 workflow="${GH_STATS_SITE_WORKFLOW:-gh-stats-site.yml}"
+data_branch="${GH_STATS_DATA_BRANCH:-data}"
 attempts="${GH_STATS_SITE_ATTEMPTS:-5}"
 call_timeout="${GH_STATS_SITE_CALL_TIMEOUT:-600}"
 SECURITY="${GH_STATS_SECURITY_BIN:-$(dirname "$(readlink -f "$0")")/gh-stats-security}"
@@ -91,7 +96,9 @@ umask 027
 mkdir -p "$site/builds" "$site/cache"
 [ -z "$group" ] || chgrp "$group" "$site" "$site/builds"
 exec 9>"$site/.lock"
-flock -n 9 || die "another run holds $site/.lock"
+# The run before is still building what this one would build, or something
+# older, which the next run after it replaces.
+flock -n 9 || exit 0
 
 gh_repo="${repo#*://}"
 gh_repo="${gh_repo%.git}"
@@ -110,6 +117,13 @@ retry() {
 run_id="$(retry timeout "$call_timeout" "$GH" run list -R "$gh_repo" -w "$workflow" -s success -L 1 --json databaseId -q '.[0].databaseId')" \
 	|| die "cannot list the runs of $workflow"
 [ -n "$run_id" ] || die "no successful run of $workflow"
+data_head="$(retry timeout "$call_timeout" "$GH" api "repos/$gh_repo/branches/$data_branch" -q .commit.sha)" 	|| die "cannot read the head of $data_branch"
+
+# What the current build was made of: the site run, the data branch and the
+# two tools that build it. A build of the same would be the same, so the run
+# ends; an updated tool builds again.
+source_key="$run_id $data_head $(cat "$0" "$SECURITY" | sha256sum | cut -d' ' -f1)"
+[ "$(cat "$site/built" 2>/dev/null)" != "$source_key" ] || [ ! -e "$site/current" ] || exit 0
 
 work="$(mktemp -d "$site/.work.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
@@ -245,6 +259,7 @@ chmod -R o-rwx,g-w "$build"
 mv "$build" "$site/builds/$stamp"
 ln -sfn "builds/$stamp" "$site/current.new"
 mv -T "$site/current.new" "$site/current"
+echo "$source_key" >"$site/built"
 
 # The build before the current one stays, so a page that loaded its config.json
 # just before the switch still finds its database.
