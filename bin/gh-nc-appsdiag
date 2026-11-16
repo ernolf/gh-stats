@@ -1097,8 +1097,11 @@ security_make() {
 # route that is no public page, a 2xx there is what route-open reports, so that
 # status is left out on every such route, and one left out says nothing. Its
 # findings at level ok stay, as the badge Runs clean reads them. Of php-audit
-# the number of endpoints in its inventory is public as endpoints, without the
-# endpoints and their access; it is null where the run left no inventory.
+# the endpoints of its inventory are public as endpoints, their number, and as
+# endpointList, each with verb, path, controller method and OpenAPI scope. Their
+# access is not: page, API and public, the kinds php-audit derives from the
+# access attributes, are all route there, and OCS, DAV and capability stay.
+# Both are null where the run left no inventory.
 security_public() {
 	[ "$1" != deps-audit ] || return 0
 	if [ "$1" = runtime-audit ]; then
@@ -1108,7 +1111,10 @@ security_public() {
 		return 0
 	fi
 	"$JQ" --arg t "$1" '{findings: [if type == "object" then .findings[]? else empty end | select(.security != true and .level != "ok")]}
-		+ if $t == "php-audit" then {endpoints: ([objects | .inventory.endpoints? | arrays | length][0])} else {} end' \
+		+ if $t == "php-audit" then ([objects | .inventory.endpoints? | arrays][0]) as $e
+			| {endpoints: (if $e then ($e | length) else null end), endpointList: (if $e then [$e[] | {verb, path, target, openapi,
+				kind: (if .kind == "page" or .kind == "API" or .kind == "public" then "route" else .kind end)}] else null end)}
+		else {} end' \
 		"$SECURITY_TMP/$1.json" >"$RUN_DIR/$1.json"
 }
 

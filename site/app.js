@@ -1337,10 +1337,11 @@ function infoXmlLink(m) {
 	return href ? [' ', el('a', { href, title }, 'info.xml')] : []
 }
 
-// The runs of runtime-audit and install-test, from the file gh-stats-site-db
-// writes beside the database for a measurement with either result, as tables:
-// one block per server the run went to, with every route, command, job and
-// step and what each answered. A measurement with neither result has no file,
+// The runs of runtime-audit and install-test and the endpoints of php-audit,
+// from the file gh-stats-site-db writes beside the database for a measurement
+// with any of them, as tables: one block per server the run went to, with
+// every route, command, job and step and what each answered, and one with the
+// endpoints the source declares. A measurement with none of them has no file,
 // and the page does not ask for one.
 async function tablesOf(m) {
 	if (!query('SELECT 1 FROM run_tables WHERE dir = $dir', { $dir: m.dir }).length) {
@@ -1474,7 +1475,17 @@ function installTestTables(data) {
 			: el('p', { class: 'muted' }, 'No log lines.')))
 }
 
-const RUN_TABLES = { 'runtime-audit': runtimeAuditTables, 'install-test': installTestTables }
+// The endpoints as php-audit reads them from the source, without their access:
+// a route outside OCS is route, whether a page, an API or a public page.
+function endpointTables(data) {
+	const n = data.endpoints.length
+	return n ? [el('details', { class: 'audit-run' },
+		el('summary', {}, `${n} endpoint${n === 1 ? '' : 's'} the source declares`),
+		auditTable(['Verb', 'Path', 'Kind', 'Controller', 'OpenAPI scope'], data.endpoints.map((e) => el('tr', {},
+			cell(e.verb ?? '–'), cell(code(e.path)), cell(e.kind), cell(code(e.target)), cell((e.openapi ?? []).join(', '))))))] : []
+}
+
+const RUN_TABLES = { 'runtime-audit': runtimeAuditTables, 'install-test': installTestTables, 'php-audit': endpointTables }
 
 // Warnings in full, grouped by the tool that found them, the security targets
 // first, those with a security finding before the others, then the tools with
