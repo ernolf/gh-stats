@@ -901,6 +901,13 @@ CREATE TABLE targets (
   invalid TEXT,
   PRIMARY KEY (dir, name)
 ) WITHOUT ROWID;
+-- The measurements with a file in tables/, by tool. runtime-audit runs among the
+-- security targets, which leave no row in targets, so the page asks here.
+CREATE TABLE run_tables (
+  dir  TEXT NOT NULL,
+  tool TEXT NOT NULL,
+  PRIMARY KEY (dir, tool)
+) WITHOUT ROWID;
 CREATE TABLE findings (
   dir   TEXT    NOT NULL,
   tool  TEXT    NOT NULL,
@@ -1272,6 +1279,7 @@ DROP TABLE findings;
 CREATE TEMP TABLE exported_tables AS
 SELECT count(*) AS runs, sum(writefile('${tables_dir//$sq/$sq$sq}/' || t.dir || '.json', t.data)) AS bytes
   FROM (SELECT dir, json_group_object(tool, json(data)) AS data FROM tables GROUP BY dir) t;
+INSERT INTO run_tables SELECT dir, tool FROM tables;
 -- The samples of a project, of the assets the summary counts, as the JSON array
 -- the charts and the comparison read: one entry per asset, [host, owner, repo,
 -- tag, asset, [[ts, downloads], ...]]. A project without any has an empty one,
