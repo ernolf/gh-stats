@@ -8,7 +8,9 @@
 # the public results. The tool fetches the data branch, opens the file of the
 # newest run of every version with the age identity, and prints the findings. A
 # master run that carries an earlier scan of the whole history as
-# secrets-history.json.age adds the findings of that scan.
+# secrets-history.json.age adds the findings of that scan, and a run that
+# gh-stats-deps-recheck checked again takes deps-audit from its
+# deps-recheck.json.age.
 # The key never leaves the machine the tool runs on, and nothing it decrypts is
 # written to a file, but by --export.
 #
@@ -265,12 +267,25 @@ CARRY='def key: .fingerprint // "\(.commit):\(.file):\(.rule)";
 		| if ($add | length) == 0 then .
 		  else .result.findings = [(.result.findings[]? | select(.id != "secrets-history")), $add[]]
 			| .exit = (if .exit == 0 then 1 else .exit end) end)'
+#
+# gh-stats-deps-recheck runs deps-audit of the run again with the advisories
+# of its day and keeps the result as deps-recheck.json.age beside it, which
+# takes the place of that target. A recheck that left no result keeps the one
+# before, which is the last one known.
+# shellcheck disable=SC2016 # jq variables
+RECHECK='.[1].target as $t | .[0] | .targets |= map(if .name == $t.name and $t.result != null then $t else . end)'
 security_plain() {
-	local plain carried
+	local plain carried recheck
 	plain="$(decrypt "$2")" || return 1
-	[ -f "$1/secrets-history.json.age" ] || { printf '%s\n' "$plain"; return 0; }
-	carried="$(decrypt "$1/secrets-history.json.age")" || return 1
-	printf '%s\n%s\n' "$plain" "$carried" | "$JQ" -c -s "$CARRY"
+	if [ -f "$1/secrets-history.json.age" ]; then
+		carried="$(decrypt "$1/secrets-history.json.age")" || return 1
+		plain="$(printf '%s\n%s\n' "$plain" "$carried" | "$JQ" -c -s "$CARRY")"
+	fi
+	if [ -f "$1/deps-recheck.json.age" ]; then
+		recheck="$(decrypt "$1/deps-recheck.json.age")" || return 1
+		plain="$(printf '%s\n%s\n' "$plain" "$recheck" | "$JQ" -c -s "$RECHECK")"
+	fi
+	printf '%s\n' "$plain"
 }
 
 # The newest run directory of every version directory, as "<run dir>" lines: the
