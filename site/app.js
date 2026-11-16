@@ -1526,7 +1526,7 @@ function checksBlock(m, collapse) {
 						`${counted(tool, warns.filter((f) => f.security && !f.counted_in))} security, ${counted(tool, warns.filter((f) => !f.security && !f.counted_in))} other`,
 						elsewhere ? `, ${elsewhere} counted in another release` : '')]
 					: []
-				return el('div', { class: tool.startsWith('security/') ? 'tool security' : 'tool' }, el('h5', {}, tool, ...split), toolHead(tool),
+				return el('div', { class: tool.startsWith('security/') ? 'tool security' : 'tool' }, el('h5', {}, toolHeads[baseTool(tool)].title, ' ', el('code', { class: 'target' }, tool), ...split), toolHead(tool),
 					...(tables[tool] ? RUN_TABLES[tool](tables[tool]) : []),
 					...(warns.length && baseTool(tool).startsWith('lint-') ? [lintFold(tool, warns, notes)] : findingEntries(tool, warns, under, notes)),
 					...(rest.length

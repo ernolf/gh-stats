@@ -1317,10 +1317,11 @@ UNION ALL SELECT 'developed', count(*) FROM developed
 UNION ALL SELECT 'security_overdue', count(*) FROM security_overdue;
 SQL
 # Every tool the site shows a section for opens it with the head that
-# site/tool-heads.json gives it, so a tool without an entry there fails the
-# build instead of showing up without one.
+# site/tool-heads.json gives it, titled by what the tool checks, so a tool
+# without an entry there, or an entry without a title, fails the build instead
+# of showing up without one.
 missing="$(find "$findings" -name '*.json' -print0 | xargs -0 -r jq -r '.[].tool | sub("^security/"; "")' | sort -u \
-	| jq -R -r --slurpfile heads "$heads" 'select(. as $t | $heads[0] | has($t) | not)' | paste -sd ' ')"
+	| jq -R -r --slurpfile heads "$heads" 'select(. as $t | $heads[0][$t].title // "" | . == "")' | paste -sd ' ')"
 if [ -n "$missing" ]; then
 	rm -rf "$out" "$findings" "$samples_dir" "$tables_dir"
 	die "no head in $heads for $missing"
