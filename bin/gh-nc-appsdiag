@@ -53,6 +53,8 @@ STUB_URL="${NC_APPSDIAG_STUB_URL:-https://raw.githubusercontent.com/ernolf/ncmak
 # GNU make reads the first of GNUmakefile, makefile and Makefile it finds, so the
 # stub goes in under the first name and the app's own build files stay as they are.
 STUB="GNUmakefile"
+# The lock files deps-audit reads, in the root of the app.
+DEPS_LOCKS="composer.lock package-lock.json pnpm-lock.yaml yarn.lock"
 BUILD_FILES="GNUmakefile makefile Makefile"
 
 # Offered in this order: metadata only, then the licence check, the changelog and
@@ -307,6 +309,10 @@ a repository on another host below a directory of that host:
       secrets-history.json
                           beside it, the rules that scan ran with and the
                           commits it reached
+      deps/<lock file>    each lock file deps-audit read that the release
+                          does not track, written by the build, so that
+                          gh-stats-deps-recheck audits the release again
+                          without a build; not with -s
       <name>.orig         the app's own GNUmakefile, makefile and Makefile,
                           except one that is the ncmake stub byte for byte
       release/diff.txt    the staged tree against the shipped tarball, as diff
@@ -980,7 +986,24 @@ run_target() {
 	# A failed target can still have written its result: reuse exits non-zero
 	# exactly when it has something to report, and that report is what is kept.
 	json_run "$t" "$from"
+	[ "$t" != deps-audit ] || deps_keep
 	return 0
+}
+
+# The lock files deps-audit read that the release does not track, which the
+# build wrote, as deps/<file> beside the results: gh-stats-deps-recheck audits
+# the release again from its tag and these, without a build. A run of a server
+# release has no tag of the app to go back to.
+deps_keep() {
+	local f
+	[ -z "$SERVER_REF" ] || return 0
+	for f in $DEPS_LOCKS; do
+		[ -f "$APP_DIR/$f" ] || continue
+		! "$GIT" -C "$APP_DIR" ls-files --error-unmatch -- "$f" >/dev/null 2>&1 || continue
+		mkdir -p "$RUN_DIR/deps"
+		cp "$APP_DIR/$f" "$RUN_DIR/deps/$f"
+		log "   kept $f, which the build wrote, as deps/$f"
+	done
 }
 
 # What a failed target printed last before make reported the error, on standard
@@ -1770,7 +1793,7 @@ write_summary_json() {
 	# The findings quote info.xml, so the run keeps the file they quote.
 	[ ! -f "$APP_DIR/appinfo/info.xml" ] || cp "$APP_DIR/appinfo/info.xml" "$RUN_DIR/info.xml" \
 		|| warn "could not keep appinfo/info.xml in $RUN_DIR"
-	files="$(cd "$RUN_DIR" && find . -path ./release/shipped -prune -o \( -name '*.json' -o -path ./info.xml \) ! -name summary.json -print \
+	files="$(cd "$RUN_DIR" && find . \( -path ./release/shipped -o -path ./deps \) -prune -o \( -name '*.json' -o -path ./info.xml \) ! -name summary.json -print \
 		| sed 's:^\./::' | sort | "$JQ" -R -s -c 'split("\n") | map(select(length > 0))')"
 	# Whether the app is set up for the Nextcloud translation sync, and the languages
 	# l10n/ holds; a run without info.xml never got to the app.

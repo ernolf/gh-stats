@@ -1,0 +1,216 @@
+#!/usr/bin/env -S LC_CTYPE=C.UTF-8 LC_MESSAGES=C bash
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# gh-stats-deps-recheck - run deps-audit again, with advisories, on releases
+# already measured. An advisory is often published long after the release it
+# concerns, so the result of a measured release goes stale while the release
+# stays the same. The run of gh-nc-appsdiag kept what the audit needs: the
+# commit of the release in summary.json, the lock files the build wrote under
+# deps/, and in deps-audit.json the packages the build output bundles. The
+# release is checked out at that commit, those files are put back, and
+# deps-audit reads the bundle from deps-audit.json, so nothing is built.
+#
+# The result names vulnerable packages before their fix may be out, so it is
+# kept only as deps-recheck.json.age, encrypted like security.json.age, in the
+# directory of the run; gh-stats-security takes its deps-audit in place of the
+# one of the run.
+
+set -euo pipefail
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+usage() {
+	cat <<'USAGE'
+Usage: gh-stats-deps-recheck --list <dir>
+       gh-stats-deps-recheck -r <recipient> -o <out-dir> <dir> <run dir>...
+
+<dir> is the directory apps/ of a checkout of the data branch, and a <run dir>
+is the path of a run directory below it.
+
+--list prints the run directory of the newest measured release of every app,
+as gh-stats-security picks it: one with a security.json.age, where a release
+of the app ranks above every server release. A run of a server release is not
+listed, as the app has no tag of its own there.
+
+Otherwise each <run dir> is checked out at the commit its summary.json names,
+the lock files it kept under deps/ are put back, and make deps-audit runs with
+advisories, reading the bundle from its deps-audit.json. The output and the
+result go encrypted to <recipient> into <out-dir>/<run dir>/deps-recheck.json.age.
+A run is skipped, with a line that says why, where its deps-audit.json does not
+name the packages of the bundle, or a lock file deps-audit read is neither in
+the release nor kept under deps/: both are runs from before they were kept.
+
+  -r, --recipient <age recipient>  whom the result is encrypted to
+  -o, --out <dir>        where the encrypted results go
+  -h, --help             this text
+
+Environment:
+  GH_STATS_RECHECK_TIMEOUT  the limit of one make deps-audit, default 15m
+  GH_STATS_RECHECK_PAD   the size the plain text is padded to a multiple of,
+                         as NC_APPSDIAG_SECURITY_PAD, default 65536
+  GH_STATS_STUB_URL      the ncmake stub, default that of ncmake main
+  AGE_BIN, JQ_BIN, GIT_BIN, CURL_BIN
+USAGE
+}
+
+limit="${GH_STATS_RECHECK_TIMEOUT:-15m}"
+pad="${GH_STATS_RECHECK_PAD:-65536}"
+stub_url="${GH_STATS_STUB_URL:-https://raw.githubusercontent.com/ernolf/ncmake/main/bootstrap/GNUmakefile}"
+AGE="${AGE_BIN:-/usr/bin/age}"
+JQ="${JQ_BIN:-/usr/bin/jq}"
+GIT="${GIT_BIN:-/usr/bin/git}"
+CURL="${CURL_BIN:-/usr/bin/curl}"
+list=0 recipient="" out="" args=()
+while [ $# -gt 0 ]; do
+	case "$1" in
+		-h|--help) usage; exit 0 ;;
+		--list) list=1 ;;
+		-r|--recipient)
+			[ $# -ge 2 ] || die "$1 needs a recipient"
+			recipient="$2"; shift ;;
+		-o|--out)
+			[ $# -ge 2 ] || die "$1 needs a directory"
+			out="$2"; shift ;;
+		-*) die "unknown option $1, see --help" ;;
+		*) args+=("$1") ;;
+	esac
+	shift
+done
+
+if [ "$list" = 1 ]; then
+	[ "${#args[@]}" -eq 1 ] || die "--list takes the directory alone, see --help"
+else
+	[ "${#args[@]}" -ge 2 ] || die "a directory and at least one run directory, see --help"
+	[ -n "$recipient" ] || die "no recipient, see --help"
+	[ -n "$out" ] || die "no output directory, see --help"
+fi
+dir="${args[0]%/}"
+[ -d "$dir" ] || die "no directory $dir"
+case "$pad" in
+	''|*[!0-9]*|0) die "GH_STATS_RECHECK_PAD must be a positive number, not $pad" ;;
+esac
+need=("$JQ")
+[ "$list" = 1 ] || need+=("$AGE" "$GIT" "$CURL")
+for x in "${need[@]}"; do
+	[ -x "$x" ] || die "$x not found"
+done
+
+# == List ==
+# The newest run directory of every version directory: the run directories of
+# a version are named by their timestamp, so the last one in sort order is the
+# newest. The key ranks the runs of an app as newest_app_runs of
+# gh-stats-security does, without the server releases.
+if [ "$list" = 1 ]; then
+	find "$dir" -name summary.json -printf '%h\n' | sort | awk '
+		{ v = $0; sub(/\/[^\/]*$/, "", v) }
+		v != last && NR > 1 { print run }
+		{ last = v; run = $0 }
+		END { if (NR) print run }' \
+	| while IFS= read -r run; do
+		[ -f "$run/security.json.age" ] || [ -f "$run/security.json.age.gz" ] || continue
+		# shellcheck disable=SC2016 # jq variables
+		"$JQ" -r --arg run "${run#"$dir"/}" 'select(.server == null and .head.sha != null)
+			| [.app_id // .repo, "1 \(.requested_version // .version // "")", $run] | @tsv' "$run/summary.json"
+	done | sort -t $'\t' -k1,1 -k2,2V | awk -F '\t' '
+		$1 != last && NR > 1 { print out }
+		{ last = $1; out = $3 }
+		END { if (NR) print out }'
+	exit 0
+fi
+
+# == Recheck ==
+# A file the data branch keeps compressed, as <name>.gz above 1 MiB, in plain.
+unpacked() {
+	if [ -f "$1" ]; then
+		cat "$1"
+	elif [ -f "$1.gz" ]; then
+		gzip -dc "$1.gz"
+	else
+		return 1
+	fi
+}
+
+# Trailing blanks keep the JSON what it is, and the size says nothing of the
+# findings.
+pad_file() {
+	local size
+	size="$(wc -c <"$1")"
+	head -c $(((size / pad + 1) * pad - size)) /dev/zero | tr '\0' ' ' >>"$1"
+}
+
+skip() {
+	echo "$rel: $*, skipped"
+	skipped=$((skipped + 1))
+}
+
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+dev_init=0 checked=0 skipped=0
+for rel in "${args[@]:1}"; do
+	run="$dir/$rel"
+	if [ ! -f "$run/summary.json" ]; then
+		skip "no summary.json"; continue
+	fi
+	if ! unpacked "$run/deps-audit.json" >"$work/bundle.json" 2>/dev/null \
+		|| ! "$JQ" -e '.sources | type == "array"' "$work/bundle.json" >/dev/null 2>&1; then
+		skip "no deps-audit.json"; continue
+	fi
+	if "$JQ" -e 'any(.sources[]; .manager != "composer" and .bundle != null and (.bundle.packages | type) != "array")' "$work/bundle.json" >/dev/null; then
+		skip "its deps-audit.json does not name the packages of the bundle"; continue
+	fi
+	# A tab is whitespace to read, which would fold the empty subdir away.
+	IFS=$'\x1f' read -r host owner repo subdir sha < <("$JQ" -r '[.repo_host // "github.com", .owner, .repo, .subdir // "", .head.sha] | join("\u001f")' "$run/summary.json")
+	rm -rf "$work/app"
+	if ! { "$GIT" init -q "$work/app" \
+		&& "$GIT" -C "$work/app" fetch -q --depth 1 "https://$host/$owner/$repo.git" "$sha" \
+		&& "$GIT" -C "$work/app" -c advice.detachedHead=false checkout -q FETCH_HEAD; } 2>"$work/git.err"; then
+		skip "cannot check out $sha of $host/$owner/$repo: $(tail -n 1 "$work/git.err")"; continue
+	fi
+	app="$work/app"
+	[ -z "$subdir" ] || app="$app/$subdir"
+	for f in "$run"/deps/*; do
+		[ -e "$f" ] || continue
+		f="$(basename "$f" .gz)"
+		unpacked "$run/deps/$f" >"$app/$f"
+	done
+	missing="$("$JQ" -r '.sources[].lock // empty' "$work/bundle.json" | while IFS= read -r f; do
+		[ -f "$app/$f" ] || printf '%s ' "$f"
+	done)"
+	if [ -n "$missing" ]; then
+		skip "${missing% } neither in the release nor kept under deps/"; continue
+	fi
+	# The checkout is a throwaway, so the stub takes the place of any build
+	# file of the app, which make would otherwise read first.
+	"$CURL" -fsSL "$stub_url" -o "$app/GNUmakefile" || die "cannot fetch the stub from $stub_url"
+	rm -f "$app/makefile"
+	mkdir -p "$app/build"
+	cp "$work/bundle.json" "$app/build/deps-bundle.json"
+	# The analyser targets come from the developer modules in the ncmake cache
+	# of the machine, which one fetch fills for every app after it.
+	if [ "$dev_init" = 0 ]; then
+		if ! (cd "$app" && make dev-init) </dev/null >"$work/dev-init.log" 2>&1; then
+			cat "$work/dev-init.log" >&2
+			die "make dev-init failed"
+		fi
+		dev_init=1
+	fi
+	rm -f "$work/result.json"
+	if (cd "$app" && timeout -k 1m "$limit" make deps-audit JSON="$work/result.json" ARGS=--bundle=build/deps-bundle.json) </dev/null >"$work/log" 2>&1; then
+		rc=0
+	else
+		rc=$?
+	fi
+	sed -i 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$work/log"
+	[ -s "$work/result.json" ] && "$JQ" -e . "$work/result.json" >/dev/null 2>&1 || echo null >"$work/result.json"
+	# shellcheck disable=SC2016 # jq variables
+	"$JQ" -n -c --argjson rc "$rc" --rawfile log "$work/log" --slurpfile r "$work/result.json" --arg checked "$(date -u +%FT%TZ)" \
+		'{tool: "gh-stats-deps-recheck", schema: 1, checked: $checked, target: {name: "deps-audit", exit: $rc, result: $r[0], log: $log}}' >"$work/recheck.json"
+	pad_file "$work/recheck.json"
+	mkdir -p "$out/$rel"
+	"$AGE" -r "$recipient" -o "$out/$rel/deps-recheck.json.age" "$work/recheck.json" || die "age could not encrypt to $recipient"
+	rm -f "$work/recheck.json" "$work/result.json" "$work/log"
+	echo "$rel: exit $rc"
+	checked=$((checked + 1))
+done
+echo "deps-recheck: $checked runs checked, $skipped skipped"
