@@ -60,16 +60,17 @@ BUILD_FILES="GNUmakefile makefile Makefile"
 # build output, then the tarball. An analyser that prices what was built has
 # nothing to price before make build, so the build comes first; deps-audit follows
 # it, since make build writes the composer.lock of an app that ignores it.
-# install-test and runtime-audit install what make build staged on real servers
-# and read their logs, so a release that passes every static check and fails on
-# every request shows it. Release
+# install-test installs what make build staged on real servers and reads their
+# logs, so a release that passes every static check and fails on every request
+# shows it. Release
 # and deploy targets (version, changelog, tag, rsync, cp) are not offered - they
 # act outside the checkout. Neither are secrets-audit, lint-actions,
-# lint-actions-security and php-audit: the output of a run is public, and their
-# findings show where an app can be attacked (actionlint reports untrusted input
-# in a run step, php-audit a route without CSRF protection). They run among
-# SECURITY_TARGETS instead, which leave their other findings public.
-TARGETS="${NC_APPSDIAG_TARGETS:-help consistency-audit reuse changelog-lint lint-containerfiles lint-markdown lint-php-syntax lint-shell lint-version lint-vue-imports lint-web lint-yaml l10n-lint build deps-audit build-audit bundle-report build-verify php-compat install-test runtime-audit dist}"
+# lint-actions-security, php-audit and runtime-audit: the output of a run is
+# public, and their findings show where an app can be attacked (actionlint
+# reports untrusted input in a run step, php-audit a route without CSRF
+# protection, runtime-audit a route that answers without credentials). They run
+# among SECURITY_TARGETS instead, which leave their other findings public.
+TARGETS="${NC_APPSDIAG_TARGETS:-help consistency-audit reuse changelog-lint lint-containerfiles lint-markdown lint-php-syntax lint-shell lint-version lint-vue-imports lint-web lint-yaml l10n-lint build deps-audit build-audit bundle-report build-verify php-compat install-test dist}"
 # Offered after the release comparison, because both of them remove what it reads.
 CLEAN_TARGETS="${NC_APPSDIAG_CLEAN_TARGETS:-clean dist-clean}"
 # These have to be said yes to; everything else runs on the empty answer, because
@@ -83,7 +84,7 @@ TARGETS_ASK="${NC_APPSDIAG_TARGETS_ASK:-help}"
 # that something is missing, the JSON says what. integrity-check is no target of
 # the list: the release comparison runs it on a shipped tree that carries
 # appinfo/signature.json.
-JSON_TARGETS="${NC_APPSDIAG_JSON:-consistency-audit build-audit bundle-report reuse changelog-lint lint-containerfiles lint-markdown lint-php-syntax lint-shell lint-version lint-vue-imports lint-web lint-yaml l10n-lint deps-audit build-verify php-compat install-test runtime-audit integrity-check}"
+JSON_TARGETS="${NC_APPSDIAG_JSON:-consistency-audit build-audit bundle-report reuse changelog-lint lint-containerfiles lint-markdown lint-php-syntax lint-shell lint-version lint-vue-imports lint-web lint-yaml l10n-lint deps-audit build-verify php-compat install-test integrity-check}"
 # Of those, the ones that cannot write the file in that run and run a second time
 # with ARGS=--json for it. The REUSE tool prints text or JSON, never both; its
 # second run costs seconds.
@@ -95,7 +96,7 @@ JSON_RERUN_TARGETS="${NC_APPSDIAG_JSON_RERUN:-reuse}"
 # recipient of the site maintainer; without a recipient they do not run. Only
 # their findings that are not marked "security": true go beside the log as well.
 # deps-audit runs here a second time, with the advisories.
-SECURITY_TARGETS="${NC_APPSDIAG_SECURITY_TARGETS:-secrets-audit lint-actions lint-actions-security php-audit deps-audit}"
+SECURITY_TARGETS="${NC_APPSDIAG_SECURITY_TARGETS:-secrets-audit lint-actions lint-actions-security php-audit runtime-audit deps-audit}"
 # A run of the server repository at its root, with -s, measures no app: it runs
 # these in place of TARGETS and SECURITY_TARGETS, the ones that read only the
 # tracked files of the repository.
@@ -278,7 +279,7 @@ a repository on another host below a directory of that host:
                           lint-* targets, l10n-lint where the app has
                           .tx/config, deps-audit (without advisories),
                           build-audit, bundle-report, build-verify,
-                          php-compat, install-test and runtime-audit, and
+                          php-compat and install-test, and
                           for a shipped tree that carries
                           appinfo/signature.json integrity-check, its
                           signature held against
@@ -286,10 +287,15 @@ a repository on another host below a directory of that host:
                           of secrets-audit, lint-actions,
                           lint-actions-security and php-audit only the
                           findings that are neither marked "security": true
-                          nor at level ok
+                          nor at level ok, and of runtime-audit the result
+                          without the findings marked "security": true and
+                          without the status
+                          without credentials of a route that is no public
+                          page
       security.json.age   the output and the results of the security targets
                           (secrets-audit, lint-actions, lint-actions-security,
-                          php-audit and deps-audit with advisories), and every
+                          php-audit, runtime-audit and deps-audit with
+                          advisories), and every
                           finding of another result marked "security": true,
                           as JSON encrypted to NC_APPSDIAG_AGE_RECIPIENT;
                           without a recipient the security targets do not run
@@ -1086,9 +1092,19 @@ security_make() {
 # level ok is left out as well, since its presence would say that the target
 # found nothing. The file is written whatever the target left, so its presence
 # says nothing either. deps-audit keeps the public result of its run without
-# advisories.
+# advisories. Of runtime-audit the run tables of the site read the whole
+# result, which keeps the status of every request without credentials: on a
+# route that is no public page, a 2xx there is what route-open reports, so that
+# status is left out on every such route, and one left out says nothing. Its
+# findings at level ok stay, as the badge Runs clean reads them.
 security_public() {
 	[ "$1" != deps-audit ] || return 0
+	if [ "$1" = runtime-audit ]; then
+		"$JQ" 'if type == "object" then (.findings |= map(select(.security != true)))
+			| (.runs[]?.requests[]? |= if .public then . else .anon = null end) else {findings: []} end' \
+			"$SECURITY_TMP/$1.json" >"$RUN_DIR/$1.json"
+		return 0
+	fi
 	"$JQ" '{findings: [if type == "object" then .findings[]? else empty end | select(.security != true and .level != "ok")]}' \
 		"$SECURITY_TMP/$1.json" >"$RUN_DIR/$1.json"
 }

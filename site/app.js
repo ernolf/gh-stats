@@ -1338,7 +1338,7 @@ function infoXmlLink(m) {
 // step and what each answered. A measurement with neither result has no file,
 // and the page does not ask for one.
 async function tablesOf(m) {
-	if (!query(`SELECT 1 FROM targets WHERE dir = $dir AND json AND name IN ('runtime-audit', 'install-test')`, { $dir: m.dir }).length) {
+	if (!query('SELECT 1 FROM run_tables WHERE dir = $dir', { $dir: m.dir }).length) {
 		return {}
 	}
 	const url = `${tablesBase}${m.dir.split('/').map(encodeURIComponent).join('/')}.json`
@@ -1378,14 +1378,14 @@ function logCell(entries) {
 				.filter(Boolean).join(' ')))))
 }
 
-// A 5xx status is a failure. A 2xx status without credentials on a route that
-// is no public page let in someone the route should have turned away.
-function statusCell(status, anonOnPrivate = false) {
+// A 5xx status is a failure. Of a route that is no public page the status
+// without credentials is not public, since a 2xx there says the route is open
+// to anyone.
+function statusCell(status) {
 	if (status === null || status === undefined) {
 		return cell('–', 'muted')
 	}
-	const cls = status >= 500 ? 'fail' : anonOnPrivate && status >= 200 && status < 300 ? 'open' : ''
-	return cell(String(status), cls)
+	return cell(String(status), status >= 500 ? 'fail' : '')
 }
 
 function yesNo(b, noIsBad = true) {
@@ -1397,7 +1397,7 @@ function yesNo(b, noIsBad = true) {
 function routeTable(run, skipped) {
 	const rows = run.requests.map((r) => el('tr', {},
 		cell(r.verb), cell(code(r.path)), cell(code(r.target)), cell(r.as), yesNo(r.public, false),
-		statusCell(r.anon, !r.public), statusCell(r.auth), yesNo(r.registered), logCell(r.log)))
+		statusCell(r.anon), statusCell(r.auth), yesNo(r.registered), logCell(r.log)))
 	rows.push(...skipped.map((s) => el('tr', { class: 'skipped' },
 		cell(s.verb), cell(code(s.path)), cell(code(s.target)), cell('–', 'muted'), yesNo(s.public, false),
 		el('td', { colspan: '3', class: 'muted' }, `skipped: no value for ${s.missing.join(', ')}`), cell(''))))
