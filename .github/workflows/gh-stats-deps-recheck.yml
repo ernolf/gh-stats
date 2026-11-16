@@ -1,0 +1,224 @@
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# Runs deps-audit again, with the advisories of the day, on the newest
+# measured release of every app, with gh-stats-deps-recheck. An advisory is
+# often published long after the release it concerns, so the result of the
+# measurement goes stale while the release stays the same. Nothing is built:
+# the release is checked out at its commit, with the lock files its run kept,
+# and deps-audit reads what the bundle holds from the deps-audit.json of the
+# run.
+#
+# The result names vulnerable packages before their fix may be out, so it
+# gets into the data branch only as deps-recheck.json.age in the directory of
+# the run, encrypted to SECURITY_AGE_RECIPIENT, and gh-stats-security takes its
+# deps-audit in place of the one of the run. The key that opens it is never in
+# this workflow. Once the results are pushed, gh-stats-security.yml decides
+# again which apps have an overdue security finding.
+#
+# The jobs that check the releases out hold a read-only token, as those of
+# gh-stats-measure.yml do; one job after them commits the results. The
+# releases are split into SHARDS jobs.
+#
+# An external cron dispatches it once a day, for example with a /etc/cron.d
+# entry whose retry repeats a failed dispatch and whose logger keeps its
+# output:
+#
+#   47 2 * * * root retry gh workflow run gh-stats-deps-recheck.yml -R ernolf/gh-stats 2>&1 | /usr/bin/logger -t gh-stats-dispatch
+
+name: Check the measured releases for new advisories
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A queued run checks the releases as they are when it starts, so it is as
+# good as the one it replaces.
+concurrency:
+  group: deps-recheck
+  cancel-in-progress: false
+
+env:
+  GH_REPO: ${{ github.repository }}
+  DATA_BRANCH: data
+  SHARDS: 16
+
+jobs:
+  plan:
+    name: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      shards: ${{ steps.plan.outputs.shards }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Checkout the measurement results
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.DATA_BRANCH }}
+          path: data
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            apps/**/summary.json
+            apps/**/security.json.age*
+
+      - name: List the releases
+        id: plan
+        env:
+          RECIPIENT: ${{ vars.SECURITY_AGE_RECIPIENT }}
+        run: |
+          if [ -z "$RECIPIENT" ]; then
+            echo "::error::The variable SECURITY_AGE_RECIPIENT is not set"
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/runs"
+          bin/gh-stats-deps-recheck --list data/apps > "$RUNNER_TEMP/runs.txt"
+          awk -v n="$SHARDS" -v d="$RUNNER_TEMP/runs" '{ print > (d "/shard-" ((NR - 1) % n) ".txt") }' "$RUNNER_TEMP/runs.txt"
+          echo "shards=$(find "$RUNNER_TEMP/runs" -name 'shard-*.txt' -printf '%f\n' | sed 's/^shard-//; s/\.txt$//' | sort -n | jq -R -s -c 'split("\n") | map(select(length > 0) | tonumber)')" >> "$GITHUB_OUTPUT"
+          echo "::notice::$(wc -l < "$RUNNER_TEMP/runs.txt") releases in at most $SHARDS jobs"
+
+      - name: Keep the list
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: runs
+          path: ${{ runner.temp }}/runs/
+          if-no-files-found: error
+
+  recheck:
+    name: shard ${{ matrix.shard }}
+    needs: plan
+    if: needs.plan.outputs.shards != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      # GitHub Free runs 20 jobs of the account at once; the rest stay free for
+      # the sampler, a measurement and the other workflows.
+      max-parallel: 8
+      matrix:
+        shard: ${{ fromJSON(needs.plan.outputs.shards) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Checkout the measurement results
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.DATA_BRANCH }}
+          path: data
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            apps/**/summary.json
+            apps/**/deps-audit.json*
+            apps/**/deps/*
+
+      - name: Fetch the list
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: runs
+          path: ${{ runner.temp }}/runs
+
+      # apt-get normally takes seconds but has hung for hours.
+      - name: Install age
+        timeout-minutes: 5
+        run: sudo apt-get update -q && sudo apt-get install -y -q age
+
+      - name: Check the releases
+        env:
+          SHARD: ${{ matrix.shard }}
+          RECIPIENT: ${{ vars.SECURITY_AGE_RECIPIENT }}
+        run: |
+          mapfile -t runs < "$RUNNER_TEMP/runs/shard-$SHARD.txt"
+          bin/gh-stats-deps-recheck -r "$RECIPIENT" -o "$RUNNER_TEMP/out" data/apps "${runs[@]}"
+
+      - name: Keep the results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: recheck-${{ matrix.shard }}
+          path: ${{ runner.temp }}/out/
+          if-no-files-found: warn
+
+  collect:
+    name: collect
+    needs: [plan, recheck]
+    if: ${{ !cancelled() && needs.plan.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      # Pushes to the data branch.
+      contents: write
+      # Checks the security findings.
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Fetch the results
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: recheck-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/out
+
+      - name: Check out the data branch
+        run: |
+          data="$RUNNER_TEMP/data"
+          echo "DATA=$data" >> "$GITHUB_ENV"
+          git clone -q --depth 1 --branch "$DATA_BRANCH" "https://github.com/$GH_REPO.git" "$data"
+          git -C "$data" config user.name 'github-actions[bot]'
+          git -C "$data" config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # The repository is public, so only the push needs the token, sent
+          # the way actions/checkout sends it.
+          git -C "$data" config http.https://github.com/.extraheader \
+            "AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+
+      # A result replaces the one before in its run directory. A run directory
+      # that a measurement removed since keeps nothing. The push goes through
+      # only while the branch is still the commit this write started from;
+      # otherwise another write got ahead, and this one starts over from the
+      # branch it left.
+      - name: Commit the results
+        run: |
+          out="$RUNNER_TEMP/out"
+          for try in 1 2 3 4 5; do
+            if [ "$try" -gt 1 ]; then
+              sleep $((try * 10))
+              git -C "$DATA" fetch -q --depth 1 origin "$DATA_BRANCH"
+              git -C "$DATA" reset -q --hard FETCH_HEAD
+              git -C "$DATA" clean -q -f -d
+            fi
+            base="$(git -C "$DATA" rev-parse HEAD)"
+            n=0
+            while IFS= read -r -d '' f; do
+              rel="${f#"$out"/}"
+              [ -d "$DATA/apps/$(dirname "$rel")" ] || continue
+              cp "$f" "$DATA/apps/$rel"
+              n=$((n + 1))
+            done < <(find "$out" -name deps-recheck.json.age -print0 2>/dev/null)
+            if [ "$n" -eq 0 ]; then
+              echo "No results"
+              exit 0
+            fi
+            git -C "$DATA" add -A apps
+            commit="$(git -C "$DATA" commit-tree "$(git -C "$DATA" write-tree)" -m "deps-recheck: $n runs")"
+            if git -C "$DATA" push -q --force-with-lease="refs/heads/$DATA_BRANCH:$base" \
+                origin "$commit:refs/heads/$DATA_BRANCH"; then
+              echo "COMMITTED=1" >> "$GITHUB_ENV"
+              exit 0
+            fi
+          done
+          exit 1
+
+      - name: Check the security findings
+        if: env.COMMITTED == '1'
+        run: gh workflow run gh-stats-security.yml --ref "$GITHUB_REF_NAME"
