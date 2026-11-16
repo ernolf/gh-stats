@@ -343,7 +343,8 @@ links_sql="$(jq -r "$release_url"'
 # them, for the tables of the run block: every route with its controller, the
 # statuses and the log lines of the app, and every step with its result and the
 # log lines of the app, while the setup checks and background jobs of the whole
-# server, the larger part of the result, are left out.
+# server, the larger part of the result, are left out. Of php-audit the
+# endpoints its public result lists are kept, for the endpoint table.
 # q doubles each quote with split and join, not gsub: a finding may quote a
 # whole minified line of megabytes, and gsub takes minutes and gigabytes on it.
 result_fields='{"build-audit": ["toolchain", "frameworks", "libraries", "defects"], "php-compat": ["range", "next"], "integrity-check": ["state", "certificate", "files"], "l10n-lint": ["strings"], "php-audit": ["endpoints"]}'
@@ -368,6 +369,8 @@ tables_jq='
 		elif $tool == "install-test" then
 			{runs: [.runs[]? | {tag, server, php, failed, stopped, enable, enabled, requests: (.requests // []), cron,
 				log: {unread: .log.unread, entries: [(.log.entries // [])[] | {level, app, url, message, namesApp}]}}]}
+		elif $tool == "php-audit" then
+			(.endpointList // empty | {endpoints: .})
 		else empty end;'
 sql_defs='
 	def q: "'\''" + (split("'\''") | join("'\'''\''")) + "'\''";
@@ -903,8 +906,9 @@ CREATE TABLE targets (
   invalid TEXT,
   PRIMARY KEY (dir, name)
 ) WITHOUT ROWID;
--- The measurements with a file in tables/, by tool. runtime-audit runs among the
--- security targets, which leave no row in targets, so the page asks here.
+-- The measurements with a file in tables/, by tool. runtime-audit and php-audit
+-- run among the security targets, which leave no row in targets, so the page
+-- asks here.
 CREATE TABLE run_tables (
   dir  TEXT NOT NULL,
   tool TEXT NOT NULL,
