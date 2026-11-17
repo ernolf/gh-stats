@@ -67,8 +67,9 @@ The repositories are the ones gh-nc-appstore-targets picks: every app whose
 releases are downloaded from GitHub, or from a Forgejo or Gitea host, which the
 line then names in front, and whose newest release is from <year> or later. Each one is listed once, with the newest stable version the App Store
 ships for it - nightlies and versions with a suffix such as -beta.1 or -rc.1 do
-not count. Where several apps come from one repository, the newest version among
-them stands for it. A repository without a single stable release is left out.
+not count, except for an app without a single stable release, which is listed
+with its newest pre-release. Where several apps come from one repository, the
+newest version among them stands for it.
 
 With -L the repository has a line for each of its newest release lines as
 well: the newest stable version of each of the <n> lines before the newest, a
@@ -192,6 +193,9 @@ if [ ! -r "$sources_json" ]; then
 fi
 
 # Only stable releases count: no nightly, no version with a pre-release suffix.
+# An app with no stable release counts with its newest pre-release, the newest
+# version anyone can install: without it, an app the catalogue has would be in
+# no list, as gh-nc-unlisted leaves out every app id of the catalogue.
 # Of each app id only the newest of them counts, with -L the newest of each of
 # its newest lines: an app that moved to another repository keeps its old
 # releases in the catalogue, and the repository it left would stay listed with
@@ -208,7 +212,9 @@ fi
 list="$("$JQ" -r --slurpfile t "$work/targets.json" --slurpfile s "$sources_json" \
 	--argjson want "$want_json" \
 	--argjson lines "$APPLIST_LINES" --arg since "$APPSTORE_SINCE_YEAR" '
-	def vkey: split(".") | map(tonumber);
+	def vkey: split("-") as $p | ($p[0] | split(".") | map(tonumber))
+		+ if ($p | length) > 1 then [ $p[1:] | join("-") | split(".") | map(tonumber? // .) ]
+		  else [{}] end;
 	def newest_lines: group_by(.version | vkey | .[0:2]) | map(max_by(.version | vkey))
 		| sort_by(.version | vkey) | reverse | .[0:$lines + 1];
 	def asset: (.download | split("/")) as $p
@@ -226,6 +232,11 @@ list="$("$JQ" -r --slurpfile t "$work/targets.json" --slurpfile s "$sources_json
 	    | [ .releases[]?
 	        | select(.download != null and (.isNightly | not)
 	                 and (.version | test("^[0-9]+(\\.[0-9]+)*$"))) ] as $stable
+	    | (if $stable != [] then $stable
+	       else [ .releases[]?
+	              | select(.download != null and (.isNightly | not)
+	                       and (.version | test("^[0-9]+(\\.[0-9]+)*-[0-9A-Za-z.-]+$"))) ]
+	            | if . == [] then [] else [ max_by(.version | vkey) ] end end) as $stable
 	    | ($stable | map(select(asset | not))) as $other
 	    | (($other | max_by(.version | vkey)) // {} | (.created // "")[0:4] >= $since) as $recent
 	    | (if $want == null then $stable | newest_lines[]

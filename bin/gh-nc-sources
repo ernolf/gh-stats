@@ -89,7 +89,9 @@ it is downloaded from another one, to <file>, as JSON:
   }
 
 Under apps, a release counts when it is stable, no nightly and a version of
-numbers only, and its download is no release asset: neither one on GitHub nor
+numbers only, or, for an app without such a release, when it is its newest
+pre-release, as gh-nc-appslist lists it; and its download is no release
+asset: neither one on GitHub nor
 one under /releases/download/ of another host. An app counts when the newest
 of these releases is from APPSTORE_SINCE_YEAR or later. Its versions are all
 of these releases.
@@ -124,7 +126,8 @@ ago. Every other app is resolved again; one that resolved before with the same
 releases and does not now keeps its previous entry.
 
 Under developed, an app counts when its releases that are stable, no nightly
-and a version of numbers only are downloaded as release assets, from GitHub or
+and a version of numbers only, or its newest pre-release where it has none of
+them, are downloaded as release assets, from GitHub or
 from under /releases/download/ of another host, the newest of them from
 APPSTORE_SINCE_YEAR or later, and its issue tracker or its website names a
 repository other than one of these releases from APPSTORE_SINCE_YEAR or later
@@ -220,14 +223,23 @@ jq_url='
 	def decode: if . == null then null
 		else gsub("%(?<x>[0-9A-Fa-f]{2})"; .x | ascii_downcase | explode | map(if . >= 97 then . - 87 else . - 48 end) | [.[0] * 16 + .[1]] | implode) end;
 	def key: if .api then .api else (.host + "/" + .repo | ascii_downcase) end;
-	def stable: select(.download != null and (.isNightly | not) and (.version | test("^[0-9]+(\\.[0-9]+)*$")));
-	def by_version: sort_by(.version | split(".") | map(tonumber)) | reverse;
+	def vkey: split("-") as $p | ($p[0] | split(".") | map(tonumber))
+		+ if ($p | length) > 1 then [ $p[1:] | join("-") | split(".") | map(tonumber? // .) ]
+		  else [{}] end;
+	def listed: select(.download != null and (.isNightly | not));
+	# The releases gh-nc-appslist lists from: the stable ones, or the newest
+	# pre-release of an app that has no stable release.
+	def stable: [.releases[]? | listed | select(.version | test("^[0-9]+(\\.[0-9]+)*$"))] as $s
+		| if $s != [] then $s[]
+		  else [.releases[]? | listed | select(.version | test("^[0-9]+(\\.[0-9]+)*-[0-9A-Za-z.-]+$"))]
+		       | if . == [] then empty else max_by(.version | vkey) end end;
+	def by_version: sort_by(.version | vkey) | reverse;
 '
 # One line per app: {id, versions: [{version, download, url_tag}], candidates},
 # a candidate being {host, repo} or {api} for a GitLab project still to be read.
 "$JQ" -c --arg since "$APPSTORE_SINCE_YEAR" "$jq_url"'
 	(if type == "array" then . else .data end)[] | . as $a
-	| [.releases[]? | stable
+	| [stable
 	   | (.download | split("/")) as $p
 	   | select(($p[5] == "releases" and ($p[2] == "github.com" or $p[6] == "download")) | not)]
 	| select(length > 0 and (max_by(.created) | .created[0:4]) >= $since)
@@ -244,7 +256,7 @@ jq_url='
 # candidates: [{host, repo}]}, the releases newest first.
 "$JQ" -c --arg since "$APPSTORE_SINCE_YEAR" "$jq_url"'
 	(if type == "array" then . else .data end)[] | . as $a
-	| [.releases[]? | stable
+	| [stable
 	   | (.download | split("/")) as $p
 	   | select($p[5] == "releases" and ($p[2] == "github.com" or $p[6] == "download") and ($p[7] // "") != "")
 	   | {version, download, created, host: ($p[2] | ascii_downcase), repo: ($p[3] + "/" + $p[4]), tag: ($p[7] | decode)}]
