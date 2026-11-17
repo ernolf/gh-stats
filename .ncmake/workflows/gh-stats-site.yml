@@ -144,13 +144,13 @@ jobs:
           sampled="$(cat "$STATE/tools.json" 2>/dev/null || echo '{}')"
           measured="$(cat data/tools.json 2>/dev/null || echo '{}')"
           # ncmake has no release it runs from; its commit stands in.
-          jq -n --arg db "$db" --argjson bytes "$(stat -c %s "$out/$db")" \
+          jq -n --arg db "$db" --argjson bytes "$(stat -c %s "$out/$db")" --arg built "$(date -u +%FT%TZ)" \
             --arg results "https://github.com/$GH_REPO/tree/$DATA_BRANCH/apps" \
             --arg issues "https://github.com/$GH_REPO/issues/new" \
             --arg sqljs "$SQLJS_VERSION" --arg uplot "$UPLOT_VERSION" \
             --arg marked "$MARKED_VERSION" --arg dompurify "$DOMPURIFY_VERSION" \
             --argjson sampled "$sampled" --argjson measured "$measured" \
-            '{db: $db, bytes: $bytes, results: $results, issues: $issues,
+            '{db: $db, bytes: $bytes, built: $built, results: $results, issues: $issues,
               lib: ({"sql.js": $sqljs, uPlot: $uplot, marked: $marked, DOMPurify: $dompurify}
                     + $sampled + ($measured | if .ncmake then .ncmake |= .[0:7] else . end))}' > "$out/config.json"
           echo "SITE=$out" >> "$GITHUB_ENV"

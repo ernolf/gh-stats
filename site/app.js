@@ -95,6 +95,38 @@ function showVersions(versions) {
 	}
 }
 
+// When the build on the page was made, and on the private copy when the
+// security results were added, so that a copy no longer rebuilt shows its age.
+function showBuilt(config) {
+	if (!config.built) {
+		return
+	}
+	const line = document.getElementById('built')
+	const at = (iso) => `${new Date(iso).toLocaleString('en', { dateStyle: 'medium', timeStyle: 'long' })}, ${ago(iso)}`
+	const update = () => {
+		line.textContent = `Built ${at(config.built)}`
+			+ (config.security_built ? `; security results added ${at(config.security_built)}` : '')
+	}
+	update()
+	setInterval(update, 60000)
+	line.hidden = false
+}
+
+function ago(iso) {
+	const minutes = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60000))
+	if (minutes < 1) {
+		return 'just now'
+	}
+	if (minutes < 60) {
+		return `${minutes} minute${minutes === 1 ? '' : 's'} ago`
+	}
+	const hours = Math.floor(minutes / 60)
+	if (hours < 48) {
+		return `${hours} hour${hours === 1 ? '' : 's'} ago`
+	}
+	return `${Math.floor(hours / 24)} days ago`
+}
+
 async function load() {
 	const progress = document.getElementById('progress')
 	const text = document.getElementById('progress-text')
@@ -112,6 +144,7 @@ async function load() {
 		samplesBase = config.db.replace(/[^/]*$/, 'samples/')
 		tablesBase = config.db.replace(/[^/]*$/, 'tables/')
 		showVersions(config.lib ?? {})
+		showBuilt(config)
 		progress.max = config.bytes
 		const [SQL, bytes, heads] = await Promise.all([
 			initSqlJs({ locateFile: (file) => `lib/sql.js/${file}` }),
