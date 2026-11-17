@@ -39,7 +39,7 @@ Usage: gh-stats-security [-i <identity>] [-d <dir>] [-v] [<app-id> [<version>]]
        gh-stats-security [-i <identity>] --deadline <app-id> <finding> <YYYY-MM-DD>
        gh-stats-security [-i <identity>] --forget <app-id> <finding>
        gh-stats-security [-i <identity>] [-d <dir>] --overdue <file>
-       gh-stats-security [-i <identity>] [-d <dir>] --export <out-dir>
+       gh-stats-security [-i <identity>] [-d <dir>] [-c <cache>] --export <out-dir>
 
 Without an app id, lists every app version whose newest run holds a
 security.json.age, with the number of warnings per security target. With one,
@@ -64,6 +64,8 @@ into <out-dir>, which must not exist yet: security.sql, the statements that add
 them to a database of gh-stats-site-db, and logs/<run dir>/<target>.log, the
 output of each security target. A warning becomes a finding of the tool
 security/<target>, one taken out of a public result one of security/<tool>.
+With -c, the export keeps what it made of each run in <cache> and decrypts
+only a run whose files are new or have changed since; without it, every run.
 
 The data branch is fetched into <dir>, a shallow clone kept between runs.
 
@@ -71,6 +73,8 @@ The data branch is fetched into <dir>, a shallow clone kept between runs.
                          ${XDG_CONFIG_HOME:-~/.config}/gh-stats/age-identity.txt
   -d, --dir <dir>        the clone of the data branch, default
                          ${XDG_CACHE_HOME:-~/.cache}/gh-stats/data
+  -c, --cache <dir>      with --export, what it made of each run, plain text
+                         like the export
   -n, --no-fetch         read <dir> as it is
   -v, --verbose          the notes too, and the output of each target
   -h, --help             this text
@@ -105,7 +109,7 @@ AGE_KEYGEN="${AGE_KEYGEN_BIN:-/usr/bin/age-keygen}"
 JQ="${JQ_BIN:-/usr/bin/jq}"
 GIT="${GIT_BIN:-/usr/bin/git}"
 GH="${GH_BIN:-/usr/bin/gh}"
-fetch=1 verbose=0 mode=list args=()
+fetch=1 verbose=0 mode=list cache='' args=()
 while [ $# -gt 0 ]; do
 	case "$1" in
 		-h|--help) usage; exit 0 ;;
@@ -115,6 +119,9 @@ while [ $# -gt 0 ]; do
 		-d|--dir)
 			[ $# -ge 2 ] || die "$1 needs a directory"
 			dir="$2"; shift ;;
+		-c|--cache)
+			[ $# -ge 2 ] || die "$1 needs a directory"
+			cache="$2"; shift ;;
 		-n|--no-fetch) fetch=0 ;;
 		-v|--verbose) verbose=1 ;;
 		--stages|--confirm|--report|--deadline|--forget|--overdue|--export)
@@ -134,6 +141,7 @@ case "$mode" in
 	deadline) [ "${#args[@]}" -eq 3 ] ;;
 	overdue|export) [ "${#args[@]}" -eq 1 ] ;;
 esac || die "wrong number of arguments${mode/#list/}, see --help"
+[ -z "$cache" ] || [ "$mode" = export ] || die "--cache goes with --export only"
 app="${args[0]:-}"
 case "$days" in
 	''|*[!0-9]*) die "GH_STATS_SECURITY_DAYS must be a number of days, not $days" ;;
@@ -362,33 +370,73 @@ EXPORT='def q: ([39] | implode) as $s | $s + (split($s) | join($s + $s)) + $s;
 	| group_by(.tool)[] | to_entries[]
 	| "INSERT INTO findings VALUES (\($dir | q), \("security/" + .value.tool | q), \(.key + 1), \(.value.f.level | v), \(.value.f.id | v), \(.value.f.lines // [] | join("\n") | q), \(.value.f.file | v), \(.value.f.line | v), \(.value.f.security == true | v));")'
 
+# All the export writes of one run, from one jq: for each target "log:<name>"
+# and its log as jq -r prints it, then "sql" and the lines of $EXPORT, each
+# string ended by a NUL, which a string loses so it cannot end one early. A
+# target is public when the run has <target>.json beside it, of the files in
+# $files, but deps-audit, whose file is the result of its run without
+# advisories, not one taken from the security target.
+# shellcheck disable=SC2016 # jq variables
+RUN_EXPORT='($files | split(" ")) as $have
+	| [.targets[].name | select(. != "deps-audit" and (. + ".json" | IN($have[])))] as $public
+	| ((.targets[] | "log:\(.name)", ((.log | if type == "string" then . else tojson end) + "\n")),
+		"sql", ([ '"$EXPORT"' ] | map(. + "\n") | join("")))
+	| split("\u0000") | join("") + "\u0000"'
+
 if [ "$mode" = export ]; then
 	out="${args[0]}"
 	[ ! -e "$out" ] || die "$out exists already"
-	mkdir -p "$out/logs"
+	# Without a cache of its own, the export keeps what it made of each run in
+	# <out-dir> only until it is done.
+	[ -n "$cache" ] || cache="$out/.cache"
+	mkdir -p "$out" "$cache/sql" "$cache/logs"
+	# A finished run does not change; what a run of the export is made of is
+	# every file of the run directory, by name, size and time, and this tool.
+	tool="$(sha256sum <"$0" | cut -d' ' -f1)"
+	declare -A files=() seen=()
+	while IFS=$'\t' read -r d f; do
+		files[$d]+="$f "
+	done < <(find "$dir/apps" -type f -printf '%h\t%f %s %T@\n' | sort)
+	while IFS= read -r run; do
+		case " ${files[$run]:-}" in
+			*' security.json.age '*) sec="$run/security.json.age" ;;
+			*' security.json.age.gz '*) sec="$run/security.json.age.gz" ;;
+			*) continue ;;
+		esac
+		rel="${run#"$dir/apps/"}"
+		seen[$rel]=1
+		key="$tool ${files[$run]}"
+		old=''
+		[ ! -f "$cache/sql/$rel/key" ] || IFS= read -r -d '' old <"$cache/sql/$rel/key" || true
+		[ "$old" != "$key" ] || continue
+		plain="$(security_plain "$run" "$sec")" || die "cannot decrypt $sec with $identity"
+		rm -rf "$cache/sql/$rel" "$cache/logs/$rel"
+		mkdir -p "$cache/sql/$rel" "$cache/logs/$rel"
+		while IFS= read -r -d '' tag && IFS= read -r -d '' body; do
+			case "$tag" in
+				log:*) printf '%s' "$body" >"$cache/logs/$rel/${tag#log:}.log" ;;
+				sql) printf '%s' "$body" >"$cache/sql/$rel/run.sql" ;;
+			esac
+		done < <("$JQ" -j --arg dir "$rel" --arg files "${files[$run]}" "$RUN_EXPORT" <<<"$plain")
+		[ -f "$cache/sql/$rel/run.sql" ] || die "cannot export $sec"
+		# The key comes last, so a run of the export that broke off does not
+		# leave a part of a run that counts as done.
+		printf '%s' "$key" >"$cache/sql/$rel/key"
+	done < <(newest_runs)
+	# A run that is no longer the newest of its version leaves the cache.
+	while IFS= read -r f; do
+		rel="${f%/*}"
+		[ -n "${seen[$rel]:-}" ] || rm -rf "$cache/sql/$rel" "$cache/logs/$rel"
+	done < <(find "$cache/sql" "$cache/logs" -type f -printf '%P\n')
+	cp -a "$cache/logs" "$out/logs"
 	{
 		echo 'CREATE TABLE security_runs (dir TEXT NOT NULL PRIMARY KEY) WITHOUT ROWID;'
 		echo 'CREATE TABLE security_targets (dir TEXT NOT NULL, name TEXT NOT NULL, exit INTEGER, PRIMARY KEY (dir, name)) WITHOUT ROWID;'
 		echo 'BEGIN;'
-		while IFS= read -r run; do
-			sec="$(security_file "$run")"
-			[ -n "$sec" ] || continue
-			rel="${run#"$dir/apps/"}"
-			plain="$(security_plain "$run" "$sec")" || die "cannot decrypt $sec with $identity"
-			mkdir -p "$out/logs/$rel"
-			while IFS= read -r t; do
-				# shellcheck disable=SC2016 # jq variables
-				"$JQ" -r --arg t "$t" '.targets[] | select(.name == $t) | .log' <<<"$plain" >"$out/logs/$rel/$t.log"
-			done < <("$JQ" -r '.targets[].name' <<<"$plain")
-			# deps-audit.json is the result of its run without advisories, not one
-			# taken from the security target.
-			public="$(while IFS= read -r t; do
-				[ "$t" = deps-audit ] || [ ! -f "$run/$t.json" ] || printf '%s\n' "$t"
-			done < <("$JQ" -r '.targets[].name' <<<"$plain") | "$JQ" -R . | "$JQ" -s -c .)"
-			"$JQ" -r --arg dir "$rel" --argjson public "$public" "$EXPORT" <<<"$plain"
-		done < <(newest_runs)
+		find "$cache/sql" -name run.sql -print0 | sort -z | xargs -0 -r cat
 		echo 'COMMIT;'
 	} >"$out/security.sql"
+	[ "$cache" != "$out/.cache" ] || rm -rf "$cache"
 	echo "export: $(grep -c '^INSERT INTO security_runs' "$out/security.sql") runs into $out"
 	exit 0
 fi
