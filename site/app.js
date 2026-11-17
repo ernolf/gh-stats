@@ -194,14 +194,14 @@ function projectApps() {
 }
 
 // Every catalogue app with its newest release, the newest stable one where it
-// has one; an app without a release, as the App Store lists an integration,
-// comes without.
+// has one, else the newest that is no nightly; an app without a release, as
+// the App Store lists an integration, comes without.
 function catalogueApps() {
 	return query(`
 		SELECT d.id, d.exapp, d.categories, coalesce((SELECT t.name FROM app_texts t WHERE t.id = d.id AND t.lang = 'en'), d.id) AS name,
-		       r.version, CAST(strftime('%s', r.created) AS INTEGER) AS published, r.platform, r.stable, r.host, r.asset
+		       r.version, CAST(strftime('%s', r.created) AS INTEGER) AS published, r.platform, r.nightly, r.host, r.asset
 		  FROM app_details d LEFT JOIN app_releases r ON r.id = d.id AND r.version = (
-		       SELECT x.version FROM app_releases x WHERE x.id = d.id ORDER BY x.stable DESC, x.created DESC LIMIT 1)
+		       SELECT x.version FROM app_releases x WHERE x.id = d.id ORDER BY x.stable DESC, x.nightly ASC, x.created DESC LIMIT 1)
 		 ORDER BY d.id`)
 }
 
@@ -1836,7 +1836,7 @@ function downloadReason(a) {
 // Gitea or not sampled, or it
 // has none. Its download columns stay empty, so there is nothing to chart or
 // compare, and say why; so does an unmeasured Checks cell, the measurement
-// taking stable releases only.
+// taking no nightly.
 function catalogueRow(a) {
 	const released = a.version !== null
 	const p = {
@@ -1853,8 +1853,8 @@ function catalogueRow(a) {
 	const [label, reason] = downloadReason(a)
 	const [checks, checksRow, sec] = checksCell(runs, 15)
 	if (!runs) {
-		const [why, title] = released && !a.stable
-			? ['no stable release', 'the App Store lists only nightlies or pre-releases of this app, and only stable releases are measured']
+		const [why, title] = released && a.nightly
+			? ['nightly only', 'the App Store lists only nightlies of this app, and no nightly is measured']
 			: [label, reason]
 		checks.title = title
 		checks.append(el('span', { class: 'check-why' }, why))
@@ -2528,8 +2528,10 @@ function specList(json) {
 	return JSON.parse(json).map((s) => (s.spec && s.spec !== '*' ? `${s.id} ${s.spec}` : s.id)).join(', ')
 }
 
-// A version as gh-stats-request.yml accepts it: a stable release, numbers only.
+// A version as gh-stats-request.yml accepts it: a stable release, numbers only,
+// or the newest pre-release of an app without one.
 const STABLE = /^[0-9]+(\.[0-9]+)*$/
+const PRERELEASE = /^[0-9]+(\.[0-9]+)*-[0-9A-Za-z.-]+$/
 
 function compareVersions(a, b) {
 	const x = a.split('.').map(Number)
@@ -2552,10 +2554,12 @@ function requestLink(text, title, help, label = 'appsdiag') {
 	return el('a', { class: 'request', href: `${issues}?${params}`, title: help }, text)
 }
 
-// The newest stable version keeps its check, so it has no button to remove it.
+// The newest stable version keeps its check, so it has no button to remove it;
+// so does the newest pre-release of an app without a stable version, the only
+// one of its versions that is measured.
 function requestCell(id, r, runs, newest) {
 	const links = []
-	if (r.stable && !r.nightly && STABLE.test(r.version)) {
+	if ((r.stable && !r.nightly && STABLE.test(r.version)) || r.version === newest) {
 		links.push(requestLink(runs ? 'recheck' : 'check', `Measure ${id} ${r.version}`,
 			`Builds and checks ${id} ${r.version} with ncmake${runs ? ' again' : ''} and keeps its result.`))
 		if (runs && r.version !== newest) {
@@ -2586,6 +2590,9 @@ function appReleases(id, requests) {
 	const asks = Boolean(requests && issues)
 	const newest = releases.filter((r) => r.stable && !r.nightly && STABLE.test(r.version))
 		.map((r) => r.version).sort(compareVersions).at(-1)
+		?? releases.filter((r) => !r.nightly && PRERELEASE.test(r.version))
+			.sort((a, b) => compareVersions(a.version.split('-')[0], b.version.split('-')[0]) || a.created.localeCompare(b.created))
+			.at(-1)?.version
 	return el('table', {},
 		el('thead', {}, el('tr', {}, ...['Version', 'Released', 'Channel', 'Nextcloud', 'PHP', 'Databases', 'PHP extensions', 'Licences']
 			.map((h) => el('th', {}, h)), ...securityHead(), el('th', { title: 'warnings the ncmake analysers found in the release' }, 'Checks'),

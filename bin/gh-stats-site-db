@@ -92,8 +92,9 @@ repository under its current name, plus
              another host than GitHub has the host in front of its key
   summary    one row per project and release line (the major.minor of vkey)
              for its newest release, the highest vkey that is not a
-             pre-release, of a project with an app among the releases the
-             catalogue links: downloads in total and in the last day,
+             pre-release, or a single row for the newest pre-release of a
+             project without one, of a project with an app among the releases
+             the catalogue links: downloads in total and in the last day,
              7 days and 30 days, summed over the repositories of the project
   measurements  the newest run of every app version measured by
              gh-nc-appsdiag, from the summary.json of the run directories
@@ -761,7 +762,9 @@ CREATE INDEX projects_project ON projects (project);
 -- assets are not published yet. A repository may tag more than its app, a
 -- desktop client, a server or a branch, so the lines of a project with an app
 -- come from the releases the catalogue links; the others still count as older
--- releases of the project. Stars, forks and watchers belong to the project,
+-- releases of the project. A project without a release that is not a
+-- pre-release has one line, its newest pre-release, as gh-nc-appslist measures
+-- an app without a stable release by its newest one. Stars, forks and watchers belong to the project,
 -- not to a release: the newest snapshot of each of its repositories, summed,
 -- and NULL while the sampler has none.
 CREATE TEMP TABLE linked AS
@@ -797,8 +800,9 @@ rel AS (
 newest AS (
   SELECT project, line, tag, published, has FROM (
     SELECT project, substr(vkey, 1, 12) AS line, tag, published, has,
-           row_number() OVER (PARTITION BY project, substr(vkey, 1, 12) ORDER BY has DESC, vkey DESC, published DESC) AS n
-      FROM rel WHERE pre = 0)
+           row_number() OVER (PARTITION BY project, CASE WHEN pre = 0 THEN substr(vkey, 1, 12) END
+                              ORDER BY has DESC, vkey DESC, published DESC) AS n
+      FROM rel x WHERE pre = 0 OR NOT EXISTS (SELECT 1 FROM rel y WHERE y.project = x.project AND y.pre = 0))
    WHERE n = 1
 ),
 picked AS (
