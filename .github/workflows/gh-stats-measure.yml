@@ -479,9 +479,11 @@ jobs:
         if: env.COMMITTED == '1' && vars.SECURITY_AGE_RECIPIENT != ''
         run: gh workflow run gh-stats-security.yml --ref "$GITHUB_REF_NAME"
 
-      # Only after the commit, so the next run starts once this one is kept.
+      # Only after the commit, so the next run starts once this one is kept. A
+      # re-run of failed jobs runs collect again, and the first attempt has
+      # passed the rest on already.
       - name: Pass the rest on
-        if: needs.plan.outputs.rest != '0'
+        if: needs.plan.outputs.rest != '0' && github.run_attempt == 1
         env:
           REST: ${{ needs.plan.outputs.rest }}
         run: |
