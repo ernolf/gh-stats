@@ -367,7 +367,7 @@ tables_jq='
 				setupChecks: (.setupChecks.step | step),
 				capabilities: (.capabilities.step | step), newCapabilities: (.capabilities.added // []),
 				dav: (.dav | step), repair: [(.repair // [])[] | step]}]}
-		elif $tool == "install-test" then
+		elif $tool == "install-test" or $tool == "install-test-tarball" then
 			{runs: [.runs[]? | {tag, server, php, failed, stopped, enable, enabled, requests: (.requests // []), cron,
 				log: {unread: .log.unread, entries: [(.log.entries // [])[] | {level, app, url, message, namesApp}]}}]}
 		elif $tool == "php-audit" then
@@ -986,7 +986,7 @@ SELECT dir, name, 0, 'info', 'skipped', skipped, NULL, NULL FROM targets WHERE s
 -- before a request, measured nothing of the app; its warning counts like a
 -- target that failed without a result, and says so.
 UPDATE findings SET text = text || char(10) || 'This is no finding in the app: the check did not run, and the cause lies with ncmake or the run.'
- WHERE (tool = 'install-test' AND id IN ('install-not-run', 'install-stopped'))
+ WHERE (tool IN ('install-test', 'install-test-tarball') AND id IN ('install-not-run', 'install-stopped'))
     OR (tool = 'runtime-audit' AND id IN ('server-not-run', 'server-stopped'));
 INSERT INTO findings (dir, tool, n, level, id, text, file, line)
 SELECT dir, name, 0, 'warn', 'failed', 'make ' || name || ' ended with exit ' || exit || ' and left no result.'
