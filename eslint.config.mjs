@@ -19,6 +19,11 @@ export default [
 		files: ['site/**/*.js'],
 		rules: { 'no-unused-vars': ['error', { vars: 'local' }] },
 	},
+	// The tests of the site libraries run in node.
+	{
+		files: ['tests/**/*.mjs'],
+		languageOptions: { globals: { ...globals.node } },
+	},
 	{
 		files: ['site/app.js'],
 		languageOptions: {

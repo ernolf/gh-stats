@@ -1,0 +1,46 @@
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# Merges a Dependabot update of the actions of the repository's own workflows
+# on its own when it is a patch or minor update. Dependabot groups them in one
+# pull request against .ncmake/workflows/; the required checks zizmor and
+# actionlint read every workflow it changes, and auto-merge waits for them. A
+# major update stays open for a merge by hand. The workflow updater then brings
+# the change to .github/workflows/ through a pull request of its own.
+#
+# The workflow checks nothing out and runs no code of the update. GitHub grants
+# a Dependabot pull request the write permissions a workflow asks for (see
+# "Automating Dependabot with GitHub Actions").
+
+name: Merge a Dependabot update of the actions
+
+on:
+  pull_request:
+    paths:
+      - .ncmake/workflows/**
+
+permissions: {}
+
+jobs:
+  merge:
+    name: auto-merge
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Read the update
+        id: meta
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+
+      - name: Turn on auto-merge
+        if: >-
+          steps.meta.outputs.dependency-group == 'actions'
+          && (steps.meta.outputs.update-type == 'version-update:semver-patch'
+            || steps.meta.outputs.update-type == 'version-update:semver-minor')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --squash "$PR_URL"
