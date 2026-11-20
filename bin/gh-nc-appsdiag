@@ -64,7 +64,9 @@ BUILD_FILES="GNUmakefile makefile Makefile"
 # it, since make build writes the composer.lock of an app that ignores it.
 # install-test installs what make build staged on real servers and reads their
 # logs, so a release that passes every static check and fails on every request
-# shows it. Release
+# shows it. What the store ships can differ from that stage, so the release
+# comparison installs the shipped tarball as well when the two differ in more
+# than the signature, as install-test-tarball. Release
 # and deploy targets (version, changelog, tag, rsync, cp) are not offered - they
 # act outside the checkout. Neither are secrets-audit, lint-actions,
 # lint-actions-security, php-audit and runtime-audit: the output of a run is
@@ -86,7 +88,7 @@ TARGETS_ASK="${NC_APPSDIAG_TARGETS_ASK:-help}"
 # that something is missing, the JSON says what. integrity-check is no target of
 # the list: the release comparison runs it on a shipped tree that carries
 # appinfo/signature.json.
-JSON_TARGETS="${NC_APPSDIAG_JSON:-consistency-audit build-audit bundle-report reuse changelog-lint lint-containerfiles lint-markdown lint-php-syntax lint-shell lint-version lint-vue-imports lint-web lint-yaml l10n-lint deps-audit build-verify php-compat install-test integrity-check}"
+JSON_TARGETS="${NC_APPSDIAG_JSON:-consistency-audit build-audit bundle-report reuse changelog-lint lint-containerfiles lint-markdown lint-php-syntax lint-shell lint-version lint-vue-imports lint-web lint-yaml l10n-lint deps-audit build-verify php-compat install-test install-test-tarball integrity-check}"
 # Of those, the ones that cannot write the file in that run and run a second time
 # with ARGS=--json for it. The REUSE tool prints text or JSON, never both; its
 # second run costs seconds.
@@ -320,6 +322,10 @@ a repository on another host below a directory of that host:
       release/diff.tsv    the same, one path per line: kind, class, path
       release/diff.json   the same with tarball, signature and counts, and
                           the version the shipped appinfo/info.xml declares
+      install-test-tarball.json
+                          install-test of the shipped tarball, when the
+                          shipped tree differs from the stage in more than
+                          appinfo/signature.json
 
 A difference is of the kind shipped-only, staged-only or differ, and of the
 class signature (appinfo/signature.json, only the store signs), composer-autoload
@@ -638,6 +644,7 @@ rel_bytes=""
 rel_version=""
 integrity_dir=""
 integrity_root=""
+install_tarball=""
 summary_written=0
 end_reason=""
 # Set once the apps below the root run in runs of their own: this run then measures
@@ -938,7 +945,7 @@ ncmake_check() {
 # once, and a failing target is a result rather than the end of the run - so the
 # pipeline is asked for its status instead of aborting on it.
 run_target() {
-	local t="$1" start rc=0 out from args=()
+	local t="$1" mk="$1" start rc=0 out from args=()
 	start=$SECONDS
 	printf '\n%s===== make %s =====\n' "$MARK" "$t" >>"$LOG"
 	from=$(($(wc -l <"$LOG") + 1))
@@ -971,7 +978,13 @@ run_target() {
 	if [ "$t" = integrity-check ]; then
 		args+=("DIR=$integrity_dir" "ROOT_CERT=$integrity_root")
 	fi
-	if ( cd "$APP_DIR" && make "$t" "${args[@]}" ) 2>&1 | tee_plain "$LOG"; then rc=0; else rc=$?; fi
+	# The shipped tarball, installed by the same target as the stage; its result
+	# is kept under a name of its own, beside the one of the stage.
+	if [ "$t" = install-test-tarball ]; then
+		mk=install-test
+		args+=("TARBALL=$install_tarball")
+	fi
+	if ( cd "$APP_DIR" && make "$mk" "${args[@]}" ) 2>&1 | tee_plain "$LOG"; then rc=0; else rc=$?; fi
 	[ "$rc" = 0 ] || stopped_lines[$t]="$(tail -n "+$from" "$LOG" | stopped_line)"
 	results+=("$t	$rc	$((SECONDS - start))")
 	log "----- make $t: exit $rc after $((SECONDS - start))s"
@@ -1677,6 +1690,24 @@ release_diff() {
 	log "   $n differences between the shipped tree and build/stage/$app_id, in $dir/diff.txt"
 	classify_diff "$shipped" "$staged" <"$dir/diff.txt" >"$dir/diff.tsv"
 	diff_report "$dir" "$shipped"
+	[ -z "$tgz" ] || shipped_install "$dir" "$tgz"
+}
+
+# The install of the stage stands for the shipped tarball only when both hold
+# the same files; the signature, which only the store adds, is no difference.
+# Otherwise the tarball is installed too, and both results are kept. A release of
+# the server archive has no tarball of its own to install.
+shipped_install() {
+	local dir="$1" tgz="$2"
+	if ! awk -F'\t' '$2 != "signature" { found = 1 } END { exit !found }' "$dir/diff.tsv"; then
+		log "   the shipped tree holds what was staged, so its install is the one of the stage"
+		return 0
+	fi
+	case " $TARGETS " in *" install-test "*) ;; *) return 0 ;; esac
+	log "   the shipped tree differs from the stage, so the tarball is installed as well"
+	install_tarball="$(readlink -f "$tgz")"
+	run_target install-test-tarball
+	install_tarball=""
 }
 
 # The signature of the shipped tree, held against resources/codesigning/root.crt

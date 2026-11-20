@@ -1044,7 +1044,7 @@ const BADGES = [
 	{ id: 'changelog', of: (run) => run.pass('changelog-lint', 'changelog-section', 'Changelog') },
 	// Installed and used on real servers: a badge only where no server of the
 	// run warns, since each server reports its own ok.
-	{ id: 'installs', of: (run) => (run.warns('install-test') ? null : run.pass('install-test', 'install', 'Installs')) },
+	{ id: 'installs', of: (run) => (run.warns('install-test') || run.warns('install-test-tarball') ? null : run.pass('install-test', 'install', 'Installs')) },
 	{ id: 'runtime', of: (run) => (run.warns('runtime-audit') ? null : run.pass('runtime-audit', 'runtime', 'Runs clean')) },
 	// The class map of the Composer loader at level 1, where php-audit read the
 	// app and none of its class loading findings warns.
@@ -1518,7 +1518,7 @@ function endpointTables(data) {
 			cell(e.verb ?? '–'), cell(code(e.path)), cell(e.kind), cell(code(e.target)), cell((e.openapi ?? []).join(', '))))))] : []
 }
 
-const RUN_TABLES = { 'runtime-audit': runtimeAuditTables, 'install-test': installTestTables, 'php-audit': endpointTables }
+const RUN_TABLES = { 'runtime-audit': runtimeAuditTables, 'install-test': installTestTables, 'install-test-tarball': installTestTables, 'php-audit': endpointTables }
 
 // Warnings in full, grouped by the tool that found them, the security targets
 // first, those with a security finding before the others, then the tools with
