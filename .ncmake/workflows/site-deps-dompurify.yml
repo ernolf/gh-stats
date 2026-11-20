@@ -1,0 +1,101 @@
+# SPDX-FileCopyrightText: 2026 [ernolf] Raphael Gradenwitz <raphael.gradenwitz@googlemail.com>
+# SPDX-License-Identifier: MIT
+#
+# Tests a Dependabot update of DOMPurify, which the site ships, and merges it on
+# its own when the test passes. The required checks lint the code of the
+# repository and never run a library of the site, so a broken release of one
+# would pass them; this test runs it. Each library of the site has a workflow
+# like this one, and Dependabot opens one pull request per library.
+#
+# A pull request of anyone else, or a Dependabot update of another package,
+# ends the run at once. npm ci installs what site/package-lock.json names and
+# checks every tarball against the integrity recorded there; no install script
+# runs. tests/site-deps/dompurify.mjs then runs the build the site ships.
+#
+# A patch or minor update that passes gets auto-merge, which still waits for
+# the required checks of the ruleset. A major update, or one that fails, stays
+# open for a merge by hand. This check must never become required: it does not
+# run on other pull requests and would block them for good.
+#
+# The test runs with a read-only token; only the job after it, which runs no
+# code of the update, may merge. GitHub grants a Dependabot pull request the
+# write permissions a workflow asks for (see "Automating Dependabot with GitHub
+# Actions").
+
+name: Test a Dependabot update of DOMPurify
+
+on:
+  pull_request:
+    paths:
+      - site/package.json
+      - site/package-lock.json
+
+permissions: {}
+
+env:
+  PACKAGE: dompurify
+  TEST: tests/site-deps/dompurify.mjs
+
+jobs:
+  test:
+    name: DOMPurify
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      merge: ${{ steps.own.outputs.merge }}
+    steps:
+      - name: Read the update
+        id: meta
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+
+      - name: Whether the update is of this package
+        id: own
+        env:
+          NAMES: ${{ steps.meta.outputs.dependency-names }}
+          UPDATE: ${{ steps.meta.outputs.update-type }}
+        run: |
+          if ! tr ',' '\n' <<< "$NAMES" | sed 's/^ *//; s/ *$//' | grep -qxF "$PACKAGE"; then
+            echo "Not an update of $PACKAGE: $NAMES"
+            echo "own=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "own=true" >> "$GITHUB_OUTPUT"
+          case "$UPDATE" in
+            version-update:semver-patch|version-update:semver-minor) echo "merge=true" >> "$GITHUB_OUTPUT" ;;
+            *) echo "$UPDATE: left for a merge by hand" ;;
+          esac
+
+      - name: Checkout
+        if: steps.own.outputs.own == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install the site libraries
+        if: steps.own.outputs.own == 'true'
+        working-directory: site
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Test the library
+        if: steps.own.outputs.own == 'true'
+        run: node "$TEST"
+
+  merge:
+    name: auto-merge
+    needs: test
+    if: needs.test.outputs.merge == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Turn on auto-merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --squash "$PR_URL"
