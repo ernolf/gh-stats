@@ -331,7 +331,7 @@ function categories() {
 // warn, sec, sec_other, abandoned, endpoints, loader and unreferenced are the
 // counts gh-stats-site-db and gh-stats-security-site take from the findings.
 const MEASUREMENT = `m.dir, m.host, m.owner, m.repo, m.subdir, m.app_id, m.version, m.restrictable, m.server, m.tag, m.tarball, m.signed, m.diff, m.info_xml,
-	m.declared, m.shipped_version, m.warn, m.sec, m.sec_other, m.abandoned, m.endpoints, m.loader, m.unreferenced,
+	m.declared, m.shipped_version, m.source, m.warn, m.sec, m.sec_other, m.abandoned, m.endpoints, m.loader, m.unreferenced,
 	(SELECT s.repo FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_repo,
 	(SELECT s.path FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_path,
 	(SELECT s.app_ref FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_ref`
@@ -1214,6 +1214,9 @@ function coverage(fs) {
 function diffText(m) {
 	const archive = m.server ? `apps/${m.app_id}/ of the server archive ${m.tarball}` : `Release tarball ${m.tarball}`
 	const declares = m.shipped_version ? ` Its appinfo/info.xml declares ${m.shipped_version}.` : ''
+	if (m.source === 'tarball') {
+		return `${archive}: measured as shipped, the release has no tag, so no build to compare it with.${declares}`
+	}
 	if (m.diff === null) {
 		return m.tarball ? `${archive} not compared.${declares}` : m.server ? 'No server archive.' : 'No release tarball.'
 	}
