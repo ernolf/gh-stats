@@ -77,6 +77,9 @@ BUILD_FILES="GNUmakefile makefile Makefile"
 TARGETS="${NC_APPSDIAG_TARGETS:-help consistency-audit reuse changelog-lint lint-containerfiles lint-markdown lint-php-syntax lint-shell lint-version lint-vue-imports lint-web lint-yaml l10n-lint build deps-audit build-audit bundle-report build-verify php-compat install-test dist}"
 # Offered after the release comparison, because both of them remove what it reads.
 CLEAN_TARGETS="${NC_APPSDIAG_CLEAN_TARGETS:-clean dist-clean}"
+# A release without a tag is measured from its tarball, which is downloaded only
+# up to the size make install-test TARBALL= accepts.
+TARBALL_MAX_BYTES="${NC_APPSDIAG_TARBALL_MAX_BYTES:-209715200}"
 # These have to be said yes to; everything else runs on the empty answer, because
 # that is what a run is for. make help only prints the target list and measures
 # nothing at all.
@@ -382,6 +385,9 @@ Environment (or /etc/gh-stats/gh-stats.env):
                              carries on
   AGE_BIN                    age (default: /usr/bin/age)
   NC_APPSDIAG_STUB_URL       the ncmake bootstrap stub to install
+  NC_APPSDIAG_TARBALL_MAX_BYTES
+                             the largest tarball of a release without a tag
+                             that is downloaded (default: 209715200)
   NC_APPSDIAG_NCMAKE_REPO    the ncmake repo whose main the run is compared with
   TAG_MENU_MAX               how many tags the list offers (default: 12)
   APPSTORE_SOURCE            where the App Store catalogue comes from: download,
@@ -645,6 +651,11 @@ rel_version=""
 integrity_dir=""
 integrity_root=""
 install_tarball=""
+# A release without a tag: its download, the tarball and the directory it is
+# unpacked in.
+untagged_url=""
+untagged_tarball=""
+UNTAGGED_DIR=""
 summary_written=0
 end_reason=""
 # Set once the apps below the root run in runs of their own: this run then measures
@@ -695,7 +706,16 @@ ask_target() {
 # source strings against the review of the translation team, which only an app
 # set up for the Transifex sync goes through, so an app without .tx/config costs
 # no run of the image of the translation bot.
+#
+# A release without a tag has no source to build, lint or audit; what it ships
+# is all there is. Of the targets, php-compat reads that tree as it is and
+# install-test installs the tarball, the rest has nothing to measure.
 skip_reason() {
+	if [ -n "$untagged_tarball" ]; then
+		case "$1" in help|php-compat|install-test) return 1 ;; esac
+		echo "not measurable: the release has no tag, only its shipped tarball is measured"
+		return 0
+	fi
 	[ "$1" = l10n-lint ] && [ ! -f "$APP_DIR/.tx/config" ] || return 1
 	echo "no .tx/config, the app is not set up for the Transifex sync"
 }
@@ -762,7 +782,9 @@ inventory() {
 	done
 	for d in src js css dist build vendor node_modules; do
 		[ -d "$APP_DIR/$d" ] || continue
-		if "$GIT" -C "$APP_DIR" check-ignore -q "$d"; then
+		if [ -n "$untagged_tarball" ]; then
+			log "   dir   $d/ (shipped)"
+		elif "$GIT" -C "$APP_DIR" check-ignore -q "$d"; then
 			log "   dir   $d/ (gitignored)"
 		else
 			log "   dir   $d/ ($("$GIT" -C "$APP_DIR" ls-files "$d" | wc -l) tracked files)"
@@ -1543,6 +1565,38 @@ release_checkout() {
 	return 1
 }
 
+# The download of a release the App Store ships from no tag of the repository:
+# the catalogue lists the version with this repository and without a tag.
+store_untagged() {
+	"$JQ" -r --arg repo "${slug,,}" --arg v "$1" '[.apps[]? | select(.repo != null)
+		| select(((if .host == "github.com" then "" else .host + "/" end) + .repo | ascii_downcase) == $repo)
+		| .versions[] | select(.version == $v and .tag == null and .download != null) | .download]
+		| first // empty' "$SOURCES_CACHE" 2>/dev/null || true
+}
+
+# The tarball of a release without a tag, over https alone and no larger than
+# TARBALL_MAX_BYTES, unpacked beside the checkout. The app in it takes the place
+# of the checkout for everything that runs.
+untagged_unpack() {
+	local url="$1" name top
+	case "$url" in https://*) ;; *) die "the download of $want_version is not https: $url" ;; esac
+	UNTAGGED_DIR="$CHECKOUT.shipped"
+	rm -rf "$UNTAGGED_DIR"
+	mkdir -p "$UNTAGGED_DIR/tree" || die "cannot create $UNTAGGED_DIR"
+	name="${url%%[?#]*}"
+	name="${name##*/}"
+	"$CURL" -fsSL --proto =https --proto-redir =https --max-filesize "$TARBALL_MAX_BYTES" "$url" -o "$UNTAGGED_DIR/$name" \
+		|| die "cannot download $url"
+	tar xzf "$UNTAGGED_DIR/$name" -C "$UNTAGGED_DIR/tree" || die "cannot unpack $name"
+	top="$(find "$UNTAGGED_DIR/tree" -mindepth 1 -maxdepth 1 -type d)"
+	[ "$(printf '%s\n' "$top" | grep -c .)" = 1 ] && [ -f "$top/appinfo/info.xml" ] \
+		|| die "$name holds no single app directory with appinfo/info.xml"
+	untagged_tarball="$(readlink -f "$UNTAGGED_DIR/$name")"
+	APP_DIR="$top"
+	log "   no tag: the App Store ships $want_version from $url"
+	log "   unpacked $name, $(stat -c %s "$untagged_tarball") B; only what reads the shipped tree runs"
+}
+
 # Nothing is typed out here: the repo's own tags are the list, newest first, and
 # each one says whether the App Store has a tarball of it, because only then is
 # there something to compare the build against. The offered answer is the newest
@@ -1611,6 +1665,10 @@ fetch_tarball() {
 	local dest="$1" cache url name r t v f pattern='*.tar.gz'
 	# The release of a repository with several apps carries a tarball for each.
 	[ -z "$subdir" ] || pattern="*${app_id}*.tar.gz"
+	if [ -n "$untagged_tarball" ]; then
+		cp "$untagged_tarball" "$dest/" && { printf '%s\n' "$dest/${untagged_tarball##*/}"; return 0; }
+		return 1
+	fi
 	if cache="$(appstore_catalogue)"; then
 		url="$(release_url "$cache")"
 		if [ -n "$url" ] && [ "$url" != null ]; then
@@ -1674,6 +1732,10 @@ release_diff() {
 		log "   the shipped appinfo/info.xml declares ${rel_version:-no version}"
 	fi
 	signature_check "$dir" "$shipped"
+	if [ -n "$untagged_tarball" ]; then
+		log "   no tag, so no stage to compare the shipped tree with"
+		return 0
+	fi
 	staged="$APP_DIR/build/stage/$app_id"
 	# A dist that ran and staged nothing fails the same way a second time.
 	if [ ! -d "$staged" ] && [ ${#results[@]} -gt 0 ] && printf '%s\n' "${results[@]}" | grep -q '^dist	'; then
@@ -1815,7 +1877,7 @@ write_summary_json() {
 	ncmake_check
 	[ -z "${NC_APPSDIAG_RESULT_FILE:-}" ] || printf '%s\n' "$RUN_DIR" >>"$NC_APPSDIAG_RESULT_FILE"
 	[ -x "$JQ" ] || { warn "no jq at $JQ, so no summary.json"; return 0; }
-	[ -d "$CHECKOUT/.git" ] && head="$("$GIT" -C "$CHECKOUT" log -1 --format='%H%x09%cI%x09%s' 2>/dev/null)" || true
+	[ -z "$untagged_tarball" ] && [ -d "$CHECKOUT/.git" ] && head="$("$GIT" -C "$CHECKOUT" log -1 --format='%H%x09%cI%x09%s' 2>/dev/null)" || true
 	host="$(uname -n)"
 	cpus="$(nproc 2>/dev/null)" || cpus=""
 	mem="$(awk '/^MemTotal:/ { print int($2 / 1024) }' /proc/meminfo 2>/dev/null)" || mem=""
@@ -1845,6 +1907,7 @@ write_summary_json() {
 		--arg want "$want_version" --arg server "$SERVER_REF" --arg server_build "$server_build" --arg stamp "$STAMP" --arg started "$STARTED" \
 		--arg finished "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg status "$status" --argjson code "$code" --arg reason "$end_reason" \
 		--arg head "$head" --arg tag "$head_tag" --arg stub "$STUB_URL" \
+		--arg source "${untagged_tarball:+tarball}" --arg download "$untagged_url" \
 		--arg ncmain "$ncmake_main" --arg ncdiffers "$ncmake_differs" --argjson ncchecked "$ncmake_checked" \
 		--arg host "$host" --arg cpus "$cpus" --arg mem "$mem" --arg cpu "$cpu" \
 		--argjson inv "$inv" --argjson transifex "$transifex" --arg bname "$build_name" --arg bkind "$build_kind" --argjson files "$files" \
@@ -1857,6 +1920,7 @@ write_summary_json() {
 		 requested_version: nul($want), restrictable: (if $restrictable == "" then null else $restrictable == "true" end),
 		 server: nul($server), server_build: nul($server_build), stamp: $stamp, started: $started, finished: $finished,
 		 status: $status, exit: $code, reason: nul($reason),
+		 source: (if $source != "" then $source elif $tag != "" then "tag" else null end), download: nul($download),
 		 head: (if $head == "" then null else ($head | split("\t") | {sha: .[0], date: .[1], subject: (.[2:] | join("\t")), tag: nul($tag)}) end),
 		 ncmake: {ref: (if $ncchecked == 1 and $ncdiffers == "" then nul($ncmain) else null end),
 		          main: nul($ncmain),
@@ -1883,6 +1947,7 @@ write_summary_json() {
 # leave its checkout behind any more than a finished one does.
 on_exit() {
 	[ -z "$SHIPPED_TREE" ] || rm -rf "$SHIPPED_TREE"
+	[ -z "$UNTAGGED_DIR" ] || rm -rf "$UNTAGGED_DIR"
 	[ -z "$SECURITY_TMP" ] || rm -rf "$SECURITY_TMP"
 	if [ "$fanned" = 1 ]; then
 		rm -rf "$CHECKOUT"
@@ -1893,7 +1958,7 @@ on_exit() {
 	[ -n "$RUN_DIR" ] || promote_run_dir "$want_version"
 	if [ "$1" = 0 ]; then write_summary_json stopped 0; else write_summary_json aborted "$1"; fi
 	if [ "$1" != 0 ] && [ -d "$CHECKOUT" ]; then
-		ask_yes "remove the checkout $CHECKOUT?" && { rm -rf "$CHECKOUT"; log "checkout removed."; } || true
+		ask_yes "remove the checkout $CHECKOUT?" && { rm -rf "$CHECKOUT" ${UNTAGGED_DIR:+"$UNTAGGED_DIR"}; log "checkout removed."; } || true
 	fi
 }
 
@@ -1978,16 +2043,22 @@ init_submodules
 # A version on the command line is checked out before anything is read, so the
 # inventory, the App Store lookup and the tarball comparison all speak about the
 # same release. That release was built from its tag and from nothing else, so a
-# missing tag ends the run instead of quietly measuring the default branch.
+# missing tag ends the run instead of quietly measuring the default branch. Only
+# a release the catalogue lists without a tag is measured, from its tarball.
 if [ -n "$want_version" ]; then
 	log ""
 	log "== requested version $want_version"
-	release_checkout "$want_version" || die "no tag for $want_version in $slug"
+	if [ -z "$subdir" ] && [ -z "$SERVER_REF" ] && [ -z "$(store_tags "$want_version")" ] \
+		&& untagged_url="$(store_untagged "$want_version")" && [ -n "$untagged_url" ]; then
+		untagged_unpack "$untagged_url"
+	else
+		release_checkout "$want_version" || die "no tag for $want_version in $slug"
+	fi
 fi
 
 if [ -n "$subdir" ]; then
 	[ -f "$APP_DIR/appinfo/info.xml" ] || die "no appinfo/info.xml in $subdir of $slug"
-elif [ "$server_run" = 0 ] && [ ! -f "$CHECKOUT/appinfo/info.xml" ]; then
+elif [ "$server_run" = 0 ] && [ -z "$untagged_tarball" ] && [ ! -f "$CHECKOUT/appinfo/info.xml" ]; then
 	mapfile -t below < <(app_dirs)
 	[ ${#below[@]} -eq 0 ] || fan_out "${below[@]}"
 fi
@@ -1995,7 +2066,7 @@ fi
 inventory
 promote_run_dir
 if [ -n "$want_version" ] && [ -n "$app_version" ] && [ "$app_version" != "$want_version" ]; then
-	warn "the tag of $want_version carries version $app_version in appinfo/info.xml"
+	warn "the ${untagged_tarball:+tarball}${untagged_tarball:-tag} of $want_version carries version $app_version in appinfo/info.xml"
 fi
 
 if [ -n "$app_version" ] && [ -z "$SERVER_REF" ]; then
@@ -2036,14 +2107,26 @@ for t in $TARGETS; do
 	rc=0
 	ask_target "$t" || rc=$?
 	case "$rc" in
-		0) run_target "$t" ;;
+		0)
+			if [ "$t" = install-test ] && [ -n "$untagged_tarball" ]; then
+				install_tarball="$untagged_tarball"
+				run_target install-test-tarball
+				install_tarball=""
+			else
+				run_target "$t"
+			fi
+			;;
 		2) break ;;
 	esac
 done
 
 log ""
 log "== security targets"
-security_run
+if [ -n "$untagged_tarball" ]; then
+	log "   not measurable: the release has no tag, so they do not run"
+else
+	security_run
+fi
 
 if [ -n "$app_id" ] && [ -n "$app_version" ]; then
 	ask_yes "compare what make dist stages against the shipped tarball?" && release_compare || true
@@ -2051,6 +2134,8 @@ fi
 
 log ""
 log "== cleanup targets"
+# The unpacked tarball goes with the checkout; nothing was built in it.
+[ -z "$untagged_tarball" ] || CLEAN_TARGETS=""
 for t in $CLEAN_TARGETS; do
 	rc=0
 	ask_target "$t" || rc=$?
@@ -2072,4 +2157,4 @@ done
 summary
 
 # == Teardown ==
-ask_yes "remove the checkout $CHECKOUT?" && { rm -rf "$CHECKOUT"; log "checkout removed."; } || true
+ask_yes "remove the checkout $CHECKOUT?" && { rm -rf "$CHECKOUT" ${UNTAGGED_DIR:+"$UNTAGGED_DIR"}; log "checkout removed."; } || true

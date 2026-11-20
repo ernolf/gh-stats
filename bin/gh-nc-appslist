@@ -91,10 +91,11 @@ its release is downloaded from.
 A release that is no release asset, downloaded from a host of its own, a
 package registry or a file in a repository, names no repository the targets
 hold. It is listed under the repository gh-nc-sources found for it in
-SOURCES_CACHE, the host in front unless it is GitHub, as long as that
-repository has a tag for it and the newest such release of the app is from
-<year> or later. Where the App Store lists one tag under several versions, the
-newest of them stands for the tag, which is measured once.
+SOURCES_CACHE, the host in front unless it is GitHub, as long as the newest
+such release of the app is from <year> or later. A release that repository has
+no tag for is listed too: gh-nc-appsdiag measures it from its tarball. Where
+the App Store lists one tag under several versions, the newest of them stands
+for the tag, which is measured once.
 
 With -v the list holds the versions a file names instead of the newest one of
 each app: one "<app-id> <version>" per line, # starts a comment. Each of them is
@@ -206,7 +207,7 @@ fi
 # app is developed in, and without one under the repository of its download.
 # A release that is no release asset takes its repository and tag from
 # sources.json, and the recency cutoff from its own newest such release, as the
-# targets know nothing of it. The App Store can list one tag under several
+# targets know nothing of it. One without a tag stands for itself. The App Store can list one tag under several
 # versions; each of them becomes the newest version built from that tag, so the
 # tag is measured once and its result is filed under the version that names it.
 list="$("$JQ" -r --slurpfile t "$work/targets.json" --slurpfile s "$sources_json" \
@@ -220,10 +221,10 @@ list="$("$JQ" -r --slurpfile t "$work/targets.json" --slurpfile s "$sources_json
 	def asset: (.download | split("/")) as $p
 		| $p[5] == "releases" and ($p[2] == "github.com" or $p[6] == "download");
 	$t[0].targets as $targets
-	| ([ $s[0].apps[]? | select(.repo != null) | . as $x | .versions[] | select(.tag != null)
+	| ([ $s[0].apps[]? | select(.repo != null) | . as $x | .versions[]
 	     | { key: "\($x.id) \(.version)",
 	         value: { src: ((if $x.host == "github.com" then "" else $x.host + "/" end) + $x.repo),
-	                  tag } } ] | from_entries) as $tagged
+	                  tag } } ] | from_entries) as $sourced
 	| ([ $s[0].developed[]? | select(.repo != null)
 	     | { key: .id, value: ((if .host == "github.com" then "" else .host + "/" end) + .repo) } ]
 	   | from_entries) as $developed
@@ -249,10 +250,11 @@ list="$("$JQ" -r --slurpfile t "$work/targets.json" --slurpfile s "$sources_json
 	        | select($targets | index($dl))
 	        | { version, tag: null, src: ($developed[$a.id] // $dl) }
 	      else
-	        $tagged["\($a.id) \(.version)"] as $src
+	        $sourced["\($a.id) \(.version)"] as $src
 	        | select($src != null and $recent)
-	        | { version: ([ $other[].version | select($tagged["\($a.id) \(.)"].tag == $src.tag) ]
-	                      | max_by(vkey)),
+	        | { version: (if $src.tag == null then .version
+	                      else [ $other[].version | select($sourced["\($a.id) \(.)"].tag == $src.tag) ]
+	                        | max_by(vkey) end),
 	            src: $src.src, tag: $src.tag }
 	      end ]
 	| if $want == null then group_by(.src | ascii_downcase)
