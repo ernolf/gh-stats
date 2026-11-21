@@ -200,7 +200,7 @@ hex() { od -An -v -tx1 "$1" | tr -d ' \n'; }
 
 # le <hex> <offset> <bytes>: the little-endian number at that byte offset.
 le() {
-	local v=0 i
+	local v=0 i=""
 	for ((i = $2 + $3 - 1; i >= $2; i--)); do v=$((v * 256 + 16#${1:i*2:2})); done
 	echo "$v"
 }
@@ -283,7 +283,7 @@ directory() {
 # a fixed header and the CRC-32 and size of the directory as its trailer, so
 # gzip inflates it and checks it.
 inflate() {
-	local t i
+	local t="" i=""
 	case "$3" in
 		0) cat "$6" ;;
 		8)
@@ -302,7 +302,7 @@ inflate() {
 
 # extract <url> <etag> <directory line> <file>: one file of the archive.
 extract() {
-	local name method csize off crc isize lh start
+	local name="" method="" csize="" off="" crc="" isize="" lh="" start=""
 	read -r name method csize off crc isize <<<"$3"
 	fetch "$1" "$2" "$off" $((off + 29)) "$tmp/local"
 	lh="$(hex "$tmp/local")"
@@ -348,7 +348,7 @@ restrictable() {
 # git ls-remote, repeated up to RETRIES times as every curl request: a single
 # connection that times out must not end a run of several hundred requests.
 remote() {
-	local i
+	local i=""
 	for ((i = 0; i <= RETRIES; i++)); do
 		"$GIT" ls-remote "$@" && return
 	done
@@ -370,7 +370,7 @@ previous() {
 # the listing of that directory, read once per run. Without it there returns 1.
 prereleases=""
 archive_url() {
-	local name
+	local name=""
 	if [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 		url="$SERVER_RELEASES_URL/nextcloud-$1.zip"
 		return 0
@@ -404,7 +404,7 @@ heads() {
 # central <url>: the central directory of the archive heads just read into
 # $tmp/cd, its offset into cdoff.
 central() {
-	local first t eocd entries cdsize
+	local first="" t="" eocd="" entries="" cdsize=""
 	# The end record is 22 bytes and a comment of at most 65535; its
 	# signature is the last one in the tail.
 	first=$((size > 65557 ? size - 65557 : 0))
@@ -426,7 +426,7 @@ central() {
 # each of its apps has enabled and restrictable. Each archive read counts in
 # reads.
 archive() {
-	local url="$1" ref="$2" etag modified size cdoff server major build id line version name repo path aref probe code enabled restricts
+	local url="$1" ref="$2" etag="" modified="" size="" cdoff="" server="" major="" build="" id="" line="" version="" name="" repo="" path="" aref="" probe="" code="" enabled="" restricts=""
 	heads "$url"
 	if previous "$url" "$etag" > "$tmp/entry"; then
 		cat "$tmp/entry"
@@ -513,7 +513,7 @@ archive() {
 # The build of the archive goes into build, read under the same ETag, so it is
 # that of the files unpacked.
 unpack() {
-	local url="$1" id="$2" dest="$3" etag modified size cdoff first end method csize off crc isize hname s i name rel lh start line n=0
+	local url="$1" id="$2" dest="$3" etag="" modified="" size="" cdoff="" first="" end="" method="" csize="" off="" crc="" isize="" hname="" s="" i="" name="" rel="" lh="" start="" line="" n=0
 	heads "$url"
 	central "$url"
 	directory "$tmp/cd" "$id" "$tmp/next" > "$tmp/dir"
@@ -552,7 +552,7 @@ unpack() {
 # version_build <url>: the $OC_Build of the version.php of the archive central
 # just read, into build.
 version_build() {
-	local line
+	local line=""
 	line="$(directory "$tmp/cd" | awk -v n="$ARCHIVE_ROOT/version.php" '$1 == n')"
 	[ -n "$line" ] || die "$1: no version.php"
 	extract "$1" "$etag" "$line" "$tmp/version.php"
@@ -600,7 +600,7 @@ majors="$majors $eol $(awk -F. -v n="$newest" '$1 > n { print $1 }' <<<"$all_tag
 # the previous file or read from its archive, read only while fewer than <max>
 # archives are read when <max> is given. kept is 1 when the entry is there.
 release() {
-	local url
+	local url=""
 	kept=1
 	if ! archive_url "$1"; then
 		warn "no archive of $1 in $SERVER_PRERELEASES_URL/"

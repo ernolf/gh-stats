@@ -177,7 +177,7 @@ gh_repo() {
 # A connection to GitHub fails now and then where the next one gets through, so
 # a call is tried again, after a pause that grows with each attempt.
 retry() {
-	local i
+	local i=""
 	for ((i = 1; ; i++)); do
 		"$@" && return 0
 		[ "$i" -lt "$attempts" ] || return 1
@@ -188,7 +188,7 @@ retry() {
 # The stages in plain text, which exist only in the variables of this shell.
 # A repository without the variable yet has none.
 stages_read() {
-	local enc plain i
+	local enc="" plain="" i=""
 	if [ -n "${GH_STATS_SECURITY_STAGES+x}" ]; then
 		enc="$GH_STATS_SECURITY_STAGES"
 	else
@@ -210,7 +210,7 @@ stages_read() {
 
 # Encrypts the stages to the recipient of the identity and stores them.
 stages_write() {
-	local recipient enc
+	local recipient="" enc=""
 	recipient="$("$AGE_KEYGEN" -y "$identity")" || die "cannot read the recipient of $identity"
 	enc="$(printf '%s\n' "$1" | "$JQ" -c '.findings |= sort_by(.app, .id)' | "$AGE" -a -r "$recipient")" \
 		|| die "cannot encrypt the stages"
@@ -283,7 +283,7 @@ CARRY='def key: .fingerprint // "\(.commit):\(.file):\(.rule)";
 # shellcheck disable=SC2016 # jq variables
 RECHECK='.[1].target as $t | .[0] | .targets |= map(if .name == $t.name and $t.result != null then $t else . end)'
 security_plain() {
-	local plain carried recheck
+	local plain="" carried="" recheck=""
 	plain="$(decrypt "$2")" || return 1
 	if [ -f "$1/secrets-history.json.age" ]; then
 		carried="$(decrypt "$1/secrets-history.json.age")" || return 1
@@ -308,7 +308,7 @@ newest_runs() {
 }
 
 security_file() {
-	local f
+	local f=""
 	for f in "$1/security.json.age" "$1/security.json.age.gz"; do
 		[ -f "$f" ] && { printf '%s\n' "$f"; return; }
 	done
@@ -322,7 +322,7 @@ security_file() {
 # or of an unlisted app ranks above every server release, and master above the
 # server releases.
 newest_app_runs() {
-	local run id key
+	local run="" id="" key=""
 	while IFS= read -r run; do
 		[ -n "$(security_file "$run")" ] || continue
 		IFS=$'\t' read -r id key < <("$JQ" -r '[.app_id // .repo,
