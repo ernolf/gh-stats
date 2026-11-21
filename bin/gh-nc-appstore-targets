@@ -99,7 +99,7 @@ fetch_cached() {
 	[ "$APPSTORE_INCLUDE_ENTERPRISE" = true ] && url="${url}?include_enterprise=true"
 	mkdir -p "$(dirname "$cache")"
 
-	local body headers args code
+	local body="" headers="" args=() code=""
 	body="$(mktemp)"; headers="$(mktemp)"
 	args=(-sSL -A "gh-nc-appstore-targets" -D "$headers" -o "$body")
 	[ -r "$etagf" ] && args+=(-H "If-None-Match: $(cat "$etagf")")
@@ -113,7 +113,7 @@ fetch_cached() {
 
 	case "$code" in
 		200)
-			local et
+			local et=""
 			et="$(sed -n 's/^[Ee][Tt][Aa][Gg]: *//p' "$headers" | tr -d '\r' | tail -n1)"
 			[ -n "$et" ] && printf '%s\n' "$et" > "$etagf"
 			mv "$body" "$cache"; rm -f "$headers"
@@ -145,7 +145,7 @@ acquire_appdata() {
 	local f="$APPSTORE_APPDATA_FILE"
 	if [ -z "$f" ]; then
 		[ -n "$APPSTORE_OCC" ] || die "appdata source needs APPSTORE_APPDATA_FILE or APPSTORE_OCC"
-		local datadir iid
+		local datadir="" iid=""
 		datadir="$($APPSTORE_OCC config:system:get datadir)"
 		iid="$($APPSTORE_OCC config:system:get instanceid)"
 		f="${datadir}/appdata_${iid}/appstore/apps.json"
@@ -158,7 +158,7 @@ acquire_appdata() {
 # Resolve the current apps.json through the ebtb nc-apps database, which is the
 # authoritative pointer (the underlying filename rotates on each refresh).
 acquire_ebtb() {
-	local db="$APPSTORE_EBTB_DB" f
+	local db="$APPSTORE_EBTB_DB" f=""
 	[ -n "$db" ]  || die "ebtb source needs APPSTORE_EBTB_DB"
 	[ -r "$db" ]  || die "ebtb apps.db not readable: $db"
 	f="$("$SQLITE" "$db" "SELECT json_data_file FROM apps WHERE platform='all'")"

@@ -244,7 +244,7 @@ split_slug() {
 # The request path of a repository, with the second argument appended: a path
 # of the GitHub API, or a URL of the forge's.
 api_path() {
-	local host owner repo
+	local host="" owner="" repo=""
 	split_slug "$1"
 	if [ "$host" = github.com ]; then
 		printf 'repos/%s/%s%s' "$owner" "$repo" "${2:-}"
@@ -263,8 +263,8 @@ api_path() {
 failed=() missing=() transient=() unreachable=() given_up=0
 requests=0 unchanged=0 left='' done_repos=0 reported=$SECONDS
 request() {
-	local path="$1" e n=0 sq="'"
-	local -a cond=() pause
+	local path="$1" e="" n=0 sq="'"
+	local -a cond=() pause=()
 	read -ra pause <<<"$RETRY_DELAYS"
 	[ -z "${etag[$path]:-}" ] || cond=(-H "If-None-Match: ${etag[$path]}")
 	while :; do
@@ -339,7 +339,7 @@ list_requests() {
 # repository without a row is asked without its ETag. A repository with a 404
 # is reported until it counts as unreachable, and once more as such.
 record_repo() {
-	local sq="'" seen="$4" n=NULL m=0 since=NULL slug
+	local sq="'" seen="$4" n=NULL m=0 since=NULL slug=""
 	local h="${1//$sq/$sq$sq}" o="${2//$sq/$sq$sq}" r="${3//$sq/$sq$sq}"
 	if [ "$1" = github.com ]; then slug="$2/$3"; else slug="$1/$2/$3"; fi
 	case "$status" in
@@ -375,7 +375,7 @@ record_repo() {
 # main config, any targets.d/*.json drop-ins, SAMPLER_TARGETS and UNLISTED_TOOLS.
 # All of them are optional; the caller checks that at least one target came out.
 collect_targets() {
-	local f var
+	local f="" var=""
 	if [ -f "$CONFIG" ]; then jq -r --arg f "$CONFIG" '.targets[]? | "\($f)\t\(.)"' "$CONFIG"; fi
 	if [ -d "$TARGETS_DIR" ]; then
 		for f in "$TARGETS_DIR"/*.json; do

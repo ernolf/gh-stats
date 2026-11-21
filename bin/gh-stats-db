@@ -123,7 +123,7 @@ call() { timeout "$CALL_TIMEOUT" "$GH" "$@" </dev/null; }
 # Repeats a call that only reads, writing its output to <out> only once it
 # succeeded.
 read_retry() {
-	local out="$1" i
+	local out="$1" i=""
 	shift
 	for ((i = 1; ; i++)); do
 		call "$@" >"$out.part" && mv "$out.part" "$out" && return 0
@@ -144,7 +144,7 @@ release_id() {
 # by tabs. Fails with 2 when the release does not exist, with 1 when it cannot
 # be read.
 assets() {
-	local tag="$1" rel
+	local tag="$1" rel=""
 	if [ -s "$work/release.$tag" ]; then
 		rel="$(<"$work/release.$tag")"
 	else
@@ -165,7 +165,7 @@ fetch() { call api -H 'Accept: application/octet-stream' "repos/$GH_REPO/release
 # Uploads <file> to the release <tag> under its own name and sets PUT_ID to
 # the id of the asset once it is complete and downloads to the same bytes.
 put() {
-	local tag="$1" file="$2" name="${2##*/}" size listing id i
+	local tag="$1" file="$2" name="${2##*/}" size="" listing="" id="" i=""
 	PUT_ID=''
 	size="$(stat -c %s "$file")"
 	for ((i = 1; i <= ATTEMPTS; i++)); do
@@ -207,7 +207,7 @@ newest_of() { awk '$1 == "newest" { print $2 }' "$1"; }
 
 # == restore ==
 restore() {
-	local listing rc=0 tag id name size state
+	local listing="" rc=0 tag="" id="" name="" size="" state=""
 	: >"$work/candidates"
 	for tag in "$TAG" "$BACKUP_TAG"; do
 		listing="$(assets "$tag")" || rc=$?
@@ -252,8 +252,8 @@ restore() {
 
 # == store ==
 check() {
-	local t rows series a_rows a_series
-	local -A after
+	local t="" rows="" series="" a_rows="" a_series=""
+	local -A after=()
 	while read -r t rows series; do after[$t]="$rows $series"; done <"$work/stored"
 	while read -r t rows series; do
 		read -r a_rows a_series <<<"${after[$t]:-}"
@@ -272,7 +272,7 @@ check() {
 
 # Creates the backup release when there is none yet.
 backup_release() {
-	local rel i
+	local rel="" i=""
 	for ((i = 0; ; i++)); do
 		if rel="$(release_id "$BACKUP_TAG")"; then
 			[ -z "$rel" ] || return 0
@@ -290,7 +290,7 @@ backup_release() {
 # A run that restored .next or .prev because the main asset was gone gives it
 # the name back before anything else is uploaded.
 promote() {
-	local tag id name listing i
+	local tag="" id="" name="" listing="" i=""
 	IFS=$'\t' read -r tag id name <"$work/source"
 	[ "$tag" = "$TAG" ] && [ "$name" != "$ASSET" ] || return 0
 	for ((i = 0; ; i++)); do
@@ -312,7 +312,7 @@ promote() {
 # Makes the asset <id>, uploaded as .next, the main asset. Each turn reads the
 # release and takes the one step its state calls for.
 swap() {
-	local new="$1" listing main next prev step i
+	local new="$1" listing="" main="" next="" prev="" step=() i=""
 	for ((i = 1; i <= 3 * ATTEMPTS; i++)); do
 		if listing="$(assets "$TAG")"; then
 			main="$(id_of "$ASSET" "$listing")"
@@ -345,7 +345,7 @@ swap() {
 # Keeps the newest BACKUPS backups and the newest of each UTC day for
 # BACKUP_DAYS days. Runs only after a new backup was written and checked.
 rotate() {
-	local listing cutoff kept=0 last='' id name size state stamp day
+	local listing="" cutoff="" kept=0 last='' id="" name="" size="" state="" stamp="" day=""
 	listing="$(assets "$BACKUP_TAG")" || { warn "cannot read $BACKUP_TAG, no backup deleted"; return 0; }
 	cutoff="$(date -u -d "-$BACKUP_DAYS days" +%Y%m%d)"
 	while IFS=$'\t' read -r id name size state; do
@@ -362,7 +362,7 @@ rotate() {
 
 # Whether a listing of assets holds a backup.
 has_backup() {
-	local name
+	local name=""
 	while IFS=$'\t' read -r _ name _ _; do
 		backup_stamp "$name" >/dev/null && return 0
 	done <<<"$1"
@@ -370,7 +370,7 @@ has_backup() {
 }
 
 store() {
-	local stamp backup listing first
+	local stamp="" backup="" listing="" first=""
 	[ -s "$work/restored" ] && [ -s "$work/source" ] || die "$file was not restored by gh-stats-db restore"
 	intact "$file" || die "$file fails the integrity check, nothing written"
 	counts "$file" >"$work/stored" || die "$file lacks a table, nothing written"
