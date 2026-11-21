@@ -1,0 +1,189 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\OCMRemoteWebApp\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Service/TokenExchanger.php:35 OC\\OCM\\OCMSignatoryManager",
+        "lib/Service/TokenExchanger.php:90 OC\\OCM\\Rfc9421SignatoryManager",
+        "templates/embed.php:24 OC\\Security\\CSP\\ContentSecurityPolicyNonceManager",
+        "templates/redirect.php:18 OC\\Security\\CSP\\ContentSecurityPolicyNonceManager"
+      ],
+      "lines": [
+        "4 uses of the private API of the server in 3 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Service/TokenExchanger.php:35 OC\\OCM\\OCMSignatoryManager",
+        "  lib/Service/TokenExchanger.php:90 OC\\OCM\\Rfc9421SignatoryManager",
+        "  templates/embed.php:24 OC\\Security\\CSP\\ContentSecurityPolicyNonceManager",
+        "  templates/redirect.php:18 OC\\Security\\CSP\\ContentSecurityPolicyNonceManager"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:34 OCP\\OCM\\Events\\LocalOCMDiscoveryEvent: there since Nextcloud 33, the app declares from 31",
+        "lib/Federation/FolderCloudFederationProvider.php:17 OCP\\Federation\\IValidationAwareCloudFederationProvider: there since Nextcloud 35, the app declares from 31",
+        "lib/Federation/FolderCloudFederationProvider.php:17 OCP\\Federation\\ISignedCloudFederationProvider: there since Nextcloud 33, the app declares from 31",
+        "lib/Federation/WebappCloudFederationProvider.php:29 OCP\\Federation\\IValidationAwareCloudFederationProvider: there since Nextcloud 35, the app declares from 31",
+        "lib/Listener/LocalOCMDiscoveryEventListener.php:18 OCP\\OCM\\Events\\LocalOCMDiscoveryEvent: there since Nextcloud 33, the app declares from 31",
+        "lib/Service/TokenExchanger.php:34 OCP\\Security\\Signature\\ISignatureManager: there since Nextcloud 33, the app declares from 31",
+        "lib/Service/TokenExchanger.php:89 OCP\\Security\\Signature\\ISignatureManager::signOutgoingRequestIClientPayload(): there since Nextcloud 33, the app declares from 31"
+      ],
+      "lines": [
+        "7 uses in 5 files of the public API that the oldest majors of Nextcloud 31 to 35 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/AppInfo/Application.php:34 OCP\\OCM\\Events\\LocalOCMDiscoveryEvent: there since Nextcloud 33, the app declares from 31",
+        "  lib/Federation/FolderCloudFederationProvider.php:17 OCP\\Federation\\IValidationAwareCloudFederationProvider: there since Nextcloud 35, the app declares from 31",
+        "  lib/Federation/FolderCloudFederationProvider.php:17 OCP\\Federation\\ISignedCloudFederationProvider: there since Nextcloud 33, the app declares from 31",
+        "  lib/Federation/WebappCloudFederationProvider.php:29 OCP\\Federation\\IValidationAwareCloudFederationProvider: there since Nextcloud 35, the app declares from 31",
+        "  lib/Listener/LocalOCMDiscoveryEventListener.php:18 OCP\\OCM\\Events\\LocalOCMDiscoveryEvent: there since Nextcloud 33, the app declares from 31",
+        "  lib/Service/TokenExchanger.php:34 OCP\\Security\\Signature\\ISignatureManager: there since Nextcloud 33, the app declares from 31",
+        "  lib/Service/TokenExchanger.php:89 OCP\\Security\\Signature\\ISignatureManager::signOutgoingRequestIClientPayload(): there since Nextcloud 33, the app declares from 31"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:39 injectFn()",
+        "lib/AppInfo/Application.php:55 get()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 2 places. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:39 injectFn()",
+        "  lib/AppInfo/Application.php:55 get()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/ocmremotewebapp/api/v1/shares  ocmremotewebapp.received.list  appinfo/routes.php:25 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 route outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 2 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/ocmremotewebapp/api/v1/shares  ocmremotewebapp.received.list  appinfo/routes.php:25 routes"
+      ]
+    },
+    {
+      "id": "openapi-drift",
+      "level": "warn",
+      "places": [
+        "GET /ocs/v2.php/apps/ocmremotewebapp/api: in openapi.json, and no route provides it"
+      ],
+      "lines": [
+        "The OpenAPI specification and the routes differ in 1 operation. A client generated from the specification then calls what is not there, or lacks what is. This holds the routes against the specification and does not generate it again.",
+        "  GET /ocs/v2.php/apps/ocmremotewebapp/api: in openapi.json, and no route provides it"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Listener/CSPListener.php:52 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated in Nextcloud 31 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Listener/CSPListener.php:52 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/embed.php:26 <style> with content",
+        "templates/launch_error.php:14 style= attribute",
+        "templates/redirect.php:24 <style> with content"
+      ],
+      "lines": [
+        "3 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/embed.php:26 <style> with content",
+        "  templates/launch_error.php:14 style= attribute",
+        "  templates/redirect.php:24 <style> with content"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/PageController.php:136 time()",
+        "lib/Federation/WebappCloudFederationProvider.php:94 time()",
+        "lib/Service/TokenExchanger.php:134 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 3 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/PageController.php:136 time()",
+        "  lib/Federation/WebappCloudFederationProvider.php:94 time()",
+        "  lib/Service/TokenExchanger.php:134 time()"
+      ]
+    }
+  ],
+  "endpoints": 5,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ocmremotewebapp/",
+      "target": "OCA\\OCMRemoteWebApp\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ocmremotewebapp/api/v1/shares",
+      "target": "OCA\\OCMRemoteWebApp\\Controller\\ReceivedController::list",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ocmremotewebapp/api/v1/shares/{id}/accept",
+      "target": "OCA\\OCMRemoteWebApp\\Controller\\ReceivedController::accept",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ocmremotewebapp/api/v1/shares/{id}/decline",
+      "target": "OCA\\OCMRemoteWebApp\\Controller\\ReceivedController::decline",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ocmremotewebapp/ocm/open/{token}",
+      "target": "OCA\\OCMRemoteWebApp\\Controller\\PageController::open",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    }
+  ]
+}

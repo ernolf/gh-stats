@@ -1,0 +1,295 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Registration\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Service/LoginFlowService.php:25 OC\\Core\\Service\\LoginFlowV2Service",
+        "lib/Service/LoginFlowService.php:30 OC\\Core\\Controller\\ClientFlowLoginController",
+        "lib/Service/LoginFlowService.php:34 OC\\Core\\Controller\\ClientFlowLoginV2Controller",
+        "lib/Service/LoginFlowService.php:43 OC",
+        "lib/Service/LoginFlowService.php:43 OC::$server",
+        "lib/Service/RegistrationService.php:58 OC\\Authentication\\Token\\IProvider",
+        "lib/Service/RegistrationService.php:364 OC",
+        "lib/Service/RegistrationService.php:364 OC::$server",
+        "lib/Service/RegistrationService.php:437 OC\\Authentication\\Exceptions\\PasswordlessTokenException"
+      ],
+      "lines": [
+        "9 uses of the private API of the server in 2 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Service/LoginFlowService.php:25 OC\\Core\\Service\\LoginFlowV2Service",
+        "  lib/Service/LoginFlowService.php:30 OC\\Core\\Controller\\ClientFlowLoginController",
+        "  lib/Service/LoginFlowService.php:34 OC\\Core\\Controller\\ClientFlowLoginV2Controller",
+        "  lib/Service/LoginFlowService.php:43 OC",
+        "  lib/Service/LoginFlowService.php:43 OC::$server",
+        "  lib/Service/RegistrationService.php:58 OC\\Authentication\\Token\\IProvider",
+        "  lib/Service/RegistrationService.php:364 OC",
+        "  lib/Service/RegistrationService.php:364 OC::$server",
+        "  lib/Service/RegistrationService.php:437 OC\\Authentication\\Exceptions\\PasswordlessTokenException"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 6
+        }
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "POST /index.php/apps/registration/  registration.register.submitemailform  appinfo/routes.php:9 routes",
+        "POST /index.php/apps/registration/verify/{secret}  registration.register.submitverificationform  appinfo/routes.php:9 routes",
+        "POST /index.php/apps/registration/register/{secret}/{token}  registration.register.submituserform  appinfo/routes.php:9 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 3 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 6 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  POST /index.php/apps/registration/  registration.register.submitemailform  appinfo/routes.php:9 routes",
+        "  POST /index.php/apps/registration/verify/{secret}  registration.register.submitverificationform  appinfo/routes.php:9 routes",
+        "  POST /index.php/apps/registration/register/{secret}/{token}  registration.register.submituserform  appinfo/routes.php:9 routes"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:29 OCP\\AppFramework\\Bootstrap\\IRegistrationContext::registerAlternativeLogin(): deprecated since Nextcloud 34; Use registerAlternativeLoginProvider instead.",
+        "lib/Controller/RegisterController.php:238 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Db/RegistrationMapper.php:118 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Listener/UserEnabledListener.php:42 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/RegistrationService.php:350 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/RegistrationService.php:360 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/RegistrationService.php:362 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "lines": [
+        "7 uses in 5 files of the public API that is deprecated in Nextcloud 32 to 34. The text of the tag names the replacement where it has one.",
+        "  lib/AppInfo/Application.php:29 OCP\\AppFramework\\Bootstrap\\IRegistrationContext::registerAlternativeLogin(): deprecated since Nextcloud 34; Use registerAlternativeLoginProvider instead.",
+        "  lib/Controller/RegisterController.php:238 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Db/RegistrationMapper.php:118 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Listener/UserEnabledListener.php:42 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/RegistrationService.php:350 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/RegistrationService.php:360 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/RegistrationService.php:362 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/ExpireRegistrations.php:41 getAppValueInt()",
+        "lib/Controller/RegisterController.php:65 getAppValueBool()",
+        "lib/Controller/RegisterController.php:67 getAppValueBool()",
+        "lib/Controller/RegisterController.php:84 getAppValueBool()",
+        "lib/Controller/RegisterController.php:85 getAppValueBool()",
+        "lib/Controller/RegisterController.php:117 getAppValueBool()",
+        "lib/Controller/RegisterController.php:216 getAppValueString()",
+        "lib/Controller/RegisterController.php:221 getAppValueBool()",
+        "lib/Controller/RegisterController.php:222 getAppValueBool()",
+        "lib/Controller/RegisterController.php:225 getAppValueBool()",
+        "lib/Controller/RegisterController.php:226 getAppValueBool()",
+        "lib/Controller/RegisterController.php:228 getAppValueBool()",
+        "lib/Controller/RegisterController.php:229 getAppValueBool()",
+        "lib/Controller/RegisterController.php:256 getAppValueBool()",
+        "lib/Controller/SettingsController.php:66 setAppValueString()",
+        "lib/Controller/SettingsController.php:73 setAppValueString()",
+        "lib/Controller/SettingsController.php:79 setAppValueString()",
+        "lib/Controller/SettingsController.php:94 setAppValueString()",
+        "lib/Controller/SettingsController.php:97 setAppValueBool()",
+        "lib/Controller/SettingsController.php:98 setAppValueBool()",
+        "lib/Controller/SettingsController.php:99 setAppValueBool()",
+        "lib/Controller/SettingsController.php:100 setAppValueBool()",
+        "lib/Controller/SettingsController.php:101 setAppValueBool()",
+        "lib/Controller/SettingsController.php:102 setAppValueBool()",
+        "lib/Controller/SettingsController.php:103 setAppValueBool()",
+        "lib/Controller/SettingsController.php:104 setAppValueBool()",
+        "lib/Controller/SettingsController.php:105 setAppValueBool()",
+        "lib/Controller/SettingsController.php:106 setAppValueBool()",
+        "lib/Controller/SettingsController.php:120 setAppValueString()",
+        "lib/Service/MailService.php:84 getAppValueString()",
+        "lib/Service/RegistrationService.php:97 getAppValueBool()",
+        "lib/Service/RegistrationService.php:126 getAppValueBool()",
+        "lib/Service/RegistrationService.php:127 getAppValueBool()",
+        "lib/Service/RegistrationService.php:177 getAppValueString()",
+        "lib/Service/RegistrationService.php:244 getAppValueString()",
+        "lib/Service/RegistrationService.php:275 getAppValueBool()",
+        "lib/Service/RegistrationService.php:276 getAppValueBool()",
+        "lib/Service/RegistrationService.php:281 getAppValueBool()",
+        "lib/Service/RegistrationService.php:284 getAppValueBool()",
+        "lib/Service/RegistrationService.php:310 getAppValueBool()",
+        "lib/Service/RegistrationService.php:317 getAppValueBool()",
+        "lib/Service/RegistrationService.php:330 getAppValueString()",
+        "lib/Service/RegistrationService.php:347 getAppValueBool()",
+        "lib/Service/RegistrationService.php:362 getAppValue()",
+        "lib/Settings/RegistrationSettings.php:34 getAppValueString()",
+        "lib/Settings/RegistrationSettings.php:39 getAppValueBool()",
+        "lib/Settings/RegistrationSettings.php:44 getAppValueString()",
+        "lib/Settings/RegistrationSettings.php:48 getAppValueBool()",
+        "lib/Settings/RegistrationSettings.php:52 getAppValueBool()",
+        "lib/Settings/RegistrationSettings.php:56 getAppValueBool()",
+        "lib/Settings/RegistrationSettings.php:60 getAppValueBool()",
+        "lib/Settings/RegistrationSettings.php:64 getAppValueBool()",
+        "lib/Settings/RegistrationSettings.php:68 getAppValueString()",
+        "lib/Settings/RegistrationSettings.php:72 getAppValueString()",
+        "lib/Settings/RegistrationSettings.php:76 getAppValueBool()",
+        "lib/Settings/RegistrationSettings.php:80 getAppValueBool()",
+        "lib/Settings/RegistrationSettings.php:84 getAppValueBool()",
+        "lib/Settings/RegistrationSettings.php:88 getAppValueBool()",
+        "lib/Settings/RegistrationSettings.php:93 getAppValueString()",
+        "lib/Settings/RegistrationSettings.php:97 getAppValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 60 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/BackgroundJob/ExpireRegistrations.php:41 getAppValueInt()",
+        "  lib/Controller/RegisterController.php:65 getAppValueBool()",
+        "  lib/Controller/RegisterController.php:67 getAppValueBool()",
+        "  lib/Controller/RegisterController.php:84 getAppValueBool()",
+        "  lib/Controller/RegisterController.php:85 getAppValueBool()",
+        "  lib/Controller/RegisterController.php:117 getAppValueBool()",
+        "  lib/Controller/RegisterController.php:216 getAppValueString()",
+        "  lib/Controller/RegisterController.php:221 getAppValueBool()",
+        "  lib/Controller/RegisterController.php:222 getAppValueBool()",
+        "  lib/Controller/RegisterController.php:225 getAppValueBool()",
+        "  lib/Controller/RegisterController.php:226 getAppValueBool()",
+        "  lib/Controller/RegisterController.php:228 getAppValueBool()",
+        "  lib/Controller/RegisterController.php:229 getAppValueBool()",
+        "  lib/Controller/RegisterController.php:256 getAppValueBool()",
+        "  lib/Controller/SettingsController.php:66 setAppValueString()",
+        "  lib/Controller/SettingsController.php:73 setAppValueString()",
+        "  lib/Controller/SettingsController.php:79 setAppValueString()",
+        "  lib/Controller/SettingsController.php:94 setAppValueString()",
+        "  lib/Controller/SettingsController.php:97 setAppValueBool()",
+        "  lib/Controller/SettingsController.php:98 setAppValueBool()",
+        "  lib/Controller/SettingsController.php:99 setAppValueBool()",
+        "  lib/Controller/SettingsController.php:100 setAppValueBool()",
+        "  lib/Controller/SettingsController.php:101 setAppValueBool()",
+        "  lib/Controller/SettingsController.php:102 setAppValueBool()",
+        "  lib/Controller/SettingsController.php:103 setAppValueBool()",
+        "  lib/Controller/SettingsController.php:104 setAppValueBool()",
+        "  lib/Controller/SettingsController.php:105 setAppValueBool()",
+        "  lib/Controller/SettingsController.php:106 setAppValueBool()",
+        "  lib/Controller/SettingsController.php:120 setAppValueString()",
+        "  lib/Service/MailService.php:84 getAppValueString()",
+        "  lib/Service/RegistrationService.php:97 getAppValueBool()",
+        "  lib/Service/RegistrationService.php:126 getAppValueBool()",
+        "  lib/Service/RegistrationService.php:127 getAppValueBool()",
+        "  lib/Service/RegistrationService.php:177 getAppValueString()",
+        "  lib/Service/RegistrationService.php:244 getAppValueString()",
+        "  lib/Service/RegistrationService.php:275 getAppValueBool()",
+        "  lib/Service/RegistrationService.php:276 getAppValueBool()",
+        "  lib/Service/RegistrationService.php:281 getAppValueBool()",
+        "  lib/Service/RegistrationService.php:284 getAppValueBool()",
+        "  lib/Service/RegistrationService.php:310 getAppValueBool()",
+        "  lib/Service/RegistrationService.php:317 getAppValueBool()",
+        "  lib/Service/RegistrationService.php:330 getAppValueString()",
+        "  lib/Service/RegistrationService.php:347 getAppValueBool()",
+        "  lib/Service/RegistrationService.php:362 getAppValue()",
+        "  lib/Settings/RegistrationSettings.php:34 getAppValueString()",
+        "  lib/Settings/RegistrationSettings.php:39 getAppValueBool()",
+        "  lib/Settings/RegistrationSettings.php:44 getAppValueString()",
+        "  lib/Settings/RegistrationSettings.php:48 getAppValueBool()",
+        "  lib/Settings/RegistrationSettings.php:52 getAppValueBool()",
+        "  lib/Settings/RegistrationSettings.php:56 getAppValueBool()",
+        "  lib/Settings/RegistrationSettings.php:60 getAppValueBool()",
+        "  lib/Settings/RegistrationSettings.php:64 getAppValueBool()",
+        "  lib/Settings/RegistrationSettings.php:68 getAppValueString()",
+        "  lib/Settings/RegistrationSettings.php:72 getAppValueString()",
+        "  lib/Settings/RegistrationSettings.php:76 getAppValueBool()",
+        "  lib/Settings/RegistrationSettings.php:80 getAppValueBool()",
+        "  lib/Settings/RegistrationSettings.php:84 getAppValueBool()",
+        "  lib/Settings/RegistrationSettings.php:88 getAppValueBool()",
+        "  lib/Settings/RegistrationSettings.php:93 getAppValueString()",
+        "  lib/Settings/RegistrationSettings.php:97 getAppValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 57
+        }
+      ]
+    }
+  ],
+  "endpoints": 8,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/registration/",
+      "target": "OCA\\Registration\\Controller\\RegisterController::showEmailForm",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/registration/",
+      "target": "OCA\\Registration\\Controller\\RegisterController::submitEmailForm",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/registration/register/{secret}/{token}",
+      "target": "OCA\\Registration\\Controller\\RegisterController::showUserForm",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/registration/register/{secret}/{token}",
+      "target": "OCA\\Registration\\Controller\\RegisterController::submitUserForm",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/registration/settings",
+      "target": "OCA\\Registration\\Controller\\SettingsController::admin",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/registration/verify/{secret}",
+      "target": "OCA\\Registration\\Controller\\RegisterController::showVerificationForm",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/registration/verify/{secret}",
+      "target": "OCA\\Registration\\Controller\\RegisterController::submitVerificationForm",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/capabilities",
+      "target": "OCA\\Registration\\Capabilities",
+      "openapi": [],
+      "kind": "capability"
+    }
+  ]
+}

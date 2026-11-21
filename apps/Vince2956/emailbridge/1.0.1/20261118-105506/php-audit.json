@@ -1,0 +1,607 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\EmailBridge\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "doctrine/dbal 4.2.5, in 3rdparty/ of Nextcloud 30 to 32",
+        "doctrine/deprecations 1.1.5, in 3rdparty/ of Nextcloud 30 to 32",
+        "psr/cache 3.0.0, in 3rdparty/ of Nextcloud 30 to 32",
+        "psr/log 2.0.0, in 3rdparty/ of Nextcloud 30 to 32"
+      ],
+      "lines": [
+        "vendor/ ships 4 packages that the server ships itself in a major of Nextcloud 30 to 32. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  doctrine/dbal 4.2.5, in 3rdparty/ of Nextcloud 30 to 32",
+        "  doctrine/deprecations 1.1.5, in 3rdparty/ of Nextcloud 30 to 32",
+        "  psr/cache 3.0.0, in 3rdparty/ of Nextcloud 30 to 32",
+        "  psr/log 2.0.0, in 3rdparty/ of Nextcloud 30 to 32"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/StartupCheck.php:24 OC",
+        "lib/AppInfo/StartupCheck.php:24 OC::$server",
+        "lib/AppInfo/StartupCheck.php:30 OC::$server",
+        "lib/BackgroundJob/EmailSenderJob.php:37 OC",
+        "lib/BackgroundJob/EmailSenderJob.php:37 OC::$server",
+        "lib/BackgroundJob/EmailSenderJob.php:40 OC::$server",
+        "lib/BackgroundJob/EmailSenderJob.php:41 OC::$server",
+        "lib/BackgroundJob/EmailSenderJob.php:42 OC::$server",
+        "lib/BackgroundJob/EmailSenderJob.php:43 OC::$server",
+        "lib/BackgroundJob/EmailSenderJob.php:44 OC::$server",
+        "lib/Controller/UnsubscribeController.php:181 OC",
+        "lib/Controller/UnsubscribeController.php:181 OC::$server",
+        "lib/Controller/UnsubscribeController.php:185 OC::$server",
+        "lib/Service/EmailService.php:113 OC_User"
+      ],
+      "lines": [
+        "14 uses of the private API of the server in 4 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/AppInfo/StartupCheck.php:24 OC",
+        "  lib/AppInfo/StartupCheck.php:24 OC::$server",
+        "  lib/AppInfo/StartupCheck.php:30 OC::$server",
+        "  lib/BackgroundJob/EmailSenderJob.php:37 OC",
+        "  lib/BackgroundJob/EmailSenderJob.php:37 OC::$server",
+        "  lib/BackgroundJob/EmailSenderJob.php:40 OC::$server",
+        "  lib/BackgroundJob/EmailSenderJob.php:41 OC::$server",
+        "  lib/BackgroundJob/EmailSenderJob.php:42 OC::$server",
+        "  lib/BackgroundJob/EmailSenderJob.php:43 OC::$server",
+        "  lib/BackgroundJob/EmailSenderJob.php:44 OC::$server",
+        "  lib/Controller/UnsubscribeController.php:181 OC",
+        "  lib/Controller/UnsubscribeController.php:181 OC::$server",
+        "  lib/Controller/UnsubscribeController.php:185 OC::$server",
+        "  lib/Service/EmailService.php:113 OC_User"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 11
+        }
+      ]
+    },
+    {
+      "id": "route-target-missing",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/emailbridge/expired  emailbridge.form.expired  appinfo/routes.php:2 routes: OCA\\EmailBridge\\Controller\\FormController has no method expired()",
+        "GET /index.php/apps/emailbridge/error  emailbridge.form.error  appinfo/routes.php:2 routes: OCA\\EmailBridge\\Controller\\FormController has no method error()",
+        "POST /index.php/apps/emailbridge/save  emailbridge.page.save  appinfo/routes.php:2 routes: OCA\\EmailBridge\\Controller\\PageController has no method save()"
+      ],
+      "lines": [
+        "3 routes name a controller class or a method that does not exist, or a method that is not public. A request to such a route ends in an error.",
+        "  GET /index.php/apps/emailbridge/expired  emailbridge.form.expired  appinfo/routes.php:2 routes: OCA\\EmailBridge\\Controller\\FormController has no method expired()",
+        "  GET /index.php/apps/emailbridge/error  emailbridge.form.error  appinfo/routes.php:2 routes: OCA\\EmailBridge\\Controller\\FormController has no method error()",
+        "  POST /index.php/apps/emailbridge/save  emailbridge.page.save  appinfo/routes.php:2 routes: OCA\\EmailBridge\\Controller\\PageController has no method save()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/emailbridge/form  emailbridge.form.index  appinfo/routes.php:2 routes",
+        "GET /index.php/apps/emailbridge/form/{id}  emailbridge.form.show  appinfo/routes.php:2 routes",
+        "POST /index.php/apps/emailbridge/form/{id}/submit  emailbridge.form.submit  appinfo/routes.php:2 routes",
+        "POST /index.php/apps/emailbridge/parcours/{id}/saveFile  emailbridge.page.savefile  appinfo/routes.php:2 routes",
+        "POST /index.php/apps/emailbridge/parcours/{parcoursId}/delete  emailbridge.page.deleteparcours  appinfo/routes.php:2 routes",
+        "POST /index.php/apps/emailbridge/parcours/{id}/update-bypass  emailbridge.page.updatebypass  appinfo/routes.php:2 routes",
+        "GET /index.php/apps/emailbridge/message/{parcoursId}  emailbridge.message.getemailmessage  appinfo/routes.php:2 routes",
+        "POST /index.php/apps/emailbridge/message/{parcoursId}  emailbridge.message.saveemailmessage  appinfo/routes.php:2 routes",
+        "GET /index.php/apps/emailbridge/parcours/{parcoursId}/emails/{emailId}/rules  emailbridge.sequence.getemailrules  appinfo/routes.php:2 routes",
+        "POST /index.php/apps/emailbridge/parcours/{parcoursId}/emails/{emailId}/rules/save  emailbridge.sequence.saveemailrules  appinfo/routes.php:2 routes",
+        "POST /index.php/apps/emailbridge/parcours/{parcoursId}/emails/{emailId}/edit  emailbridge.sequence.editemail  appinfo/routes.php:2 routes",
+        "GET /index.php/apps/emailbridge/parcours/{parcoursId}/emails  emailbridge.sequence.getsequence  appinfo/routes.php:2 routes",
+        "POST /index.php/apps/emailbridge/parcours/{parcoursId}/emails/add  emailbridge.sequence.addemail  appinfo/routes.php:2 routes",
+        "DELETE /index.php/apps/emailbridge/email/{id}  emailbridge.sequence.deleteemail  appinfo/routes.php:2 routes",
+        "GET /index.php/apps/emailbridge/parcours/{parcoursId}/inscriptions  emailbridge.sequence.getinscriptions  appinfo/routes.php:2 routes",
+        "GET /index.php/apps/emailbridge/parcours/{parcoursId}/unsubscribe-text  emailbridge.unsubscribe.gettext  appinfo/routes.php:2 routes",
+        "POST /index.php/apps/emailbridge/parcours/{parcoursId}/unsubscribe-text  emailbridge.unsubscribe.savetext  appinfo/routes.php:2 routes",
+        "GET /index.php/apps/emailbridge/unsubscribe  emailbridge.unsubscribe.process  appinfo/routes.php:2 routes",
+        "POST /index.php/apps/emailbridge/inscription/{inscriptionId}/stop-all-sequence  emailbridge.sequence.stopallsequence  appinfo/routes.php:2 routes",
+        "POST /index.php/apps/emailbridge/inscription/{inscriptionId}/stop-single-sequence/{sequenceId}  emailbridge.sequence.stopsinglesequence  appinfo/routes.php:2 routes",
+        "POST /index.php/apps/emailbridge/inscription/{inscriptionId}/redirect-sequence  emailbridge.sequence.redirectinscription  appinfo/routes.php:2 routes",
+        "GET /index.php/apps/emailbridge/parcours/all  emailbridge.sequence.getallparcours  appinfo/routes.php:2 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 22 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/emailbridge/form  emailbridge.form.index  appinfo/routes.php:2 routes",
+        "  GET /index.php/apps/emailbridge/form/{id}  emailbridge.form.show  appinfo/routes.php:2 routes",
+        "  POST /index.php/apps/emailbridge/form/{id}/submit  emailbridge.form.submit  appinfo/routes.php:2 routes",
+        "  POST /index.php/apps/emailbridge/parcours/{id}/saveFile  emailbridge.page.savefile  appinfo/routes.php:2 routes",
+        "  POST /index.php/apps/emailbridge/parcours/{parcoursId}/delete  emailbridge.page.deleteparcours  appinfo/routes.php:2 routes",
+        "  POST /index.php/apps/emailbridge/parcours/{id}/update-bypass  emailbridge.page.updatebypass  appinfo/routes.php:2 routes",
+        "  GET /index.php/apps/emailbridge/message/{parcoursId}  emailbridge.message.getemailmessage  appinfo/routes.php:2 routes",
+        "  POST /index.php/apps/emailbridge/message/{parcoursId}  emailbridge.message.saveemailmessage  appinfo/routes.php:2 routes",
+        "  GET /index.php/apps/emailbridge/parcours/{parcoursId}/emails/{emailId}/rules  emailbridge.sequence.getemailrules  appinfo/routes.php:2 routes",
+        "  POST /index.php/apps/emailbridge/parcours/{parcoursId}/emails/{emailId}/rules/save  emailbridge.sequence.saveemailrules  appinfo/routes.php:2 routes",
+        "  POST /index.php/apps/emailbridge/parcours/{parcoursId}/emails/{emailId}/edit  emailbridge.sequence.editemail  appinfo/routes.php:2 routes",
+        "  GET /index.php/apps/emailbridge/parcours/{parcoursId}/emails  emailbridge.sequence.getsequence  appinfo/routes.php:2 routes",
+        "  POST /index.php/apps/emailbridge/parcours/{parcoursId}/emails/add  emailbridge.sequence.addemail  appinfo/routes.php:2 routes",
+        "  DELETE /index.php/apps/emailbridge/email/{id}  emailbridge.sequence.deleteemail  appinfo/routes.php:2 routes",
+        "  GET /index.php/apps/emailbridge/parcours/{parcoursId}/inscriptions  emailbridge.sequence.getinscriptions  appinfo/routes.php:2 routes",
+        "  GET /index.php/apps/emailbridge/parcours/{parcoursId}/unsubscribe-text  emailbridge.unsubscribe.gettext  appinfo/routes.php:2 routes",
+        "  POST /index.php/apps/emailbridge/parcours/{parcoursId}/unsubscribe-text  emailbridge.unsubscribe.savetext  appinfo/routes.php:2 routes",
+        "  GET /index.php/apps/emailbridge/unsubscribe  emailbridge.unsubscribe.process  appinfo/routes.php:2 routes",
+        "  POST /index.php/apps/emailbridge/inscription/{inscriptionId}/stop-all-sequence  emailbridge.sequence.stopallsequence  appinfo/routes.php:2 routes",
+        "  POST /index.php/apps/emailbridge/inscription/{inscriptionId}/stop-single-sequence/{sequenceId}  emailbridge.sequence.stopsinglesequence  appinfo/routes.php:2 routes",
+        "  POST /index.php/apps/emailbridge/inscription/{inscriptionId}/redirect-sequence  emailbridge.sequence.redirectinscription  appinfo/routes.php:2 routes",
+        "  GET /index.php/apps/emailbridge/parcours/all  emailbridge.sequence.getallparcours  appinfo/routes.php:2 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 19
+        }
+      ]
+    },
+    {
+      "id": "migration-bool-notnull",
+      "level": "warn",
+      "places": [
+        "lib/Migration/Version20251013.php:31 oc_emailbridge_parcours.bypass_file, in Nextcloud 30 to 32"
+      ],
+      "lines": [
+        "1 boolean column is NotNull. Oracle cannot store false in such a column, so the server stops the migration with an exception. A boolean column needs notnull false.",
+        "  Up to Nextcloud 32 the server checks this only where info.xml lists no database, or lists oci among them. From Nextcloud 33 on the server makes the column nullable on Oracle itself.",
+        "  lib/Migration/Version20251013.php:31 oc_emailbridge_parcours.bypass_file, in Nextcloud 30 to 32"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "vimeo/psalm, friendsofphp/php-cs-fixer, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/EmailSenderJob.php:212 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/Controller/FormController.php:349 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/Controller/PageController.php:132 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/Controller/SequenceController.php:112 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/Controller/TrackingController.php:178 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/Service/EmailService.php:130 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead"
+      ],
+      "lines": [
+        "6 uses in 6 files of the public API that is deprecated in Nextcloud 30 to 32. The text of the tag names the replacement where it has one.",
+        "  lib/BackgroundJob/EmailSenderJob.php:212 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/Controller/FormController.php:349 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/Controller/PageController.php:132 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/Controller/SequenceController.php:112 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/Controller/TrackingController.php:178 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/Service/EmailService.php:130 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/confirm_pending.php:10 style= attribute",
+        "templates/confirmed.php:3 style= attribute",
+        "templates/index.php:79 style= attribute",
+        "templates/index.php:83 style= attribute",
+        "templates/index.php:85 style= attribute",
+        "templates/index.php:135 style= attribute",
+        "templates/index.php:148 style= attribute",
+        "templates/index.php:149 style= attribute",
+        "templates/index.php:163 style= attribute",
+        "templates/index.php:165 style= attribute",
+        "templates/index.php:166 style= attribute",
+        "templates/index.php:167 style= attribute",
+        "templates/index.php:168 style= attribute",
+        "templates/index.php:169 style= attribute",
+        "templates/index.php:170 style= attribute",
+        "templates/index.php:179 style= attribute",
+        "templates/unsubscribe.php:7 style= attribute"
+      ],
+      "lines": [
+        "17 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/confirm_pending.php:10 style= attribute",
+        "  templates/confirmed.php:3 style= attribute",
+        "  templates/index.php:79 style= attribute",
+        "  templates/index.php:83 style= attribute",
+        "  templates/index.php:85 style= attribute",
+        "  templates/index.php:135 style= attribute",
+        "  templates/index.php:148 style= attribute",
+        "  templates/index.php:149 style= attribute",
+        "  templates/index.php:163 style= attribute",
+        "  templates/index.php:165 style= attribute",
+        "  templates/index.php:166 style= attribute",
+        "  templates/index.php:167 style= attribute",
+        "  templates/index.php:168 style= attribute",
+        "  templates/index.php:169 style= attribute",
+        "  templates/index.php:170 style= attribute",
+        "  templates/index.php:179 style= attribute",
+        "  templates/unsubscribe.php:7 style= attribute"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 14
+        }
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Controller/PageController.php:207",
+        "lib/Service/SequenceService.php:248"
+      ],
+      "lines": [
+        "2 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Controller/PageController.php:207",
+        "  lib/Service/SequenceService.php:248"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/EmailSenderJob.php OCA\\EmailBridge\\BackgroundJob\\EmailSenderJob"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/EmailSenderJob.php OCA\\EmailBridge\\BackgroundJob\\EmailSenderJob"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/EmailSenderJob.php:75 new DateTime()",
+        "lib/BackgroundJob/EmailSenderJob.php:104 new DateTimeImmutable()",
+        "lib/BackgroundJob/EmailSenderJob.php:139 new DateTimeImmutable()",
+        "lib/BackgroundJob/EmailSenderJob.php:194 new DateTimeImmutable()",
+        "lib/Controller/FormController.php:334 new DateTimeImmutable()",
+        "lib/Controller/MessageController.php:90 new DateTimeImmutable()",
+        "lib/Controller/PageController.php:120 new DateTimeImmutable()",
+        "lib/Controller/SequenceController.php:94 new DateTimeImmutable()",
+        "lib/Controller/SequenceController.php:151 new DateTimeImmutable()",
+        "lib/Controller/TrackingController.php:162 new DateTimeImmutable()",
+        "lib/Controller/UnsubscribeController.php:135 new DateTimeImmutable()",
+        "lib/Controller/UnsubscribeController.php:143 new DateTimeImmutable()",
+        "lib/Service/EmailService.php:188 new DateTimeImmutable()",
+        "lib/Service/EmailService.php:248 new DateTimeImmutable()",
+        "lib/Service/EmailService.php:429 new DateTimeImmutable()",
+        "lib/Service/EmailService.php:802 new DateTimeImmutable()",
+        "lib/Service/SequenceManagementService.php:68 new DateTimeImmutable()",
+        "lib/Service/SequenceManagementService.php:127 new DateTimeImmutable()",
+        "lib/Service/SequenceManagementService.php:259 new DateTimeImmutable()",
+        "lib/Service/SequenceManagementService.php:307 new DateTimeImmutable()",
+        "lib/Service/SequenceService.php:56 new DateTimeImmutable()",
+        "lib/Service/SequenceService.php:271 new DateTimeImmutable()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 22 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/BackgroundJob/EmailSenderJob.php:75 new DateTime()",
+        "  lib/BackgroundJob/EmailSenderJob.php:104 new DateTimeImmutable()",
+        "  lib/BackgroundJob/EmailSenderJob.php:139 new DateTimeImmutable()",
+        "  lib/BackgroundJob/EmailSenderJob.php:194 new DateTimeImmutable()",
+        "  lib/Controller/FormController.php:334 new DateTimeImmutable()",
+        "  lib/Controller/MessageController.php:90 new DateTimeImmutable()",
+        "  lib/Controller/PageController.php:120 new DateTimeImmutable()",
+        "  lib/Controller/SequenceController.php:94 new DateTimeImmutable()",
+        "  lib/Controller/SequenceController.php:151 new DateTimeImmutable()",
+        "  lib/Controller/TrackingController.php:162 new DateTimeImmutable()",
+        "  lib/Controller/UnsubscribeController.php:135 new DateTimeImmutable()",
+        "  lib/Controller/UnsubscribeController.php:143 new DateTimeImmutable()",
+        "  lib/Service/EmailService.php:188 new DateTimeImmutable()",
+        "  lib/Service/EmailService.php:248 new DateTimeImmutable()",
+        "  lib/Service/EmailService.php:429 new DateTimeImmutable()",
+        "  lib/Service/EmailService.php:802 new DateTimeImmutable()",
+        "  lib/Service/SequenceManagementService.php:68 new DateTimeImmutable()",
+        "  lib/Service/SequenceManagementService.php:127 new DateTimeImmutable()",
+        "  lib/Service/SequenceManagementService.php:259 new DateTimeImmutable()",
+        "  lib/Service/SequenceManagementService.php:307 new DateTimeImmutable()",
+        "  lib/Service/SequenceService.php:56 new DateTimeImmutable()",
+        "  lib/Service/SequenceService.php:271 new DateTimeImmutable()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 19
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/emailbridge/api  ocs.emailbridge.api.index  lib/Controller/ApiController.php:26"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 OCS route. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/emailbridge/api  ocs.emailbridge.api.index  lib/Controller/ApiController.php:26"
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/PageController.php:151 OCA\\EmailBridge\\Controller\\PageController::testSubmit()",
+        "lib/Controller/PageController.php:269 OCA\\EmailBridge\\Controller\\PageController::confirm_pending()",
+        "lib/Controller/SequenceController.php:327 OCA\\EmailBridge\\Controller\\SequenceController::redirectSequence()"
+      ],
+      "lines": [
+        "3 public methods of controllers are reached by no route.",
+        "  lib/Controller/PageController.php:151 OCA\\EmailBridge\\Controller\\PageController::testSubmit()",
+        "  lib/Controller/PageController.php:269 OCA\\EmailBridge\\Controller\\PageController::confirm_pending()",
+        "  lib/Controller/SequenceController.php:327 OCA\\EmailBridge\\Controller\\SequenceController::redirectSequence()"
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version20251013.php:28 the type of oc_emailbridge_parcours.created_at, which is no constant",
+        "lib/Migration/Version20251013.php:29 the type of oc_emailbridge_parcours.updated_at, which is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version20251013.php:28 the type of oc_emailbridge_parcours.created_at, which is no constant",
+        "  lib/Migration/Version20251013.php:29 the type of oc_emailbridge_parcours.updated_at, which is no constant"
+      ]
+    }
+  ],
+  "endpoints": 33,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/emailbridge/",
+      "target": "OCA\\EmailBridge\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/emailbridge/already-confirmed",
+      "target": "OCA\\EmailBridge\\Controller\\FormController::alreadyConfirm",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/emailbridge/already-registered",
+      "target": "OCA\\EmailBridge\\Controller\\FormController::alreadyRegistered",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/emailbridge/confirm/{token}",
+      "target": "OCA\\EmailBridge\\Controller\\FormController::confirm",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/emailbridge/createParcours",
+      "target": "OCA\\EmailBridge\\Controller\\PageController::createParcours",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/emailbridge/email/{id}",
+      "target": "OCA\\EmailBridge\\Controller\\SequenceController::deleteEmail",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/emailbridge/error",
+      "target": "OCA\\EmailBridge\\Controller\\FormController::error",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/emailbridge/expired",
+      "target": "OCA\\EmailBridge\\Controller\\FormController::expired",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/emailbridge/form",
+      "target": "OCA\\EmailBridge\\Controller\\FormController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/emailbridge/form/{id}",
+      "target": "OCA\\EmailBridge\\Controller\\FormController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/emailbridge/form/{id}/submit",
+      "target": "OCA\\EmailBridge\\Controller\\FormController::submit",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/emailbridge/inscription/{inscriptionId}/redirect-sequence",
+      "target": "OCA\\EmailBridge\\Controller\\SequenceController::redirectInscription",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/emailbridge/inscription/{inscriptionId}/stop-all-sequence",
+      "target": "OCA\\EmailBridge\\Controller\\SequenceController::stopAllSequence",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/emailbridge/inscription/{inscriptionId}/stop-single-sequence/{sequenceId}",
+      "target": "OCA\\EmailBridge\\Controller\\SequenceController::stopSingleSequence",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/emailbridge/message/{parcoursId}",
+      "target": "OCA\\EmailBridge\\Controller\\MessageController::getEmailMessage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/emailbridge/message/{parcoursId}",
+      "target": "OCA\\EmailBridge\\Controller\\MessageController::saveEmailMessage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/emailbridge/parcours/{id}/saveFile",
+      "target": "OCA\\EmailBridge\\Controller\\PageController::saveFile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/emailbridge/parcours/{id}/update-bypass",
+      "target": "OCA\\EmailBridge\\Controller\\PageController::updateBypass",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/emailbridge/parcours/{parcoursId}/delete",
+      "target": "OCA\\EmailBridge\\Controller\\PageController::deleteParcours",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/emailbridge/parcours/{parcoursId}/emails",
+      "target": "OCA\\EmailBridge\\Controller\\SequenceController::getSequence",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/emailbridge/parcours/{parcoursId}/emails/{emailId}/edit",
+      "target": "OCA\\EmailBridge\\Controller\\SequenceController::editEmail",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/emailbridge/parcours/{parcoursId}/emails/{emailId}/rules",
+      "target": "OCA\\EmailBridge\\Controller\\SequenceController::getEmailRules",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/emailbridge/parcours/{parcoursId}/emails/{emailId}/rules/save",
+      "target": "OCA\\EmailBridge\\Controller\\SequenceController::saveEmailRules",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/emailbridge/parcours/{parcoursId}/emails/add",
+      "target": "OCA\\EmailBridge\\Controller\\SequenceController::addEmail",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/emailbridge/parcours/{parcoursId}/inscriptions",
+      "target": "OCA\\EmailBridge\\Controller\\SequenceController::getInscriptions",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/emailbridge/parcours/{parcoursId}/unsubscribe-text",
+      "target": "OCA\\EmailBridge\\Controller\\UnsubscribeController::getText",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/emailbridge/parcours/{parcoursId}/unsubscribe-text",
+      "target": "OCA\\EmailBridge\\Controller\\UnsubscribeController::saveText",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/emailbridge/parcours/all",
+      "target": "OCA\\EmailBridge\\Controller\\SequenceController::getAllParcours",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/emailbridge/save",
+      "target": "OCA\\EmailBridge\\Controller\\PageController::save",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/emailbridge/tracking/click",
+      "target": "OCA\\EmailBridge\\Controller\\TrackingController::click",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/emailbridge/tracking/open",
+      "target": "OCA\\EmailBridge\\Controller\\TrackingController::trackOpen",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/emailbridge/unsubscribe",
+      "target": "OCA\\EmailBridge\\Controller\\UnsubscribeController::process",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/emailbridge/api",
+      "target": "OCA\\EmailBridge\\Controller\\ApiController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

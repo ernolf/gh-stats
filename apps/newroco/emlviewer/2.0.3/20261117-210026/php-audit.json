@@ -1,0 +1,185 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\EmlViewer\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "pimple/pimple v3.6.2, in 3rdparty/ of Nextcloud 28 to 32",
+        "psr/container 2.0.2, in 3rdparty/ of Nextcloud 28 to 32",
+        "psr/http-message 2.0, in 3rdparty/ of Nextcloud 28 to 32",
+        "symfony/polyfill-mbstring v1.35.0, in 3rdparty/ of Nextcloud 28 to 31"
+      ],
+      "lines": [
+        "vendor/ ships 4 packages that the server ships itself in a major of Nextcloud 28 to 32. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  pimple/pimple v3.6.2, in 3rdparty/ of Nextcloud 28 to 32",
+        "  psr/container 2.0.2, in 3rdparty/ of Nextcloud 28 to 32",
+        "  psr/http-message 2.0, in 3rdparty/ of Nextcloud 28 to 32",
+        "  symfony/polyfill-mbstring v1.35.0, in 3rdparty/ of Nextcloud 28 to 31"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/PageController.php:234 OC",
+        "lib/Controller/PageController.php:234 OC::$server"
+      ],
+      "lines": [
+        "2 uses of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/PageController.php:234 OC",
+        "  lib/Controller/PageController.php:234 OC::$server"
+      ]
+    },
+    {
+      "id": "ocp-removed-soon",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:71 OCP\\AppFramework\\Http\\EmptyContentSecurityPolicy::addAllowedChildSrcDomain(): deprecated since Nextcloud 15, Nextcloud 33 is the last major to have it; use addAllowedWorkerSrcDomains or addAllowedFrameDomain",
+        "lib/AppInfo/Application.php:72 OCP\\AppFramework\\Http\\EmptyContentSecurityPolicy::addAllowedChildSrcDomain(): deprecated since Nextcloud 15, Nextcloud 33 is the last major to have it; use addAllowedWorkerSrcDomains or addAllowedFrameDomain"
+      ],
+      "lines": [
+        "2 uses in 1 file of the public API that is deprecated and that Nextcloud 36 no longer has: the app fails on the first major without it, once it declares that one.",
+        "  lib/AppInfo/Application.php:71 OCP\\AppFramework\\Http\\EmptyContentSecurityPolicy::addAllowedChildSrcDomain(): deprecated since Nextcloud 15, Nextcloud 33 is the last major to have it; use addAllowedWorkerSrcDomains or addAllowedFrameDomain",
+        "  lib/AppInfo/Application.php:72 OCP\\AppFramework\\Http\\EmptyContentSecurityPolicy::addAllowedChildSrcDomain(): deprecated since Nextcloud 15, Nextcloud 33 is the last major to have it; use addAllowedWorkerSrcDomains or addAllowedFrameDomain"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:55 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:55 injectFn()"
+      ]
+    },
+    {
+      "id": "route-target-missing",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/emlviewer/  emlviewer.page.index  appinfo/routes.php:3 routes: OCA\\EmlViewer\\Controller\\PageController has no method index()"
+      ],
+      "lines": [
+        "1 route names a controller class or a method that does not exist, or a method that is not public. A request to such a route ends in an error.",
+        "  GET /index.php/apps/emlviewer/  emlviewer.page.index  appinfo/routes.php:3 routes: OCA\\EmlViewer\\Controller\\PageController has no method index()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/emlviewer/pdf  emlviewer.page.pdfprint  appinfo/routes.php:3 routes",
+        "GET /index.php/apps/emlviewer/att  emlviewer.page.attachment  appinfo/routes.php:3 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 1 file of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/emlviewer/pdf  emlviewer.page.pdfprint  appinfo/routes.php:3 routes",
+        "  GET /index.php/apps/emlviewer/att  emlviewer.page.attachment  appinfo/routes.php:3 routes"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:55 OCP\\Security\\IContentSecurityPolicyManager: deprecated since Nextcloud 17; listen to the AddContentSecurityPolicyEvent to add a policy",
+        "lib/AppInfo/Application.php:76 OCP\\Security\\IContentSecurityPolicyManager::addDefaultPolicy(): deprecated since Nextcloud 17; listen to the AddContentSecurityPolicyEvent to add a policy",
+        "lib/Controller/PageController.php:215 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ],
+      "lines": [
+        "3 uses in 2 files of the public API that is deprecated in Nextcloud 28 to 32. The text of the tag names the replacement where it has one.",
+        "  lib/AppInfo/Application.php:55 OCP\\Security\\IContentSecurityPolicyManager: deprecated since Nextcloud 17; listen to the AddContentSecurityPolicyEvent to add a policy",
+        "  lib/AppInfo/Application.php:76 OCP\\Security\\IContentSecurityPolicyManager::addDefaultPolicy(): deprecated since Nextcloud 17; listen to the AddContentSecurityPolicyEvent to add a policy",
+        "  lib/Controller/PageController.php:215 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/email_headers.php:1 <style> with content",
+        "templates/email_headers.php:17 style= attribute",
+        "templates/email_headers.php:18 style= attribute",
+        "templates/email_headers.php:30 style= attribute",
+        "templates/emlcontent.php:21 style= attribute",
+        "templates/emlcontent.php:24 style= attribute",
+        "templates/emlcontent.php:27 style= attribute",
+        "templates/emlcontent.php:36 style= attribute"
+      ],
+      "lines": [
+        "8 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/email_headers.php:1 <style> with content",
+        "  templates/email_headers.php:17 style= attribute",
+        "  templates/email_headers.php:18 style= attribute",
+        "  templates/email_headers.php:30 style= attribute",
+        "  templates/emlcontent.php:21 style= attribute",
+        "  templates/emlcontent.php:24 style= attribute",
+        "  templates/emlcontent.php:27 style= attribute",
+        "  templates/emlcontent.php:36 style= attribute"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/PageController.php:73 OCA\\EmlViewer\\Controller\\PageController::getMessage()"
+      ],
+      "lines": [
+        "1 public method of a controller is reached by no route.",
+        "  lib/Controller/PageController.php:73 OCA\\EmlViewer\\Controller\\PageController::getMessage()"
+      ]
+    }
+  ],
+  "endpoints": 4,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/emlviewer/",
+      "target": "OCA\\EmlViewer\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/emlviewer/att",
+      "target": "OCA\\EmlViewer\\Controller\\PageController::attachment",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/emlviewer/emlparse",
+      "target": "OCA\\EmlViewer\\Controller\\PageController::emlPrint",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/emlviewer/pdf",
+      "target": "OCA\\EmlViewer\\Controller\\PageController::pdfPrint",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

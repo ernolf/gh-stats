@@ -1,0 +1,58 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\FirstRunWizard\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Notification/AppHint.php:50 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 1 place. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Notification/AppHint.php:50 new DateTime()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Listener/BeforeTemplateRenderedListener.php:57 getAppValueBool()",
+        "lib/Listener/UserLoggedInListener.php:44 getAppValueBool()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 2 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Listener/BeforeTemplateRenderedListener.php:57 getAppValueBool()",
+        "  lib/Listener/UserLoggedInListener.php:44 getAppValueBool()"
+      ]
+    }
+  ],
+  "endpoints": 1,
+  "endpointList": [
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/firstrunwizard/wizard",
+      "target": "OCA\\FirstRunWizard\\Controller\\WizardController::disable",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

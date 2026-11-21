@@ -1,0 +1,341 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\MusicStats\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/musicstats/s/{token}  musicstats.sharepublic.page  lib/Controller/SharePublicController.php:69",
+        "GET /index.php/apps/musicstats/s/{token}/image/{kind}/{id}  musicstats.sharepublic.image  lib/Controller/SharePublicController.php:85"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 2 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/musicstats/s/{token}  musicstats.sharepublic.page  lib/Controller/SharePublicController.php:69",
+        "  GET /index.php/apps/musicstats/s/{token}/image/{kind}/{id}  musicstats.sharepublic.image  lib/Controller/SharePublicController.php:85"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/SnapshotJob.php:43 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Db/MusicRepository.php:42 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Service/Periode.php:27 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "lines": [
+        "3 uses in 3 files of the public API that is deprecated in Nextcloud 34 to 36. The text of the tag names the replacement where it has one.",
+        "  lib/BackgroundJob/SnapshotJob.php:43 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Db/MusicRepository.php:42 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Service/Periode.php:27 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/share.php:112 style= attribute",
+        "templates/share.php:113 style= attribute"
+      ],
+      "lines": [
+        "2 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/share.php:112 style= attribute",
+        "  templates/share.php:113 style= attribute"
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Service/SnapshotService.php:64"
+      ],
+      "lines": [
+        "1 transaction is opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Service/SnapshotService.php:64"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/StatsService.php:460 time()",
+        "lib/Service/StatsService.php:461 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 2 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/StatsService.php:460 time()",
+        "  lib/Service/StatsService.php:461 time()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/SnapshotJob.php:43 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 1 place and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/BackgroundJob/SnapshotJob.php:43 getAppValue()"
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/musicstats/api/v1/library  ocs.musicstats.library.overview  lib/Controller/LibraryController.php:30",
+        "GET /ocs/v2.php/apps/musicstats/api/v1/library/never-played  ocs.musicstats.library.neverplayed  lib/Controller/LibraryController.php:37",
+        "GET /ocs/v2.php/apps/musicstats/api/v1/library/missing/{kind}  ocs.musicstats.library.missingtags  lib/Controller/LibraryController.php:49",
+        "GET /ocs/v2.php/apps/musicstats/api/v1/library/artists/{artistId}/tracks  ocs.musicstats.library.artisttracks  lib/Controller/LibraryController.php:57",
+        "GET /ocs/v2.php/apps/musicstats/api/v1/library/albums/{albumId}/tracks  ocs.musicstats.library.albumtracks  lib/Controller/LibraryController.php:64",
+        "GET /ocs/v2.php/apps/musicstats/api/v1/settings  ocs.musicstats.settings.get  lib/Controller/SettingsController.php:29",
+        "PUT /ocs/v2.php/apps/musicstats/api/v1/settings  ocs.musicstats.settings.update  lib/Controller/SettingsController.php:36",
+        "DELETE /ocs/v2.php/apps/musicstats/api/v1/history  ocs.musicstats.settings.deletehistory  lib/Controller/SettingsController.php:43",
+        "GET /ocs/v2.php/apps/musicstats/api/v1/shares  ocs.musicstats.share.index  lib/Controller/ShareController.php:31",
+        "POST /ocs/v2.php/apps/musicstats/api/v1/shares  ocs.musicstats.share.create  lib/Controller/ShareController.php:41",
+        "DELETE /ocs/v2.php/apps/musicstats/api/v1/shares/{id}  ocs.musicstats.share.destroy  lib/Controller/ShareController.php:48",
+        "GET /ocs/v2.php/apps/musicstats/api/v1/dashboard  ocs.musicstats.stats.dashboard  lib/Controller/StatsController.php:34",
+        "GET /ocs/v2.php/apps/musicstats/api/v1/summary  ocs.musicstats.stats.summary  lib/Controller/StatsController.php:44",
+        "GET /ocs/v2.php/apps/musicstats/api/v1/top/{kind}  ocs.musicstats.stats.top  lib/Controller/StatsController.php:54",
+        "GET /ocs/v2.php/apps/musicstats/api/v1/timeline  ocs.musicstats.stats.timeline  lib/Controller/StatsController.php:64",
+        "GET /ocs/v2.php/apps/musicstats/api/v1/breakdown/{dimension}  ocs.musicstats.stats.breakdown  lib/Controller/StatsController.php:74",
+        "GET /ocs/v2.php/apps/musicstats/api/v1/habits  ocs.musicstats.stats.habits  lib/Controller/StatsController.php:84",
+        "GET /ocs/v2.php/apps/musicstats/api/v1/recap/{year}  ocs.musicstats.stats.recap  lib/Controller/StatsController.php:94"
+      ],
+      "lines": [
+        "Nothing in the app calls 18 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/musicstats/api/v1/library  ocs.musicstats.library.overview  lib/Controller/LibraryController.php:30",
+        "  GET /ocs/v2.php/apps/musicstats/api/v1/library/never-played  ocs.musicstats.library.neverplayed  lib/Controller/LibraryController.php:37",
+        "  GET /ocs/v2.php/apps/musicstats/api/v1/library/missing/{kind}  ocs.musicstats.library.missingtags  lib/Controller/LibraryController.php:49",
+        "  GET /ocs/v2.php/apps/musicstats/api/v1/library/artists/{artistId}/tracks  ocs.musicstats.library.artisttracks  lib/Controller/LibraryController.php:57",
+        "  GET /ocs/v2.php/apps/musicstats/api/v1/library/albums/{albumId}/tracks  ocs.musicstats.library.albumtracks  lib/Controller/LibraryController.php:64",
+        "  GET /ocs/v2.php/apps/musicstats/api/v1/settings  ocs.musicstats.settings.get  lib/Controller/SettingsController.php:29",
+        "  PUT /ocs/v2.php/apps/musicstats/api/v1/settings  ocs.musicstats.settings.update  lib/Controller/SettingsController.php:36",
+        "  DELETE /ocs/v2.php/apps/musicstats/api/v1/history  ocs.musicstats.settings.deletehistory  lib/Controller/SettingsController.php:43",
+        "  GET /ocs/v2.php/apps/musicstats/api/v1/shares  ocs.musicstats.share.index  lib/Controller/ShareController.php:31",
+        "  POST /ocs/v2.php/apps/musicstats/api/v1/shares  ocs.musicstats.share.create  lib/Controller/ShareController.php:41",
+        "  DELETE /ocs/v2.php/apps/musicstats/api/v1/shares/{id}  ocs.musicstats.share.destroy  lib/Controller/ShareController.php:48",
+        "  GET /ocs/v2.php/apps/musicstats/api/v1/dashboard  ocs.musicstats.stats.dashboard  lib/Controller/StatsController.php:34",
+        "  GET /ocs/v2.php/apps/musicstats/api/v1/summary  ocs.musicstats.stats.summary  lib/Controller/StatsController.php:44",
+        "  GET /ocs/v2.php/apps/musicstats/api/v1/top/{kind}  ocs.musicstats.stats.top  lib/Controller/StatsController.php:54",
+        "  GET /ocs/v2.php/apps/musicstats/api/v1/timeline  ocs.musicstats.stats.timeline  lib/Controller/StatsController.php:64",
+        "  GET /ocs/v2.php/apps/musicstats/api/v1/breakdown/{dimension}  ocs.musicstats.stats.breakdown  lib/Controller/StatsController.php:74",
+        "  GET /ocs/v2.php/apps/musicstats/api/v1/habits  ocs.musicstats.stats.habits  lib/Controller/StatsController.php:84",
+        "  GET /ocs/v2.php/apps/musicstats/api/v1/recap/{year}  ocs.musicstats.stats.recap  lib/Controller/StatsController.php:94"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 15
+        }
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 18 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 22,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/musicstats/",
+      "target": "OCA\\MusicStats\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/musicstats/export.csv",
+      "target": "OCA\\MusicStats\\Controller\\PageController::export",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/musicstats/s/{token}",
+      "target": "OCA\\MusicStats\\Controller\\SharePublicController::page",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/musicstats/s/{token}/image/{kind}/{id}",
+      "target": "OCA\\MusicStats\\Controller\\SharePublicController::image",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/musicstats/api/v1/breakdown/{dimension}",
+      "target": "OCA\\MusicStats\\Controller\\StatsController::breakdown",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/musicstats/api/v1/dashboard",
+      "target": "OCA\\MusicStats\\Controller\\StatsController::dashboard",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/musicstats/api/v1/habits",
+      "target": "OCA\\MusicStats\\Controller\\StatsController::habits",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/musicstats/api/v1/history",
+      "target": "OCA\\MusicStats\\Controller\\SettingsController::deleteHistory",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/musicstats/api/v1/library",
+      "target": "OCA\\MusicStats\\Controller\\LibraryController::overview",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/musicstats/api/v1/library/albums/{albumId}/tracks",
+      "target": "OCA\\MusicStats\\Controller\\LibraryController::albumTracks",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/musicstats/api/v1/library/artists/{artistId}/tracks",
+      "target": "OCA\\MusicStats\\Controller\\LibraryController::artistTracks",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/musicstats/api/v1/library/missing/{kind}",
+      "target": "OCA\\MusicStats\\Controller\\LibraryController::missingTags",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/musicstats/api/v1/library/never-played",
+      "target": "OCA\\MusicStats\\Controller\\LibraryController::neverPlayed",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/musicstats/api/v1/recap/{year}",
+      "target": "OCA\\MusicStats\\Controller\\StatsController::recap",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/musicstats/api/v1/settings",
+      "target": "OCA\\MusicStats\\Controller\\SettingsController::get",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/musicstats/api/v1/settings",
+      "target": "OCA\\MusicStats\\Controller\\SettingsController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/musicstats/api/v1/shares",
+      "target": "OCA\\MusicStats\\Controller\\ShareController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/musicstats/api/v1/shares",
+      "target": "OCA\\MusicStats\\Controller\\ShareController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/musicstats/api/v1/shares/{id}",
+      "target": "OCA\\MusicStats\\Controller\\ShareController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/musicstats/api/v1/summary",
+      "target": "OCA\\MusicStats\\Controller\\StatsController::summary",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/musicstats/api/v1/timeline",
+      "target": "OCA\\MusicStats\\Controller\\StatsController::timeline",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/musicstats/api/v1/top/{kind}",
+      "target": "OCA\\MusicStats\\Controller\\StatsController::top",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

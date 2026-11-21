@@ -1,0 +1,918 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Shortlinks\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "display-name-lookup",
+      "level": "warn",
+      "places": [
+        "lib/Service/LinkPageService.php:536"
+      ],
+      "lines": [
+        "1 place loads a user with IUserManager::get() only to ask for the display name. IUserManager::getDisplayName(), there since Nextcloud 25, answers from a cache and loads no user.",
+        "  lib/Service/LinkPageService.php:536"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "POST /index.php/apps/shortlinks/public/v1/shorten  shortlinks.public_creation.shorten  appinfo/routes.php:5 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 route outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 50 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  POST /index.php/apps/shortlinks/public/v1/shorten  shortlinks.public_creation.shorten  appinfo/routes.php:5 routes"
+      ]
+    },
+    {
+      "id": "openapi-drift",
+      "level": "warn",
+      "places": [
+        "GET /ocs/v2.php/apps/shortlinks/api/v1/links/{id}/clicks/export  OCA\\Shortlinks\\Controller\\StatsApiController::exportClicks(): not in openapi.json",
+        "GET /ocs/v2.php/apps/shortlinks/api/v1/export/backup  OCA\\Shortlinks\\Controller\\ToolsApiController::exportBackup(): not in openapi.json",
+        "POST /ocs/v2.php/apps/shortlinks/api/v1/tools/metadata  OCA\\Shortlinks\\Controller\\ToolsApiController::metadata(): not in openapi.json",
+        "POST /ocs/v2.php/apps/shortlinks/api/v1/suggestions  OCA\\Shortlinks\\Controller\\SuggestionApiController::create(): not in openapi.json",
+        "GET /ocs/v2.php/apps/shortlinks/api/v1/pages  OCA\\Shortlinks\\Controller\\LinkPagesApiController::index(): not in openapi.json",
+        "GET /ocs/v2.php/apps/shortlinks/api/v1/pages/contacts  OCA\\Shortlinks\\Controller\\LinkPagesApiController::contacts(): not in openapi.json",
+        "GET /ocs/v2.php/apps/shortlinks/api/v1/pages/{id}  OCA\\Shortlinks\\Controller\\LinkPagesApiController::show(): not in openapi.json",
+        "POST /ocs/v2.php/apps/shortlinks/api/v1/pages  OCA\\Shortlinks\\Controller\\LinkPagesApiController::create(): not in openapi.json",
+        "PATCH /ocs/v2.php/apps/shortlinks/api/v1/pages/{id}  OCA\\Shortlinks\\Controller\\LinkPagesApiController::update(): not in openapi.json",
+        "GET /ocs/v2.php/apps/shortlinks/api/v1/pages/{id}/versions  OCA\\Shortlinks\\Controller\\LinkPagesApiController::versions(): not in openapi.json",
+        "GET /ocs/v2.php/apps/shortlinks/api/v1/pages/{id}/versions/{versionNumber}  OCA\\Shortlinks\\Controller\\LinkPagesApiController::version(): not in openapi.json",
+        "POST /ocs/v2.php/apps/shortlinks/api/v1/pages/{id}/versions/{versionNumber}/restore  OCA\\Shortlinks\\Controller\\LinkPagesApiController::restoreVersion(): not in openapi.json",
+        "DELETE /ocs/v2.php/apps/shortlinks/api/v1/pages/{id}  OCA\\Shortlinks\\Controller\\LinkPagesApiController::destroy(): not in openapi.json",
+        "POST /ocs/v2.php/apps/shortlinks/api/v1/pages/{id}/restore  OCA\\Shortlinks\\Controller\\LinkPagesApiController::restore(): not in openapi.json"
+      ],
+      "lines": [
+        "The OpenAPI specification and the routes differ in 14 operations. A client generated from the specification then calls what is not there, or lacks what is. This holds the routes against the specification and does not generate it again.",
+        "  GET /ocs/v2.php/apps/shortlinks/api/v1/links/{id}/clicks/export  OCA\\Shortlinks\\Controller\\StatsApiController::exportClicks(): not in openapi.json",
+        "  GET /ocs/v2.php/apps/shortlinks/api/v1/export/backup  OCA\\Shortlinks\\Controller\\ToolsApiController::exportBackup(): not in openapi.json",
+        "  POST /ocs/v2.php/apps/shortlinks/api/v1/tools/metadata  OCA\\Shortlinks\\Controller\\ToolsApiController::metadata(): not in openapi.json",
+        "  POST /ocs/v2.php/apps/shortlinks/api/v1/suggestions  OCA\\Shortlinks\\Controller\\SuggestionApiController::create(): not in openapi.json",
+        "  GET /ocs/v2.php/apps/shortlinks/api/v1/pages  OCA\\Shortlinks\\Controller\\LinkPagesApiController::index(): not in openapi.json",
+        "  GET /ocs/v2.php/apps/shortlinks/api/v1/pages/contacts  OCA\\Shortlinks\\Controller\\LinkPagesApiController::contacts(): not in openapi.json",
+        "  GET /ocs/v2.php/apps/shortlinks/api/v1/pages/{id}  OCA\\Shortlinks\\Controller\\LinkPagesApiController::show(): not in openapi.json",
+        "  POST /ocs/v2.php/apps/shortlinks/api/v1/pages  OCA\\Shortlinks\\Controller\\LinkPagesApiController::create(): not in openapi.json",
+        "  PATCH /ocs/v2.php/apps/shortlinks/api/v1/pages/{id}  OCA\\Shortlinks\\Controller\\LinkPagesApiController::update(): not in openapi.json",
+        "  GET /ocs/v2.php/apps/shortlinks/api/v1/pages/{id}/versions  OCA\\Shortlinks\\Controller\\LinkPagesApiController::versions(): not in openapi.json",
+        "  GET /ocs/v2.php/apps/shortlinks/api/v1/pages/{id}/versions/{versionNumber}  OCA\\Shortlinks\\Controller\\LinkPagesApiController::version(): not in openapi.json",
+        "  POST /ocs/v2.php/apps/shortlinks/api/v1/pages/{id}/versions/{versionNumber}/restore  OCA\\Shortlinks\\Controller\\LinkPagesApiController::restoreVersion(): not in openapi.json",
+        "  DELETE /ocs/v2.php/apps/shortlinks/api/v1/pages/{id}  OCA\\Shortlinks\\Controller\\LinkPagesApiController::destroy(): not in openapi.json",
+        "  POST /ocs/v2.php/apps/shortlinks/api/v1/pages/{id}/restore  OCA\\Shortlinks\\Controller\\LinkPagesApiController::restore(): not in openapi.json"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 11
+        }
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/PublicPagesController.php:72 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated in Nextcloud 34 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/PublicPagesController.php:72 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/link-page.php:85 style= attribute",
+        "templates/link-page.php:95 style= attribute",
+        "templates/link-page.php:99 style= attribute",
+        "templates/link-page.php:120 style= attribute",
+        "templates/link-page.php:130 style= attribute",
+        "templates/link-page.php:141 style= attribute"
+      ],
+      "lines": [
+        "6 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/link-page.php:85 style= attribute",
+        "  templates/link-page.php:95 style= attribute",
+        "  templates/link-page.php:99 style= attribute",
+        "  templates/link-page.php:120 style= attribute",
+        "  templates/link-page.php:130 style= attribute",
+        "  templates/link-page.php:141 style= attribute"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Db/ShortLinkMapper.php:300",
+        "lib/Db/StatsMapper.php:403",
+        "lib/Provider/Alias/ConfigurableAliasGenerator.php:41",
+        "lib/Service/DemoDataService.php:44",
+        "lib/Service/FolderService.php:108",
+        "lib/Service/FolderService.php:177",
+        "lib/Service/LinkService.php:135",
+        "lib/Service/LinkService.php:216",
+        "lib/Service/LinkService.php:268",
+        "lib/Service/LinkService.php:280",
+        "lib/Service/LinkService.php:298",
+        "lib/Service/OwnerTransferService.php:25",
+        "lib/Service/TagService.php:83",
+        "lib/Service/TagService.php:99"
+      ],
+      "lines": [
+        "14 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Db/ShortLinkMapper.php:300",
+        "  lib/Db/StatsMapper.php:403",
+        "  lib/Provider/Alias/ConfigurableAliasGenerator.php:41",
+        "  lib/Service/DemoDataService.php:44",
+        "  lib/Service/FolderService.php:108",
+        "  lib/Service/FolderService.php:177",
+        "  lib/Service/LinkService.php:135",
+        "  lib/Service/LinkService.php:216",
+        "  lib/Service/LinkService.php:268",
+        "  lib/Service/LinkService.php:280",
+        "  lib/Service/LinkService.php:298",
+        "  lib/Service/OwnerTransferService.php:25",
+        "  lib/Service/TagService.php:83",
+        "  lib/Service/TagService.php:99"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 11
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/StatsService.php:132 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 1 place. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/StatsService.php:132 time()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/SettingsService.php:45 getValueBool()",
+        "lib/Service/SettingsService.php:49 getValueInt()",
+        "lib/Service/SettingsService.php:53 getValueString()",
+        "lib/Service/SettingsService.php:58 getValueArray()",
+        "lib/Service/SettingsService.php:233 setValueBool()",
+        "lib/Service/SettingsService.php:235 setValueInt()",
+        "lib/Service/SettingsService.php:237 setValueArray()",
+        "lib/Service/SettingsService.php:239 setValueString()",
+        "lib/Service/SettingsService.php:350 getValueString()",
+        "lib/Service/SettingsService.php:353 setValueString()",
+        "lib/Service/SettingsService.php:354 setValueInt()",
+        "lib/Service/SettingsService.php:360 setValueString()",
+        "lib/Service/SettingsService.php:361 setValueInt()",
+        "lib/Service/UserSettingsService.php:39 getUserValue()",
+        "lib/Service/UserSettingsService.php:120 setUserValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 15 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/SettingsService.php:45 getValueBool()",
+        "  lib/Service/SettingsService.php:49 getValueInt()",
+        "  lib/Service/SettingsService.php:53 getValueString()",
+        "  lib/Service/SettingsService.php:58 getValueArray()",
+        "  lib/Service/SettingsService.php:233 setValueBool()",
+        "  lib/Service/SettingsService.php:235 setValueInt()",
+        "  lib/Service/SettingsService.php:237 setValueArray()",
+        "  lib/Service/SettingsService.php:239 setValueString()",
+        "  lib/Service/SettingsService.php:350 getValueString()",
+        "  lib/Service/SettingsService.php:353 setValueString()",
+        "  lib/Service/SettingsService.php:354 setValueInt()",
+        "  lib/Service/SettingsService.php:360 setValueString()",
+        "  lib/Service/SettingsService.php:361 setValueInt()",
+        "  lib/Service/UserSettingsService.php:39 getUserValue()",
+        "  lib/Service/UserSettingsService.php:120 setUserValue()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 12
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/shortlinks/api/v1/links  ocs.shortlinks.links_api.index  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/shortlinks/api/v1/links  ocs.shortlinks.links_api.create  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/shortlinks/api/v1/links/{id}/restore  ocs.shortlinks.links_api.restore  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/shortlinks/api/v1/links/{id}/clone  ocs.shortlinks.links_api.clonelink  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/shortlinks/api/v1/links/bulk  ocs.shortlinks.links_api.bulk  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/shortlinks/api/v1/shorten  ocs.shortlinks.links_api.shorten  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/shortlinks/api/v1/aliases/suggest  ocs.shortlinks.links_api.suggestalias  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/shortlinks/api/v1/folders  ocs.shortlinks.folders_api.index  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/shortlinks/api/v1/folders  ocs.shortlinks.folders_api.create  appinfo/routes.php:5 ocs",
+        "PUT /ocs/v2.php/apps/shortlinks/api/v1/folders/order  ocs.shortlinks.folders_api.reorder  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/shortlinks/api/v1/folders/{id}/copy  ocs.shortlinks.folders_api.copy  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/shortlinks/api/v1/tags  ocs.shortlinks.tags_api.index  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/shortlinks/api/v1/tags  ocs.shortlinks.tags_api.create  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/shortlinks/api/v1/tags/{id}/merge  ocs.shortlinks.tags_api.merge  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/shortlinks/api/v1/links/{id}/shares  ocs.shortlinks.shares_api.index  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/shortlinks/api/v1/links/{id}/shares  ocs.shortlinks.shares_api.create  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/shortlinks/api/v1/principals  ocs.shortlinks.principals_api.index  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/shortlinks/api/v1/stats  ocs.shortlinks.stats_api.overview  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/shortlinks/api/v1/links/{id}/stats  ocs.shortlinks.stats_api.link  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/shortlinks/api/v1/links/{id}/stats/export  ocs.shortlinks.stats_api.export  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/shortlinks/api/v1/links/{id}/clicks  ocs.shortlinks.stats_api.clicks  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/shortlinks/api/v1/links/{id}/clicks/export  ocs.shortlinks.stats_api.exportclicks  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/shortlinks/api/v1/export/links  ocs.shortlinks.tools_api.exportlinks  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/shortlinks/api/v1/export/backup  ocs.shortlinks.tools_api.exportbackup  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/shortlinks/api/v1/import/links  ocs.shortlinks.tools_api.importlinks  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/shortlinks/api/v1/tools/bookmarklet  ocs.shortlinks.tools_api.bookmarklet  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/shortlinks/api/v1/tools/title  ocs.shortlinks.tools_api.title  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/shortlinks/api/v1/tools/metadata  ocs.shortlinks.tools_api.metadata  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/shortlinks/api/v1/capabilities  ocs.shortlinks.capabilities_api.index  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/shortlinks/api/v1/user-settings  ocs.shortlinks.user_settings_api.index  appinfo/routes.php:5 ocs",
+        "PUT /ocs/v2.php/apps/shortlinks/api/v1/user-settings  ocs.shortlinks.user_settings_api.update  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/shortlinks/api/v1/suggestions  ocs.shortlinks.suggestion_api.create  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/shortlinks/api/v1/pages  ocs.shortlinks.link_pages_api.index  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/shortlinks/api/v1/pages/contacts  ocs.shortlinks.link_pages_api.contacts  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/shortlinks/api/v1/pages  ocs.shortlinks.link_pages_api.create  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/shortlinks/api/v1/pages/{id}/versions  ocs.shortlinks.link_pages_api.versions  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/shortlinks/api/v1/pages/{id}/versions/{versionNumber}/restore  ocs.shortlinks.link_pages_api.restoreversion  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/shortlinks/api/v1/pages/{id}/restore  ocs.shortlinks.link_pages_api.restore  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/shortlinks/api/v1/links/{id}/activity  ocs.shortlinks.activity_api.index  appinfo/routes.php:5 ocs"
+      ],
+      "lines": [
+        "Nothing in the app calls 39 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/shortlinks/api/v1/links  ocs.shortlinks.links_api.index  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/shortlinks/api/v1/links  ocs.shortlinks.links_api.create  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/shortlinks/api/v1/links/{id}/restore  ocs.shortlinks.links_api.restore  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/shortlinks/api/v1/links/{id}/clone  ocs.shortlinks.links_api.clonelink  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/shortlinks/api/v1/links/bulk  ocs.shortlinks.links_api.bulk  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/shortlinks/api/v1/shorten  ocs.shortlinks.links_api.shorten  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/shortlinks/api/v1/aliases/suggest  ocs.shortlinks.links_api.suggestalias  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/shortlinks/api/v1/folders  ocs.shortlinks.folders_api.index  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/shortlinks/api/v1/folders  ocs.shortlinks.folders_api.create  appinfo/routes.php:5 ocs",
+        "  PUT /ocs/v2.php/apps/shortlinks/api/v1/folders/order  ocs.shortlinks.folders_api.reorder  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/shortlinks/api/v1/folders/{id}/copy  ocs.shortlinks.folders_api.copy  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/shortlinks/api/v1/tags  ocs.shortlinks.tags_api.index  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/shortlinks/api/v1/tags  ocs.shortlinks.tags_api.create  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/shortlinks/api/v1/tags/{id}/merge  ocs.shortlinks.tags_api.merge  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/shortlinks/api/v1/links/{id}/shares  ocs.shortlinks.shares_api.index  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/shortlinks/api/v1/links/{id}/shares  ocs.shortlinks.shares_api.create  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/shortlinks/api/v1/principals  ocs.shortlinks.principals_api.index  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/shortlinks/api/v1/stats  ocs.shortlinks.stats_api.overview  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/shortlinks/api/v1/links/{id}/stats  ocs.shortlinks.stats_api.link  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/shortlinks/api/v1/links/{id}/stats/export  ocs.shortlinks.stats_api.export  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/shortlinks/api/v1/links/{id}/clicks  ocs.shortlinks.stats_api.clicks  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/shortlinks/api/v1/links/{id}/clicks/export  ocs.shortlinks.stats_api.exportclicks  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/shortlinks/api/v1/export/links  ocs.shortlinks.tools_api.exportlinks  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/shortlinks/api/v1/export/backup  ocs.shortlinks.tools_api.exportbackup  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/shortlinks/api/v1/import/links  ocs.shortlinks.tools_api.importlinks  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/shortlinks/api/v1/tools/bookmarklet  ocs.shortlinks.tools_api.bookmarklet  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/shortlinks/api/v1/tools/title  ocs.shortlinks.tools_api.title  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/shortlinks/api/v1/tools/metadata  ocs.shortlinks.tools_api.metadata  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/shortlinks/api/v1/capabilities  ocs.shortlinks.capabilities_api.index  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/shortlinks/api/v1/user-settings  ocs.shortlinks.user_settings_api.index  appinfo/routes.php:5 ocs",
+        "  PUT /ocs/v2.php/apps/shortlinks/api/v1/user-settings  ocs.shortlinks.user_settings_api.update  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/shortlinks/api/v1/suggestions  ocs.shortlinks.suggestion_api.create  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/shortlinks/api/v1/pages  ocs.shortlinks.link_pages_api.index  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/shortlinks/api/v1/pages/contacts  ocs.shortlinks.link_pages_api.contacts  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/shortlinks/api/v1/pages  ocs.shortlinks.link_pages_api.create  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/shortlinks/api/v1/pages/{id}/versions  ocs.shortlinks.link_pages_api.versions  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/shortlinks/api/v1/pages/{id}/versions/{versionNumber}/restore  ocs.shortlinks.link_pages_api.restoreversion  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/shortlinks/api/v1/pages/{id}/restore  ocs.shortlinks.link_pages_api.restore  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/shortlinks/api/v1/links/{id}/activity  ocs.shortlinks.activity_api.index  appinfo/routes.php:5 ocs"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 36
+        }
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version1500Date20260803090000.php:21 a column of shortlinks_links whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version1500Date20260803090000.php:21 a column of shortlinks_links whose name is no constant"
+      ]
+    }
+  ],
+  "endpoints": 70,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shortlinks/",
+      "target": "OCA\\Shortlinks\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shortlinks/media/{id}/{kind}",
+      "target": "OCA\\Shortlinks\\Controller\\LinkMediaController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shortlinks/p/{slug}",
+      "target": "OCA\\Shortlinks\\Controller\\PublicPagesController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/shortlinks/p/{slug}",
+      "target": "OCA\\Shortlinks\\Controller\\PublicPagesController::password",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shortlinks/p/{slug}/files/{index}",
+      "target": "OCA\\Shortlinks\\Controller\\PageFilesController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/shortlinks/public/v1/shorten",
+      "target": "OCA\\Shortlinks\\Controller\\PublicCreationController::shorten",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shortlinks/qr/{id}",
+      "target": "OCA\\Shortlinks\\Controller\\QrController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shortlinks/qr/bulk",
+      "target": "OCA\\Shortlinks\\Controller\\QrController::bulk",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shortlinks/r/{slug}",
+      "target": "OCA\\Shortlinks\\Controller\\RedirectController::follow",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shortlinks/r/{slug}/password",
+      "target": "OCA\\Shortlinks\\Controller\\RedirectController::passwordForm",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/shortlinks/r/{slug}/password",
+      "target": "OCA\\Shortlinks\\Controller\\RedirectController::passwordSubmit",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/shortlinks/settings/admin",
+      "target": "OCA\\Shortlinks\\Controller\\AdminSettingsController::save",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/shortlinks/settings/admin/maintenance/{action}",
+      "target": "OCA\\Shortlinks\\Controller\\AdminSettingsController::maintenance",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/shortlinks/settings/admin/thumbnails/refresh",
+      "target": "OCA\\Shortlinks\\Controller\\AdminSettingsController::refreshThumbnails",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shortlinks/thumbnail/{id}",
+      "target": "OCA\\Shortlinks\\Controller\\ThumbnailController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shortlinks/thumbnail/preview",
+      "target": "OCA\\Shortlinks\\Controller\\ThumbnailController::preview",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/aliases/{slug}",
+      "target": "OCA\\Shortlinks\\Controller\\LinksApiController::aliasAvailable",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/aliases/suggest",
+      "target": "OCA\\Shortlinks\\Controller\\LinksApiController::suggestAlias",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/capabilities",
+      "target": "OCA\\Shortlinks\\Controller\\CapabilitiesApiController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/expand/{slug}",
+      "target": "OCA\\Shortlinks\\Controller\\LinksApiController::expand",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/export/backup",
+      "target": "OCA\\Shortlinks\\Controller\\ToolsApiController::exportBackup",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/export/links",
+      "target": "OCA\\Shortlinks\\Controller\\ToolsApiController::exportLinks",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/folders",
+      "target": "OCA\\Shortlinks\\Controller\\FoldersApiController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/folders",
+      "target": "OCA\\Shortlinks\\Controller\\FoldersApiController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/folders/{id}",
+      "target": "OCA\\Shortlinks\\Controller\\FoldersApiController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/folders/{id}",
+      "target": "OCA\\Shortlinks\\Controller\\FoldersApiController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/folders/{id}/copy",
+      "target": "OCA\\Shortlinks\\Controller\\FoldersApiController::copy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/folders/order",
+      "target": "OCA\\Shortlinks\\Controller\\FoldersApiController::reorder",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/import/links",
+      "target": "OCA\\Shortlinks\\Controller\\ToolsApiController::importLinks",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/links",
+      "target": "OCA\\Shortlinks\\Controller\\LinksApiController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/links",
+      "target": "OCA\\Shortlinks\\Controller\\LinksApiController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/links/{id}",
+      "target": "OCA\\Shortlinks\\Controller\\LinksApiController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/links/{id}",
+      "target": "OCA\\Shortlinks\\Controller\\LinksApiController::show",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/links/{id}",
+      "target": "OCA\\Shortlinks\\Controller\\LinksApiController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/links/{id}/activity",
+      "target": "OCA\\Shortlinks\\Controller\\ActivityApiController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/links/{id}/clicks",
+      "target": "OCA\\Shortlinks\\Controller\\StatsApiController::clicks",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/links/{id}/clicks/export",
+      "target": "OCA\\Shortlinks\\Controller\\StatsApiController::exportClicks",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/links/{id}/clone",
+      "target": "OCA\\Shortlinks\\Controller\\LinksApiController::cloneLink",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/links/{id}/restore",
+      "target": "OCA\\Shortlinks\\Controller\\LinksApiController::restore",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/links/{id}/shares",
+      "target": "OCA\\Shortlinks\\Controller\\SharesApiController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/links/{id}/shares",
+      "target": "OCA\\Shortlinks\\Controller\\SharesApiController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/links/{id}/shares/{shareId}",
+      "target": "OCA\\Shortlinks\\Controller\\SharesApiController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/links/{id}/stats",
+      "target": "OCA\\Shortlinks\\Controller\\StatsApiController::link",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/links/{id}/stats/export",
+      "target": "OCA\\Shortlinks\\Controller\\StatsApiController::export",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/links/bulk",
+      "target": "OCA\\Shortlinks\\Controller\\LinksApiController::bulk",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/pages",
+      "target": "OCA\\Shortlinks\\Controller\\LinkPagesApiController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/pages",
+      "target": "OCA\\Shortlinks\\Controller\\LinkPagesApiController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/pages/{id}",
+      "target": "OCA\\Shortlinks\\Controller\\LinkPagesApiController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/pages/{id}",
+      "target": "OCA\\Shortlinks\\Controller\\LinkPagesApiController::show",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/pages/{id}",
+      "target": "OCA\\Shortlinks\\Controller\\LinkPagesApiController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/pages/{id}/restore",
+      "target": "OCA\\Shortlinks\\Controller\\LinkPagesApiController::restore",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/pages/{id}/versions",
+      "target": "OCA\\Shortlinks\\Controller\\LinkPagesApiController::versions",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/pages/{id}/versions/{versionNumber}",
+      "target": "OCA\\Shortlinks\\Controller\\LinkPagesApiController::version",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/pages/{id}/versions/{versionNumber}/restore",
+      "target": "OCA\\Shortlinks\\Controller\\LinkPagesApiController::restoreVersion",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/pages/contacts",
+      "target": "OCA\\Shortlinks\\Controller\\LinkPagesApiController::contacts",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/principals",
+      "target": "OCA\\Shortlinks\\Controller\\PrincipalsApiController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/shorten",
+      "target": "OCA\\Shortlinks\\Controller\\LinksApiController::shorten",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/stats",
+      "target": "OCA\\Shortlinks\\Controller\\StatsApiController::overview",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/suggestions",
+      "target": "OCA\\Shortlinks\\Controller\\SuggestionApiController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/tags",
+      "target": "OCA\\Shortlinks\\Controller\\TagsApiController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/tags",
+      "target": "OCA\\Shortlinks\\Controller\\TagsApiController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/tags/{id}",
+      "target": "OCA\\Shortlinks\\Controller\\TagsApiController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/tags/{id}",
+      "target": "OCA\\Shortlinks\\Controller\\TagsApiController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/tags/{id}/merge",
+      "target": "OCA\\Shortlinks\\Controller\\TagsApiController::merge",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/tools/bookmarklet",
+      "target": "OCA\\Shortlinks\\Controller\\ToolsApiController::bookmarklet",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/tools/metadata",
+      "target": "OCA\\Shortlinks\\Controller\\ToolsApiController::metadata",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/tools/title",
+      "target": "OCA\\Shortlinks\\Controller\\ToolsApiController::title",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/user-settings",
+      "target": "OCA\\Shortlinks\\Controller\\UserSettingsApiController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/shortlinks/api/v1/user-settings",
+      "target": "OCA\\Shortlinks\\Controller\\UserSettingsApiController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/capabilities",
+      "target": "OCA\\Shortlinks\\Capabilities\\Capabilities",
+      "openapi": [],
+      "kind": "capability"
+    }
+  ]
+}

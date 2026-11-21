@@ -1,0 +1,915 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\RoomVox\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/UserBackend/RoomUserBackend.php:20 OC\\User\\Backend"
+      ],
+      "lines": [
+        "1 use of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/UserBackend/RoomUserBackend.php:20 OC\\User\\Backend"
+      ]
+    },
+    {
+      "id": "dav-without-preload",
+      "level": "warn",
+      "places": [
+        "lib/Dav/RoomVisibilityPlugin.php:60 OCA\\RoomVox\\Dav\\RoomVisibilityPlugin"
+      ],
+      "lines": [
+        "1 DAV plugin listens to propFind and not to preloadCollection, which the server emits from Nextcloud 32 on before it reads the children of a collection. Without that listener a PROPFIND with Depth above 0 runs the queries of the plugin once per child.",
+        "  lib/Dav/RoomVisibilityPlugin.php:60 OCA\\RoomVox\\Dav\\RoomVisibilityPlugin"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/roomvox/api/personal/rooms/viewable  roomvox.personal_api.viewable_rooms  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/roomvox/api/debug/rooms  roomvox.room_api.debug  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/roomvox/api/exchange/webhooks  roomvox.exchange_api.webhook_status  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/roomvox/api/exchange/webhooks  roomvox.exchange_api.create_webhooks  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/roomvox/api/webhook/exchange  roomvox.webhook.receive  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/roomvox/api/v1/rooms/{id}/status  roomvox.public_api.room_status  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/roomvox/api/v1/rooms/{id}/availability  roomvox.public_api.room_availability  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/roomvox/api/v1/rooms/{id}/calendar.ics  roomvox.public_api.calendar_feed  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/roomvox/api/v1/rooms  roomvox.public_api.list_rooms  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/roomvox/api/v1/rooms/{id}  roomvox.public_api.get_room  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/roomvox/api/v1/rooms/{id}/bookings  roomvox.public_api.list_bookings  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/roomvox/api/v1/rooms/{id}/bookings  roomvox.public_api.create_booking  appinfo/routes.php:5 routes",
+        "DELETE /index.php/apps/roomvox/api/v1/rooms/{id}/bookings/{uid}  roomvox.public_api.delete_booking  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/roomvox/api/v1/statistics  roomvox.public_api.statistics  appinfo/routes.php:5 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 14 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 18 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/roomvox/api/personal/rooms/viewable  roomvox.personal_api.viewable_rooms  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/roomvox/api/debug/rooms  roomvox.room_api.debug  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/roomvox/api/exchange/webhooks  roomvox.exchange_api.webhook_status  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/roomvox/api/exchange/webhooks  roomvox.exchange_api.create_webhooks  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/roomvox/api/webhook/exchange  roomvox.webhook.receive  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/roomvox/api/v1/rooms/{id}/status  roomvox.public_api.room_status  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/roomvox/api/v1/rooms/{id}/availability  roomvox.public_api.room_availability  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/roomvox/api/v1/rooms/{id}/calendar.ics  roomvox.public_api.calendar_feed  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/roomvox/api/v1/rooms  roomvox.public_api.list_rooms  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/roomvox/api/v1/rooms/{id}  roomvox.public_api.get_room  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/roomvox/api/v1/rooms/{id}/bookings  roomvox.public_api.list_bookings  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/roomvox/api/v1/rooms/{id}/bookings  roomvox.public_api.create_booking  appinfo/routes.php:5 routes",
+        "  DELETE /index.php/apps/roomvox/api/v1/rooms/{id}/bookings/{uid}  roomvox.public_api.delete_booking  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/roomvox/api/v1/statistics  roomvox.public_api.statistics  appinfo/routes.php:5 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 11
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:72 OCP\\Calendar\\Room\\IManager: deprecated since Nextcloud 24",
+        "lib/BackgroundJob/LicenseUsageJob.php:55 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/RoomApiController.php:37 OCP\\Calendar\\Room\\IManager: deprecated since Nextcloud 24",
+        "lib/Controller/RoomApiController.php:683 OCP\\Calendar\\Room\\IManager::getBackends(): deprecated since Nextcloud 24; Use isEnabled instead",
+        "lib/Controller/RoomGroupApiController.php:25 OCP\\Calendar\\Room\\IManager: deprecated since Nextcloud 24",
+        "lib/Migration/MoveBookingsToRoomCalendars.php:28 OCP\\Calendar\\Room\\IManager: deprecated since Nextcloud 24",
+        "lib/Service/ApiTokenService.php:86 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Service/CalDAVService.php:20 OCP\\Calendar\\Room\\IManager: deprecated since Nextcloud 24",
+        "lib/Service/LicenseService.php:44 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:48 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:50 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:51 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:52 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:56 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:150 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:151 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:152 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:156 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:164 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:167 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:212 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:248 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:275 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:278 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:390 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PermissionService.php:54 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Service/PermissionService.php:79 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Service/RoomGroupService.php:119 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Service/RoomService.php:391 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/UserBackend/RoomUserBackend.php:20 OCP\\User\\Backend\\ICountUsersBackend: deprecated since Nextcloud 31; use and implement ILimitAwareCountUsersBackend instead."
+      ],
+      "lines": [
+        "30 uses in 12 files of the public API that is deprecated in Nextcloud 32 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/AppInfo/Application.php:72 OCP\\Calendar\\Room\\IManager: deprecated since Nextcloud 24",
+        "  lib/BackgroundJob/LicenseUsageJob.php:55 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/RoomApiController.php:37 OCP\\Calendar\\Room\\IManager: deprecated since Nextcloud 24",
+        "  lib/Controller/RoomApiController.php:683 OCP\\Calendar\\Room\\IManager::getBackends(): deprecated since Nextcloud 24; Use isEnabled instead",
+        "  lib/Controller/RoomGroupApiController.php:25 OCP\\Calendar\\Room\\IManager: deprecated since Nextcloud 24",
+        "  lib/Migration/MoveBookingsToRoomCalendars.php:28 OCP\\Calendar\\Room\\IManager: deprecated since Nextcloud 24",
+        "  lib/Service/ApiTokenService.php:86 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Service/CalDAVService.php:20 OCP\\Calendar\\Room\\IManager: deprecated since Nextcloud 24",
+        "  lib/Service/LicenseService.php:44 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:48 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:50 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:51 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:52 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:56 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:150 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:151 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:152 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:156 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:164 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:167 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:212 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:248 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:275 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:278 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:390 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PermissionService.php:54 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Service/PermissionService.php:79 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Service/RoomGroupService.php:119 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Service/RoomService.php:391 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/UserBackend/RoomUserBackend.php:20 OCP\\User\\Backend\\ICountUsersBackend: deprecated since Nextcloud 31; use and implement ILimitAwareCountUsersBackend instead."
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 27
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/ExchangeSyncJob.php OCA\\RoomVox\\BackgroundJob\\ExchangeSyncJob",
+        "lib/BackgroundJob/LicenseUsageJob.php OCA\\RoomVox\\BackgroundJob\\LicenseUsageJob",
+        "lib/BackgroundJob/TelemetryJob.php OCA\\RoomVox\\BackgroundJob\\TelemetryJob",
+        "lib/BackgroundJob/WebhookRenewalJob.php OCA\\RoomVox\\BackgroundJob\\WebhookRenewalJob"
+      ],
+      "lines": [
+        "4 timed jobs do not say whether they are time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/ExchangeSyncJob.php OCA\\RoomVox\\BackgroundJob\\ExchangeSyncJob",
+        "  lib/BackgroundJob/LicenseUsageJob.php OCA\\RoomVox\\BackgroundJob\\LicenseUsageJob",
+        "  lib/BackgroundJob/TelemetryJob.php OCA\\RoomVox\\BackgroundJob\\TelemetryJob",
+        "  lib/BackgroundJob/WebhookRenewalJob.php OCA\\RoomVox\\BackgroundJob\\WebhookRenewalJob"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/LicenseUsageJob.php:55 time()",
+        "lib/Controller/PersonalApiController.php:119 new DateTimeImmutable()",
+        "lib/Controller/PublicApiController.php:99 new DateTimeImmutable()",
+        "lib/Controller/PublicApiController.php:203 new DateTimeImmutable()",
+        "lib/Dav/SchedulingPlugin.php:841 new DateTimeImmutable()",
+        "lib/Service/ApiTokenService.php:109 new DateTimeImmutable()",
+        "lib/Service/CalDAVService.php:310 new DateTimeImmutable()",
+        "lib/Service/CalDAVService.php:1586 new DateTime()",
+        "lib/Service/CalDAVService.php:1676 time()",
+        "lib/Service/Exchange/GraphApiClient.php:218 time()",
+        "lib/Service/Exchange/GraphApiClient.php:257 time()",
+        "lib/Service/LicenseService.php:152 time()",
+        "lib/Service/TelemetryConsentService.php:174 new DateTime()",
+        "lib/Service/TelemetryService.php:193 time()",
+        "lib/Service/TelemetryService.php:214 time()",
+        "lib/Service/TelemetryService.php:449 time()",
+        "lib/Service/TelemetryService.php:512 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 17 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/BackgroundJob/LicenseUsageJob.php:55 time()",
+        "  lib/Controller/PersonalApiController.php:119 new DateTimeImmutable()",
+        "  lib/Controller/PublicApiController.php:99 new DateTimeImmutable()",
+        "  lib/Controller/PublicApiController.php:203 new DateTimeImmutable()",
+        "  lib/Dav/SchedulingPlugin.php:841 new DateTimeImmutable()",
+        "  lib/Service/ApiTokenService.php:109 new DateTimeImmutable()",
+        "  lib/Service/CalDAVService.php:310 new DateTimeImmutable()",
+        "  lib/Service/CalDAVService.php:1586 new DateTime()",
+        "  lib/Service/CalDAVService.php:1676 time()",
+        "  lib/Service/Exchange/GraphApiClient.php:218 time()",
+        "  lib/Service/Exchange/GraphApiClient.php:257 time()",
+        "  lib/Service/LicenseService.php:152 time()",
+        "  lib/Service/TelemetryConsentService.php:174 new DateTime()",
+        "  lib/Service/TelemetryService.php:193 time()",
+        "  lib/Service/TelemetryService.php:214 time()",
+        "  lib/Service/TelemetryService.php:449 time()",
+        "  lib/Service/TelemetryService.php:512 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 14
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/LicenseUsageJob.php:55 setAppValue()",
+        "lib/Controller/SettingsController.php:56 getValueString()",
+        "lib/Controller/SettingsController.php:57 getValueString()",
+        "lib/Controller/SettingsController.php:58 getValueString()",
+        "lib/Controller/SettingsController.php:61 getValueString()",
+        "lib/Controller/SettingsController.php:62 getValueString()",
+        "lib/Controller/SettingsController.php:63 getValueString()",
+        "lib/Controller/SettingsController.php:64 getValueString()",
+        "lib/Controller/SettingsController.php:65 getValueString()",
+        "lib/Controller/SettingsController.php:66 getValueString()",
+        "lib/Controller/SettingsController.php:83 setValueString()",
+        "lib/Controller/SettingsController.php:92 setValueString()",
+        "lib/Controller/SettingsController.php:101 setValueString()",
+        "lib/Controller/SettingsController.php:112 setValueString()",
+        "lib/Controller/SettingsController.php:121 setValueString()",
+        "lib/Controller/SettingsController.php:126 setValueString()",
+        "lib/Controller/SettingsController.php:132 setValueString()",
+        "lib/Controller/SettingsController.php:138 setValueString()",
+        "lib/Controller/SettingsController.php:143 setValueString()",
+        "lib/Controller/SettingsController.php:161 setValueString()",
+        "lib/Controller/SettingsController.php:179 setValueString()",
+        "lib/Controller/SettingsController.php:190 getValueString()",
+        "lib/Controller/SettingsController.php:199 getValueString()",
+        "lib/Controller/WebhookController.php:95 getValueString()",
+        "lib/Controller/WebhookController.php:101 getValueString()",
+        "lib/Service/ApiTokenService.php:61 setValueString()",
+        "lib/Service/ApiTokenService.php:116 setValueString()",
+        "lib/Service/ApiTokenService.php:158 getValueString()",
+        "lib/Service/ApiTokenService.php:172 getValueString()",
+        "lib/Service/ApiTokenService.php:185 setValueString()",
+        "lib/Service/ApiTokenService.php:196 setValueString()",
+        "lib/Service/Exchange/GraphApiClient.php:43 getValueString()",
+        "lib/Service/Exchange/GraphApiClient.php:273 getValueString()",
+        "lib/Service/Exchange/GraphApiClient.php:277 getValueString()",
+        "lib/Service/Exchange/GraphApiClient.php:281 getValueString()",
+        "lib/Service/ImportExportService.php:85 getValueString()",
+        "lib/Service/LicenseService.php:44 getAppValue()",
+        "lib/Service/LicenseService.php:48 setAppValue()",
+        "lib/Service/LicenseService.php:56 getAppValue()",
+        "lib/Service/LicenseService.php:150 setAppValue()",
+        "lib/Service/LicenseService.php:151 setAppValue()",
+        "lib/Service/LicenseService.php:152 setAppValue()",
+        "lib/Service/LicenseService.php:156 setAppValue()",
+        "lib/Service/LicenseService.php:164 getAppValue()",
+        "lib/Service/LicenseService.php:167 getAppValue()",
+        "lib/Service/LicenseService.php:212 setAppValue()",
+        "lib/Service/LicenseService.php:248 getAppValue()",
+        "lib/Service/LicenseService.php:275 getAppValue()",
+        "lib/Service/LicenseService.php:278 getAppValue()",
+        "lib/Service/LicenseService.php:390 getAppValue()",
+        "lib/Service/PermissionService.php:122 getAllValues()",
+        "lib/Service/PermissionService.php:123 getAllValues()",
+        "lib/Service/PermissionService.php:263 getAllValues()",
+        "lib/Service/PermissionService.php:340 getValueString()",
+        "lib/Service/PermissionService.php:368 setValueString()",
+        "lib/Service/RoomGroupService.php:43 getValueString()",
+        "lib/Service/RoomGroupService.php:132 getValueString()",
+        "lib/Service/RoomGroupService.php:146 setValueString()",
+        "lib/Service/RoomGroupService.php:157 setValueString()",
+        "lib/Service/RoomGroupService.php:165 setValueString()",
+        "lib/Service/RoomService.php:54 getValueString()",
+        "lib/Service/RoomService.php:492 getValueString()",
+        "lib/Service/RoomService.php:509 setValueString()",
+        "lib/Service/RoomService.php:523 setValueString()",
+        "lib/Service/RoomService.php:540 setValueString()",
+        "lib/Service/RoomService.php:647 getValueString()",
+        "lib/Service/RoomService.php:661 setValueString()",
+        "lib/Service/TelemetryConsentService.php:53 getValueString()",
+        "lib/Service/TelemetryConsentService.php:54 hasKey()",
+        "lib/Service/TelemetryConsentService.php:64 hasKey()",
+        "lib/Service/TelemetryConsentService.php:67 getValueString()",
+        "lib/Service/TelemetryConsentService.php:72 getValueString()",
+        "lib/Service/TelemetryConsentService.php:80 setValueString()",
+        "lib/Service/TelemetryConsentService.php:81 setValueString()",
+        "lib/Service/TelemetryConsentService.php:90 setValueString()",
+        "lib/Service/TelemetryConsentService.php:106 setValueString()",
+        "lib/Service/TelemetryConsentService.php:126 hasKey()",
+        "lib/Service/TelemetryConsentService.php:127 getValueString()",
+        "lib/Service/TelemetryConsentService.php:130 setValueString()",
+        "lib/Service/TelemetryConsentService.php:158 getValueString()",
+        "lib/Service/TelemetryConsentService.php:179 setValueString()",
+        "lib/Service/TelemetryService.php:166 getValueString()",
+        "lib/Service/TelemetryService.php:214 setValueString()",
+        "lib/Service/TelemetryService.php:332 getValueString()",
+        "lib/Service/TelemetryService.php:388 getValueString()",
+        "lib/Service/TelemetryService.php:495 getValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 86 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/BackgroundJob/LicenseUsageJob.php:55 setAppValue()",
+        "  lib/Controller/SettingsController.php:56 getValueString()",
+        "  lib/Controller/SettingsController.php:57 getValueString()",
+        "  lib/Controller/SettingsController.php:58 getValueString()",
+        "  lib/Controller/SettingsController.php:61 getValueString()",
+        "  lib/Controller/SettingsController.php:62 getValueString()",
+        "  lib/Controller/SettingsController.php:63 getValueString()",
+        "  lib/Controller/SettingsController.php:64 getValueString()",
+        "  lib/Controller/SettingsController.php:65 getValueString()",
+        "  lib/Controller/SettingsController.php:66 getValueString()",
+        "  lib/Controller/SettingsController.php:83 setValueString()",
+        "  lib/Controller/SettingsController.php:92 setValueString()",
+        "  lib/Controller/SettingsController.php:101 setValueString()",
+        "  lib/Controller/SettingsController.php:112 setValueString()",
+        "  lib/Controller/SettingsController.php:121 setValueString()",
+        "  lib/Controller/SettingsController.php:126 setValueString()",
+        "  lib/Controller/SettingsController.php:132 setValueString()",
+        "  lib/Controller/SettingsController.php:138 setValueString()",
+        "  lib/Controller/SettingsController.php:143 setValueString()",
+        "  lib/Controller/SettingsController.php:161 setValueString()",
+        "  lib/Controller/SettingsController.php:179 setValueString()",
+        "  lib/Controller/SettingsController.php:190 getValueString()",
+        "  lib/Controller/SettingsController.php:199 getValueString()",
+        "  lib/Controller/WebhookController.php:95 getValueString()",
+        "  lib/Controller/WebhookController.php:101 getValueString()",
+        "  lib/Service/ApiTokenService.php:61 setValueString()",
+        "  lib/Service/ApiTokenService.php:116 setValueString()",
+        "  lib/Service/ApiTokenService.php:158 getValueString()",
+        "  lib/Service/ApiTokenService.php:172 getValueString()",
+        "  lib/Service/ApiTokenService.php:185 setValueString()",
+        "  lib/Service/ApiTokenService.php:196 setValueString()",
+        "  lib/Service/Exchange/GraphApiClient.php:43 getValueString()",
+        "  lib/Service/Exchange/GraphApiClient.php:273 getValueString()",
+        "  lib/Service/Exchange/GraphApiClient.php:277 getValueString()",
+        "  lib/Service/Exchange/GraphApiClient.php:281 getValueString()",
+        "  lib/Service/ImportExportService.php:85 getValueString()",
+        "  lib/Service/LicenseService.php:44 getAppValue()",
+        "  lib/Service/LicenseService.php:48 setAppValue()",
+        "  lib/Service/LicenseService.php:56 getAppValue()",
+        "  lib/Service/LicenseService.php:150 setAppValue()",
+        "  lib/Service/LicenseService.php:151 setAppValue()",
+        "  lib/Service/LicenseService.php:152 setAppValue()",
+        "  lib/Service/LicenseService.php:156 setAppValue()",
+        "  lib/Service/LicenseService.php:164 getAppValue()",
+        "  lib/Service/LicenseService.php:167 getAppValue()",
+        "  lib/Service/LicenseService.php:212 setAppValue()",
+        "  lib/Service/LicenseService.php:248 getAppValue()",
+        "  lib/Service/LicenseService.php:275 getAppValue()",
+        "  lib/Service/LicenseService.php:278 getAppValue()",
+        "  lib/Service/LicenseService.php:390 getAppValue()",
+        "  lib/Service/PermissionService.php:122 getAllValues()",
+        "  lib/Service/PermissionService.php:123 getAllValues()",
+        "  lib/Service/PermissionService.php:263 getAllValues()",
+        "  lib/Service/PermissionService.php:340 getValueString()",
+        "  lib/Service/PermissionService.php:368 setValueString()",
+        "  lib/Service/RoomGroupService.php:43 getValueString()",
+        "  lib/Service/RoomGroupService.php:132 getValueString()",
+        "  lib/Service/RoomGroupService.php:146 setValueString()",
+        "  lib/Service/RoomGroupService.php:157 setValueString()",
+        "  lib/Service/RoomGroupService.php:165 setValueString()",
+        "  lib/Service/RoomService.php:54 getValueString()",
+        "  lib/Service/RoomService.php:492 getValueString()",
+        "  lib/Service/RoomService.php:509 setValueString()",
+        "  lib/Service/RoomService.php:523 setValueString()",
+        "  lib/Service/RoomService.php:540 setValueString()",
+        "  lib/Service/RoomService.php:647 getValueString()",
+        "  lib/Service/RoomService.php:661 setValueString()",
+        "  lib/Service/TelemetryConsentService.php:53 getValueString()",
+        "  lib/Service/TelemetryConsentService.php:54 hasKey()",
+        "  lib/Service/TelemetryConsentService.php:64 hasKey()",
+        "  lib/Service/TelemetryConsentService.php:67 getValueString()",
+        "  lib/Service/TelemetryConsentService.php:72 getValueString()",
+        "  lib/Service/TelemetryConsentService.php:80 setValueString()",
+        "  lib/Service/TelemetryConsentService.php:81 setValueString()",
+        "  lib/Service/TelemetryConsentService.php:90 setValueString()",
+        "  lib/Service/TelemetryConsentService.php:106 setValueString()",
+        "  lib/Service/TelemetryConsentService.php:126 hasKey()",
+        "  lib/Service/TelemetryConsentService.php:127 getValueString()",
+        "  lib/Service/TelemetryConsentService.php:130 setValueString()",
+        "  lib/Service/TelemetryConsentService.php:158 getValueString()",
+        "  lib/Service/TelemetryConsentService.php:179 setValueString()",
+        "  lib/Service/TelemetryService.php:166 getValueString()",
+        "  lib/Service/TelemetryService.php:214 setValueString()",
+        "  lib/Service/TelemetryService.php:332 getValueString()",
+        "  lib/Service/TelemetryService.php:388 getValueString()",
+        "  lib/Service/TelemetryService.php:495 getValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 83
+        }
+      ]
+    },
+    {
+      "id": "cors-unreferenced",
+      "level": "info",
+      "places": [
+        "OPTIONS /index.php/apps/roomvox/api/v1/{path}  roomvox.public_api.preflight  appinfo/routes.php:5 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 route outside OCS whose method allows requests from other origins (CORS), or that answers the preflight of such a request (OPTIONS). It is there for clients outside the app, so this is no defect in itself.",
+        "  OPTIONS /index.php/apps/roomvox/api/v1/{path}  roomvox.public_api.preflight  appinfo/routes.php:5 routes"
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "POST /ocs/v2.php/apps/roomvox/api/telemetry/consent/share  ocs.roomvox.telemetry_consent.share  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/roomvox/api/telemetry/consent/postpone  ocs.roomvox.telemetry_consent.postpone  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/roomvox/api/telemetry/consent/never-ask  ocs.roomvox.telemetry_consent.never_ask  appinfo/routes.php:5 ocs"
+      ],
+      "lines": [
+        "Nothing in the app calls 3 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  POST /ocs/v2.php/apps/roomvox/api/telemetry/consent/share  ocs.roomvox.telemetry_consent.share  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/roomvox/api/telemetry/consent/postpone  ocs.roomvox.telemetry_consent.postpone  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/roomvox/api/telemetry/consent/never-ask  ocs.roomvox.telemetry_consent.never_ask  appinfo/routes.php:5 ocs"
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 3 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 63,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/",
+      "target": "OCA\\RoomVox\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/all-bookings",
+      "target": "OCA\\RoomVox\\Controller\\RoomApiController::allBookings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/debug/rooms",
+      "target": "OCA\\RoomVox\\Controller\\RoomApiController::debug",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/exchange/status",
+      "target": "OCA\\RoomVox\\Controller\\ExchangeApiController::syncStatus",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/roomvox/api/exchange/test",
+      "target": "OCA\\RoomVox\\Controller\\ExchangeApiController::testConnection",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/roomvox/api/exchange/validate-resource",
+      "target": "OCA\\RoomVox\\Controller\\ExchangeApiController::validateResource",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/exchange/webhooks",
+      "target": "OCA\\RoomVox\\Controller\\ExchangeApiController::webhookStatus",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/roomvox/api/exchange/webhooks",
+      "target": "OCA\\RoomVox\\Controller\\ExchangeApiController::createWebhooks",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/license/stats",
+      "target": "OCA\\RoomVox\\Controller\\LicenseController::getStats",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/roomvox/api/license/telemetry",
+      "target": "OCA\\RoomVox\\Controller\\LicenseController::sendTelemetry",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/roomvox/api/license/telemetry",
+      "target": "OCA\\RoomVox\\Controller\\LicenseController::setTelemetry",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/roomvox/api/license/update-usage",
+      "target": "OCA\\RoomVox\\Controller\\LicenseController::updateUsage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/roomvox/api/license/validate",
+      "target": "OCA\\RoomVox\\Controller\\LicenseController::validate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/personal/approvals",
+      "target": "OCA\\RoomVox\\Controller\\PersonalApiController::approvals",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/personal/rooms",
+      "target": "OCA\\RoomVox\\Controller\\PersonalApiController::rooms",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/personal/rooms/viewable",
+      "target": "OCA\\RoomVox\\Controller\\PersonalApiController::viewableRooms",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/room-groups",
+      "target": "OCA\\RoomVox\\Controller\\RoomGroupApiController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/roomvox/api/room-groups",
+      "target": "OCA\\RoomVox\\Controller\\RoomGroupApiController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/roomvox/api/room-groups/{id}",
+      "target": "OCA\\RoomVox\\Controller\\RoomGroupApiController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/room-groups/{id}",
+      "target": "OCA\\RoomVox\\Controller\\RoomGroupApiController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/roomvox/api/room-groups/{id}",
+      "target": "OCA\\RoomVox\\Controller\\RoomGroupApiController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/room-groups/{id}/permissions",
+      "target": "OCA\\RoomVox\\Controller\\RoomGroupApiController::getPermissions",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/roomvox/api/room-groups/{id}/permissions",
+      "target": "OCA\\RoomVox\\Controller\\RoomGroupApiController::setPermissions",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/rooms",
+      "target": "OCA\\RoomVox\\Controller\\RoomApiController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/roomvox/api/rooms",
+      "target": "OCA\\RoomVox\\Controller\\RoomApiController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/roomvox/api/rooms/{id}",
+      "target": "OCA\\RoomVox\\Controller\\RoomApiController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/rooms/{id}",
+      "target": "OCA\\RoomVox\\Controller\\RoomApiController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/roomvox/api/rooms/{id}",
+      "target": "OCA\\RoomVox\\Controller\\RoomApiController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/rooms/{id}/bookings",
+      "target": "OCA\\RoomVox\\Controller\\BookingApiController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/roomvox/api/rooms/{id}/bookings",
+      "target": "OCA\\RoomVox\\Controller\\BookingApiController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/roomvox/api/rooms/{id}/bookings/{uid}",
+      "target": "OCA\\RoomVox\\Controller\\BookingApiController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/roomvox/api/rooms/{id}/bookings/{uid}",
+      "target": "OCA\\RoomVox\\Controller\\BookingApiController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/roomvox/api/rooms/{id}/bookings/{uid}/respond",
+      "target": "OCA\\RoomVox\\Controller\\BookingApiController::respond",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/roomvox/api/rooms/{id}/exchange/initial-sync",
+      "target": "OCA\\RoomVox\\Controller\\ExchangeApiController::initialSync",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/roomvox/api/rooms/{id}/feed",
+      "target": "OCA\\RoomVox\\Controller\\RoomApiController::feed",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/rooms/{id}/permissions",
+      "target": "OCA\\RoomVox\\Controller\\RoomApiController::getPermissions",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/roomvox/api/rooms/{id}/permissions",
+      "target": "OCA\\RoomVox\\Controller\\RoomApiController::setPermissions",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/rooms/export",
+      "target": "OCA\\RoomVox\\Controller\\RoomApiController::exportRooms",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/roomvox/api/rooms/import",
+      "target": "OCA\\RoomVox\\Controller\\RoomApiController::importRooms",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/roomvox/api/rooms/import/preview",
+      "target": "OCA\\RoomVox\\Controller\\RoomApiController::importPreview",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/rooms/sample-csv",
+      "target": "OCA\\RoomVox\\Controller\\RoomApiController::sampleCsv",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/settings",
+      "target": "OCA\\RoomVox\\Controller\\SettingsController::get",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/roomvox/api/settings",
+      "target": "OCA\\RoomVox\\Controller\\SettingsController::save",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/roomvox/api/settings/license",
+      "target": "OCA\\RoomVox\\Controller\\LicenseController::saveSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/sharees",
+      "target": "OCA\\RoomVox\\Controller\\RoomApiController::searchSharees",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/tokens",
+      "target": "OCA\\RoomVox\\Controller\\ApiTokenController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/roomvox/api/tokens",
+      "target": "OCA\\RoomVox\\Controller\\ApiTokenController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/roomvox/api/tokens/{id}",
+      "target": "OCA\\RoomVox\\Controller\\ApiTokenController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/roomvox/api/v1/{path}",
+      "target": "OCA\\RoomVox\\Controller\\PublicApiController::preflight",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/v1/rooms",
+      "target": "OCA\\RoomVox\\Controller\\PublicApiController::listRooms",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/v1/rooms/{id}",
+      "target": "OCA\\RoomVox\\Controller\\PublicApiController::getRoom",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/v1/rooms/{id}/availability",
+      "target": "OCA\\RoomVox\\Controller\\PublicApiController::roomAvailability",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/v1/rooms/{id}/bookings",
+      "target": "OCA\\RoomVox\\Controller\\PublicApiController::listBookings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/roomvox/api/v1/rooms/{id}/bookings",
+      "target": "OCA\\RoomVox\\Controller\\PublicApiController::createBooking",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/roomvox/api/v1/rooms/{id}/bookings/{uid}",
+      "target": "OCA\\RoomVox\\Controller\\PublicApiController::deleteBooking",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/v1/rooms/{id}/calendar.ics",
+      "target": "OCA\\RoomVox\\Controller\\PublicApiController::calendarFeed",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/v1/rooms/{id}/feed/{secret}/calendar.ics",
+      "target": "OCA\\RoomVox\\Controller\\PublicApiController::roomFeed",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/v1/rooms/{id}/status",
+      "target": "OCA\\RoomVox\\Controller\\PublicApiController::roomStatus",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/roomvox/api/v1/statistics",
+      "target": "OCA\\RoomVox\\Controller\\PublicApiController::statistics",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/roomvox/api/webhook/exchange",
+      "target": "OCA\\RoomVox\\Controller\\WebhookController::receive",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/roomvox/api/telemetry/consent/never-ask",
+      "target": "OCA\\RoomVox\\Controller\\TelemetryConsentController::neverAsk",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/roomvox/api/telemetry/consent/postpone",
+      "target": "OCA\\RoomVox\\Controller\\TelemetryConsentController::postpone",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/roomvox/api/telemetry/consent/share",
+      "target": "OCA\\RoomVox\\Controller\\TelemetryConsentController::share",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

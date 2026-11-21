@@ -1,0 +1,397 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\EndToEndEncryption\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/LockingController.php:86 OC\\User\\NoUserException",
+        "lib/Controller/MetaDataController.php:300 OC\\User\\NoUserException",
+        "lib/Controller/V1/LockingController.php:65 OC\\User\\NoUserException",
+        "lib/MetaDataStorage.php:296 OC\\User\\NoUserException",
+        "lib/MetaDataStorageV1.php:235 OC\\User\\NoUserException",
+        "lib/SignatureHandler.php:22 OC\\Security\\IdentityProof\\Manager"
+      ],
+      "lines": [
+        "6 uses of the private API of the server in 6 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/LockingController.php:86 OC\\User\\NoUserException",
+        "  lib/Controller/MetaDataController.php:300 OC\\User\\NoUserException",
+        "  lib/Controller/V1/LockingController.php:65 OC\\User\\NoUserException",
+        "  lib/MetaDataStorage.php:296 OC\\User\\NoUserException",
+        "  lib/MetaDataStorageV1.php:235 OC\\User\\NoUserException",
+        "  lib/SignatureHandler.php:22 OC\\Security\\IdentityProof\\Manager"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "dav-without-preload",
+      "level": "warn",
+      "places": [
+        "lib/Connector/Sabre/PropFindPlugin.php:52 OCA\\EndToEndEncryption\\Connector\\Sabre\\PropFindPlugin",
+        "lib/Connector/Sabre/RedirectRequestPlugin.php:68 OCA\\EndToEndEncryption\\Connector\\Sabre\\RedirectRequestPlugin"
+      ],
+      "lines": [
+        "2 DAV plugins listen to propFind and not to preloadCollection, which the server emits from Nextcloud 32 on before it reads the children of a collection. Without that listener a PROPFIND with Depth above 0 runs the queries of the plugin once per child.",
+        "  lib/Connector/Sabre/PropFindPlugin.php:52 OCA\\EndToEndEncryption\\Connector\\Sabre\\PropFindPlugin",
+        "  lib/Connector/Sabre/RedirectRequestPlugin.php:68 OCA\\EndToEndEncryption\\Connector\\Sabre\\RedirectRequestPlugin"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:78 get()",
+        "lib/AppInfo/Application.php:79 addListener()",
+        "lib/AppInfo/Application.php:89 addListener()",
+        "lib/AppInfo/Application.php:100 addListener()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 4 places. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:78 get()",
+        "  lib/AppInfo/Application.php:79 addListener()",
+        "  lib/AppInfo/Application.php:89 addListener()",
+        "  lib/AppInfo/Application.php:100 addListener()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/AccessManager.php:104 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/AccessManager.php:104 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/BackgroundJob/RollbackBackgroundJob.php:40 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/BackgroundJob/RollbackBackgroundJob.php:46 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Config.php:27 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:41 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/MetaDataController.php:357 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/E2EEPublicShareTemplateProvider.php:33 OCP\\IInitialStateService: deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "lib/E2EEPublicShareTemplateProvider.php:45 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/E2EEPublicShareTemplateProvider.php:91 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "lib/E2EEPublicShareTemplateProvider.php:92 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "lib/E2EEPublicShareTemplateProvider.php:94 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "lib/E2EEPublicShareTemplateProvider.php:95 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "lib/E2EEPublicShareTemplateProvider.php:96 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "lib/E2EEPublicShareTemplateProvider.php:97 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "lib/E2EEPublicShareTemplateProvider.php:98 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "lib/E2EEPublicShareTemplateProvider.php:107 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Listener/AllowBlobMediaInCSPListener.php:28 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Listener/LoadAdditionalListener.php:50 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Settings/Personal.php:42 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "lines": [
+        "20 uses in 9 files of the public API that is deprecated in Nextcloud 33 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/AccessManager.php:104 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/AccessManager.php:104 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/BackgroundJob/RollbackBackgroundJob.php:40 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/BackgroundJob/RollbackBackgroundJob.php:46 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Config.php:27 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:41 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/MetaDataController.php:357 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/E2EEPublicShareTemplateProvider.php:33 OCP\\IInitialStateService: deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "  lib/E2EEPublicShareTemplateProvider.php:45 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/E2EEPublicShareTemplateProvider.php:91 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "  lib/E2EEPublicShareTemplateProvider.php:92 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "  lib/E2EEPublicShareTemplateProvider.php:94 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "  lib/E2EEPublicShareTemplateProvider.php:95 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "  lib/E2EEPublicShareTemplateProvider.php:96 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "  lib/E2EEPublicShareTemplateProvider.php:97 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "  lib/E2EEPublicShareTemplateProvider.php:98 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "  lib/E2EEPublicShareTemplateProvider.php:107 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Listener/AllowBlobMediaInCSPListener.php:28 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Listener/LoadAdditionalListener.php:50 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Settings/Personal.php:42 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 17
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/RollbackBackgroundJob.php OCA\\EndToEndEncryption\\BackgroundJob\\RollbackBackgroundJob"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/RollbackBackgroundJob.php OCA\\EndToEndEncryption\\BackgroundJob\\RollbackBackgroundJob"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/RollbackBackgroundJob.php:40 getAppValue()",
+        "lib/BackgroundJob/RollbackBackgroundJob.php:46 getAppValue()",
+        "lib/Config.php:27 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 3 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/BackgroundJob/RollbackBackgroundJob.php:40 getAppValue()",
+        "  lib/BackgroundJob/RollbackBackgroundJob.php:46 getAppValue()",
+        "  lib/Config.php:27 getAppValue()"
+      ]
+    }
+  ],
+  "endpoints": 27,
+  "endpointList": [
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/end_to_end_encryption/api/v1/config/{key}",
+      "target": "OCA\\EndToEndEncryption\\Controller\\ConfigController::setUserConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/end_to_end_encryption/api/v{apiVersion}/encrypted-files",
+      "target": "OCA\\EndToEndEncryption\\Controller\\EncryptionController::removeEncryptedFolders",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/end_to_end_encryption/api/v{apiVersion}/encrypted/{id}",
+      "target": "OCA\\EndToEndEncryption\\Controller\\EncryptionController::removeEncryptionFlag",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/end_to_end_encryption/api/v{apiVersion}/encrypted/{id}",
+      "target": "OCA\\EndToEndEncryption\\Controller\\EncryptionController::setEncryptionFlag",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/end_to_end_encryption/api/v{apiVersion}/private-key",
+      "target": "OCA\\EndToEndEncryption\\Controller\\KeyController::deletePrivateKey",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/end_to_end_encryption/api/v{apiVersion}/private-key",
+      "target": "OCA\\EndToEndEncryption\\Controller\\KeyController::getPrivateKey",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/end_to_end_encryption/api/v{apiVersion}/private-key",
+      "target": "OCA\\EndToEndEncryption\\Controller\\KeyController::setPrivateKey",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/end_to_end_encryption/api/v{apiVersion}/public-key",
+      "target": "OCA\\EndToEndEncryption\\Controller\\KeyController::deletePublicKey",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/end_to_end_encryption/api/v{apiVersion}/public-key",
+      "target": "OCA\\EndToEndEncryption\\Controller\\KeyController::getPublicKeys",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/end_to_end_encryption/api/v{apiVersion}/public-key",
+      "target": "OCA\\EndToEndEncryption\\Controller\\KeyController::createPublicKey",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/end_to_end_encryption/api/v{apiVersion}/public-key",
+      "target": "OCA\\EndToEndEncryption\\Controller\\KeyController::setPublicKey",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/end_to_end_encryption/api/v{apiVersion}/server-key",
+      "target": "OCA\\EndToEndEncryption\\Controller\\KeyController::getPublicServerKey",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/end_to_end_encryption/api/v1/lock/{id}",
+      "target": "OCA\\EndToEndEncryption\\Controller\\V1\\LockingController::unlockFolder",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/end_to_end_encryption/api/v1/lock/{id}",
+      "target": "OCA\\EndToEndEncryption\\Controller\\V1\\LockingController::lockFolder",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/end_to_end_encryption/api/v1/meta-data/{id}",
+      "target": "OCA\\EndToEndEncryption\\Controller\\V1\\MetaDataController::deleteMetaData",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/end_to_end_encryption/api/v1/meta-data/{id}",
+      "target": "OCA\\EndToEndEncryption\\Controller\\V1\\MetaDataController::getMetaData",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/end_to_end_encryption/api/v1/meta-data/{id}",
+      "target": "OCA\\EndToEndEncryption\\Controller\\V1\\MetaDataController::setMetaData",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/end_to_end_encryption/api/v1/meta-data/{id}",
+      "target": "OCA\\EndToEndEncryption\\Controller\\V1\\MetaDataController::updateMetaData",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/end_to_end_encryption/api/v2/lock/{id}",
+      "target": "OCA\\EndToEndEncryption\\Controller\\LockingController::unlockFolder",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/end_to_end_encryption/api/v2/lock/{id}",
+      "target": "OCA\\EndToEndEncryption\\Controller\\LockingController::lockFolder",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/end_to_end_encryption/api/v2/meta-data/{id}",
+      "target": "OCA\\EndToEndEncryption\\Controller\\MetaDataController::deleteMetaData",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/end_to_end_encryption/api/v2/meta-data/{id}",
+      "target": "OCA\\EndToEndEncryption\\Controller\\MetaDataController::getMetaData",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/end_to_end_encryption/api/v2/meta-data/{id}",
+      "target": "OCA\\EndToEndEncryption\\Controller\\MetaDataController::setMetaData",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/end_to_end_encryption/api/v2/meta-data/{id}",
+      "target": "OCA\\EndToEndEncryption\\Controller\\MetaDataController::updateMetaData",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/end_to_end_encryption/api/v2/meta-data/{id}/filedrop",
+      "target": "OCA\\EndToEndEncryption\\Controller\\MetaDataController::addMetadataFileDrop",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": null,
+      "path": "/remote.php/dav",
+      "target": "OCA\\EndToEndEncryption\\Connector\\Sabre\\PropFindPlugin",
+      "openapi": [],
+      "kind": "DAV"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/capabilities",
+      "target": "OCA\\EndToEndEncryption\\Capabilities",
+      "openapi": [],
+      "kind": "capability"
+    }
+  ]
+}

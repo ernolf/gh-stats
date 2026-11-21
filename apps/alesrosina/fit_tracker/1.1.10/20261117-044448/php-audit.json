@@ -1,0 +1,187 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\FitTracker\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Service/PhotoService.php:81 OC\\Files\\Search\\SearchBinaryOperator",
+        "lib/Service/PhotoService.php:82 OC\\Files\\Search\\SearchComparison",
+        "lib/Service/PhotoService.php:92 OC\\Files\\Search\\SearchQuery"
+      ],
+      "lines": [
+        "3 uses of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Service/PhotoService.php:81 OC\\Files\\Search\\SearchBinaryOperator",
+        "  lib/Service/PhotoService.php:82 OC\\Files\\Search\\SearchComparison",
+        "  lib/Service/PhotoService.php:92 OC\\Files\\Search\\SearchQuery"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/fit_tracker/api/debug  fit_tracker.config.debug_fit  appinfo/routes.php:5 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 route outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 18 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/fit_tracker/api/debug  fit_tracker.config.debug_fit  appinfo/routes.php:5 routes"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Service/ActivityService.php:64 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ActivityService.php:68 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/SleepService.php:61 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "lines": [
+        "3 uses in 2 files of the public API that is deprecated in Nextcloud 32 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Service/ActivityService.php:64 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ActivityService.php:68 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/SleepService.php:61 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/ActivityService.php:315 new DateTime()",
+        "lib/Service/FitParserService.php:192 new DateTime()",
+        "lib/Service/SleepParserService.php:135 new DateTime()",
+        "lib/Service/SleepParserService.php:192 new DateTime()",
+        "lib/Service/SleepService.php:162 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 5 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/ActivityService.php:315 new DateTime()",
+        "  lib/Service/FitParserService.php:192 new DateTime()",
+        "  lib/Service/SleepParserService.php:135 new DateTime()",
+        "  lib/Service/SleepParserService.php:192 new DateTime()",
+        "  lib/Service/SleepService.php:162 new DateTime()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    }
+  ],
+  "endpoints": 15,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/fit_tracker/",
+      "target": "OCA\\FitTracker\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/fit_tracker/api/activities",
+      "target": "OCA\\FitTracker\\Controller\\ActivityController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/fit_tracker/api/activities/{id}",
+      "target": "OCA\\FitTracker\\Controller\\ActivityController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/fit_tracker/api/activities/{id}",
+      "target": "OCA\\FitTracker\\Controller\\ActivityController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/fit_tracker/api/activities/{id}/laps",
+      "target": "OCA\\FitTracker\\Controller\\ActivityController::laps",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/fit_tracker/api/activities/{id}/photos",
+      "target": "OCA\\FitTracker\\Controller\\ActivityController::photos",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/fit_tracker/api/activities/{id}/trackpoints",
+      "target": "OCA\\FitTracker\\Controller\\ActivityController::trackpoints",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/fit_tracker/api/activities/repair-sport",
+      "target": "OCA\\FitTracker\\Controller\\ActivityController::repairSport",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/fit_tracker/api/config",
+      "target": "OCA\\FitTracker\\Controller\\ConfigController::getConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/fit_tracker/api/config",
+      "target": "OCA\\FitTracker\\Controller\\ConfigController::setConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/fit_tracker/api/debug",
+      "target": "OCA\\FitTracker\\Controller\\ConfigController::debugFit",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/fit_tracker/api/sleep",
+      "target": "OCA\\FitTracker\\Controller\\SleepController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/fit_tracker/api/sleep/{id}",
+      "target": "OCA\\FitTracker\\Controller\\SleepController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/fit_tracker/api/sleep/{id}",
+      "target": "OCA\\FitTracker\\Controller\\SleepController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/fit_tracker/api/sleep/{id}/stages",
+      "target": "OCA\\FitTracker\\Controller\\SleepController::stages",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

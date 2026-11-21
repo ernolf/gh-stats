@@ -1,0 +1,161 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Vacation\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/VacationController.php:23 OC\\Core\\Controller\\OCSController",
+        "lib/Controller/VacationController.php:29 OC\\CapabilitiesManager",
+        "lib/Controller/VacationController.php:32 OC\\Security\\IdentityProof\\Manager",
+        "lib/Controller/VacationController.php:43 OC\\AppFramework\\Http"
+      ],
+      "lines": [
+        "4 uses of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/VacationController.php:23 OC\\Core\\Controller\\OCSController",
+        "  lib/Controller/VacationController.php:29 OC\\CapabilitiesManager",
+        "  lib/Controller/VacationController.php:32 OC\\Security\\IdentityProof\\Manager",
+        "  lib/Controller/VacationController.php:43 OC\\AppFramework\\Http"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "route-target-missing",
+      "level": "warn",
+      "places": [
+        "POST /index.php/apps/vacation/api/v1/admin-settings  vacation.adminsettings.update  appinfo/routes.php:14 routes: no class OCA\\Vacation\\Controller\\AdminSettingsController"
+      ],
+      "lines": [
+        "1 route names a controller class or a method that does not exist, or a method that is not public. A request to such a route ends in an error.",
+        "  POST /index.php/apps/vacation/api/v1/admin-settings  vacation.adminsettings.update  appinfo/routes.php:14 routes: no class OCA\\Vacation\\Controller\\AdminSettingsController"
+      ]
+    },
+    {
+      "id": "frontend-url-without-route",
+      "level": "warn",
+      "places": [
+        "src/App.vue:139 /apps/vacation/notes",
+        "src/App.vue:217 /apps/vacation/notes",
+        "src/App.vue:235 /apps/vacation/notes/...",
+        "src/App.vue:249 /apps/vacation/notes/..."
+      ],
+      "lines": [
+        "The frontend or a template builds 4 URLs below /apps/vacation/ that no route of the app matches. The request fails at run time.",
+        "  src/App.vue:139 /apps/vacation/notes",
+        "  src/App.vue:217 /apps/vacation/notes",
+        "  src/App.vue:235 /apps/vacation/notes/...",
+        "  src/App.vue:249 /apps/vacation/notes/..."
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "psalm/phar, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/MailService.php:366 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 1 place. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/MailService.php:366 new DateTime()"
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/SettingsController.php:59 OCA\\Vacation\\Controller\\SettingsController::update()"
+      ],
+      "lines": [
+        "1 public method of a controller is reached by no route.",
+        "  lib/Controller/SettingsController.php:59 OCA\\Vacation\\Controller\\SettingsController::update()"
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 4 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 6,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/vacation/",
+      "target": "OCA\\Vacation\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/vacation/api/v1/admin-settings",
+      "target": "OCA\\Vacation\\Controller\\AdminSettingsController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/vacation/api/v1/vacation",
+      "target": "OCA\\Vacation\\Controller\\VacationController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/vacation/api/v1/vacation",
+      "target": "OCA\\Vacation\\Controller\\VacationController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/vacation/api/v1/vacation",
+      "target": "OCA\\Vacation\\Controller\\VacationController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/vacation/api/v1/vacation",
+      "target": "OCA\\Vacation\\Controller\\VacationController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

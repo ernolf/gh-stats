@@ -1,0 +1,287 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\FilesLock\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:79 OC\\Files\\Filesystem",
+        "lib/Command/Lock.php:37 OC\\Core\\Command\\Base",
+        "lib/Command/Lock.php:178 OC\\User\\NoUserException",
+        "lib/Controller/LockController.php:145 OC\\AppFramework\\OCS\\V1Response",
+        "lib/Controller/LockController.php:147 OC\\AppFramework\\OCS\\V2Response",
+        "lib/DAV/LockBackend.php:46 OC",
+        "lib/DAV/LockBackend.php:46 OC::$server",
+        "lib/DAV/LockBackend.php:75 OC::$server",
+        "lib/Db/CoreRequestBuilder.php:57 OC",
+        "lib/Db/CoreRequestBuilder.php:57 OC\\DB\\Connection",
+        "lib/Db/CoreRequestBuilder.php:57 OC::$server",
+        "lib/Db/CoreRequestBuilder.php:58 OC\\DB\\SchemaWrapper",
+        "lib/Db/LocksRequest.php:129 OC",
+        "lib/Db/LocksRequest.php:129 OC::$server",
+        "lib/Model/FileLock.php:66 OC",
+        "lib/Model/FileLock.php:66 OC::$server",
+        "lib/Model/FileLock.php:199 OC::$server",
+        "lib/Service/LockService.php:442 OC\\Files\\Storage\\Wrapper\\Wrapper",
+        "lib/Service/LockService.php:446 OC\\Files\\Storage\\DAV",
+        "lib/Storage/LockWrapper.php:25 OC\\Files\\Storage\\Wrapper\\Wrapper",
+        "lib/Tools/Db/ExtendedQueryBuilder.php:27 OC\\DB\\QueryBuilder\\QueryBuilder",
+        "lib/Tools/Db/ExtendedQueryBuilder.php:40 OC",
+        "lib/Tools/Db/ExtendedQueryBuilder.php:40 OC::$server",
+        "lib/Tools/Db/ExtendedQueryBuilder.php:41 OC\\SystemConfig",
+        "lib/Tools/Db/ExtendedQueryBuilder.php:41 OC::$server",
+        "lib/Tools/Db/ExtendedQueryBuilder.php:42 OC::$server",
+        "lib/Tools/Traits/TSetup.php:73 OC",
+        "lib/Tools/Traits/TSetup.php:73 OC::$server"
+      ],
+      "lines": [
+        "28 uses of the private API of the server in 11 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/AppInfo/Application.php:79 OC\\Files\\Filesystem",
+        "  lib/Command/Lock.php:37 OC\\Core\\Command\\Base",
+        "  lib/Command/Lock.php:178 OC\\User\\NoUserException",
+        "  lib/Controller/LockController.php:145 OC\\AppFramework\\OCS\\V1Response",
+        "  lib/Controller/LockController.php:147 OC\\AppFramework\\OCS\\V2Response",
+        "  lib/DAV/LockBackend.php:46 OC",
+        "  lib/DAV/LockBackend.php:46 OC::$server",
+        "  lib/DAV/LockBackend.php:75 OC::$server",
+        "  lib/Db/CoreRequestBuilder.php:57 OC",
+        "  lib/Db/CoreRequestBuilder.php:57 OC\\DB\\Connection",
+        "  lib/Db/CoreRequestBuilder.php:57 OC::$server",
+        "  lib/Db/CoreRequestBuilder.php:58 OC\\DB\\SchemaWrapper",
+        "  lib/Db/LocksRequest.php:129 OC",
+        "  lib/Db/LocksRequest.php:129 OC::$server",
+        "  lib/Model/FileLock.php:66 OC",
+        "  lib/Model/FileLock.php:66 OC::$server",
+        "  lib/Model/FileLock.php:199 OC::$server",
+        "  lib/Service/LockService.php:442 OC\\Files\\Storage\\Wrapper\\Wrapper",
+        "  lib/Service/LockService.php:446 OC\\Files\\Storage\\DAV",
+        "  lib/Storage/LockWrapper.php:25 OC\\Files\\Storage\\Wrapper\\Wrapper",
+        "  lib/Tools/Db/ExtendedQueryBuilder.php:27 OC\\DB\\QueryBuilder\\QueryBuilder",
+        "  lib/Tools/Db/ExtendedQueryBuilder.php:40 OC",
+        "  lib/Tools/Db/ExtendedQueryBuilder.php:40 OC::$server",
+        "  lib/Tools/Db/ExtendedQueryBuilder.php:41 OC\\SystemConfig",
+        "  lib/Tools/Db/ExtendedQueryBuilder.php:41 OC::$server",
+        "  lib/Tools/Db/ExtendedQueryBuilder.php:42 OC::$server",
+        "  lib/Tools/Traits/TSetup.php:73 OC",
+        "  lib/Tools/Traits/TSetup.php:73 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 25
+        }
+      ]
+    },
+    {
+      "id": "legacy-hook",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:69 OC_Filesystem::preSetup: the manual names no replacement event"
+      ],
+      "lines": [
+        "1 connection to a legacy hook of the server. A hook the server removed is never emitted, and the listener never runs; the typed events of OCP\\EventDispatcher replace the hooks.",
+        "OCP\\Util::connectHook() is deprecated since Nextcloud 21: use \\OCP\\EventDispatcher\\IEventDispatcher::addListener. ocp-deprecated leaves these calls to this finding.",
+        "  lib/AppInfo/Application.php:69 OC_Filesystem::preSetup: the manual names no replacement event"
+      ]
+    },
+    {
+      "id": "dav-without-preload",
+      "level": "warn",
+      "places": [
+        "lib/DAV/LockPlugin.php:66 OCA\\FilesLock\\DAV\\LockPlugin"
+      ],
+      "lines": [
+        "1 DAV plugin listens to propFind and not to preloadCollection, which the server emits from Nextcloud 32 on before it reads the children of a collection. Without that listener a PROPFIND with Depth above 0 runs the queries of the plugin once per child.",
+        "  lib/DAV/LockPlugin.php:66 OCA\\FilesLock\\DAV\\LockPlugin"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:63 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:63 injectFn()"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "psalm/phar, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Service/ConfigService.php:74 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/ConfigService.php:87 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/ConfigService.php:99 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/ConfigService.php:107 OCP\\IConfig::deleteAppValues(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LockService.php:237 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Storage/LockWrapper.php:76 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Storage/LockWrapper.php:79 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead",
+        "lib/Storage/LockWrapper.php:80 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Storage/LockWrapper.php:146 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/Storage/LockWrapper.php:151 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Storage/LockWrapper.php:151 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/Storage/LockWrapper.php:157 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead",
+        "lib/Storage/LockWrapper.php:158 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Storage/LockWrapper.php:158 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Storage/LockWrapper.php:165 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Storage/LockWrapper.php:165 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/Storage/LockWrapper.php:169 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Storage/LockWrapper.php:190 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Storage/LockWrapper.php:190 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/Storage/LockWrapper.php:196 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/Storage/LockWrapper.php:200 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead",
+        "lib/Storage/LockWrapper.php:205 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead",
+        "lib/Storage/LockWrapper.php:211 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Storage/LockWrapper.php:211 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/Storage/LockWrapper.php:218 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Storage/LockWrapper.php:221 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Storage/LockWrapper.php:221 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/Storage/LockWrapper.php:229 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Storage/LockWrapper.php:229 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/Storage/LockWrapper.php:235 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Tools/Db/ExtendedQueryBuilder.php:155 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Tools/Traits/TSetup.php:75 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "lines": [
+        "32 uses in 5 files of the public API that is deprecated in Nextcloud 32. The text of the tag names the replacement where it has one.",
+        "  lib/Service/ConfigService.php:74 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/ConfigService.php:87 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/ConfigService.php:99 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/ConfigService.php:107 OCP\\IConfig::deleteAppValues(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LockService.php:237 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Storage/LockWrapper.php:76 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Storage/LockWrapper.php:79 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead",
+        "  lib/Storage/LockWrapper.php:80 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Storage/LockWrapper.php:146 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/Storage/LockWrapper.php:151 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Storage/LockWrapper.php:151 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/Storage/LockWrapper.php:157 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead",
+        "  lib/Storage/LockWrapper.php:158 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Storage/LockWrapper.php:158 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Storage/LockWrapper.php:165 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Storage/LockWrapper.php:165 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/Storage/LockWrapper.php:169 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Storage/LockWrapper.php:190 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Storage/LockWrapper.php:190 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/Storage/LockWrapper.php:196 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/Storage/LockWrapper.php:200 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead",
+        "  lib/Storage/LockWrapper.php:205 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead",
+        "  lib/Storage/LockWrapper.php:211 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Storage/LockWrapper.php:211 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/Storage/LockWrapper.php:218 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Storage/LockWrapper.php:221 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Storage/LockWrapper.php:221 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/Storage/LockWrapper.php:229 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Storage/LockWrapper.php:229 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/Storage/LockWrapper.php:235 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Tools/Db/ExtendedQueryBuilder.php:155 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Tools/Traits/TSetup.php:75 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 29
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/Cron/Unlock.php OCA\\FilesLock\\Cron\\Unlock"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/Cron/Unlock.php OCA\\FilesLock\\Cron\\Unlock"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/LockService.php:193 time()",
+        "lib/Tools/Db/ExtendedQueryBuilder.php:143 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 2 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/LockService.php:193 time()",
+        "  lib/Tools/Db/ExtendedQueryBuilder.php:143 new DateTime()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/ConfigService.php:74 getAppValue()",
+        "lib/Service/ConfigService.php:87 setAppValue()",
+        "lib/Tools/Traits/TSetup.php:75 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 3 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/ConfigService.php:74 getAppValue()",
+        "  lib/Service/ConfigService.php:87 setAppValue()",
+        "  lib/Tools/Traits/TSetup.php:75 getAppValue()"
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 2 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 4,
+  "endpointList": [
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/files_lock/lock/{fileId}",
+      "target": "OCA\\FilesLock\\Controller\\LockController::unlocking",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/files_lock/lock/{fileId}",
+      "target": "OCA\\FilesLock\\Controller\\LockController::locking",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": null,
+      "path": "/remote.php/dav",
+      "target": "OCA\\FilesLock\\DAV\\LockPlugin",
+      "openapi": [],
+      "kind": "DAV"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/capabilities",
+      "target": "OCA\\FilesLock\\Capability",
+      "openapi": [],
+      "kind": "capability"
+    }
+  ]
+}

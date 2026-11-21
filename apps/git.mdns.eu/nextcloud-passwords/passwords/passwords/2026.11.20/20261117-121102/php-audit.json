@@ -1,0 +1,334 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Passwords\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/LanguageController.php:42 OC\\App\\AppManager",
+        "lib/Fetcher/NightlyAppFetcher.php:46 OC\\App\\AppStore\\Fetcher\\Fetcher",
+        "lib/Fetcher/NightlyAppFetcher.php:67 OC\\Files\\AppData\\Factory",
+        "lib/Fetcher/NightlyAppFetcher.php:71 OC\\App\\CompareVersion",
+        "lib/Fetcher/NightlyAppFetcher.php:245 OC\\App\\AppStore\\Version\\VersionParser",
+        "lib/Helper/Image/AbstractImageHelper.php:205 OC",
+        "lib/Helper/Settings/ThemeSettingsHelper.php:39 OC_Defaults",
+        "lib/Helper/Survey/ServerReportHelper.php:207 OC_App",
+        "lib/Helper/User/UserTokenHelper.php:47 OC\\Authentication\\TwoFactorAuth\\Manager",
+        "lib/Mail/AbstractMail.php:43 OC_Defaults",
+        "lib/Mail/NewClientMail.php:45 OC_Defaults",
+        "lib/Mail/ShareCreatedMail.php:44 OC_Defaults",
+        "lib/Provider/Favicon/AbstractFaviconProvider.php:113 OC\\Avatar\\GuestAvatar",
+        "lib/Services/AvatarService.php:65 OC\\Avatar\\GuestAvatar",
+        "lib/Services/EnvironmentService.php:142 OC\\Authentication\\Token\\IProvider",
+        "lib/Services/EnvironmentService.php:450 OC_User",
+        "lib/Services/SessionService.php:409 OC\\Authentication\\Token\\PublicKeyToken",
+        "lib/Settings/AdminSettings.php:86 OC",
+        "lib/Settings/AdminSettings.php:86 OC::$server",
+        "templates/partials/https.php:20 OC",
+        "templates/partials/https.php:20 OC::$server",
+        "templates/partials/https.php:21 OC_User"
+      ],
+      "lines": [
+        "22 uses of the private API of the server in 15 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/LanguageController.php:42 OC\\App\\AppManager",
+        "  lib/Fetcher/NightlyAppFetcher.php:46 OC\\App\\AppStore\\Fetcher\\Fetcher",
+        "  lib/Fetcher/NightlyAppFetcher.php:67 OC\\Files\\AppData\\Factory",
+        "  lib/Fetcher/NightlyAppFetcher.php:71 OC\\App\\CompareVersion",
+        "  lib/Fetcher/NightlyAppFetcher.php:245 OC\\App\\AppStore\\Version\\VersionParser",
+        "  lib/Helper/Image/AbstractImageHelper.php:205 OC",
+        "  lib/Helper/Settings/ThemeSettingsHelper.php:39 OC_Defaults",
+        "  lib/Helper/Survey/ServerReportHelper.php:207 OC_App",
+        "  lib/Helper/User/UserTokenHelper.php:47 OC\\Authentication\\TwoFactorAuth\\Manager",
+        "  lib/Mail/AbstractMail.php:43 OC_Defaults",
+        "  lib/Mail/NewClientMail.php:45 OC_Defaults",
+        "  lib/Mail/ShareCreatedMail.php:44 OC_Defaults",
+        "  lib/Provider/Favicon/AbstractFaviconProvider.php:113 OC\\Avatar\\GuestAvatar",
+        "  lib/Services/AvatarService.php:65 OC\\Avatar\\GuestAvatar",
+        "  lib/Services/EnvironmentService.php:142 OC\\Authentication\\Token\\IProvider",
+        "  lib/Services/EnvironmentService.php:450 OC_User",
+        "  lib/Services/SessionService.php:409 OC\\Authentication\\Token\\PublicKeyToken",
+        "  lib/Settings/AdminSettings.php:86 OC",
+        "  lib/Settings/AdminSettings.php:86 OC::$server",
+        "  templates/partials/https.php:20 OC",
+        "  templates/partials/https.php:20 OC::$server",
+        "  templates/partials/https.php:21 OC_User"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 19
+        }
+      ]
+    },
+    {
+      "id": "ocp-missing",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:250 OCP\\User\\Events\\CreateUserEvent: Nextcloud 20 is the last major to have it, the app declares up to 35",
+        "lib/EventListener/User/BeforeUserCreatedListener.php:46 OCP\\User\\Events\\CreateUserEvent: Nextcloud 20 is the last major to have it, the app declares up to 35"
+      ],
+      "lines": [
+        "2 uses in 2 files of the public API that a major of Nextcloud 32 to 35 no longer has. The app fails there where it comes to that line, or the server no longer calls the method it overrides.",
+        "  lib/AppInfo/Application.php:250 OCP\\User\\Events\\CreateUserEvent: Nextcloud 20 is the last major to have it, the app declares up to 35",
+        "  lib/EventListener/User/BeforeUserCreatedListener.php:46 OCP\\User\\Events\\CreateUserEvent: Nextcloud 20 is the last major to have it, the app declares up to 35"
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/Helper/Settings/ServerSettingsHelper.php:64 OCP\\IURLGenerator::linkToRemote(): there since Nextcloud 34, the app declares from 32"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that the oldest majors of Nextcloud 32 to 35 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/Helper/Settings/ServerSettingsHelper.php:64 OCP\\IURLGenerator::linkToRemote(): there since Nextcloud 34, the app declares from 32"
+      ]
+    },
+    {
+      "id": "display-name-lookup",
+      "level": "warn",
+      "places": [
+        "lib/Services/UserService.php:59"
+      ],
+      "lines": [
+        "1 place loads a user with IUserManager::get() only to ask for the display name. IUserManager::getDisplayName(), there since Nextcloud 25, answers from a cache and loads no user.",
+        "  lib/Services/UserService.php:59"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:261 OCP\\Notification\\IManager::registerNotifierService(): deprecated since Nextcloud 26; use the IBootStrap registration context",
+        "lib/Helper/ApiObjects/ShareObjectHelper.php:158 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Helper/Settings/ServerSettingsHelper.php:66 OCP\\Util::linkToRemote(): deprecated since Nextcloud 34; Use IURlGenerator::linkToRemote",
+        "lib/Services/ConfigurationService.php:171 OCP\\IAppConfig::getKeys(): deprecated since Nextcloud 13; use method getAppKeys of \\OCP\\IConfig  This function gets all keys of an app. Please note that the values are not returned.",
+        "lib/Services/ConfigurationService.php:191 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Services/EnvironmentService.php:270 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Services/EnvironmentService.php:304 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Services/MailService.php:144 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "lines": [
+        "8 uses in 6 files of the public API that is deprecated in Nextcloud 32 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/AppInfo/Application.php:261 OCP\\Notification\\IManager::registerNotifierService(): deprecated since Nextcloud 26; use the IBootStrap registration context",
+        "  lib/Helper/ApiObjects/ShareObjectHelper.php:158 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Helper/Settings/ServerSettingsHelper.php:66 OCP\\Util::linkToRemote(): deprecated since Nextcloud 34; Use IURlGenerator::linkToRemote",
+        "  lib/Services/ConfigurationService.php:171 OCP\\IAppConfig::getKeys(): deprecated since Nextcloud 13; use method getAppKeys of \\OCP\\IConfig  This function gets all keys of an app. Please note that the values are not returned.",
+        "  lib/Services/ConfigurationService.php:191 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Services/EnvironmentService.php:270 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Services/EnvironmentService.php:304 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Services/MailService.php:144 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/Cron/BackupJob.php OCA\\Passwords\\Cron\\BackupJob",
+        "lib/Cron/CheckNightlyUpdates.php OCA\\Passwords\\Cron\\CheckNightlyUpdates",
+        "lib/Cron/CleanUpEntities.php OCA\\Passwords\\Cron\\CleanUpEntities",
+        "lib/Cron/SynchronizeShares.php OCA\\Passwords\\Cron\\SynchronizeShares"
+      ],
+      "lines": [
+        "4 timed jobs do not say whether they are time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/Cron/BackupJob.php OCA\\Passwords\\Cron\\BackupJob",
+        "  lib/Cron/CheckNightlyUpdates.php OCA\\Passwords\\Cron\\CheckNightlyUpdates",
+        "  lib/Cron/CleanUpEntities.php OCA\\Passwords\\Cron\\CleanUpEntities",
+        "  lib/Cron/SynchronizeShares.php OCA\\Passwords\\Cron\\SynchronizeShares"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/Api/FolderApiController.php:105 time()",
+        "lib/Controller/Api/PasswordApiController.php:150 time()",
+        "lib/Controller/Api/PasswordApiController.php:247 time()",
+        "lib/Controller/Api/ServiceApiController.php:236 time()",
+        "lib/Controller/Api/ShareApiController.php:209 time()",
+        "lib/Controller/Api/TagApiController.php:105 time()",
+        "lib/Controller/LanguageController.php:143 time()",
+        "lib/Controller/Link/ConnectController.php:175 time()",
+        "lib/Controller/Link/ConnectController.php:339 time()",
+        "lib/Cron/CheckPasswordsJob.php:126 time()",
+        "lib/Cron/SendServerSurvey.php:99 time()",
+        "lib/Cron/SynchronizeShares.php:79 time()",
+        "lib/Cron/SynchronizeShares.php:195 time()",
+        "lib/Helper/CleanUp/CleanDeletedEntitiesHelper.php:160 time()",
+        "lib/Helper/CleanUp/CleanRegistrationsHelper.php:45 time()",
+        "lib/Helper/CleanUp/CleanSessionsHelper.php:45 time()",
+        "lib/Helper/SecurityCheck/UserRulesSecurityCheck.php:78 time()",
+        "lib/Helper/Sharing/CreatePasswordShareHelper.php:127 time()",
+        "lib/Helper/Time/DateTimeHelper.php:25 new DateTime()",
+        "lib/Notification/AbstractNotification.php:92 new DateTime()",
+        "lib/Notification/ImpersonationNotification.php:80 time()",
+        "lib/Notification/ImpersonationNotification.php:119 new DateTime()",
+        "lib/Services/Object/AbstractModelService.php:111 time()",
+        "lib/Services/Object/AbstractModelService.php:112 time()",
+        "lib/Services/Object/AbstractService.php:169 time()",
+        "lib/Services/Object/AbstractService.php:199 time()",
+        "lib/Services/Object/AbstractService.php:200 time()",
+        "lib/Services/Object/ChallengeService.php:134 time()",
+        "lib/Services/Object/ChallengeService.php:135 time()",
+        "lib/Services/Object/FolderRevisionService.php:108 time()",
+        "lib/Services/Object/FolderRevisionService.php:222 time()",
+        "lib/Services/Object/FolderRevisionService.php:223 time()",
+        "lib/Services/Object/KeychainService.php:175 time()",
+        "lib/Services/Object/KeychainService.php:176 time()",
+        "lib/Services/Object/PasswordRevisionService.php:171 time()",
+        "lib/Services/Object/PasswordRevisionService.php:172 time()",
+        "lib/Services/Object/PasswordTagRelationService.php:137 time()",
+        "lib/Services/Object/PasswordTagRelationService.php:138 time()",
+        "lib/Services/Object/RegistrationService.php:74 time()",
+        "lib/Services/Object/RegistrationService.php:75 time()",
+        "lib/Services/Object/ShareService.php:145 time()",
+        "lib/Services/Object/ShareService.php:206 time()",
+        "lib/Services/Object/ShareService.php:207 time()",
+        "lib/Services/Object/TagRevisionService.php:115 time()",
+        "lib/Services/Object/TagRevisionService.php:116 time()",
+        "lib/Services/ValidationService.php:58 time()",
+        "lib/Services/ValidationService.php:80 time()",
+        "lib/Services/ValidationService.php:109 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 48 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/Api/FolderApiController.php:105 time()",
+        "  lib/Controller/Api/PasswordApiController.php:150 time()",
+        "  lib/Controller/Api/PasswordApiController.php:247 time()",
+        "  lib/Controller/Api/ServiceApiController.php:236 time()",
+        "  lib/Controller/Api/ShareApiController.php:209 time()",
+        "  lib/Controller/Api/TagApiController.php:105 time()",
+        "  lib/Controller/LanguageController.php:143 time()",
+        "  lib/Controller/Link/ConnectController.php:175 time()",
+        "  lib/Controller/Link/ConnectController.php:339 time()",
+        "  lib/Cron/CheckPasswordsJob.php:126 time()",
+        "  lib/Cron/SendServerSurvey.php:99 time()",
+        "  lib/Cron/SynchronizeShares.php:79 time()",
+        "  lib/Cron/SynchronizeShares.php:195 time()",
+        "  lib/Helper/CleanUp/CleanDeletedEntitiesHelper.php:160 time()",
+        "  lib/Helper/CleanUp/CleanRegistrationsHelper.php:45 time()",
+        "  lib/Helper/CleanUp/CleanSessionsHelper.php:45 time()",
+        "  lib/Helper/SecurityCheck/UserRulesSecurityCheck.php:78 time()",
+        "  lib/Helper/Sharing/CreatePasswordShareHelper.php:127 time()",
+        "  lib/Helper/Time/DateTimeHelper.php:25 new DateTime()",
+        "  lib/Notification/AbstractNotification.php:92 new DateTime()",
+        "  lib/Notification/ImpersonationNotification.php:80 time()",
+        "  lib/Notification/ImpersonationNotification.php:119 new DateTime()",
+        "  lib/Services/Object/AbstractModelService.php:111 time()",
+        "  lib/Services/Object/AbstractModelService.php:112 time()",
+        "  lib/Services/Object/AbstractService.php:169 time()",
+        "  lib/Services/Object/AbstractService.php:199 time()",
+        "  lib/Services/Object/AbstractService.php:200 time()",
+        "  lib/Services/Object/ChallengeService.php:134 time()",
+        "  lib/Services/Object/ChallengeService.php:135 time()",
+        "  lib/Services/Object/FolderRevisionService.php:108 time()",
+        "  lib/Services/Object/FolderRevisionService.php:222 time()",
+        "  lib/Services/Object/FolderRevisionService.php:223 time()",
+        "  lib/Services/Object/KeychainService.php:175 time()",
+        "  lib/Services/Object/KeychainService.php:176 time()",
+        "  lib/Services/Object/PasswordRevisionService.php:171 time()",
+        "  lib/Services/Object/PasswordRevisionService.php:172 time()",
+        "  lib/Services/Object/PasswordTagRelationService.php:137 time()",
+        "  lib/Services/Object/PasswordTagRelationService.php:138 time()",
+        "  lib/Services/Object/RegistrationService.php:74 time()",
+        "  lib/Services/Object/RegistrationService.php:75 time()",
+        "  lib/Services/Object/ShareService.php:145 time()",
+        "  lib/Services/Object/ShareService.php:206 time()",
+        "  lib/Services/Object/ShareService.php:207 time()",
+        "  lib/Services/Object/TagRevisionService.php:115 time()",
+        "  lib/Services/Object/TagRevisionService.php:116 time()",
+        "  lib/Services/ValidationService.php:58 time()",
+        "  lib/Services/ValidationService.php:80 time()",
+        "  lib/Services/ValidationService.php:109 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 45
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Helper/ApiObjects/ShareObjectHelper.php:158 getAppValue()",
+        "lib/Migration/AutoBackupRestore.php:67 getAppValueBool()",
+        "lib/Migration/AutoBackupRestore.php:69 setAppValueInt()",
+        "lib/Migration/AutoBackupRestore.php:75 setAppValueInt()",
+        "lib/Migration/AutoBackupRestore.php:96 setAppValueInt()",
+        "lib/Migration/AutoBackupRestore.php:100 setAppValueInt()",
+        "lib/Services/ConfigurationService.php:66 getValueString()",
+        "lib/Services/ConfigurationService.php:79 getValueInt()",
+        "lib/Services/ConfigurationService.php:90 getValueBool()",
+        "lib/Services/ConfigurationService.php:121 setValueString()",
+        "lib/Services/ConfigurationService.php:129 setValueInt()",
+        "lib/Services/ConfigurationService.php:137 setValueBool()",
+        "lib/Services/ConfigurationService.php:171 getKeys()",
+        "lib/Services/ConfigurationService.php:229 getValueString()",
+        "lib/Services/EnvironmentService.php:270 getAppValue()",
+        "lib/Services/EnvironmentService.php:304 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 16 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Helper/ApiObjects/ShareObjectHelper.php:158 getAppValue()",
+        "  lib/Migration/AutoBackupRestore.php:67 getAppValueBool()",
+        "  lib/Migration/AutoBackupRestore.php:69 setAppValueInt()",
+        "  lib/Migration/AutoBackupRestore.php:75 setAppValueInt()",
+        "  lib/Migration/AutoBackupRestore.php:96 setAppValueInt()",
+        "  lib/Migration/AutoBackupRestore.php:100 setAppValueInt()",
+        "  lib/Services/ConfigurationService.php:66 getValueString()",
+        "  lib/Services/ConfigurationService.php:79 getValueInt()",
+        "  lib/Services/ConfigurationService.php:90 getValueBool()",
+        "  lib/Services/ConfigurationService.php:121 setValueString()",
+        "  lib/Services/ConfigurationService.php:129 setValueInt()",
+        "  lib/Services/ConfigurationService.php:137 setValueBool()",
+        "  lib/Services/ConfigurationService.php:171 getKeys()",
+        "  lib/Services/ConfigurationService.php:229 getValueString()",
+        "  lib/Services/EnvironmentService.php:270 getAppValue()",
+        "  lib/Services/EnvironmentService.php:304 getAppValue()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 13
+        }
+      ]
+    },
+    {
+      "id": "routes-unreadable",
+      "level": "info",
+      "places": [
+        "appinfo/routes.php:138 routes",
+        "appinfo/routes.php:138 resources"
+      ],
+      "lines": [
+        "2 places state routes that are no constants, so this cannot read them: the server builds them at run time. The inventory lacks them, and what depends on the full list of routes is left out: route-unreferenced, ocs-unreferenced, frontend-url-without-route, controller-method-unrouted and the operations of openapi-drift that no route provides.",
+        "  appinfo/routes.php:138 routes",
+        "  appinfo/routes.php:138 resources"
+      ]
+    }
+  ],
+  "endpoints": 0,
+  "endpointList": []
+}

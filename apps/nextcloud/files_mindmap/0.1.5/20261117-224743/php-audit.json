@@ -1,0 +1,125 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Files_MindMap\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/DisplayController.php:57 OC",
+        "templates/viewer.php:12 OC",
+        "templates/viewer.php:12 OC::$server",
+        "templates/viewer.php:13 OC::$server"
+      ],
+      "lines": [
+        "4 uses of the private API of the server in 2 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/DisplayController.php:57 OC",
+        "  templates/viewer.php:12 OC",
+        "  templates/viewer.php:12 OC::$server",
+        "  templates/viewer.php:13 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:58 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:58 injectFn()"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:63 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Controller/DisplayController.php:79 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Controller/PublicFileHandlingController.php:105 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Controller/PublicFileHandlingController.php:144 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Controller/PublicFileHandlingController.php:191 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Listener/RegisterTemplateCreatorListener.php:39 OCP\\Files\\Template\\TemplateFileCreator::setIconClass(): deprecated since Nextcloud 29",
+        "lib/Listener/RegisterTemplateCreatorListener.php:42 OCP\\Files\\Template\\TemplateFileCreator::setIconClass(): deprecated since Nextcloud 29"
+      ],
+      "lines": [
+        "7 uses in 4 files of the public API that is deprecated in Nextcloud 32 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/AppInfo/Application.php:63 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Controller/DisplayController.php:79 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Controller/PublicFileHandlingController.php:105 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Controller/PublicFileHandlingController.php:144 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Controller/PublicFileHandlingController.php:191 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Listener/RegisterTemplateCreatorListener.php:39 OCP\\Files\\Template\\TemplateFileCreator::setIconClass(): deprecated since Nextcloud 29",
+        "  lib/Listener/RegisterTemplateCreatorListener.php:42 OCP\\Files\\Template\\TemplateFileCreator::setIconClass(): deprecated since Nextcloud 29"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/viewer.php:34 <style> with content"
+      ],
+      "lines": [
+        "1 inline style in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/viewer.php:34 <style> with content"
+      ]
+    }
+  ],
+  "endpoints": 5,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/files_mindmap/",
+      "target": "OCA\\Files_MindMap\\Controller\\DisplayController::showMindmapViewer",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/files_mindmap/ajax/loadfile",
+      "target": "OCA\\Files_MindMap\\Controller\\FileHandlingController::load",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/files_mindmap/ajax/savefile",
+      "target": "OCA\\Files_MindMap\\Controller\\FileHandlingController::save",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/files_mindmap/public/{token}",
+      "target": "OCA\\Files_MindMap\\Controller\\PublicFileHandlingController::load",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/files_mindmap/share/save",
+      "target": "OCA\\Files_MindMap\\Controller\\PublicFileHandlingController::save",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

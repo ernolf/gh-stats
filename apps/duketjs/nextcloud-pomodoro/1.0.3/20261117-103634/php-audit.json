@@ -1,0 +1,196 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Pomodoro\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "openapi-drift",
+      "level": "warn",
+      "places": [
+        "GET /ocs/v2.php/apps/pomodoro/state  OCA\\Pomodoro\\Controller\\ApiController::state(): not in openapi.json",
+        "POST /ocs/v2.php/apps/pomodoro/settings  OCA\\Pomodoro\\Controller\\ApiController::updateSettings(): not in openapi.json",
+        "POST /ocs/v2.php/apps/pomodoro/session  OCA\\Pomodoro\\Controller\\ApiController::startSession(): not in openapi.json",
+        "POST /ocs/v2.php/apps/pomodoro/task-config  OCA\\Pomodoro\\Controller\\ApiController::setTaskConfig(): not in openapi.json",
+        "PUT /ocs/v2.php/apps/pomodoro/session/phase  OCA\\Pomodoro\\Controller\\ApiController::advanceSession(): not in openapi.json",
+        "PUT /ocs/v2.php/apps/pomodoro/session/complete  OCA\\Pomodoro\\Controller\\ApiController::completeEarly(): not in openapi.json",
+        "PUT /ocs/v2.php/apps/pomodoro/session/pause  OCA\\Pomodoro\\Controller\\ApiController::pauseSession(): not in openapi.json",
+        "DELETE /ocs/v2.php/apps/pomodoro/session  OCA\\Pomodoro\\Controller\\ApiController::clearSession(): not in openapi.json",
+        "POST /ocs/v2.php/apps/pomodoro/session/announced  OCA\\Pomodoro\\Controller\\ApiController::markAnnounced(): not in openapi.json",
+        "GET /ocs/v2.php/apps/pomodoro/api: in openapi.json, and no route provides it"
+      ],
+      "lines": [
+        "The OpenAPI specification and the routes differ in 10 operations. A client generated from the specification then calls what is not there, or lacks what is. This holds the routes against the specification and does not generate it again.",
+        "  GET /ocs/v2.php/apps/pomodoro/state  OCA\\Pomodoro\\Controller\\ApiController::state(): not in openapi.json",
+        "  POST /ocs/v2.php/apps/pomodoro/settings  OCA\\Pomodoro\\Controller\\ApiController::updateSettings(): not in openapi.json",
+        "  POST /ocs/v2.php/apps/pomodoro/session  OCA\\Pomodoro\\Controller\\ApiController::startSession(): not in openapi.json",
+        "  POST /ocs/v2.php/apps/pomodoro/task-config  OCA\\Pomodoro\\Controller\\ApiController::setTaskConfig(): not in openapi.json",
+        "  PUT /ocs/v2.php/apps/pomodoro/session/phase  OCA\\Pomodoro\\Controller\\ApiController::advanceSession(): not in openapi.json",
+        "  PUT /ocs/v2.php/apps/pomodoro/session/complete  OCA\\Pomodoro\\Controller\\ApiController::completeEarly(): not in openapi.json",
+        "  PUT /ocs/v2.php/apps/pomodoro/session/pause  OCA\\Pomodoro\\Controller\\ApiController::pauseSession(): not in openapi.json",
+        "  DELETE /ocs/v2.php/apps/pomodoro/session  OCA\\Pomodoro\\Controller\\ApiController::clearSession(): not in openapi.json",
+        "  POST /ocs/v2.php/apps/pomodoro/session/announced  OCA\\Pomodoro\\Controller\\ApiController::markAnnounced(): not in openapi.json",
+        "  GET /ocs/v2.php/apps/pomodoro/api: in openapi.json, and no route provides it"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Service/SessionService.php:62 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/SessionService.php:81 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/SessionService.php:303 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/SessionService.php:361 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/SessionService.php:373 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/TaskConfigService.php:48 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/TaskConfigService.php:132 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "lines": [
+        "7 uses in 2 files of the public API that is deprecated in Nextcloud 31 to 36. The text of the tag names the replacement where it has one.",
+        "  lib/Service/SessionService.php:62 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/SessionService.php:81 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/SessionService.php:303 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/SessionService.php:361 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/SessionService.php:373 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/TaskConfigService.php:48 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/TaskConfigService.php:132 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/PhaseWatcher.php OCA\\Pomodoro\\BackgroundJob\\PhaseWatcher"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/PhaseWatcher.php OCA\\Pomodoro\\BackgroundJob\\PhaseWatcher"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/PhaseWatcher.php:64 time()",
+        "lib/Service/PhaseNotifier.php:50 new DateTime()",
+        "lib/Service/SessionService.php:391 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 3 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/BackgroundJob/PhaseWatcher.php:64 time()",
+        "  lib/Service/PhaseNotifier.php:50 new DateTime()",
+        "  lib/Service/SessionService.php:391 time()"
+      ]
+    }
+  ],
+  "endpoints": 10,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/pomodoro/",
+      "target": "OCA\\Pomodoro\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/pomodoro/session",
+      "target": "OCA\\Pomodoro\\Controller\\ApiController::clearSession",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/pomodoro/session",
+      "target": "OCA\\Pomodoro\\Controller\\ApiController::startSession",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/pomodoro/session/announced",
+      "target": "OCA\\Pomodoro\\Controller\\ApiController::markAnnounced",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/pomodoro/session/complete",
+      "target": "OCA\\Pomodoro\\Controller\\ApiController::completeEarly",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/pomodoro/session/pause",
+      "target": "OCA\\Pomodoro\\Controller\\ApiController::pauseSession",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/pomodoro/session/phase",
+      "target": "OCA\\Pomodoro\\Controller\\ApiController::advanceSession",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/pomodoro/settings",
+      "target": "OCA\\Pomodoro\\Controller\\ApiController::updateSettings",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/pomodoro/state",
+      "target": "OCA\\Pomodoro\\Controller\\ApiController::state",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/pomodoro/task-config",
+      "target": "OCA\\Pomodoro\\Controller\\ApiController::setTaskConfig",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

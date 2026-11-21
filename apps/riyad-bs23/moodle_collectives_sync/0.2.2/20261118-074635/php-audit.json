@@ -1,0 +1,542 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\MoodleCollectivesSync\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Service/SessionEstablisher.php:117 OC\\Session\\CryptoWrapper",
+        "lib/Service/SessionEstablisher.php:140 OC\\User\\Session",
+        "templates/launch-probe.php:125 OC",
+        "templates/launch-probe.php:125 OC\\Security\\CSP\\ContentSecurityPolicyNonceManager",
+        "templates/launch-probe.php:125 OC::$server"
+      ],
+      "lines": [
+        "5 uses of the private API of the server in 2 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Service/SessionEstablisher.php:117 OC\\Session\\CryptoWrapper",
+        "  lib/Service/SessionEstablisher.php:140 OC\\User\\Session",
+        "  templates/launch-probe.php:125 OC",
+        "  templates/launch-probe.php:125 OC\\Security\\CSP\\ContentSecurityPolicyNonceManager",
+        "  templates/launch-probe.php:125 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "template-inline-script",
+      "level": "warn",
+      "places": [
+        "templates/admin-settings.php:140 <script> with content"
+      ],
+      "lines": [
+        "1 inline script in templates/. The Content Security Policy of the server runs neither a <script> without a source or the nonce of the response nor an event handler attribute, so the browser does not run them. A script added with OCP\\Util::addScript() or addInitScript() runs.",
+        "  templates/admin-settings.php:140 <script> with content"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/moodle_collectives_sync/launch  moodle_collectives_sync.launch.launch  appinfo/routes.php:4 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 route outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 1 file of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/moodle_collectives_sync/launch  moodle_collectives_sync.launch.launch  appinfo/routes.php:4 routes"
+      ]
+    },
+    {
+      "id": "openapi-drift",
+      "level": "warn",
+      "places": [
+        "POST /ocs/v2.php/apps/moodle_collectives_sync/api/v1/webhook  OCA\\MoodleCollectivesSync\\Controller\\WebhookController::receive(): not in openapi-collectives-4.4.2.json",
+        "GET /ocs/v2.php/apps/moodle_collectives_sync/api/v1/health  OCA\\MoodleCollectivesSync\\Controller\\HealthController::status(): not in openapi-collectives-4.4.2.json",
+        "GET /ocs/v2.php/apps/collectives/api/v{}/collectives: in openapi-collectives-4.4.2.json, and no route provides it",
+        "POST /ocs/v2.php/apps/collectives/api/v{}/collectives: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "DELETE /ocs/v2.php/apps/collectives/api/v{}/collectives/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/editLevel: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/shareLevel: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pageMode: in openapi-collectives-4.4.2.json, and no route provides it",
+        "GET /ocs/v2.php/apps/collectives/api/v{}/collectives/trash: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PATCH /ocs/v2.php/apps/collectives/api/v{}/collectives/trash/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "DELETE /ocs/v2.php/apps/collectives/api/v{}/collectives/trash/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "GET /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/shares: in openapi-collectives-4.4.2.json, and no route provides it",
+        "POST /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/shares: in openapi-collectives-4.4.2.json, and no route provides it",
+        "POST /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/shares: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/shares/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "DELETE /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/shares/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/shares/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "DELETE /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/shares/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "GET /ocs/v2.php/apps/collectives/api/v{}/collectives/search/recent: in openapi-collectives-4.4.2.json, and no route provides it",
+        "GET /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/search: in openapi-collectives-4.4.2.json, and no route provides it",
+        "GET /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages: in openapi-collectives-4.4.2.json, and no route provides it",
+        "GET /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "DELETE /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "POST /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "GET /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/touch: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/fullWidth: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/to/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/emoji: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/subpageOrder: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/tags/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "DELETE /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/tags/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "GET /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/attachments: in openapi-collectives-4.4.2.json, and no route provides it",
+        "POST /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/attachments: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/attachments/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "DELETE /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/attachments/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PATCH /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/attachments/trash/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "GET /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/trash: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PATCH /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/trash/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "DELETE /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/trash/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "GET /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/templates: in openapi-collectives-4.4.2.json, and no route provides it",
+        "POST /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/templates/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/templates/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "DELETE /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/templates/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/templates/{}/emoji: in openapi-collectives-4.4.2.json, and no route provides it",
+        "GET /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/tags: in openapi-collectives-4.4.2.json, and no route provides it",
+        "POST /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/tags: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/tags/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "DELETE /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/tags/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/userSettings/pageOrder: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/userSettings/showMembers: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/userSettings/showRecentPages: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/userSettings/favoritePages: in openapi-collectives-4.4.2.json, and no route provides it",
+        "POST /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/sessions: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/sessions: in openapi-collectives-4.4.2.json, and no route provides it",
+        "DELETE /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/sessions: in openapi-collectives-4.4.2.json, and no route provides it",
+        "GET /ocs/v2.php/apps/collectives/api/v{}/settings/user/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "POST /ocs/v2.php/apps/collectives/api/v{}/settings/user: in openapi-collectives-4.4.2.json, and no route provides it",
+        "GET /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "GET /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/search: in openapi-collectives-4.4.2.json, and no route provides it",
+        "GET /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages: in openapi-collectives-4.4.2.json, and no route provides it",
+        "GET /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "DELETE /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "POST /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "GET /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}/touch: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}/fullWidth: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}/emoji: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}/subpageOrder: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}/tags/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "DELETE /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}/tags/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "GET /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}/attachments: in openapi-collectives-4.4.2.json, and no route provides it",
+        "POST /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}/attachments: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}/attachments/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "DELETE /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}/attachments/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PATCH /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}/attachments/trash/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "GET /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/trash: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PATCH /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/trash/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "DELETE /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/trash/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "GET /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/templates: in openapi-collectives-4.4.2.json, and no route provides it",
+        "GET /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/tags: in openapi-collectives-4.4.2.json, and no route provides it",
+        "POST /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/tags: in openapi-collectives-4.4.2.json, and no route provides it",
+        "PUT /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/tags/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "DELETE /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/tags/{}: in openapi-collectives-4.4.2.json, and no route provides it"
+      ],
+      "lines": [
+        "The OpenAPI specification and the routes differ in 85 operations. A client generated from the specification then calls what is not there, or lacks what is. This holds the routes against the specification and does not generate it again.",
+        "  POST /ocs/v2.php/apps/moodle_collectives_sync/api/v1/webhook  OCA\\MoodleCollectivesSync\\Controller\\WebhookController::receive(): not in openapi-collectives-4.4.2.json",
+        "  GET /ocs/v2.php/apps/moodle_collectives_sync/api/v1/health  OCA\\MoodleCollectivesSync\\Controller\\HealthController::status(): not in openapi-collectives-4.4.2.json",
+        "  GET /ocs/v2.php/apps/collectives/api/v{}/collectives: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  POST /ocs/v2.php/apps/collectives/api/v{}/collectives: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  DELETE /ocs/v2.php/apps/collectives/api/v{}/collectives/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/editLevel: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/shareLevel: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pageMode: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  GET /ocs/v2.php/apps/collectives/api/v{}/collectives/trash: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PATCH /ocs/v2.php/apps/collectives/api/v{}/collectives/trash/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  DELETE /ocs/v2.php/apps/collectives/api/v{}/collectives/trash/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  GET /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/shares: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  POST /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/shares: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  POST /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/shares: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/shares/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  DELETE /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/shares/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/shares/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  DELETE /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/shares/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  GET /ocs/v2.php/apps/collectives/api/v{}/collectives/search/recent: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  GET /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/search: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  GET /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  GET /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  DELETE /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  POST /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  GET /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/touch: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/fullWidth: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/to/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/emoji: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/subpageOrder: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/tags/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  DELETE /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/tags/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  GET /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/attachments: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  POST /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/attachments: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/attachments/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  DELETE /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/attachments/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PATCH /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/{}/attachments/trash/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  GET /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/trash: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PATCH /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/trash/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  DELETE /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/trash/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  GET /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/templates: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  POST /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/templates/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/templates/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  DELETE /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/templates/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/pages/templates/{}/emoji: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  GET /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/tags: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  POST /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/tags: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/tags/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  DELETE /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/tags/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/userSettings/pageOrder: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/userSettings/showMembers: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/userSettings/showRecentPages: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/userSettings/favoritePages: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  POST /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/sessions: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/sessions: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  DELETE /ocs/v2.php/apps/collectives/api/v{}/collectives/{}/sessions: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  GET /ocs/v2.php/apps/collectives/api/v{}/settings/user/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  POST /ocs/v2.php/apps/collectives/api/v{}/settings/user: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  GET /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  GET /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/search: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  GET /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  GET /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  DELETE /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  POST /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  GET /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}/touch: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}/fullWidth: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}/emoji: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}/subpageOrder: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}/tags/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  DELETE /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}/tags/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  GET /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}/attachments: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  POST /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}/attachments: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}/attachments/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  DELETE /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}/attachments/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PATCH /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/{}/attachments/trash/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  GET /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/trash: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PATCH /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/trash/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  DELETE /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/trash/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  GET /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/pages/templates: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  GET /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/tags: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  POST /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/tags: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  PUT /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/tags/{}: in openapi-collectives-4.4.2.json, and no route provides it",
+        "  DELETE /ocs/v2.php/apps/collectives/api/v{}/p/collectives/{}/tags/{}: in openapi-collectives-4.4.2.json, and no route provides it"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 82
+        }
+      ]
+    },
+    {
+      "id": "migration-name-length",
+      "level": "warn",
+      "places": [
+        "lib/Migration/Version000100Date20260728000000.php:51 the primary key of moodlecoll_collective_map, named after the table: 25 characters and the prefix oc_, in Nextcloud 32",
+        "lib/Migration/Version000100Date20260728000000.php:62 the primary key of moodlecoll_event_dedupe, named after the table: 23 characters and the prefix oc_, in Nextcloud 32",
+        "lib/Migration/Version000100Date20260728000000.php:83 the primary key of moodlecoll_contribution, named after the table: 23 characters and the prefix oc_, in Nextcloud 32"
+      ],
+      "lines": [
+        "3 names in the migrations are longer than the server allows, so it stops the install or the update of the app with an exception. The table names are counted with the default prefix oc_.",
+        "  Up to Nextcloud 32 the server checks this only where info.xml lists no database, or lists oci among them.",
+        "  lib/Migration/Version000100Date20260728000000.php:51 the primary key of moodlecoll_collective_map, named after the table: 25 characters and the prefix oc_, in Nextcloud 32",
+        "  lib/Migration/Version000100Date20260728000000.php:62 the primary key of moodlecoll_event_dedupe, named after the table: 23 characters and the prefix oc_, in Nextcloud 32",
+        "  lib/Migration/Version000100Date20260728000000.php:83 the primary key of moodlecoll_contribution, named after the table: 23 characters and the prefix oc_, in Nextcloud 32"
+      ]
+    },
+    {
+      "id": "migration-bool-notnull",
+      "level": "warn",
+      "places": [
+        "lib/Migration/Version000100Date20260728000000.php:24 moodlecoll_user_map.created_by_us, in Nextcloud 32"
+      ],
+      "lines": [
+        "1 boolean column is NotNull. Oracle cannot store false in such a column, so the server stops the migration with an exception. A boolean column needs notnull false.",
+        "  Up to Nextcloud 32 the server checks this only where info.xml lists no database, or lists oci among them. From Nextcloud 33 on the server makes the column nullable on Oracle itself.",
+        "  lib/Migration/Version000100Date20260728000000.php:24 moodlecoll_user_map.created_by_us, in Nextcloud 32"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/HealthController.php:39 OCP\\Util::getVersion(): deprecated since Nextcloud 31; Use \\OCP\\ServerVersion::getVersion"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated in Nextcloud 32 to 34. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/HealthController.php:39 OCP\\Util::getVersion(): deprecated since Nextcloud 31; Use \\OCP\\ServerVersion::getVersion"
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/admin-settings.php:27 style= attribute",
+        "templates/admin-settings.php:33 style= attribute",
+        "templates/admin-settings.php:39 style= attribute",
+        "templates/admin-settings.php:55 style= attribute",
+        "templates/admin-settings.php:60 style= attribute",
+        "templates/admin-settings.php:77 style= attribute",
+        "templates/admin-settings.php:94 style= attribute",
+        "templates/admin-settings.php:100 style= attribute",
+        "templates/launch-error.php:27 <style> with content",
+        "templates/launch-probe.php:94 <style> with content"
+      ],
+      "lines": [
+        "10 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/admin-settings.php:27 style= attribute",
+        "  templates/admin-settings.php:33 style= attribute",
+        "  templates/admin-settings.php:39 style= attribute",
+        "  templates/admin-settings.php:55 style= attribute",
+        "  templates/admin-settings.php:60 style= attribute",
+        "  templates/admin-settings.php:77 style= attribute",
+        "  templates/admin-settings.php:94 style= attribute",
+        "  templates/admin-settings.php:100 style= attribute",
+        "  templates/launch-error.php:27 <style> with content",
+        "  templates/launch-probe.php:94 <style> with content"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/OutboxDrain.php OCA\\MoodleCollectivesSync\\BackgroundJob\\OutboxDrain",
+        "lib/BackgroundJob/PruneDedupe.php OCA\\MoodleCollectivesSync\\BackgroundJob\\PruneDedupe"
+      ],
+      "lines": [
+        "2 timed jobs do not say whether they are time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/OutboxDrain.php OCA\\MoodleCollectivesSync\\BackgroundJob\\OutboxDrain",
+        "  lib/BackgroundJob/PruneDedupe.php OCA\\MoodleCollectivesSync\\BackgroundJob\\PruneDedupe"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:126 time()",
+        "lib/BackgroundJob/PruneDedupe.php:17 time()",
+        "lib/Controller/HealthController.php:54 time()",
+        "lib/Controller/WebhookController.php:55 time()",
+        "lib/Db/CollectiveMapMapper.php:81 time()",
+        "lib/Db/CollectiveMapMapper.php:99 time()",
+        "lib/Db/UserMapMapper.php:50 time()",
+        "lib/Db/UserMapMapper.php:63 time()",
+        "lib/Listener/PageWrittenListener.php:107 time()",
+        "lib/Middleware/HmacAuthMiddleware.php:62 time()",
+        "lib/Middleware/HmacAuthMiddleware.php:64 time()",
+        "lib/Middleware/HmacAuthMiddleware.php:69 time()",
+        "lib/Service/ContributionPusher.php:54 time()",
+        "lib/Service/MoodleClient.php:66 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 14 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/AppInfo/Application.php:126 time()",
+        "  lib/BackgroundJob/PruneDedupe.php:17 time()",
+        "  lib/Controller/HealthController.php:54 time()",
+        "  lib/Controller/WebhookController.php:55 time()",
+        "  lib/Db/CollectiveMapMapper.php:81 time()",
+        "  lib/Db/CollectiveMapMapper.php:99 time()",
+        "  lib/Db/UserMapMapper.php:50 time()",
+        "  lib/Db/UserMapMapper.php:63 time()",
+        "  lib/Listener/PageWrittenListener.php:107 time()",
+        "  lib/Middleware/HmacAuthMiddleware.php:62 time()",
+        "  lib/Middleware/HmacAuthMiddleware.php:64 time()",
+        "  lib/Middleware/HmacAuthMiddleware.php:69 time()",
+        "  lib/Service/ContributionPusher.php:54 time()",
+        "  lib/Service/MoodleClient.php:66 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 11
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:25 getValueString()",
+        "lib/AppInfo/Application.php:51 getValueInt()",
+        "lib/AppInfo/Application.php:80 getValueString()",
+        "lib/AppInfo/Application.php:81 getValueString()",
+        "lib/AppInfo/Application.php:82 getValueString()",
+        "lib/AppInfo/Application.php:83 getValueString()",
+        "lib/AppInfo/Application.php:95 getValueString()",
+        "lib/AppInfo/Application.php:104 getValueString()",
+        "lib/AppInfo/Application.php:105 getValueString()",
+        "lib/AppInfo/Application.php:106 getValueString()",
+        "lib/AppInfo/Application.php:115 getValueBool()",
+        "lib/AppInfo/Application.php:124 getValueString()",
+        "lib/AppInfo/Application.php:125 getValueString()",
+        "lib/AppInfo/Application.php:134 getValueString()",
+        "lib/AppInfo/Application.php:151 getValueString()",
+        "lib/Controller/HealthController.php:32 getValueString()",
+        "lib/Controller/HealthController.php:35 getValueString()",
+        "lib/Controller/HealthController.php:50 getValueString()",
+        "lib/Controller/HealthController.php:56 getValueString()",
+        "lib/Controller/LaunchController.php:107 getValueBool()",
+        "lib/Controller/SettingsController.php:65 setValueString()",
+        "lib/Controller/SettingsController.php:66 setValueString()",
+        "lib/Controller/SettingsController.php:67 setValueString()",
+        "lib/Controller/SettingsController.php:68 setValueString()",
+        "lib/Controller/SettingsController.php:69 setValueBool()",
+        "lib/Controller/SettingsController.php:70 setValueString()",
+        "lib/Controller/SettingsController.php:71 setValueBool()",
+        "lib/Controller/SettingsController.php:72 setValueInt()",
+        "lib/Controller/SettingsController.php:73 setValueInt()",
+        "lib/Controller/SettingsController.php:84 setValueString()",
+        "lib/Controller/SettingsController.php:92 getValueString()",
+        "lib/Controller/SettingsController.php:93 getValueString()",
+        "lib/Controller/SettingsController.php:94 getValueString()",
+        "lib/Middleware/HmacAuthMiddleware.php:50 getValueString()",
+        "lib/Middleware/HmacAuthMiddleware.php:58 getValueInt()",
+        "lib/Middleware/HmacAuthMiddleware.php:75 getValueString()",
+        "lib/Settings/AdminSettings.php:33 getValueString()",
+        "lib/Settings/AdminSettings.php:35 getValueString()",
+        "lib/Settings/AdminSettings.php:37 getValueString()",
+        "lib/Settings/AdminSettings.php:41 getValueString()",
+        "lib/Settings/AdminSettings.php:43 getValueString()",
+        "lib/Settings/AdminSettings.php:45 getValueString()",
+        "lib/Settings/AdminSettings.php:47 getValueString()",
+        "lib/Settings/AdminSettings.php:49 getValueBool()",
+        "lib/Settings/AdminSettings.php:51 getValueString()",
+        "lib/Settings/AdminSettings.php:53 getValueBool()",
+        "lib/Settings/AdminSettings.php:55 getValueInt()",
+        "lib/Settings/AdminSettings.php:57 getValueInt()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 48 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/AppInfo/Application.php:25 getValueString()",
+        "  lib/AppInfo/Application.php:51 getValueInt()",
+        "  lib/AppInfo/Application.php:80 getValueString()",
+        "  lib/AppInfo/Application.php:81 getValueString()",
+        "  lib/AppInfo/Application.php:82 getValueString()",
+        "  lib/AppInfo/Application.php:83 getValueString()",
+        "  lib/AppInfo/Application.php:95 getValueString()",
+        "  lib/AppInfo/Application.php:104 getValueString()",
+        "  lib/AppInfo/Application.php:105 getValueString()",
+        "  lib/AppInfo/Application.php:106 getValueString()",
+        "  lib/AppInfo/Application.php:115 getValueBool()",
+        "  lib/AppInfo/Application.php:124 getValueString()",
+        "  lib/AppInfo/Application.php:125 getValueString()",
+        "  lib/AppInfo/Application.php:134 getValueString()",
+        "  lib/AppInfo/Application.php:151 getValueString()",
+        "  lib/Controller/HealthController.php:32 getValueString()",
+        "  lib/Controller/HealthController.php:35 getValueString()",
+        "  lib/Controller/HealthController.php:50 getValueString()",
+        "  lib/Controller/HealthController.php:56 getValueString()",
+        "  lib/Controller/LaunchController.php:107 getValueBool()",
+        "  lib/Controller/SettingsController.php:65 setValueString()",
+        "  lib/Controller/SettingsController.php:66 setValueString()",
+        "  lib/Controller/SettingsController.php:67 setValueString()",
+        "  lib/Controller/SettingsController.php:68 setValueString()",
+        "  lib/Controller/SettingsController.php:69 setValueBool()",
+        "  lib/Controller/SettingsController.php:70 setValueString()",
+        "  lib/Controller/SettingsController.php:71 setValueBool()",
+        "  lib/Controller/SettingsController.php:72 setValueInt()",
+        "  lib/Controller/SettingsController.php:73 setValueInt()",
+        "  lib/Controller/SettingsController.php:84 setValueString()",
+        "  lib/Controller/SettingsController.php:92 getValueString()",
+        "  lib/Controller/SettingsController.php:93 getValueString()",
+        "  lib/Controller/SettingsController.php:94 getValueString()",
+        "  lib/Middleware/HmacAuthMiddleware.php:50 getValueString()",
+        "  lib/Middleware/HmacAuthMiddleware.php:58 getValueInt()",
+        "  lib/Middleware/HmacAuthMiddleware.php:75 getValueString()",
+        "  lib/Settings/AdminSettings.php:33 getValueString()",
+        "  lib/Settings/AdminSettings.php:35 getValueString()",
+        "  lib/Settings/AdminSettings.php:37 getValueString()",
+        "  lib/Settings/AdminSettings.php:41 getValueString()",
+        "  lib/Settings/AdminSettings.php:43 getValueString()",
+        "  lib/Settings/AdminSettings.php:45 getValueString()",
+        "  lib/Settings/AdminSettings.php:47 getValueString()",
+        "  lib/Settings/AdminSettings.php:49 getValueBool()",
+        "  lib/Settings/AdminSettings.php:51 getValueString()",
+        "  lib/Settings/AdminSettings.php:53 getValueBool()",
+        "  lib/Settings/AdminSettings.php:55 getValueInt()",
+        "  lib/Settings/AdminSettings.php:57 getValueInt()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 45
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "POST /ocs/v2.php/apps/moodle_collectives_sync/api/v1/webhook  ocs.moodle_collectives_sync.webhook.receive  appinfo/routes.php:4 ocs",
+        "GET /ocs/v2.php/apps/moodle_collectives_sync/api/v1/health  ocs.moodle_collectives_sync.health.status  appinfo/routes.php:4 ocs"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  POST /ocs/v2.php/apps/moodle_collectives_sync/api/v1/webhook  ocs.moodle_collectives_sync.webhook.receive  appinfo/routes.php:4 ocs",
+        "  GET /ocs/v2.php/apps/moodle_collectives_sync/api/v1/health  ocs.moodle_collectives_sync.health.status  appinfo/routes.php:4 ocs"
+      ]
+    }
+  ],
+  "endpoints": 4,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/moodle_collectives_sync/launch",
+      "target": "OCA\\MoodleCollectivesSync\\Controller\\LaunchController::launch",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/moodle_collectives_sync/settings/save",
+      "target": "OCA\\MoodleCollectivesSync\\Controller\\SettingsController::save",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/moodle_collectives_sync/api/v1/health",
+      "target": "OCA\\MoodleCollectivesSync\\Controller\\HealthController::status",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/moodle_collectives_sync/api/v1/webhook",
+      "target": "OCA\\MoodleCollectivesSync\\Controller\\WebhookController::receive",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

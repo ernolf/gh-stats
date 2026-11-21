@@ -1,0 +1,1586 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Polls\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "psr/event-dispatcher 1.0.0, in 3rdparty/ of Nextcloud 31 to 34",
+        "symfony/deprecation-contracts v3.7.1, in 3rdparty/ of Nextcloud 31 to 34",
+        "symfony/polyfill-php80 v1.37.0, in 3rdparty/ of Nextcloud 31"
+      ],
+      "lines": [
+        "vendor/ ships 3 packages that the server ships itself in a major of Nextcloud 31 to 34. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  psr/event-dispatcher 1.0.0, in 3rdparty/ of Nextcloud 31 to 34",
+        "  symfony/deprecation-contracts v3.7.1, in 3rdparty/ of Nextcloud 31 to 34",
+        "  symfony/polyfill-php80 v1.37.0, in 3rdparty/ of Nextcloud 31"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Command/Share/Add.php:26 OC\\Core\\Command\\Base",
+        "lib/Command/Share/Remove.php:25 OC\\Core\\Command\\Base"
+      ],
+      "lines": [
+        "2 uses of the private API of the server in 2 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Command/Share/Add.php:26 OC\\Core\\Command\\Base",
+        "  lib/Command/Share/Remove.php:25 OC\\Core\\Command\\Base"
+      ]
+    },
+    {
+      "id": "route-target-missing",
+      "level": "warn",
+      "places": [
+        "OPTIONS /index.php/apps/polls/api/v1.0/{path}  polls.baseapiv1.preflighted_cors  appinfo/routes.php:8 routes: no class OCA\\Polls\\Controller\\BaseApiV1Controller"
+      ],
+      "lines": [
+        "1 route names a controller class or a method that does not exist, or a method that is not public. A request to such a route ends in an error.",
+        "  OPTIONS /index.php/apps/polls/api/v1.0/{path}  polls.baseapiv1.preflighted_cors  appinfo/routes.php:8 routes: no class OCA\\Polls\\Controller\\BaseApiV1Controller"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Command/Share/TShareCommand.php:37 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "lib/Controller/PageController.php:53 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ],
+      "lines": [
+        "2 uses in 2 files of the public API that is deprecated in Nextcloud 31 to 34. The text of the tag names the replacement where it has one.",
+        "  lib/Command/Share/TShareCommand.php:37 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "  lib/Controller/PageController.php:53 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/Cron/AutoReminderCron.php OCA\\Polls\\Cron\\AutoReminderCron",
+        "lib/Cron/JanitorCron.php OCA\\Polls\\Cron\\JanitorCron",
+        "lib/Cron/NotificationCron.php OCA\\Polls\\Cron\\NotificationCron"
+      ],
+      "lines": [
+        "3 timed jobs do not say whether they are time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/Cron/AutoReminderCron.php OCA\\Polls\\Cron\\AutoReminderCron",
+        "  lib/Cron/JanitorCron.php OCA\\Polls\\Cron\\JanitorCron",
+        "  lib/Cron/NotificationCron.php OCA\\Polls\\Cron\\NotificationCron"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Cron/JanitorCron.php:68 time()",
+        "lib/Cron/JanitorCron.php:71 time()",
+        "lib/Cron/JanitorCron.php:77 time()",
+        "lib/Cron/JanitorCron.php:90 time()",
+        "lib/Cron/JanitorCron.php:115 time()",
+        "lib/Db/EntityWithUser.php:84 time()",
+        "lib/Db/Poll.php:219 time()",
+        "lib/Db/Poll.php:237 time()",
+        "lib/Db/Poll.php:397 time()",
+        "lib/Db/Poll.php:590 time()",
+        "lib/Db/PollGroupMapper.php:98 time()",
+        "lib/Db/PollMapper.php:124 time()",
+        "lib/Db/PollMapper.php:149 time()",
+        "lib/Db/V11/TableManager.php:624 time()",
+        "lib/Migration/RepairSteps/CleanTables.php:47 time()",
+        "lib/Migration/Version080307Date20250826231102.php:76 time()",
+        "lib/Model/Mail/ReminderMail.php:45 time()",
+        "lib/Model/Mail/ReminderMail.php:54 time()",
+        "lib/Model/Mail/ReminderMail.php:98 new DateTime()",
+        "lib/Service/ActivityService.php:81 time()",
+        "lib/Service/CommentService.php:82 time()",
+        "lib/Service/CommentService.php:111 time()",
+        "lib/Service/LogService.php:30 time()",
+        "lib/Service/MailService.php:200 time()",
+        "lib/Service/MailService.php:258 time()",
+        "lib/Service/NotificationService.php:54 new DateTime()",
+        "lib/Service/NotificationService.php:64 new DateTime()",
+        "lib/Service/OptionService.php:240 time()",
+        "lib/Service/OptionService.php:257 time()",
+        "lib/Service/PollGroupService.php:84 time()",
+        "lib/Service/PollService.php:208 time()",
+        "lib/Service/PollService.php:281 time()",
+        "lib/Service/PollService.php:337 time()",
+        "lib/Service/PollService.php:372 time()",
+        "lib/Service/PreferencesService.php:45 time()",
+        "lib/Service/PreferencesService.php:52 time()",
+        "lib/Service/PreferencesService.php:70 time()",
+        "lib/Service/ShareService.php:415 time()",
+        "lib/Service/ShareService.php:444 time()",
+        "lib/Service/ShareService.php:794 time()",
+        "lib/Service/SystemService.php:302 time()",
+        "lib/Service/WatchService.php:44 time()",
+        "lib/Service/WatchService.php:54 time()",
+        "lib/Service/WatchService.php:95 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 44 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Cron/JanitorCron.php:68 time()",
+        "  lib/Cron/JanitorCron.php:71 time()",
+        "  lib/Cron/JanitorCron.php:77 time()",
+        "  lib/Cron/JanitorCron.php:90 time()",
+        "  lib/Cron/JanitorCron.php:115 time()",
+        "  lib/Db/EntityWithUser.php:84 time()",
+        "  lib/Db/Poll.php:219 time()",
+        "  lib/Db/Poll.php:237 time()",
+        "  lib/Db/Poll.php:397 time()",
+        "  lib/Db/Poll.php:590 time()",
+        "  lib/Db/PollGroupMapper.php:98 time()",
+        "  lib/Db/PollMapper.php:124 time()",
+        "  lib/Db/PollMapper.php:149 time()",
+        "  lib/Db/V11/TableManager.php:624 time()",
+        "  lib/Migration/RepairSteps/CleanTables.php:47 time()",
+        "  lib/Migration/Version080307Date20250826231102.php:76 time()",
+        "  lib/Model/Mail/ReminderMail.php:45 time()",
+        "  lib/Model/Mail/ReminderMail.php:54 time()",
+        "  lib/Model/Mail/ReminderMail.php:98 new DateTime()",
+        "  lib/Service/ActivityService.php:81 time()",
+        "  lib/Service/CommentService.php:82 time()",
+        "  lib/Service/CommentService.php:111 time()",
+        "  lib/Service/LogService.php:30 time()",
+        "  lib/Service/MailService.php:200 time()",
+        "  lib/Service/MailService.php:258 time()",
+        "  lib/Service/NotificationService.php:54 new DateTime()",
+        "  lib/Service/NotificationService.php:64 new DateTime()",
+        "  lib/Service/OptionService.php:240 time()",
+        "  lib/Service/OptionService.php:257 time()",
+        "  lib/Service/PollGroupService.php:84 time()",
+        "  lib/Service/PollService.php:208 time()",
+        "  lib/Service/PollService.php:281 time()",
+        "  lib/Service/PollService.php:337 time()",
+        "  lib/Service/PollService.php:372 time()",
+        "  lib/Service/PreferencesService.php:45 time()",
+        "  lib/Service/PreferencesService.php:52 time()",
+        "  lib/Service/PreferencesService.php:70 time()",
+        "  lib/Service/ShareService.php:415 time()",
+        "  lib/Service/ShareService.php:444 time()",
+        "  lib/Service/ShareService.php:794 time()",
+        "  lib/Service/SystemService.php:302 time()",
+        "  lib/Service/WatchService.php:44 time()",
+        "  lib/Service/WatchService.php:54 time()",
+        "  lib/Service/WatchService.php:95 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 41
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Controller/PublicController.php:84 getValueBool()",
+        "lib/Model/Settings/AppSettings.php:138 getValueType()",
+        "lib/Model/Settings/AppSettings.php:176 getValueBool()",
+        "lib/Model/Settings/AppSettings.php:180 getValueBool()",
+        "lib/Model/Settings/AppSettings.php:187 setValueBool()",
+        "lib/Model/Settings/AppSettings.php:197 getValueArray()",
+        "lib/Model/Settings/AppSettings.php:204 setValueArray()",
+        "lib/Model/Settings/AppSettings.php:214 getValueInt()",
+        "lib/Model/Settings/AppSettings.php:221 setValueInt()",
+        "lib/Model/Settings/AppSettings.php:231 getValueString()",
+        "lib/Model/Settings/AppSettings.php:238 setValueString()",
+        "lib/Model/Settings/AppSettings.php:330 getValueString()",
+        "lib/Model/Settings/AppSettings.php:369 getValueString()",
+        "lib/Model/Settings/AppSettings.php:447 getValueString()",
+        "lib/Model/Settings/AppSettings.php:448 getValueString()",
+        "lib/Model/Settings/AppSettings.php:449 getValueString()",
+        "lib/Model/Settings/AppSettings.php:458 getValueString()",
+        "lib/Model/Settings/AppSettings.php:459 getValueString()",
+        "lib/Model/Settings/SystemSettings.php:63 getValueString()",
+        "lib/Model/Settings/SystemSettings.php:77 getValueArray()",
+        "lib/Model/Settings/SystemSettings.php:110 getValueString()",
+        "lib/Model/Settings/SystemSettings.php:124 getValueArray()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 22 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Controller/PublicController.php:84 getValueBool()",
+        "  lib/Model/Settings/AppSettings.php:138 getValueType()",
+        "  lib/Model/Settings/AppSettings.php:176 getValueBool()",
+        "  lib/Model/Settings/AppSettings.php:180 getValueBool()",
+        "  lib/Model/Settings/AppSettings.php:187 setValueBool()",
+        "  lib/Model/Settings/AppSettings.php:197 getValueArray()",
+        "  lib/Model/Settings/AppSettings.php:204 setValueArray()",
+        "  lib/Model/Settings/AppSettings.php:214 getValueInt()",
+        "  lib/Model/Settings/AppSettings.php:221 setValueInt()",
+        "  lib/Model/Settings/AppSettings.php:231 getValueString()",
+        "  lib/Model/Settings/AppSettings.php:238 setValueString()",
+        "  lib/Model/Settings/AppSettings.php:330 getValueString()",
+        "  lib/Model/Settings/AppSettings.php:369 getValueString()",
+        "  lib/Model/Settings/AppSettings.php:447 getValueString()",
+        "  lib/Model/Settings/AppSettings.php:448 getValueString()",
+        "  lib/Model/Settings/AppSettings.php:449 getValueString()",
+        "  lib/Model/Settings/AppSettings.php:458 getValueString()",
+        "  lib/Model/Settings/AppSettings.php:459 getValueString()",
+        "  lib/Model/Settings/SystemSettings.php:63 getValueString()",
+        "  lib/Model/Settings/SystemSettings.php:77 getValueArray()",
+        "  lib/Model/Settings/SystemSettings.php:110 getValueString()",
+        "  lib/Model/Settings/SystemSettings.php:124 getValueArray()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 19
+        }
+      ]
+    }
+  ],
+  "endpoints": 155,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/",
+      "target": "OCA\\Polls\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/administration",
+      "target": "OCA\\Polls\\Controller\\AdminController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/polls/administration/job/run",
+      "target": "OCA\\Polls\\Controller\\AdminController::runJob",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/administration/jobs",
+      "target": "OCA\\Polls\\Controller\\AdminController::getJobs",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/administration/poll/{pollId}/takeover",
+      "target": "OCA\\Polls\\Controller\\AdminController::takeover",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/administration/polls",
+      "target": "OCA\\Polls\\Controller\\AdminController::list",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/polls/api/v1.0/{path}",
+      "target": "OCA\\Polls\\Controller\\BaseApiV1Controller::preflightedCors",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/calendars",
+      "target": "OCA\\Polls\\Controller\\UserController::getCalendars",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/check/emailaddress/{emailAddress}",
+      "target": "OCA\\Polls\\Controller\\PublicController::validateEmailAddress",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/polls/check/username",
+      "target": "OCA\\Polls\\Controller\\PublicController::validatePublicDisplayName",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/combo",
+      "target": "OCA\\Polls\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/polls/comment/{commentId}",
+      "target": "OCA\\Polls\\Controller\\CommentController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/comment/{commentId}/restore",
+      "target": "OCA\\Polls\\Controller\\CommentController::restore",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/group/{slug}",
+      "target": "OCA\\Polls\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/groups",
+      "target": "OCA\\Polls\\Controller\\SystemController::groupAll",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/groups/{query}",
+      "target": "OCA\\Polls\\Controller\\SystemController::groupSearch",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/list/{category}",
+      "target": "OCA\\Polls\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/polls/option/{optionId}",
+      "target": "OCA\\Polls\\Controller\\OptionController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/option/{optionId}",
+      "target": "OCA\\Polls\\Controller\\OptionController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/option/{optionId}/confirm",
+      "target": "OCA\\Polls\\Controller\\OptionController::confirm",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/option/{optionId}/events",
+      "target": "OCA\\Polls\\Controller\\OptionController::findCalendarEvents",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/option/{optionId}/restore",
+      "target": "OCA\\Polls\\Controller\\OptionController::restore",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/polls/option/{optionId}/sequence",
+      "target": "OCA\\Polls\\Controller\\OptionController::sequence",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/polls/option/bulk",
+      "target": "OCA\\Polls\\Controller\\OptionController::addBulk",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/polls/poll/{pollId}",
+      "target": "OCA\\Polls\\Controller\\PollController::delete",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/poll/{pollId}",
+      "target": "OCA\\Polls\\Controller\\PollController::getFull",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/poll/{pollId}",
+      "target": "OCA\\Polls\\Controller\\PollController::update",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/poll/{pollId}/addresses",
+      "target": "OCA\\Polls\\Controller\\PollController::getParticipantsEmailAddresses",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/poll/{pollId}/changeowner/{targetUserId}",
+      "target": "OCA\\Polls\\Controller\\PollController::changeOwner",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/polls/poll/{pollId}/clone",
+      "target": "OCA\\Polls\\Controller\\PollController::clone",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/poll/{pollId}/close",
+      "target": "OCA\\Polls\\Controller\\PollController::close",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/polls/poll/{pollId}/comment",
+      "target": "OCA\\Polls\\Controller\\CommentController::add",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/poll/{pollId}/comments",
+      "target": "OCA\\Polls\\Controller\\CommentController::list",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/polls/poll/{pollId}/confirmation",
+      "target": "OCA\\Polls\\Controller\\PollController::sendConfirmation",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/poll/{pollId}/inviteAll",
+      "target": "OCA\\Polls\\Controller\\ShareController::sendAllInvitations",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/poll/{pollId}/lockAnonymous",
+      "target": "OCA\\Polls\\Controller\\PollController::lockAnonymous",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/polls/poll/{pollId}/option",
+      "target": "OCA\\Polls\\Controller\\OptionController::add",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/poll/{pollId}/options",
+      "target": "OCA\\Polls\\Controller\\OptionController::list",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/polls/poll/{pollId}/options/reorder",
+      "target": "OCA\\Polls\\Controller\\OptionController::reorder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/poll/{pollId}/poll",
+      "target": "OCA\\Polls\\Controller\\PollController::get",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/polls/poll/{pollId}/publicshare",
+      "target": "OCA\\Polls\\Controller\\ShareController::addPublicShare",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/poll/{pollId}/reopen",
+      "target": "OCA\\Polls\\Controller\\PollController::reopen",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/polls/poll/{pollId}/share",
+      "target": "OCA\\Polls\\Controller\\ShareController::add",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/poll/{pollId}/shares",
+      "target": "OCA\\Polls\\Controller\\ShareController::list",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/polls/poll/{pollId}/shift",
+      "target": "OCA\\Polls\\Controller\\OptionController::shift",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/poll/{pollId}/subscribe",
+      "target": "OCA\\Polls\\Controller\\SubscriptionController::subscribe",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/poll/{pollId}/subscription",
+      "target": "OCA\\Polls\\Controller\\SubscriptionController::get",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/poll/{pollId}/toggleArchive",
+      "target": "OCA\\Polls\\Controller\\PollController::toggleArchive",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/poll/{pollId}/unsubscribe",
+      "target": "OCA\\Polls\\Controller\\SubscriptionController::unsubscribe",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/polls/poll/{pollId}/user",
+      "target": "OCA\\Polls\\Controller\\VoteController::delete",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/polls/poll/{pollId}/user/{userId}",
+      "target": "OCA\\Polls\\Controller\\VoteController::delete",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/poll/{pollId}/votes",
+      "target": "OCA\\Polls\\Controller\\VoteController::list",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/polls/poll/{pollId}/votes/orphaned",
+      "target": "OCA\\Polls\\Controller\\VoteController::deleteOrphaned",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/poll/{pollId}/watch",
+      "target": "OCA\\Polls\\Controller\\WatchController::watchPoll",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/polls/poll/add",
+      "target": "OCA\\Polls\\Controller\\PollController::add",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/poll/transfer/{sourceUserId}/{targetUserId}",
+      "target": "OCA\\Polls\\Controller\\PollController::transferPolls",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/polls/pollgroup/{pollGroupId}/poll/{pollId}",
+      "target": "OCA\\Polls\\Controller\\PollGroupController::removePoll",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/pollgroup/{pollGroupId}/poll/{pollId}",
+      "target": "OCA\\Polls\\Controller\\PollGroupController::addPoll",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/polls/pollgroup/{pollGroupId}/share",
+      "target": "OCA\\Polls\\Controller\\ShareController::addForPollGroup",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/pollgroup/{pollGroupId}/shares",
+      "target": "OCA\\Polls\\Controller\\ShareController::listForPollGroup",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/pollgroup/{pollGroupId}/update",
+      "target": "OCA\\Polls\\Controller\\PollGroupController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/polls/pollgroup/new/poll/{pollId}",
+      "target": "OCA\\Polls\\Controller\\PollGroupController::add",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/pollgroups",
+      "target": "OCA\\Polls\\Controller\\PollGroupController::list",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/polls",
+      "target": "OCA\\Polls\\Controller\\PollController::listPolls",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/preferences",
+      "target": "OCA\\Polls\\Controller\\UserController::getUserSettings",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/polls/preferences",
+      "target": "OCA\\Polls\\Controller\\UserController::writePreferences",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/polls/randomname",
+      "target": "OCA\\Polls\\Controller\\PublicController::getRandomUserName",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/s/{token}",
+      "target": "OCA\\Polls\\Controller\\PublicController::votePage",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/polls/s/{token}/comment",
+      "target": "OCA\\Polls\\Controller\\PublicController::addComment",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/polls/s/{token}/comment/{commentId}",
+      "target": "OCA\\Polls\\Controller\\PublicController::deleteComment",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/s/{token}/comment/{commentId}/restore",
+      "target": "OCA\\Polls\\Controller\\PublicController::restoreComment",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/s/{token}/comments",
+      "target": "OCA\\Polls\\Controller\\PublicController::getComments",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/polls/s/{token}/email",
+      "target": "OCA\\Polls\\Controller\\PublicController::deleteEmailAddress",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/s/{token}/email/{emailAddress}",
+      "target": "OCA\\Polls\\Controller\\PublicController::setEmailAddress",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/s/{token}/name/{displayName}",
+      "target": "OCA\\Polls\\Controller\\PublicController::setDisplayName",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/polls/s/{token}/option",
+      "target": "OCA\\Polls\\Controller\\PublicController::addOption",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/polls/s/{token}/option/{optionId}",
+      "target": "OCA\\Polls\\Controller\\PublicController::deleteOption",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/polls/s/{token}/option/{optionId}/restore",
+      "target": "OCA\\Polls\\Controller\\PublicController::restoreOption",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/s/{token}/options",
+      "target": "OCA\\Polls\\Controller\\PublicController::getOptions",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/s/{token}/poll",
+      "target": "OCA\\Polls\\Controller\\PublicController::getPoll",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/s/{token}/register",
+      "target": "OCA\\Polls\\Controller\\PublicController::votePage",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/polls/s/{token}/register",
+      "target": "OCA\\Polls\\Controller\\PublicController::register",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/polls/s/{token}/resend",
+      "target": "OCA\\Polls\\Controller\\PublicController::resendInvitation",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/s/{token}/session",
+      "target": "OCA\\Polls\\Controller\\PublicController::getSession",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/s/{token}/share",
+      "target": "OCA\\Polls\\Controller\\PublicController::getShare",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/s/{token}/subscribe",
+      "target": "OCA\\Polls\\Controller\\PublicController::subscribe",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/s/{token}/subscription",
+      "target": "OCA\\Polls\\Controller\\PublicController::getSubscription",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/s/{token}/unsubscribe",
+      "target": "OCA\\Polls\\Controller\\PublicController::unsubscribe",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/polls/s/{token}/user",
+      "target": "OCA\\Polls\\Controller\\PublicController::deleteUser",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/s/{token}/vote",
+      "target": "OCA\\Polls\\Controller\\PublicController::setVote",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/s/{token}/votes",
+      "target": "OCA\\Polls\\Controller\\PublicController::getVotes",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/polls/s/{token}/votes/orphaned",
+      "target": "OCA\\Polls\\Controller\\PublicController::deleteOrphanedVotes",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/s/{token}/watch",
+      "target": "OCA\\Polls\\Controller\\PublicController::watchPoll",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/search/users/{query}",
+      "target": "OCA\\Polls\\Controller\\SystemController::userSearch",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/session",
+      "target": "OCA\\Polls\\Controller\\UserController::getSession",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/settings/app",
+      "target": "OCA\\Polls\\Controller\\SettingsController::getAppSettings",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/polls/settings/app",
+      "target": "OCA\\Polls\\Controller\\SettingsController::writeAppSettings",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/polls/share/{token}",
+      "target": "OCA\\Polls\\Controller\\ShareController::delete",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/share/{token}/admin",
+      "target": "OCA\\Polls\\Controller\\ShareController::userToAdmin",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/polls/share/{token}/invite",
+      "target": "OCA\\Polls\\Controller\\ShareController::sendInvitation",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/share/{token}/lock",
+      "target": "OCA\\Polls\\Controller\\ShareController::lock",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/share/{token}/publicpollemail/{value}",
+      "target": "OCA\\Polls\\Controller\\ShareController::setPublicPollEmail",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/share/{token}/resolve",
+      "target": "OCA\\Polls\\Controller\\ShareController::resolveGroup",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/share/{token}/restore",
+      "target": "OCA\\Polls\\Controller\\ShareController::restore",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/share/{token}/setlabel",
+      "target": "OCA\\Polls\\Controller\\ShareController::setLabel",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/share/{token}/unlock",
+      "target": "OCA\\Polls\\Controller\\ShareController::unlock",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/share/{token}/user",
+      "target": "OCA\\Polls\\Controller\\ShareController::adminToUser",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/polls/vote",
+      "target": "OCA\\Polls\\Controller\\VoteController::set",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/polls/vote/{id}",
+      "target": "OCA\\Polls\\Controller\\PageController::vote",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/comment/{commentId}",
+      "target": "OCA\\Polls\\Controller\\CommentApiController::delete",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/comment/{commentId}/restore",
+      "target": "OCA\\Polls\\Controller\\CommentApiController::restore",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/option/{optionId}",
+      "target": "OCA\\Polls\\Controller\\OptionApiController::delete",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/option/{optionId}",
+      "target": "OCA\\Polls\\Controller\\OptionApiController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/option/{optionId}/confirm",
+      "target": "OCA\\Polls\\Controller\\OptionApiController::confirm",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/option/{optionId}/order/{order}",
+      "target": "OCA\\Polls\\Controller\\OptionApiController::setOrder",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/option/{optionId}/restore",
+      "target": "OCA\\Polls\\Controller\\OptionApiController::restore",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/option/{optionId}/vote/{answer}",
+      "target": "OCA\\Polls\\Controller\\VoteApiController::set",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/poll",
+      "target": "OCA\\Polls\\Controller\\PollApiController::add",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/poll/{pollId}",
+      "target": "OCA\\Polls\\Controller\\PollApiController::delete",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/poll/{pollId}",
+      "target": "OCA\\Polls\\Controller\\PollApiController::get",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/poll/{pollId}",
+      "target": "OCA\\Polls\\Controller\\PollApiController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/poll/{pollId}/addresses",
+      "target": "OCA\\Polls\\Controller\\PollApiController::getParticipantsEmailAddresses",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/poll/{pollId}/archive/toggle",
+      "target": "OCA\\Polls\\Controller\\PollApiController::toggleArchive",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/poll/{pollId}/clone",
+      "target": "OCA\\Polls\\Controller\\PollApiController::clone",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/poll/{pollId}/close",
+      "target": "OCA\\Polls\\Controller\\PollApiController::close",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/poll/{pollId}/comment",
+      "target": "OCA\\Polls\\Controller\\CommentApiController::add",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/poll/{pollId}/comments",
+      "target": "OCA\\Polls\\Controller\\CommentApiController::list",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/poll/{pollId}/option",
+      "target": "OCA\\Polls\\Controller\\OptionApiController::add",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/poll/{pollId}/options",
+      "target": "OCA\\Polls\\Controller\\OptionApiController::list",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/poll/{pollId}/options",
+      "target": "OCA\\Polls\\Controller\\OptionApiController::addBulk",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/poll/{pollId}/reopen",
+      "target": "OCA\\Polls\\Controller\\PollApiController::reopen",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/poll/{pollId}/share/{type}",
+      "target": "OCA\\Polls\\Controller\\ShareApiController::add",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/poll/{pollId}/shares",
+      "target": "OCA\\Polls\\Controller\\ShareApiController::list",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/poll/{pollId}/subscription",
+      "target": "OCA\\Polls\\Controller\\SubscriptionApiController::unsubscribe",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/poll/{pollId}/subscription",
+      "target": "OCA\\Polls\\Controller\\SubscriptionApiController::get",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/poll/{pollId}/subscription",
+      "target": "OCA\\Polls\\Controller\\SubscriptionApiController::subscribe",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/poll/{pollId}/transfer/{targetUserId}",
+      "target": "OCA\\Polls\\Controller\\PollApiController::transferPoll",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/poll/{pollId}/user/{userId}",
+      "target": "OCA\\Polls\\Controller\\VoteApiController::delete",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/poll/{pollId}/votes",
+      "target": "OCA\\Polls\\Controller\\VoteApiController::list",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/poll/{pollId}/votes/orphaned",
+      "target": "OCA\\Polls\\Controller\\VoteApiController::deleteOrphaned",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/poll/{pollId}/watch",
+      "target": "OCA\\Polls\\Controller\\WatchApiController::watchPoll",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/poll/transfer/{sourceUserId}/{targetUserId}",
+      "target": "OCA\\Polls\\Controller\\PollApiController::transferPolls",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/polls",
+      "target": "OCA\\Polls\\Controller\\PollApiController::listPolls",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/preferences",
+      "target": "OCA\\Polls\\Controller\\UserApiController::writePreferences",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/s/{token}/email",
+      "target": "OCA\\Polls\\Controller\\ShareApiController::deleteEmailAddress",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/s/{token}/email/{emailAddress}",
+      "target": "OCA\\Polls\\Controller\\ShareApiController::setEmailAddress",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/s/{token}/register",
+      "target": "OCA\\Polls\\Controller\\ShareApiController::register",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/session",
+      "target": "OCA\\Polls\\Controller\\UserApiController::getSession",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/share/{token}",
+      "target": "OCA\\Polls\\Controller\\ShareApiController::delete",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/share/{token}",
+      "target": "OCA\\Polls\\Controller\\ShareApiController::get",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/share/{token}/invite",
+      "target": "OCA\\Polls\\Controller\\ShareApiController::sendInvitation",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/share/{token}/lock",
+      "target": "OCA\\Polls\\Controller\\ShareApiController::lock",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/share/{token}/restore",
+      "target": "OCA\\Polls\\Controller\\ShareApiController::restore",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/polls/api/v1.0/share/{token}/unlock",
+      "target": "OCA\\Polls\\Controller\\ShareApiController::unlock",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/capabilities",
+      "target": "OCA\\Polls\\Capabilities",
+      "openapi": [],
+      "kind": "capability"
+    }
+  ]
+}

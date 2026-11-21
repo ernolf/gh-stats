@@ -1,0 +1,114 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\kicad_viewer\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/FileController.php:39 OC",
+        "lib/Controller/FileController.php:39 OC::$server",
+        "lib/Controller/FileController.php:40 OC::$server",
+        "lib/Controller/FileController.php:79 OC::$server",
+        "lib/Controller/FileController.php:128 OC::$server",
+        "lib/Migration/MimeTypeBase.php:32 OC\\Core\\Command\\Maintenance\\Mimetype\\UpdateJS",
+        "lib/Migration/MimeTypeInstall.php:8 OC",
+        "lib/Migration/MimeTypeUninstall.php:8 OC"
+      ],
+      "lines": [
+        "8 uses of the private API of the server in 4 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/FileController.php:39 OC",
+        "  lib/Controller/FileController.php:39 OC::$server",
+        "  lib/Controller/FileController.php:40 OC::$server",
+        "  lib/Controller/FileController.php:79 OC::$server",
+        "  lib/Controller/FileController.php:128 OC::$server",
+        "  lib/Migration/MimeTypeBase.php:32 OC\\Core\\Command\\Maintenance\\Mimetype\\UpdateJS",
+        "  lib/Migration/MimeTypeInstall.php:8 OC",
+        "  lib/Migration/MimeTypeUninstall.php:8 OC"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "id": "ocp-removed-soon",
+      "level": "warn",
+      "places": [
+        "lib/Listener/AddCspEventListener.php:24 OCP\\AppFramework\\Http\\EmptyContentSecurityPolicy::allowEvalScript(): deprecated since Nextcloud 17, Nextcloud 33 is the last major to have it; Eval should not be used anymore. Please update your scripts. This function will stop functioning in a future version of Nextcloud."
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated and that Nextcloud 36 no longer has: the app fails on the first major without it, once it declares that one.",
+        "  lib/Listener/AddCspEventListener.php:24 OCP\\AppFramework\\Http\\EmptyContentSecurityPolicy::allowEvalScript(): deprecated since Nextcloud 17, Nextcloud 33 is the last major to have it; Eval should not be used anymore. Please update your scripts. This function will stop functioning in a future version of Nextcloud."
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/kicad_viewer/test  kicad_viewer.file.test  appinfo/routes.php:8 routes",
+        "POST /index.php/apps/kicad_viewer/api/public-token  kicad_viewer.file.createpublictoken  appinfo/routes.php:8 routes",
+        "GET /index.php/apps/kicad_viewer/public/{token}  kicad_viewer.file.getpublicfile  appinfo/routes.php:8 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 3 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 9 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/kicad_viewer/test  kicad_viewer.file.test  appinfo/routes.php:8 routes",
+        "  POST /index.php/apps/kicad_viewer/api/public-token  kicad_viewer.file.createpublictoken  appinfo/routes.php:8 routes",
+        "  GET /index.php/apps/kicad_viewer/public/{token}  kicad_viewer.file.getpublicfile  appinfo/routes.php:8 routes"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/FileController.php:97 time()",
+        "lib/Controller/FileController.php:122 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 2 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/FileController.php:97 time()",
+        "  lib/Controller/FileController.php:122 time()"
+      ]
+    }
+  ],
+  "endpoints": 4,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/kicad_viewer/api/file/{path}/{filename}",
+      "target": "OCA\\kicad_viewer\\Controller\\FileController::getFile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/kicad_viewer/api/public-token",
+      "target": "OCA\\kicad_viewer\\Controller\\FileController::createPublicToken",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/kicad_viewer/public/{token}",
+      "target": "OCA\\kicad_viewer\\Controller\\FileController::getPublicFile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/kicad_viewer/test",
+      "target": "OCA\\kicad_viewer\\Controller\\FileController::test",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

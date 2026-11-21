@@ -1,0 +1,287 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\X2Mail\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/ContentSecurityPolicy.php:38 OC\\Security\\CSP\\ContentSecurityPolicyNonceManager"
+      ],
+      "lines": [
+        "1 use of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/ContentSecurityPolicy.php:38 OC\\Security\\CSP\\ContentSecurityPolicyNonceManager"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:89 get()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:89 get()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "POST /index.php/apps/x2mail/  x2mail.page.indexpost  appinfo/routes.php:3 routes",
+        "POST /index.php/apps/x2mail/app/  x2mail.page.apppost  appinfo/routes.php:3 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 2 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  POST /index.php/apps/x2mail/  x2mail.page.indexpost  appinfo/routes.php:3 routes",
+        "  POST /index.php/apps/x2mail/app/  x2mail.page.apppost  appinfo/routes.php:3 routes"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/ContentSecurityPolicy.php:5 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Migration/InstallStep.php:53 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "templates/not_configured.php:15 OCP\\Util::linkToAbsolute(): deprecated since Nextcloud 34; Use IUrlGenerator::getAbsoluteUrl and IUrlGenerator::linkTo"
+      ],
+      "lines": [
+        "3 uses in 3 files of the public API that is deprecated in Nextcloud 33 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/ContentSecurityPolicy.php:5 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Migration/InstallStep.php:53 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  templates/not_configured.php:15 OCP\\Util::linkToAbsolute(): deprecated since Nextcloud 34; Use IUrlGenerator::getAbsoluteUrl and IUrlGenerator::linkTo"
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/admin-local.php:13 style= attribute",
+        "templates/admin-local.php:56 style= attribute",
+        "templates/admin-local.php:87 style= attribute",
+        "templates/admin-local.php:90 style= attribute",
+        "templates/admin-local.php:91 style= attribute",
+        "templates/admin-local.php:96 style= attribute",
+        "templates/index_embed.php:1 <style> with content",
+        "templates/index_embed.php:10 <style> with content",
+        "templates/not_configured.php:7 style= attribute",
+        "templates/not_configured.php:10 style= attribute",
+        "templates/not_configured.php:12 style= attribute",
+        "templates/not_configured.php:19 style= attribute",
+        "templates/personal_settings.php:3 style= attribute",
+        "templates/personal_settings.php:5 style= attribute",
+        "templates/personal_settings.php:12 style= attribute",
+        "templates/setup-wizard.php:69 style= attribute",
+        "templates/setup-wizard.php:71 style= attribute",
+        "templates/setup-wizard.php:75 style= attribute"
+      ],
+      "lines": [
+        "18 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/admin-local.php:13 style= attribute",
+        "  templates/admin-local.php:56 style= attribute",
+        "  templates/admin-local.php:87 style= attribute",
+        "  templates/admin-local.php:90 style= attribute",
+        "  templates/admin-local.php:91 style= attribute",
+        "  templates/admin-local.php:96 style= attribute",
+        "  templates/index_embed.php:1 <style> with content",
+        "  templates/index_embed.php:10 <style> with content",
+        "  templates/not_configured.php:7 style= attribute",
+        "  templates/not_configured.php:10 style= attribute",
+        "  templates/not_configured.php:12 style= attribute",
+        "  templates/not_configured.php:19 style= attribute",
+        "  templates/personal_settings.php:3 style= attribute",
+        "  templates/personal_settings.php:5 style= attribute",
+        "  templates/personal_settings.php:12 style= attribute",
+        "  templates/setup-wizard.php:69 style= attribute",
+        "  templates/setup-wizard.php:71 style= attribute",
+        "  templates/setup-wizard.php:75 style= attribute"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 15
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/SetupController.php:243 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 1 place. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/SetupController.php:243 time()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Command/Setup.php:225 getValueString()",
+        "lib/Command/Setup.php:227 setValueString()",
+        "lib/Command/Setup.php:295 setValueString()",
+        "lib/Command/Setup.php:297 setValueString()",
+        "lib/Command/Setup.php:299 setValueString()",
+        "lib/Command/Setup.php:302 setValueString()",
+        "lib/Command/Status.php:89 getValueString()",
+        "lib/Command/Status.php:90 getValueString()",
+        "lib/Command/Status.php:95 getValueString()",
+        "lib/Command/Status.php:110 getValueString()",
+        "lib/Command/Status.php:121 getValueString()",
+        "lib/Controller/FetchController.php:50 setValueString()",
+        "lib/Controller/FetchController.php:52 setValueString()",
+        "lib/Controller/FetchController.php:55 setValueString()",
+        "lib/Controller/SetupController.php:78 getValueString()",
+        "lib/Controller/SetupController.php:81 getValueString()",
+        "lib/Controller/SetupController.php:209 getValueString()",
+        "lib/Controller/SetupController.php:214 getValueString()",
+        "lib/Controller/SetupController.php:367 setValueString()",
+        "lib/Controller/SetupController.php:368 setValueString()",
+        "lib/Controller/SetupController.php:370 setValueString()",
+        "lib/Controller/SetupController.php:375 setValueString()",
+        "lib/Listeners/PasswordLoginListener.php:54 getValueString()",
+        "lib/Migration/InstallStep.php:46 getValueString()",
+        "lib/Migration/InstallStep.php:48 getValueString()",
+        "lib/Migration/InstallStep.php:50 setValueString()",
+        "lib/Migration/InstallStep.php:157 getValueString()",
+        "lib/Migration/InstallStep.php:178 getValueString()",
+        "lib/Migration/InstallStep.php:180 setValueString()",
+        "lib/Service/LogService.php:34 getValueString()",
+        "lib/Service/LogService.php:44 setValueString()",
+        "lib/Service/LogService.php:50 setValueString()",
+        "lib/Settings/AdminSettings.php:35 getValueString()",
+        "lib/Settings/AdminSettings.php:38 getValueString()",
+        "lib/Util/EngineHelper.php:141 getValueString()",
+        "lib/Util/EngineHelper.php:180 getValueString()",
+        "lib/Util/EngineHelper.php:181 getValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 37 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Command/Setup.php:225 getValueString()",
+        "  lib/Command/Setup.php:227 setValueString()",
+        "  lib/Command/Setup.php:295 setValueString()",
+        "  lib/Command/Setup.php:297 setValueString()",
+        "  lib/Command/Setup.php:299 setValueString()",
+        "  lib/Command/Setup.php:302 setValueString()",
+        "  lib/Command/Status.php:89 getValueString()",
+        "  lib/Command/Status.php:90 getValueString()",
+        "  lib/Command/Status.php:95 getValueString()",
+        "  lib/Command/Status.php:110 getValueString()",
+        "  lib/Command/Status.php:121 getValueString()",
+        "  lib/Controller/FetchController.php:50 setValueString()",
+        "  lib/Controller/FetchController.php:52 setValueString()",
+        "  lib/Controller/FetchController.php:55 setValueString()",
+        "  lib/Controller/SetupController.php:78 getValueString()",
+        "  lib/Controller/SetupController.php:81 getValueString()",
+        "  lib/Controller/SetupController.php:209 getValueString()",
+        "  lib/Controller/SetupController.php:214 getValueString()",
+        "  lib/Controller/SetupController.php:367 setValueString()",
+        "  lib/Controller/SetupController.php:368 setValueString()",
+        "  lib/Controller/SetupController.php:370 setValueString()",
+        "  lib/Controller/SetupController.php:375 setValueString()",
+        "  lib/Listeners/PasswordLoginListener.php:54 getValueString()",
+        "  lib/Migration/InstallStep.php:46 getValueString()",
+        "  lib/Migration/InstallStep.php:48 getValueString()",
+        "  lib/Migration/InstallStep.php:50 setValueString()",
+        "  lib/Migration/InstallStep.php:157 getValueString()",
+        "  lib/Migration/InstallStep.php:178 getValueString()",
+        "  lib/Migration/InstallStep.php:180 setValueString()",
+        "  lib/Service/LogService.php:34 getValueString()",
+        "  lib/Service/LogService.php:44 setValueString()",
+        "  lib/Service/LogService.php:50 setValueString()",
+        "  lib/Settings/AdminSettings.php:35 getValueString()",
+        "  lib/Settings/AdminSettings.php:38 getValueString()",
+        "  lib/Util/EngineHelper.php:141 getValueString()",
+        "  lib/Util/EngineHelper.php:180 getValueString()",
+        "  lib/Util/EngineHelper.php:181 getValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 34
+        }
+      ]
+    }
+  ],
+  "endpoints": 10,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/x2mail/",
+      "target": "OCA\\X2Mail\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/x2mail/",
+      "target": "OCA\\X2Mail\\Controller\\PageController::indexPost",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/x2mail/app/",
+      "target": "OCA\\X2Mail\\Controller\\PageController::appGet",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/x2mail/app/",
+      "target": "OCA\\X2Mail\\Controller\\PageController::appPost",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/x2mail/fetch/setAdmin",
+      "target": "OCA\\X2Mail\\Controller\\FetchController::setAdmin",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/x2mail/fetch/upgrade",
+      "target": "OCA\\X2Mail\\Controller\\FetchController::upgrade",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/x2mail/setup/config",
+      "target": "OCA\\X2Mail\\Controller\\SetupController::getConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/x2mail/setup/delete",
+      "target": "OCA\\X2Mail\\Controller\\SetupController::deleteDomain",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/x2mail/setup/preflight",
+      "target": "OCA\\X2Mail\\Controller\\SetupController::preflightCheck",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/x2mail/setup/save",
+      "target": "OCA\\X2Mail\\Controller\\SetupController::saveSetup",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

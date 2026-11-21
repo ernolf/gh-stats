@@ -1,0 +1,253 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\NcConnector\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "templates/adminSettings.php:15 OC",
+        "templates/adminSettings.php:15 OC::$server",
+        "templates/index.php:17 OC",
+        "templates/index.php:17 OC::$server"
+      ],
+      "lines": [
+        "4 uses of the private API of the server in 2 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  templates/adminSettings.php:15 OC",
+        "  templates/adminSettings.php:15 OC::$server",
+        "  templates/index.php:17 OC",
+        "  templates/index.php:17 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Service/AdminSettingsResponseFactory.php:22 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Setup/UninstallCleanup.php:116 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants"
+      ],
+      "lines": [
+        "2 uses in 2 files of the public API that is deprecated in Nextcloud 32 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Service/AdminSettingsResponseFactory.php:22 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Setup/UninstallCleanup.php:116 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/Cron/LicenseSyncJob.php OCA\\NcConnector\\Cron\\LicenseSyncJob",
+        "lib/Cron/UpdateCheckJob.php OCA\\NcConnector\\Cron\\UpdateCheckJob"
+      ],
+      "lines": [
+        "2 timed jobs do not say whether they are time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/Cron/LicenseSyncJob.php OCA\\NcConnector\\Cron\\LicenseSyncJob",
+        "  lib/Cron/UpdateCheckJob.php OCA\\NcConnector\\Cron\\UpdateCheckJob"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/AdminDelegationService.php:99 time()",
+        "lib/Service/ClientSettingsService.php:153 time()",
+        "lib/Service/ClientSettingsService.php:406 time()",
+        "lib/Service/ClientSettingsService.php:450 time()",
+        "lib/Service/LicenseService.php:76 time()",
+        "lib/Service/LicenseService.php:89 time()",
+        "lib/Service/LicenseService.php:163 time()",
+        "lib/Service/LicenseService.php:255 time()",
+        "lib/Service/SeatService.php:40 time()",
+        "lib/Service/SeatService.php:134 time()",
+        "lib/Service/UpdateCheckService.php:52 time()",
+        "lib/Service/UpdateCheckService.php:59 time()",
+        "lib/Service/UpdateCheckService.php:142 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 13 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/AdminDelegationService.php:99 time()",
+        "  lib/Service/ClientSettingsService.php:153 time()",
+        "  lib/Service/ClientSettingsService.php:406 time()",
+        "  lib/Service/ClientSettingsService.php:450 time()",
+        "  lib/Service/LicenseService.php:76 time()",
+        "  lib/Service/LicenseService.php:89 time()",
+        "  lib/Service/LicenseService.php:163 time()",
+        "  lib/Service/LicenseService.php:255 time()",
+        "  lib/Service/SeatService.php:40 time()",
+        "  lib/Service/SeatService.php:134 time()",
+        "  lib/Service/UpdateCheckService.php:52 time()",
+        "  lib/Service/UpdateCheckService.php:59 time()",
+        "  lib/Service/UpdateCheckService.php:142 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 10
+        }
+      ]
+    }
+  ],
+  "endpoints": 21,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ncc_backend_4mc/",
+      "target": "OCA\\NcConnector\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ncc_backend_4mc/api/v1/admin/client-settings/defaults",
+      "target": "OCA\\NcConnector\\Controller\\AdminClientSettingsController::setDefaults",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ncc_backend_4mc/api/v1/admin/client-settings/groups",
+      "target": "OCA\\NcConnector\\Controller\\AdminClientSettingsController::getGroupSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ncc_backend_4mc/api/v1/admin/client-settings/groups",
+      "target": "OCA\\NcConnector\\Controller\\AdminClientSettingsController::setGroupSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ncc_backend_4mc/api/v1/admin/client-settings/schema",
+      "target": "OCA\\NcConnector\\Controller\\AdminClientSettingsController::getSchema",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ncc_backend_4mc/api/v1/admin/client-settings/users/{targetUserId}",
+      "target": "OCA\\NcConnector\\Controller\\AdminClientSettingsController::getUserSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ncc_backend_4mc/api/v1/admin/client-settings/users/{targetUserId}",
+      "target": "OCA\\NcConnector\\Controller\\AdminClientSettingsController::setUserSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ncc_backend_4mc/api/v1/admin/delegations",
+      "target": "OCA\\NcConnector\\Controller\\AdminDelegationController::listDelegations",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ncc_backend_4mc/api/v1/admin/delegations/{targetUserId}",
+      "target": "OCA\\NcConnector\\Controller\\AdminDelegationController::deleteDelegation",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ncc_backend_4mc/api/v1/admin/delegations/{targetUserId}",
+      "target": "OCA\\NcConnector\\Controller\\AdminDelegationController::saveDelegation",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ncc_backend_4mc/api/v1/admin/groups",
+      "target": "OCA\\NcConnector\\Controller\\AdminDirectoryController::listGroups",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ncc_backend_4mc/api/v1/admin/license",
+      "target": "OCA\\NcConnector\\Controller\\AdminLicenseController::getLicense",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ncc_backend_4mc/api/v1/admin/license/credentials",
+      "target": "OCA\\NcConnector\\Controller\\AdminLicenseController::setCredentials",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ncc_backend_4mc/api/v1/admin/license/mode",
+      "target": "OCA\\NcConnector\\Controller\\AdminLicenseController::setMode",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ncc_backend_4mc/api/v1/admin/license/sync",
+      "target": "OCA\\NcConnector\\Controller\\AdminLicenseController::syncNow",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ncc_backend_4mc/api/v1/admin/me",
+      "target": "OCA\\NcConnector\\Controller\\AdminDelegationController::getCurrentAdmin",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ncc_backend_4mc/api/v1/admin/seats",
+      "target": "OCA\\NcConnector\\Controller\\AdminSeatController::listAssignedSeats",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ncc_backend_4mc/api/v1/admin/seats/{targetUserId}",
+      "target": "OCA\\NcConnector\\Controller\\AdminSeatController::setSeat",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ncc_backend_4mc/api/v1/admin/update-check",
+      "target": "OCA\\NcConnector\\Controller\\AdminUpdateController::getUpdateStatus",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ncc_backend_4mc/api/v1/admin/users",
+      "target": "OCA\\NcConnector\\Controller\\AdminDirectoryController::listUsers",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ncc_backend_4mc/api/v1/status",
+      "target": "OCA\\NcConnector\\Controller\\StatusController::status",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

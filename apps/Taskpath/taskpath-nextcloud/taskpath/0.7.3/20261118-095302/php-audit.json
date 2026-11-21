@@ -1,0 +1,298 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Taskpath\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "display-name-lookup",
+      "level": "warn",
+      "places": [
+        "lib/Service/Uploader.php:35"
+      ],
+      "lines": [
+        "1 place loads a user with IUserManager::get() only to ask for the display name. IUserManager::getDisplayName(), there since Nextcloud 25, answers from a cache and loads no user.",
+        "  lib/Service/Uploader.php:35"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "DELETE /index.php/apps/taskpath/connect  taskpath.connect.disconnect  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/taskpath/filing  taskpath.filing.show  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/taskpath/filing/pick  taskpath.filing.pick  appinfo/routes.php:5 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 3 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 7 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  DELETE /index.php/apps/taskpath/connect  taskpath.connect.disconnect  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/taskpath/filing  taskpath.filing.show  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/taskpath/filing/pick  taskpath.filing.pick  appinfo/routes.php:5 routes"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "vimeo/psalm, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/ConnectController.php:148 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Controller/ConnectController.php:148 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/Controller/ConnectController.php:148 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Controller/ConnectController.php:148 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead",
+        "lib/Service/Connection.php:72 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Service/Connection.php:138 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Service/Connection.php:139 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig"
+      ],
+      "lines": [
+        "7 uses in 2 files of the public API that is deprecated in Nextcloud 33 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/ConnectController.php:148 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Controller/ConnectController.php:148 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/Controller/ConnectController.php:148 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Controller/ConnectController.php:148 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead",
+        "  lib/Service/Connection.php:72 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Service/Connection.php:138 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Service/Connection.php:139 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/Snapshot.php OCA\\Taskpath\\BackgroundJob\\Snapshot"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/Snapshot.php OCA\\Taskpath\\BackgroundJob\\Snapshot"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/Filer.php:91 time()",
+        "lib/Service/Syncer.php:67 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 2 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/Filer.php:91 time()",
+        "  lib/Service/Syncer.php:67 new DateTime()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/Connection.php:26 getValueString()",
+        "lib/Service/Connection.php:31 getValueString()",
+        "lib/Service/Connection.php:44 getValueString()",
+        "lib/Service/Connection.php:56 setValueString()",
+        "lib/Service/Connection.php:57 setValueString()",
+        "lib/Service/Connection.php:58 setValueString()",
+        "lib/Service/Connection.php:59 setValueString()",
+        "lib/Service/Connection.php:63 setValueInt()",
+        "lib/Service/Connection.php:64 setValueInt()",
+        "lib/Service/Connection.php:65 setValueString()",
+        "lib/Service/Connection.php:66 setValueString()",
+        "lib/Service/Connection.php:79 setValueString()",
+        "lib/Service/Connection.php:97 getValueString()",
+        "lib/Service/Connection.php:101 getValueString()",
+        "lib/Service/Connection.php:105 getValueString()",
+        "lib/Service/Connection.php:109 getValueInt()",
+        "lib/Service/Connection.php:113 getValueInt()",
+        "lib/Service/Connection.php:117 getValueString()",
+        "lib/Service/Connection.php:121 getValueString()",
+        "lib/Service/Connection.php:128 setValueString()",
+        "lib/Service/Connection.php:129 setValueString()",
+        "lib/Service/Connection.php:136 getValueString()",
+        "lib/Service/Connection.php:137 getValueString()",
+        "lib/Service/Connection.php:154 setValueString()",
+        "lib/Service/Connection.php:162 getValueString()",
+        "lib/Service/Connection.php:167 getValueString()",
+        "lib/Service/Connection.php:171 setValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 27 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/Connection.php:26 getValueString()",
+        "  lib/Service/Connection.php:31 getValueString()",
+        "  lib/Service/Connection.php:44 getValueString()",
+        "  lib/Service/Connection.php:56 setValueString()",
+        "  lib/Service/Connection.php:57 setValueString()",
+        "  lib/Service/Connection.php:58 setValueString()",
+        "  lib/Service/Connection.php:59 setValueString()",
+        "  lib/Service/Connection.php:63 setValueInt()",
+        "  lib/Service/Connection.php:64 setValueInt()",
+        "  lib/Service/Connection.php:65 setValueString()",
+        "  lib/Service/Connection.php:66 setValueString()",
+        "  lib/Service/Connection.php:79 setValueString()",
+        "  lib/Service/Connection.php:97 getValueString()",
+        "  lib/Service/Connection.php:101 getValueString()",
+        "  lib/Service/Connection.php:105 getValueString()",
+        "  lib/Service/Connection.php:109 getValueInt()",
+        "  lib/Service/Connection.php:113 getValueInt()",
+        "  lib/Service/Connection.php:117 getValueString()",
+        "  lib/Service/Connection.php:121 getValueString()",
+        "  lib/Service/Connection.php:128 setValueString()",
+        "  lib/Service/Connection.php:129 setValueString()",
+        "  lib/Service/Connection.php:136 getValueString()",
+        "  lib/Service/Connection.php:137 getValueString()",
+        "  lib/Service/Connection.php:154 setValueString()",
+        "  lib/Service/Connection.php:162 getValueString()",
+        "  lib/Service/Connection.php:167 getValueString()",
+        "  lib/Service/Connection.php:171 setValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 24
+        }
+      ]
+    }
+  ],
+  "endpoints": 18,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/taskpath/",
+      "target": "OCA\\Taskpath\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/taskpath/api/archive-suggestion",
+      "target": "OCA\\Taskpath\\Controller\\InboxController::suggestArchive",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/taskpath/api/inbox",
+      "target": "OCA\\Taskpath\\Controller\\InboxController::list",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/taskpath/api/inbox/upload",
+      "target": "OCA\\Taskpath\\Controller\\InboxController::upload",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/taskpath/api/rules",
+      "target": "OCA\\Taskpath\\Controller\\InboxController::rules",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/taskpath/api/state",
+      "target": "OCA\\Taskpath\\Controller\\InboxController::state",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/taskpath/autonomy/{type}",
+      "target": "OCA\\Taskpath\\Controller\\FilingController::revoke",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/taskpath/autonomy/{type}",
+      "target": "OCA\\Taskpath\\Controller\\FilingController::grant",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/taskpath/autonomy/{type}/decline",
+      "target": "OCA\\Taskpath\\Controller\\FilingController::decline",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/taskpath/connect",
+      "target": "OCA\\Taskpath\\Controller\\ConnectController::disconnect",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/taskpath/connect",
+      "target": "OCA\\Taskpath\\Controller\\ConnectController::callback",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/taskpath/connect/setup",
+      "target": "OCA\\Taskpath\\Controller\\ConnectController::setup",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/taskpath/connect/start",
+      "target": "OCA\\Taskpath\\Controller\\ConnectController::start",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/taskpath/filing",
+      "target": "OCA\\Taskpath\\Controller\\FilingController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/taskpath/filing/{id}/approve",
+      "target": "OCA\\Taskpath\\Controller\\FilingController::approve",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/taskpath/filing/{id}/skip",
+      "target": "OCA\\Taskpath\\Controller\\FilingController::skip",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/taskpath/filing/{id}/undo",
+      "target": "OCA\\Taskpath\\Controller\\FilingController::undo",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/taskpath/filing/pick",
+      "target": "OCA\\Taskpath\\Controller\\FilingController::pick",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

@@ -1,0 +1,363 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Kladory\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/kladory/api/tree  kladory.api.tree  lib/Controller/ApiController.php:57",
+        "POST /index.php/apps/kladory/api/notebooks  kladory.api.createnotebook  lib/Controller/ApiController.php:65",
+        "GET /index.php/apps/kladory/api/capabilities  kladory.api.capabilities  lib/Controller/ApiController.php:200",
+        "POST /index.php/apps/kladory/api/classes  kladory.api.createclass  lib/Controller/ApiController.php:206",
+        "GET /index.php/apps/kladory/api/principals  kladory.api.principals  lib/Controller/ApiController.php:236",
+        "GET /index.php/apps/kladory/api/export/options  kladory.api.exportoptions  lib/Controller/ApiController.php:244",
+        "POST /index.php/apps/kladory/api/export  kladory.api.export  lib/Controller/ApiController.php:253",
+        "GET /index.php/apps/kladory/api/import/files  kladory.api.importfiles  lib/Controller/ApiController.php:283",
+        "POST /index.php/apps/kladory/api/import  kladory.api.import  lib/Controller/ApiController.php:290",
+        "GET /index.php/apps/kladory/api/search  kladory.api.search  lib/Controller/ApiController.php:307",
+        "GET /index.php/apps/kladory/api/trash  kladory.api.trashlist  lib/Controller/ApiController.php:327",
+        "DELETE /index.php/apps/kladory/api/trash  kladory.api.trashempty  lib/Controller/ApiController.php:351"
+      ],
+      "lines": [
+        "Nothing in the app calls 12 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 2 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/kladory/api/tree  kladory.api.tree  lib/Controller/ApiController.php:57",
+        "  POST /index.php/apps/kladory/api/notebooks  kladory.api.createnotebook  lib/Controller/ApiController.php:65",
+        "  GET /index.php/apps/kladory/api/capabilities  kladory.api.capabilities  lib/Controller/ApiController.php:200",
+        "  POST /index.php/apps/kladory/api/classes  kladory.api.createclass  lib/Controller/ApiController.php:206",
+        "  GET /index.php/apps/kladory/api/principals  kladory.api.principals  lib/Controller/ApiController.php:236",
+        "  GET /index.php/apps/kladory/api/export/options  kladory.api.exportoptions  lib/Controller/ApiController.php:244",
+        "  POST /index.php/apps/kladory/api/export  kladory.api.export  lib/Controller/ApiController.php:253",
+        "  GET /index.php/apps/kladory/api/import/files  kladory.api.importfiles  lib/Controller/ApiController.php:283",
+        "  POST /index.php/apps/kladory/api/import  kladory.api.import  lib/Controller/ApiController.php:290",
+        "  GET /index.php/apps/kladory/api/search  kladory.api.search  lib/Controller/ApiController.php:307",
+        "  GET /index.php/apps/kladory/api/trash  kladory.api.trashlist  lib/Controller/ApiController.php:327",
+        "  DELETE /index.php/apps/kladory/api/trash  kladory.api.trashempty  lib/Controller/ApiController.php:351"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 9
+        }
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Service/ClassService.php:68",
+        "lib/Service/ClassService.php:102",
+        "lib/Service/ExportService.php:274",
+        "lib/Service/NoteService.php:152",
+        "lib/Service/TransferService.php:43",
+        "lib/Service/TrashService.php:236"
+      ],
+      "lines": [
+        "6 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Service/ClassService.php:68",
+        "  lib/Service/ClassService.php:102",
+        "  lib/Service/ExportService.php:274",
+        "  lib/Service/NoteService.php:152",
+        "  lib/Service/TransferService.php:43",
+        "  lib/Service/TrashService.php:236"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/ClassService.php:66 time()",
+        "lib/Service/ClassService.php:138 time()",
+        "lib/Service/ClassService.php:168 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 3 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/ClassService.php:66 time()",
+        "  lib/Service/ClassService.php:138 time()",
+        "  lib/Service/ClassService.php:168 time()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/ClassService.php:53 getValueString()",
+        "lib/Service/TrashService.php:52 getValueInt()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 2 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/ClassService.php:53 getValueString()",
+        "  lib/Service/TrashService.php:52 getValueInt()"
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version0003Date20261115120000.php:35 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version0003Date20261115120000.php:36 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version0003Date20261115120000.php:37 addIndex() on a table whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version0003Date20261115120000.php:35 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version0003Date20261115120000.php:36 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version0003Date20261115120000.php:37 addIndex() on a table whose name is no constant"
+      ]
+    }
+  ],
+  "endpoints": 34,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/kladory/",
+      "target": "OCA\\Kladory\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/kladory/api/capabilities",
+      "target": "OCA\\Kladory\\Controller\\ApiController::capabilities",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/kladory/api/classes",
+      "target": "OCA\\Kladory\\Controller\\ApiController::createClass",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/kladory/api/export",
+      "target": "OCA\\Kladory\\Controller\\ApiController::export",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/kladory/api/export/options",
+      "target": "OCA\\Kladory\\Controller\\ApiController::exportOptions",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/kladory/api/import",
+      "target": "OCA\\Kladory\\Controller\\ApiController::import",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/kladory/api/import/files",
+      "target": "OCA\\Kladory\\Controller\\ApiController::importFiles",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/kladory/api/notebooks",
+      "target": "OCA\\Kladory\\Controller\\ApiController::createNotebook",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/kladory/api/notebooks/{id}",
+      "target": "OCA\\Kladory\\Controller\\ApiController::deleteNotebook",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/kladory/api/notebooks/{id}",
+      "target": "OCA\\Kladory\\Controller\\ApiController::updateNotebook",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/kladory/api/notebooks/{id}/members",
+      "target": "OCA\\Kladory\\Controller\\ApiController::getMembers",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/kladory/api/notebooks/{id}/members",
+      "target": "OCA\\Kladory\\Controller\\ApiController::setMembers",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/kladory/api/notebooks/{id}/student-sections",
+      "target": "OCA\\Kladory\\Controller\\ApiController::addStudentSection",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/kladory/api/notebooks/{notebookId}/sections",
+      "target": "OCA\\Kladory\\Controller\\ApiController::createSection",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/kladory/api/pages/{id}",
+      "target": "OCA\\Kladory\\Controller\\ApiController::deletePage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/kladory/api/pages/{id}",
+      "target": "OCA\\Kladory\\Controller\\ApiController::getPage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/kladory/api/pages/{id}",
+      "target": "OCA\\Kladory\\Controller\\ApiController::updatePage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/kladory/api/pages/{id}/distribute",
+      "target": "OCA\\Kladory\\Controller\\ApiController::distribute",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/kladory/api/pages/{id}/images",
+      "target": "OCA\\Kladory\\Controller\\ApiController::uploadImage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/kladory/api/pages/{id}/images/{name}",
+      "target": "OCA\\Kladory\\Controller\\ApiController::image",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/kladory/api/pages/{id}/save",
+      "target": "OCA\\Kladory\\Controller\\ApiController::savePage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/kladory/api/pages/{id}/tags",
+      "target": "OCA\\Kladory\\Controller\\ApiController::setTags",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/kladory/api/principals",
+      "target": "OCA\\Kladory\\Controller\\ApiController::principals",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/kladory/api/search",
+      "target": "OCA\\Kladory\\Controller\\ApiController::search",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/kladory/api/sections/{id}",
+      "target": "OCA\\Kladory\\Controller\\ApiController::deleteSection",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/kladory/api/sections/{id}",
+      "target": "OCA\\Kladory\\Controller\\ApiController::updateSection",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/kladory/api/sections/{sectionId}/pages",
+      "target": "OCA\\Kladory\\Controller\\ApiController::listPages",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/kladory/api/sections/{sectionId}/pages",
+      "target": "OCA\\Kladory\\Controller\\ApiController::createPage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/kladory/api/tags",
+      "target": "OCA\\Kladory\\Controller\\ApiController::tags",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/kladory/api/trash",
+      "target": "OCA\\Kladory\\Controller\\ApiController::trashEmpty",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/kladory/api/trash",
+      "target": "OCA\\Kladory\\Controller\\ApiController::trashList",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/kladory/api/trash/{type}/{id}",
+      "target": "OCA\\Kladory\\Controller\\ApiController::trashDelete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/kladory/api/trash/{type}/{id}/restore",
+      "target": "OCA\\Kladory\\Controller\\ApiController::trashRestore",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/kladory/api/tree",
+      "target": "OCA\\Kladory\\Controller\\ApiController::tree",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

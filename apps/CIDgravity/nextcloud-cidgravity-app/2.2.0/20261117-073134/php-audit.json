@@ -1,0 +1,162 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\CIDgravity\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "psr/log 3.0.2, in 3rdparty/ of Nextcloud 29 to 32",
+        "sabre/dav 4.7.1, in 3rdparty/ of Nextcloud 29 to 32",
+        "sabre/event 5.1.9, in 3rdparty/ of Nextcloud 29 to 32",
+        "sabre/http 5.1.13, in 3rdparty/ of Nextcloud 29 to 32",
+        "sabre/uri 2.3.4, in 3rdparty/ of Nextcloud 29 to 32",
+        "sabre/vobject 4.6.1, in 3rdparty/ of Nextcloud 29 to 32",
+        "sabre/xml 2.2.11, in 3rdparty/ of Nextcloud 29 to 32"
+      ],
+      "lines": [
+        "vendor/ ships 7 packages that the server ships itself in a major of Nextcloud 29 to 32. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  psr/log 3.0.2, in 3rdparty/ of Nextcloud 29 to 32",
+        "  sabre/dav 4.7.1, in 3rdparty/ of Nextcloud 29 to 32",
+        "  sabre/event 5.1.9, in 3rdparty/ of Nextcloud 29 to 32",
+        "  sabre/http 5.1.13, in 3rdparty/ of Nextcloud 29 to 32",
+        "  sabre/uri 2.3.4, in 3rdparty/ of Nextcloud 29 to 32",
+        "  sabre/vobject 4.6.1, in 3rdparty/ of Nextcloud 29 to 32",
+        "  sabre/xml 2.2.11, in 3rdparty/ of Nextcloud 29 to 32"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Event/Listener/UserCreatedListener.php:39 OC\\Files\\Mount\\Manager",
+        "lib/Event/Listener/UserCreatedListener.php:39 OC\\Files\\Storage\\StorageFactory",
+        "lib/Service/ExternalStorageService.php:48 OC",
+        "lib/Service/ExternalStorageService.php:48 OC::$server"
+      ],
+      "lines": [
+        "4 uses of the private API of the server in 2 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Event/Listener/UserCreatedListener.php:39 OC\\Files\\Mount\\Manager",
+        "  lib/Event/Listener/UserCreatedListener.php:39 OC\\Files\\Storage\\StorageFactory",
+        "  lib/Service/ExternalStorageService.php:48 OC",
+        "  lib/Service/ExternalStorageService.php:48 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "route-target-missing",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/cidgravity/cidgravity  cidgravity.cidgravity.index  appinfo/routes.php:3 resources: no class OCA\\CIDgravity\\Controller\\CidgravityController",
+        "GET /index.php/apps/cidgravity/cidgravity/{id}  cidgravity.cidgravity.show  appinfo/routes.php:3 resources: no class OCA\\CIDgravity\\Controller\\CidgravityController",
+        "POST /index.php/apps/cidgravity/cidgravity  cidgravity.cidgravity.create  appinfo/routes.php:3 resources: no class OCA\\CIDgravity\\Controller\\CidgravityController",
+        "PUT /index.php/apps/cidgravity/cidgravity/{id}  cidgravity.cidgravity.update  appinfo/routes.php:3 resources: no class OCA\\CIDgravity\\Controller\\CidgravityController",
+        "DELETE /index.php/apps/cidgravity/cidgravity/{id}  cidgravity.cidgravity.destroy  appinfo/routes.php:3 resources: no class OCA\\CIDgravity\\Controller\\CidgravityController"
+      ],
+      "lines": [
+        "5 routes name a controller class or a method that does not exist, or a method that is not public. A request to such a route ends in an error.",
+        "  GET /index.php/apps/cidgravity/cidgravity  cidgravity.cidgravity.index  appinfo/routes.php:3 resources: no class OCA\\CIDgravity\\Controller\\CidgravityController",
+        "  GET /index.php/apps/cidgravity/cidgravity/{id}  cidgravity.cidgravity.show  appinfo/routes.php:3 resources: no class OCA\\CIDgravity\\Controller\\CidgravityController",
+        "  POST /index.php/apps/cidgravity/cidgravity  cidgravity.cidgravity.create  appinfo/routes.php:3 resources: no class OCA\\CIDgravity\\Controller\\CidgravityController",
+        "  PUT /index.php/apps/cidgravity/cidgravity/{id}  cidgravity.cidgravity.update  appinfo/routes.php:3 resources: no class OCA\\CIDgravity\\Controller\\CidgravityController",
+        "  DELETE /index.php/apps/cidgravity/cidgravity/{id}  cidgravity.cidgravity.destroy  appinfo/routes.php:3 resources: no class OCA\\CIDgravity\\Controller\\CidgravityController"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 2 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 7,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cidgravity/cidgravity",
+      "target": "OCA\\CIDgravity\\Controller\\CidgravityController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/cidgravity/cidgravity",
+      "target": "OCA\\CIDgravity\\Controller\\CidgravityController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/cidgravity/cidgravity/{id}",
+      "target": "OCA\\CIDgravity\\Controller\\CidgravityController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cidgravity/cidgravity/{id}",
+      "target": "OCA\\CIDgravity\\Controller\\CidgravityController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/cidgravity/cidgravity/{id}",
+      "target": "OCA\\CIDgravity\\Controller\\CidgravityController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cidgravity/get-external-storage-config",
+      "target": "OCA\\CIDgravity\\Controller\\ExternalStorageController::getExternalStorageConfigurationForSpecificFile",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/cidgravity/get-file-metadata",
+      "target": "OCA\\CIDgravity\\Controller\\ExternalStorageController::getMetadataForSpecificFile",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

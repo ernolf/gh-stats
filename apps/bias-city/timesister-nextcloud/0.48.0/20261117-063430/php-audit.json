@@ -1,0 +1,1296 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\TimeSister\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "vimeo/psalm, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Migration/Uninstall.php:64 OCP\\IAppConfig::deleteApp(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig  Removes all keys in appconfig belonging to the app.",
+        "lib/Service/PurgeService.php:163 OCP\\IAppConfig::deleteApp(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig  Removes all keys in appconfig belonging to the app."
+      ],
+      "lines": [
+        "2 uses in 2 files of the public API that is deprecated in Nextcloud 33 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Migration/Uninstall.php:64 OCP\\IAppConfig::deleteApp(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig  Removes all keys in appconfig belonging to the app.",
+        "  lib/Service/PurgeService.php:163 OCP\\IAppConfig::deleteApp(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig  Removes all keys in appconfig belonging to the app."
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Db/AbsenceMapper.php:35",
+        "lib/Db/CounterMapper.php:55",
+        "lib/Service/EntryService.php:723",
+        "lib/Service/JobService.php:435",
+        "lib/Service/RecordService.php:432",
+        "lib/Service/RecordService.php:489",
+        "lib/Service/TeamAdminService.php:87",
+        "lib/Service/TeamAdminService.php:127",
+        "lib/Service/TeamDeleteService.php:120",
+        "lib/Service/TeamImportService.php:130",
+        "lib/Service/Transaction.php:30"
+      ],
+      "lines": [
+        "11 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Db/AbsenceMapper.php:35",
+        "  lib/Db/CounterMapper.php:55",
+        "  lib/Service/EntryService.php:723",
+        "  lib/Service/JobService.php:435",
+        "  lib/Service/RecordService.php:432",
+        "  lib/Service/RecordService.php:489",
+        "  lib/Service/TeamAdminService.php:87",
+        "  lib/Service/TeamAdminService.php:127",
+        "  lib/Service/TeamDeleteService.php:120",
+        "  lib/Service/TeamImportService.php:130",
+        "  lib/Service/Transaction.php:30"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 8
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/ExchangeRateService.php:45 getValueString()",
+        "lib/Service/PrivacyFacts.php:106 getValueString()",
+        "lib/Service/PurgeService.php:69 setValueString()",
+        "lib/Service/PurgeService.php:73 getValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 4 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/ExchangeRateService.php:45 getValueString()",
+        "  lib/Service/PrivacyFacts.php:106 getValueString()",
+        "  lib/Service/PurgeService.php:69 setValueString()",
+        "  lib/Service/PurgeService.php:73 getValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "POST /ocs/v2.php/apps/timesister/api/v1/admin/teams/from-zip  ocs.timesister.adminbackup.fromzip  lib/Controller/AdminBackupController.php:87",
+        "GET /ocs/v2.php/apps/timesister/api/v1/admin/purge  ocs.timesister.adminpurge.preview  lib/Controller/AdminPurgeController.php:39",
+        "POST /ocs/v2.php/apps/timesister/api/v1/admin/purge  ocs.timesister.adminpurge.purge  lib/Controller/AdminPurgeController.php:53",
+        "GET /ocs/v2.php/apps/timesister/api/v1/admin/teams  ocs.timesister.adminteam.index  lib/Controller/AdminTeamController.php:47",
+        "POST /ocs/v2.php/apps/timesister/api/v1/admin/teams  ocs.timesister.adminteam.create  lib/Controller/AdminTeamController.php:57",
+        "POST /ocs/v2.php/apps/timesister/api/v1/backups  ocs.timesister.backup.create  lib/Controller/BackupController.php:39",
+        "GET /ocs/v2.php/apps/timesister/api/v1/backups  ocs.timesister.backup.index  lib/Controller/BackupController.php:55",
+        "POST /ocs/v2.php/apps/timesister/api/v1/backups/now  ocs.timesister.backup.now  lib/Controller/BackupController.php:78",
+        "GET /ocs/v2.php/apps/timesister/api/v1/backups/consent  ocs.timesister.backup.consent  lib/Controller/BackupController.php:89",
+        "PUT /ocs/v2.php/apps/timesister/api/v1/backups/consent  ocs.timesister.backup.setconsent  lib/Controller/BackupController.php:97",
+        "GET /ocs/v2.php/apps/timesister/api/v1/backups/own-copy  ocs.timesister.backup.owncopy  lib/Controller/BackupController.php:110",
+        "PUT /ocs/v2.php/apps/timesister/api/v1/backups/own-copy  ocs.timesister.backup.setowncopy  lib/Controller/BackupController.php:118",
+        "POST /ocs/v2.php/apps/timesister/api/v1/bank/entries  ocs.timesister.bank.entries  lib/Controller/BankController.php:37",
+        "GET /ocs/v2.php/apps/timesister/api/v1/entries  ocs.timesister.entry.index  lib/Controller/EntryController.php:33",
+        "GET /ocs/v2.php/apps/timesister/api/v1/entries/status  ocs.timesister.entry.status  lib/Controller/EntryController.php:41",
+        "POST /ocs/v2.php/apps/timesister/api/v1/entries/correct  ocs.timesister.entry.correct  lib/Controller/EntryController.php:49",
+        "POST /ocs/v2.php/apps/timesister/api/v1/entries/list  ocs.timesister.entry.writelist  lib/Controller/EntryController.php:58",
+        "GET /ocs/v2.php/apps/timesister/api/v1/entries/corrections  ocs.timesister.entry.corrections  lib/Controller/EntryController.php:67",
+        "POST /ocs/v2.php/apps/timesister/api/v1/entries/reread  ocs.timesister.entry.reread  lib/Controller/EntryController.php:75",
+        "GET /ocs/v2.php/apps/timesister/api/v1/invoices/next-number  ocs.timesister.invoice.preview  lib/Controller/InvoiceController.php:34",
+        "POST /ocs/v2.php/apps/timesister/api/v1/invoices/next-number  ocs.timesister.invoice.take  lib/Controller/InvoiceController.php:42",
+        "GET /ocs/v2.php/apps/timesister/api/v1/invoices/webhooks/status  ocs.timesister.invoiceexport.webhookstatus  lib/Controller/InvoiceExportController.php:105",
+        "GET /ocs/v2.php/apps/timesister/api/v1/invoices/ledger  ocs.timesister.invoicing.ledger  lib/Controller/InvoicingController.php:153",
+        "GET /ocs/v2.php/apps/timesister/api/v1/invoices/chain/head  ocs.timesister.invoicing.chainhead  lib/Controller/InvoicingController.php:191",
+        "GET /ocs/v2.php/apps/timesister/api/v1/invoices/chain/verify  ocs.timesister.invoicing.verify  lib/Controller/InvoicingController.php:199",
+        "POST /ocs/v2.php/apps/timesister/api/v1/jobs/progress  ocs.timesister.job.progress  lib/Controller/JobController.php:150",
+        "POST /ocs/v2.php/apps/timesister/api/v1/jobs/weeks  ocs.timesister.job.reportweeks  lib/Controller/JobController.php:159",
+        "GET /ocs/v2.php/apps/timesister/api/v1/jobs/weeks  ocs.timesister.job.weeks  lib/Controller/JobController.php:168",
+        "POST /ocs/v2.php/apps/timesister/api/v1/jobs/fits  ocs.timesister.job.fits  lib/Controller/JobController.php:176",
+        "GET /ocs/v2.php/apps/timesister/api/v1/me  ocs.timesister.me.show  lib/Controller/MeController.php:40",
+        "PUT /ocs/v2.php/apps/timesister/api/v1/me/time-calendar  ocs.timesister.me.settimecalendar  lib/Controller/MeController.php:69",
+        "DELETE /ocs/v2.php/apps/timesister/api/v1/me/time-calendar  ocs.timesister.me.unsettimecalendar  lib/Controller/MeController.php:78",
+        "PUT /ocs/v2.php/apps/timesister/api/v1/me/absences  ocs.timesister.me.setabsences  lib/Controller/MeController.php:90",
+        "POST /ocs/v2.php/apps/timesister/api/v1/expense-reports/fix  ocs.timesister.receipt.fix  lib/Controller/ReceiptController.php:97",
+        "POST /ocs/v2.php/apps/timesister/api/v1/expense-reports/ready  ocs.timesister.receipt.readygone  lib/Controller/ReceiptController.php:126",
+        "GET /ocs/v2.php/apps/timesister/api/v1/exports/expenses  ocs.timesister.receipt.export  lib/Controller/ReceiptController.php:182",
+        "GET /ocs/v2.php/apps/timesister/api/v1/records  ocs.timesister.record.index  lib/Controller/RecordController.php:36",
+        "POST /ocs/v2.php/apps/timesister/api/v1/records/batch  ocs.timesister.record.batch  lib/Controller/RecordController.php:86",
+        "POST /ocs/v2.php/apps/timesister/api/v1/status  ocs.timesister.status.create  lib/Controller/StatusController.php:33",
+        "GET /ocs/v2.php/apps/timesister/api/v1/status  ocs.timesister.status.index  lib/Controller/StatusController.php:47",
+        "GET /ocs/v2.php/apps/timesister/api/v1/team  ocs.timesister.team.show  lib/Controller/TeamController.php:34",
+        "PUT /ocs/v2.php/apps/timesister/api/v1/team/settings  ocs.timesister.team.updatesettings  lib/Controller/TeamController.php:48",
+        "GET /ocs/v2.php/apps/timesister/api/v1/templates/invoice/info  ocs.timesister.template.info  lib/Controller/TemplateController.php:38",
+        "GET /ocs/v2.php/apps/timesister/api/v1/templates/invoice  ocs.timesister.template.show  lib/Controller/TemplateController.php:46",
+        "PUT /ocs/v2.php/apps/timesister/api/v1/templates/invoice  ocs.timesister.template.update  lib/Controller/TemplateController.php:54",
+        "DELETE /ocs/v2.php/apps/timesister/api/v1/templates/invoice  ocs.timesister.template.destroy  lib/Controller/TemplateController.php:63",
+        "GET /ocs/v2.php/apps/timesister/api/v1/templates/quote/info  ocs.timesister.template.quoteinfo  lib/Controller/TemplateController.php:72",
+        "GET /ocs/v2.php/apps/timesister/api/v1/templates/quote  ocs.timesister.template.quoteshow  lib/Controller/TemplateController.php:80",
+        "PUT /ocs/v2.php/apps/timesister/api/v1/templates/quote  ocs.timesister.template.quoteupdate  lib/Controller/TemplateController.php:88",
+        "DELETE /ocs/v2.php/apps/timesister/api/v1/templates/quote  ocs.timesister.template.quotedestroy  lib/Controller/TemplateController.php:97"
+      ],
+      "lines": [
+        "Nothing in the app calls 50 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  POST /ocs/v2.php/apps/timesister/api/v1/admin/teams/from-zip  ocs.timesister.adminbackup.fromzip  lib/Controller/AdminBackupController.php:87",
+        "  GET /ocs/v2.php/apps/timesister/api/v1/admin/purge  ocs.timesister.adminpurge.preview  lib/Controller/AdminPurgeController.php:39",
+        "  POST /ocs/v2.php/apps/timesister/api/v1/admin/purge  ocs.timesister.adminpurge.purge  lib/Controller/AdminPurgeController.php:53",
+        "  GET /ocs/v2.php/apps/timesister/api/v1/admin/teams  ocs.timesister.adminteam.index  lib/Controller/AdminTeamController.php:47",
+        "  POST /ocs/v2.php/apps/timesister/api/v1/admin/teams  ocs.timesister.adminteam.create  lib/Controller/AdminTeamController.php:57",
+        "  POST /ocs/v2.php/apps/timesister/api/v1/backups  ocs.timesister.backup.create  lib/Controller/BackupController.php:39",
+        "  GET /ocs/v2.php/apps/timesister/api/v1/backups  ocs.timesister.backup.index  lib/Controller/BackupController.php:55",
+        "  POST /ocs/v2.php/apps/timesister/api/v1/backups/now  ocs.timesister.backup.now  lib/Controller/BackupController.php:78",
+        "  GET /ocs/v2.php/apps/timesister/api/v1/backups/consent  ocs.timesister.backup.consent  lib/Controller/BackupController.php:89",
+        "  PUT /ocs/v2.php/apps/timesister/api/v1/backups/consent  ocs.timesister.backup.setconsent  lib/Controller/BackupController.php:97",
+        "  GET /ocs/v2.php/apps/timesister/api/v1/backups/own-copy  ocs.timesister.backup.owncopy  lib/Controller/BackupController.php:110",
+        "  PUT /ocs/v2.php/apps/timesister/api/v1/backups/own-copy  ocs.timesister.backup.setowncopy  lib/Controller/BackupController.php:118",
+        "  POST /ocs/v2.php/apps/timesister/api/v1/bank/entries  ocs.timesister.bank.entries  lib/Controller/BankController.php:37",
+        "  GET /ocs/v2.php/apps/timesister/api/v1/entries  ocs.timesister.entry.index  lib/Controller/EntryController.php:33",
+        "  GET /ocs/v2.php/apps/timesister/api/v1/entries/status  ocs.timesister.entry.status  lib/Controller/EntryController.php:41",
+        "  POST /ocs/v2.php/apps/timesister/api/v1/entries/correct  ocs.timesister.entry.correct  lib/Controller/EntryController.php:49",
+        "  POST /ocs/v2.php/apps/timesister/api/v1/entries/list  ocs.timesister.entry.writelist  lib/Controller/EntryController.php:58",
+        "  GET /ocs/v2.php/apps/timesister/api/v1/entries/corrections  ocs.timesister.entry.corrections  lib/Controller/EntryController.php:67",
+        "  POST /ocs/v2.php/apps/timesister/api/v1/entries/reread  ocs.timesister.entry.reread  lib/Controller/EntryController.php:75",
+        "  GET /ocs/v2.php/apps/timesister/api/v1/invoices/next-number  ocs.timesister.invoice.preview  lib/Controller/InvoiceController.php:34",
+        "  POST /ocs/v2.php/apps/timesister/api/v1/invoices/next-number  ocs.timesister.invoice.take  lib/Controller/InvoiceController.php:42",
+        "  GET /ocs/v2.php/apps/timesister/api/v1/invoices/webhooks/status  ocs.timesister.invoiceexport.webhookstatus  lib/Controller/InvoiceExportController.php:105",
+        "  GET /ocs/v2.php/apps/timesister/api/v1/invoices/ledger  ocs.timesister.invoicing.ledger  lib/Controller/InvoicingController.php:153",
+        "  GET /ocs/v2.php/apps/timesister/api/v1/invoices/chain/head  ocs.timesister.invoicing.chainhead  lib/Controller/InvoicingController.php:191",
+        "  GET /ocs/v2.php/apps/timesister/api/v1/invoices/chain/verify  ocs.timesister.invoicing.verify  lib/Controller/InvoicingController.php:199",
+        "  POST /ocs/v2.php/apps/timesister/api/v1/jobs/progress  ocs.timesister.job.progress  lib/Controller/JobController.php:150",
+        "  POST /ocs/v2.php/apps/timesister/api/v1/jobs/weeks  ocs.timesister.job.reportweeks  lib/Controller/JobController.php:159",
+        "  GET /ocs/v2.php/apps/timesister/api/v1/jobs/weeks  ocs.timesister.job.weeks  lib/Controller/JobController.php:168",
+        "  POST /ocs/v2.php/apps/timesister/api/v1/jobs/fits  ocs.timesister.job.fits  lib/Controller/JobController.php:176",
+        "  GET /ocs/v2.php/apps/timesister/api/v1/me  ocs.timesister.me.show  lib/Controller/MeController.php:40",
+        "  PUT /ocs/v2.php/apps/timesister/api/v1/me/time-calendar  ocs.timesister.me.settimecalendar  lib/Controller/MeController.php:69",
+        "  DELETE /ocs/v2.php/apps/timesister/api/v1/me/time-calendar  ocs.timesister.me.unsettimecalendar  lib/Controller/MeController.php:78",
+        "  PUT /ocs/v2.php/apps/timesister/api/v1/me/absences  ocs.timesister.me.setabsences  lib/Controller/MeController.php:90",
+        "  POST /ocs/v2.php/apps/timesister/api/v1/expense-reports/fix  ocs.timesister.receipt.fix  lib/Controller/ReceiptController.php:97",
+        "  POST /ocs/v2.php/apps/timesister/api/v1/expense-reports/ready  ocs.timesister.receipt.readygone  lib/Controller/ReceiptController.php:126",
+        "  GET /ocs/v2.php/apps/timesister/api/v1/exports/expenses  ocs.timesister.receipt.export  lib/Controller/ReceiptController.php:182",
+        "  GET /ocs/v2.php/apps/timesister/api/v1/records  ocs.timesister.record.index  lib/Controller/RecordController.php:36",
+        "  POST /ocs/v2.php/apps/timesister/api/v1/records/batch  ocs.timesister.record.batch  lib/Controller/RecordController.php:86",
+        "  POST /ocs/v2.php/apps/timesister/api/v1/status  ocs.timesister.status.create  lib/Controller/StatusController.php:33",
+        "  GET /ocs/v2.php/apps/timesister/api/v1/status  ocs.timesister.status.index  lib/Controller/StatusController.php:47",
+        "  GET /ocs/v2.php/apps/timesister/api/v1/team  ocs.timesister.team.show  lib/Controller/TeamController.php:34",
+        "  PUT /ocs/v2.php/apps/timesister/api/v1/team/settings  ocs.timesister.team.updatesettings  lib/Controller/TeamController.php:48",
+        "  GET /ocs/v2.php/apps/timesister/api/v1/templates/invoice/info  ocs.timesister.template.info  lib/Controller/TemplateController.php:38",
+        "  GET /ocs/v2.php/apps/timesister/api/v1/templates/invoice  ocs.timesister.template.show  lib/Controller/TemplateController.php:46",
+        "  PUT /ocs/v2.php/apps/timesister/api/v1/templates/invoice  ocs.timesister.template.update  lib/Controller/TemplateController.php:54",
+        "  DELETE /ocs/v2.php/apps/timesister/api/v1/templates/invoice  ocs.timesister.template.destroy  lib/Controller/TemplateController.php:63",
+        "  GET /ocs/v2.php/apps/timesister/api/v1/templates/quote/info  ocs.timesister.template.quoteinfo  lib/Controller/TemplateController.php:72",
+        "  GET /ocs/v2.php/apps/timesister/api/v1/templates/quote  ocs.timesister.template.quoteshow  lib/Controller/TemplateController.php:80",
+        "  PUT /ocs/v2.php/apps/timesister/api/v1/templates/quote  ocs.timesister.template.quoteupdate  lib/Controller/TemplateController.php:88",
+        "  DELETE /ocs/v2.php/apps/timesister/api/v1/templates/quote  ocs.timesister.template.quotedestroy  lib/Controller/TemplateController.php:97"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 47
+        }
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 116 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version1015Date20261015210000.php:36 a column of ts_inv_invoices whose name is no constant",
+        "lib/Migration/Version1015Date20261015210000.php:43 a column of ts_tenants whose name is no constant",
+        "lib/Migration/Version1016Date20261016120000.php:32 a column of ts_inv_invoices whose name is no constant",
+        "lib/Migration/Version1024Date20261029180000.php:30 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version1024Date20261029180000.php:31 addColumn() on a table whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version1015Date20261015210000.php:36 a column of ts_inv_invoices whose name is no constant",
+        "  lib/Migration/Version1015Date20261015210000.php:43 a column of ts_tenants whose name is no constant",
+        "  lib/Migration/Version1016Date20261016120000.php:32 a column of ts_inv_invoices whose name is no constant",
+        "  lib/Migration/Version1024Date20261029180000.php:30 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version1024Date20261029180000.php:31 addColumn() on a table whose name is no constant"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    }
+  ],
+  "endpoints": 117,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/admin/purge",
+      "target": "OCA\\TimeSister\\Controller\\AdminPurgeController::preview",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/admin/purge",
+      "target": "OCA\\TimeSister\\Controller\\AdminPurgeController::purge",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/admin/teams",
+      "target": "OCA\\TimeSister\\Controller\\AdminTeamController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/admin/teams",
+      "target": "OCA\\TimeSister\\Controller\\AdminTeamController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/admin/teams/{id}",
+      "target": "OCA\\TimeSister\\Controller\\AdminTeamController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/admin/teams/{id}",
+      "target": "OCA\\TimeSister\\Controller\\AdminTeamController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/admin/teams/{id}/documents/check",
+      "target": "OCA\\TimeSister\\Controller\\AdminTeamController::checkDocuments",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/admin/teams/{id}/export",
+      "target": "OCA\\TimeSister\\Controller\\AdminBackupController::export",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/admin/teams/{id}/import",
+      "target": "OCA\\TimeSister\\Controller\\AdminBackupController::import",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/admin/teams/{id}/import/preview",
+      "target": "OCA\\TimeSister\\Controller\\AdminBackupController::preview",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/admin/teams/{id}/members/{uid}",
+      "target": "OCA\\TimeSister\\Controller\\AdminTeamController::updateMember",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/admin/teams/{id}/privacy",
+      "target": "OCA\\TimeSister\\Controller\\PrivacyController::adminDownload",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/admin/teams/{id}/privacy",
+      "target": "OCA\\TimeSister\\Controller\\PrivacyController::adminSave",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/admin/teams/from-zip",
+      "target": "OCA\\TimeSister\\Controller\\AdminBackupController::fromZip",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/admin/teams/import/preview",
+      "target": "OCA\\TimeSister\\Controller\\AdminBackupController::previewNew",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/backups",
+      "target": "OCA\\TimeSister\\Controller\\BackupController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/backups",
+      "target": "OCA\\TimeSister\\Controller\\BackupController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/backups/{id}",
+      "target": "OCA\\TimeSister\\Controller\\BackupController::show",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/backups/consent",
+      "target": "OCA\\TimeSister\\Controller\\BackupController::consent",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/backups/consent",
+      "target": "OCA\\TimeSister\\Controller\\BackupController::setConsent",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/backups/now",
+      "target": "OCA\\TimeSister\\Controller\\BackupController::now",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/backups/own-copy",
+      "target": "OCA\\TimeSister\\Controller\\BackupController::ownCopy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/backups/own-copy",
+      "target": "OCA\\TimeSister\\Controller\\BackupController::setOwnCopy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/bank/entries",
+      "target": "OCA\\TimeSister\\Controller\\BankController::entries",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/entries",
+      "target": "OCA\\TimeSister\\Controller\\EntryController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/entries/correct",
+      "target": "OCA\\TimeSister\\Controller\\EntryController::correct",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/entries/corrections",
+      "target": "OCA\\TimeSister\\Controller\\EntryController::corrections",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/entries/list",
+      "target": "OCA\\TimeSister\\Controller\\EntryController::writeList",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/entries/reread",
+      "target": "OCA\\TimeSister\\Controller\\EntryController::reread",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/entries/status",
+      "target": "OCA\\TimeSister\\Controller\\EntryController::status",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/expense-reports/{key}/document",
+      "target": "OCA\\TimeSister\\Controller\\ReceiptController::reportDocument",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/expense-reports/{key}/documents",
+      "target": "OCA\\TimeSister\\Controller\\ReceiptController::storeDocument",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/expense-reports/{key}/paid",
+      "target": "OCA\\TimeSister\\Controller\\ReceiptController::paidGone",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/expense-reports/{key}/payment",
+      "target": "OCA\\TimeSister\\Controller\\ReceiptController::payment",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/expense-reports/{key}/reverse",
+      "target": "OCA\\TimeSister\\Controller\\ReceiptController::reverse",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/expense-reports/fix",
+      "target": "OCA\\TimeSister\\Controller\\ReceiptController::fix",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/expense-reports/ready",
+      "target": "OCA\\TimeSister\\Controller\\ReceiptController::readyGone",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/expense-rules/{key}/approve",
+      "target": "OCA\\TimeSister\\Controller\\ReceiptController::ruleApproveGone",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/exports/expenses",
+      "target": "OCA\\TimeSister\\Controller\\ReceiptController::export",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/invoices/{key}/assign",
+      "target": "OCA\\TimeSister\\Controller\\InvoicingController::assign",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/invoices/{key}/document",
+      "target": "OCA\\TimeSister\\Controller\\InvoicingController::document",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/invoices/{key}/document",
+      "target": "OCA\\TimeSister\\Controller\\InvoicingController::putDocument",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/invoices/{key}/dunning",
+      "target": "OCA\\TimeSister\\Controller\\InvoicingController::dunning",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/invoices/{key}/external",
+      "target": "OCA\\TimeSister\\Controller\\InvoiceExportController::external",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/invoices/{key}/external-cancelled",
+      "target": "OCA\\TimeSister\\Controller\\InvoiceExportController::externalCancelled",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/invoices/{key}/external-document",
+      "target": "OCA\\TimeSister\\Controller\\InvoiceExportController::externalDocument",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/invoices/{key}/fixed",
+      "target": "OCA\\TimeSister\\Controller\\InvoicingController::fixed",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/invoices/{key}/handover",
+      "target": "OCA\\TimeSister\\Controller\\InvoiceExportController::handover",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/invoices/{key}/handover/revoke",
+      "target": "OCA\\TimeSister\\Controller\\InvoiceExportController::revokeHandover",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/invoices/{key}/issue",
+      "target": "OCA\\TimeSister\\Controller\\InvoicingController::issue",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/invoices/{key}/issue/cancel",
+      "target": "OCA\\TimeSister\\Controller\\InvoicingController::cancelIssue",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/invoices/{key}/paid",
+      "target": "OCA\\TimeSister\\Controller\\InvoicingController::paid",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/invoices/{key}/preview",
+      "target": "OCA\\TimeSister\\Controller\\InvoicingController::preview",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/invoices/{key}/render",
+      "target": "OCA\\TimeSister\\Controller\\InvoicingController::render",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/invoices/{key}/reverse",
+      "target": "OCA\\TimeSister\\Controller\\InvoicingController::reverse",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/invoices/{key}/unpaid",
+      "target": "OCA\\TimeSister\\Controller\\InvoicingController::unpaid",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/invoices/chain/head",
+      "target": "OCA\\TimeSister\\Controller\\InvoicingController::chainHead",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/invoices/chain/verify",
+      "target": "OCA\\TimeSister\\Controller\\InvoicingController::verify",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/invoices/export",
+      "target": "OCA\\TimeSister\\Controller\\InvoiceExportController::export",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/invoices/ledger",
+      "target": "OCA\\TimeSister\\Controller\\InvoicingController::ledger",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/invoices/next-number",
+      "target": "OCA\\TimeSister\\Controller\\InvoiceController::preview",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/invoices/next-number",
+      "target": "OCA\\TimeSister\\Controller\\InvoiceController::take",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/invoices/webhooks/status",
+      "target": "OCA\\TimeSister\\Controller\\InvoiceExportController::webhookStatus",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/jobs/{key}",
+      "target": "OCA\\TimeSister\\Controller\\JobController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/jobs/{key}",
+      "target": "OCA\\TimeSister\\Controller\\JobController::offer",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/jobs/{key}/accept",
+      "target": "OCA\\TimeSister\\Controller\\JobController::accept",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/jobs/{key}/accept-counter",
+      "target": "OCA\\TimeSister\\Controller\\JobController::acceptCounter",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/jobs/{key}/capacity",
+      "target": "OCA\\TimeSister\\Controller\\JobController::capacity",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/jobs/{key}/change",
+      "target": "OCA\\TimeSister\\Controller\\JobController::change",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/jobs/{key}/counter",
+      "target": "OCA\\TimeSister\\Controller\\JobController::counter",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/jobs/{key}/decline",
+      "target": "OCA\\TimeSister\\Controller\\JobController::decline",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/jobs/{key}/done",
+      "target": "OCA\\TimeSister\\Controller\\JobController::done",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/jobs/{key}/paid",
+      "target": "OCA\\TimeSister\\Controller\\JobController::paid",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/jobs/{key}/reject-counter",
+      "target": "OCA\\TimeSister\\Controller\\JobController::rejectCounter",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/jobs/{key}/reopen",
+      "target": "OCA\\TimeSister\\Controller\\JobController::reopen",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/jobs/{key}/return",
+      "target": "OCA\\TimeSister\\Controller\\JobController::giveBack",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/jobs/fits",
+      "target": "OCA\\TimeSister\\Controller\\JobController::fits",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/jobs/progress",
+      "target": "OCA\\TimeSister\\Controller\\JobController::progress",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/jobs/weeks",
+      "target": "OCA\\TimeSister\\Controller\\JobController::weeks",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/jobs/weeks",
+      "target": "OCA\\TimeSister\\Controller\\JobController::reportWeeks",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/me",
+      "target": "OCA\\TimeSister\\Controller\\MeController::show",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/me/absences",
+      "target": "OCA\\TimeSister\\Controller\\MeController::setAbsences",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/me/time-calendar",
+      "target": "OCA\\TimeSister\\Controller\\MeController::unsetTimeCalendar",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/me/time-calendar",
+      "target": "OCA\\TimeSister\\Controller\\MeController::setTimeCalendar",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/projects/{key}/dossier",
+      "target": "OCA\\TimeSister\\Controller\\DocumentTreeController::dossier",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/quotes/{key}/document",
+      "target": "OCA\\TimeSister\\Controller\\DocumentTreeController::getQuote",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/quotes/{key}/document",
+      "target": "OCA\\TimeSister\\Controller\\DocumentTreeController::putQuote",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/quotes/{key}/documents",
+      "target": "OCA\\TimeSister\\Controller\\DocumentTreeController::listQuoteDocuments",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/quotes/{key}/documents",
+      "target": "OCA\\TimeSister\\Controller\\DocumentTreeController::addQuoteDocument",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/quotes/{key}/issue",
+      "target": "OCA\\TimeSister\\Controller\\DocumentTreeController::issueQuote",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/receipts/{key}/approve",
+      "target": "OCA\\TimeSister\\Controller\\ReceiptController::approve",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/receipts/{key}/file",
+      "target": "OCA\\TimeSister\\Controller\\ReceiptController::getFile",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/receipts/{key}/file",
+      "target": "OCA\\TimeSister\\Controller\\ReceiptController::putFile",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/receipts/{key}/reject",
+      "target": "OCA\\TimeSister\\Controller\\ReceiptController::reject",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/receipts/{key}/reopen",
+      "target": "OCA\\TimeSister\\Controller\\ReceiptController::reopen",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/records",
+      "target": "OCA\\TimeSister\\Controller\\RecordController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/records/{kind}/{key}",
+      "target": "OCA\\TimeSister\\Controller\\RecordController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/records/{kind}/{key}",
+      "target": "OCA\\TimeSister\\Controller\\RecordController::show",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/records/{kind}/{key}",
+      "target": "OCA\\TimeSister\\Controller\\RecordController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/records/{kind}/{key}/history",
+      "target": "OCA\\TimeSister\\Controller\\RecordController::history",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/records/{kind}/{key}/restore",
+      "target": "OCA\\TimeSister\\Controller\\RecordController::restore",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/records/batch",
+      "target": "OCA\\TimeSister\\Controller\\RecordController::batch",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/status",
+      "target": "OCA\\TimeSister\\Controller\\StatusController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/status",
+      "target": "OCA\\TimeSister\\Controller\\StatusController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/team",
+      "target": "OCA\\TimeSister\\Controller\\TeamController::show",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/team/members/{uid}",
+      "target": "OCA\\TimeSister\\Controller\\TeamController::updateMember",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/team/privacy",
+      "target": "OCA\\TimeSister\\Controller\\PrivacyController::team",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/team/settings",
+      "target": "OCA\\TimeSister\\Controller\\TeamController::updateSettings",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/templates/invoice",
+      "target": "OCA\\TimeSister\\Controller\\TemplateController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/templates/invoice",
+      "target": "OCA\\TimeSister\\Controller\\TemplateController::show",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/templates/invoice",
+      "target": "OCA\\TimeSister\\Controller\\TemplateController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/templates/invoice/info",
+      "target": "OCA\\TimeSister\\Controller\\TemplateController::info",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/templates/quote",
+      "target": "OCA\\TimeSister\\Controller\\TemplateController::quoteDestroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/templates/quote",
+      "target": "OCA\\TimeSister\\Controller\\TemplateController::quoteShow",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/templates/quote",
+      "target": "OCA\\TimeSister\\Controller\\TemplateController::quoteUpdate",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/timesister/api/v1/templates/quote/info",
+      "target": "OCA\\TimeSister\\Controller\\TemplateController::quoteInfo",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/capabilities",
+      "target": "OCA\\TimeSister\\Capabilities",
+      "openapi": [],
+      "kind": "capability"
+    }
+  ]
+}

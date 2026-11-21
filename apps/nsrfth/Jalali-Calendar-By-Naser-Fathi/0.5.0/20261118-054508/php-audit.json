@@ -1,0 +1,196 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\JalaliCalendar\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/PageController.php:58 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/PageController.php:66 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UserConfigService.php:71 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/UserConfigService.php:93 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/UserConfigService.php:116 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/UserConfigService.php:131 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "lines": [
+        "6 uses in 2 files of the public API that is deprecated in Nextcloud 30 to 34. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/PageController.php:58 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/PageController.php:66 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UserConfigService.php:71 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/UserConfigService.php:93 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/UserConfigService.php:116 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/UserConfigService.php:131 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/ImportService.php:155 new DateTimeImmutable()",
+        "lib/Settings/AdminSettings.php:34 new DateTimeImmutable()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 2 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/ImportService.php:155 new DateTimeImmutable()",
+        "  lib/Settings/AdminSettings.php:34 new DateTimeImmutable()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Controller/PageController.php:66 getAppValue()",
+        "lib/Service/ConfigService.php:44 getValueString()",
+        "lib/Service/ConfigService.php:56 setValueString()",
+        "lib/Service/ConfigService.php:64 getValueInt()",
+        "lib/Service/ConfigService.php:74 getValueInt()",
+        "lib/Service/ConfigService.php:83 getValueString()",
+        "lib/Service/ConfigService.php:106 setValueInt()",
+        "lib/Service/ConfigService.php:107 setValueInt()",
+        "lib/Service/ConfigService.php:120 setValueString()",
+        "lib/Service/ConfigService.php:133 getValueString()",
+        "lib/Service/ConfigService.php:137 setValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 11 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Controller/PageController.php:66 getAppValue()",
+        "  lib/Service/ConfigService.php:44 getValueString()",
+        "  lib/Service/ConfigService.php:56 setValueString()",
+        "  lib/Service/ConfigService.php:64 getValueInt()",
+        "  lib/Service/ConfigService.php:74 getValueInt()",
+        "  lib/Service/ConfigService.php:83 getValueString()",
+        "  lib/Service/ConfigService.php:106 setValueInt()",
+        "  lib/Service/ConfigService.php:107 setValueInt()",
+        "  lib/Service/ConfigService.php:120 setValueString()",
+        "  lib/Service/ConfigService.php:133 getValueString()",
+        "  lib/Service/ConfigService.php:137 setValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 8
+        }
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 9 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 11,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/jalali_calendar/",
+      "target": "OCA\\JalaliCalendar\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/jalali_calendar/{jy}/{jm}",
+      "target": "OCA\\JalaliCalendar\\Controller\\PageController::month",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/jalali_calendar/api/v1/config",
+      "target": "OCA\\JalaliCalendar\\Controller\\AdminConfigController::show",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/jalali_calendar/api/v1/config",
+      "target": "OCA\\JalaliCalendar\\Controller\\AdminConfigController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/jalali_calendar/api/v1/offdays",
+      "target": "OCA\\JalaliCalendar\\Controller\\OffDayController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/jalali_calendar/api/v1/offdays",
+      "target": "OCA\\JalaliCalendar\\Controller\\OffDayController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/jalali_calendar/api/v1/offdays/{id}",
+      "target": "OCA\\JalaliCalendar\\Controller\\OffDayController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/jalali_calendar/api/v1/offdays/import",
+      "target": "OCA\\JalaliCalendar\\Controller\\OffDayController::import",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/jalali_calendar/api/v1/offdays/year/{jy}",
+      "target": "OCA\\JalaliCalendar\\Controller\\OffDayController::year",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/jalali_calendar/api/v1/preferences",
+      "target": "OCA\\JalaliCalendar\\Controller\\UserConfigController::show",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/jalali_calendar/api/v1/preferences",
+      "target": "OCA\\JalaliCalendar\\Controller\\UserConfigController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

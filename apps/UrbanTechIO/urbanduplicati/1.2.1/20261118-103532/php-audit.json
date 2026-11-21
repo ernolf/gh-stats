@@ -1,0 +1,307 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\UrbanDuplicati\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/TaskController.php:143 OC",
+        "lib/Controller/TaskController.php:342 OC_Util",
+        "lib/Controller/TaskController.php:407 OC::$server",
+        "lib/Controller/TaskController.php:594 OC::$server",
+        "lib/Controller/TaskController.php:602 OC::$server"
+      ],
+      "lines": [
+        "5 uses of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/TaskController.php:143 OC",
+        "  lib/Controller/TaskController.php:342 OC_Util",
+        "  lib/Controller/TaskController.php:407 OC::$server",
+        "  lib/Controller/TaskController.php:594 OC::$server",
+        "  lib/Controller/TaskController.php:602 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/Controller/TaskController.php:346 OCP\\Exceptions\\AbortedEventException: there since Nextcloud 29, the app declares from 25"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that the oldest majors of Nextcloud 25 to 35 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/Controller/TaskController.php:346 OCP\\Exceptions\\AbortedEventException: there since Nextcloud 29, the app declares from 25"
+      ]
+    },
+    {
+      "id": "route-duplicate",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/urbanduplicati/api/v1/tasks/{id}/all-group-ids: urbanduplicati.task.allgroupids at appinfo/routes.php:2 routes, urbanduplicati.task.allgroupids at appinfo/routes.php:2 routes",
+        "urbanduplicati.task.allgroupids: urbanduplicati.task.allgroupids at appinfo/routes.php:2 routes, urbanduplicati.task.allgroupids at appinfo/routes.php:2 routes"
+      ],
+      "lines": [
+        "2 verbs and paths or route names are declared more than once. The server keeps one route per name and takes the first that matches a request, so the other one is never reached.",
+        "  GET /index.php/apps/urbanduplicati/api/v1/tasks/{id}/all-group-ids: urbanduplicati.task.allgroupids at appinfo/routes.php:2 routes, urbanduplicati.task.allgroupids at appinfo/routes.php:2 routes",
+        "  urbanduplicati.task.allgroupids: urbanduplicati.task.allgroupids at appinfo/routes.php:2 routes, urbanduplicati.task.allgroupids at appinfo/routes.php:2 routes"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/urbanduplicati/admin  urbanduplicati.page.admin  appinfo/routes.php:2 routes",
+        "POST /index.php/apps/urbanduplicati/api/v1/notify/{taskId}  urbanduplicati.notification.scanfinished  appinfo/routes.php:2 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 20 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/urbanduplicati/admin  urbanduplicati.page.admin  appinfo/routes.php:2 routes",
+        "  POST /index.php/apps/urbanduplicati/api/v1/notify/{taskId}  urbanduplicati.notification.scanfinished  appinfo/routes.php:2 routes"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/NotificationController.php:23 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:40 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/SettingsController.php:56 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Db/Db.php:30 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId"
+      ],
+      "lines": [
+        "4 uses in 3 files of the public API that is deprecated in Nextcloud 25 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/NotificationController.php:23 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:40 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/SettingsController.php:56 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Db/Db.php:30 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/NotificationController.php:35 new DateTime()",
+        "lib/Controller/ProtectionController.php:46 time()",
+        "lib/Controller/TaskController.php:113 time()",
+        "lib/Controller/TaskController.php:206 time()",
+        "lib/Controller/TaskController.php:362 time()",
+        "lib/Controller/TaskController.php:584 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 6 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/NotificationController.php:35 new DateTime()",
+        "  lib/Controller/ProtectionController.php:46 time()",
+        "  lib/Controller/TaskController.php:113 time()",
+        "  lib/Controller/TaskController.php:206 time()",
+        "  lib/Controller/TaskController.php:362 time()",
+        "  lib/Controller/TaskController.php:584 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Controller/NotificationController.php:23 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 1 place and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Controller/NotificationController.php:23 getAppValue()"
+      ]
+    }
+  ],
+  "endpoints": 24,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/urbanduplicati/",
+      "target": "OCA\\UrbanDuplicati\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/urbanduplicati/admin",
+      "target": "OCA\\UrbanDuplicati\\Controller\\PageController::admin",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/urbanduplicati/api/v1/audit",
+      "target": "OCA\\UrbanDuplicati\\Controller\\AuditController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/urbanduplicati/api/v1/audit/export",
+      "target": "OCA\\UrbanDuplicati\\Controller\\AuditController::export",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/urbanduplicati/api/v1/dependencies",
+      "target": "OCA\\UrbanDuplicati\\Controller\\DependencyController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/urbanduplicati/api/v1/notify/{taskId}",
+      "target": "OCA\\UrbanDuplicati\\Controller\\NotificationController::scanFinished",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/urbanduplicati/api/v1/protection",
+      "target": "OCA\\UrbanDuplicati\\Controller\\ProtectionController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/urbanduplicati/api/v1/protection",
+      "target": "OCA\\UrbanDuplicati\\Controller\\ProtectionController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/urbanduplicati/api/v1/protection/{id}",
+      "target": "OCA\\UrbanDuplicati\\Controller\\ProtectionController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/urbanduplicati/api/v1/settings",
+      "target": "OCA\\UrbanDuplicati\\Controller\\SettingsController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/urbanduplicati/api/v1/settings",
+      "target": "OCA\\UrbanDuplicati\\Controller\\SettingsController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/urbanduplicati/api/v1/settings/system",
+      "target": "OCA\\UrbanDuplicati\\Controller\\SettingsController::system",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/urbanduplicati/api/v1/tasks",
+      "target": "OCA\\UrbanDuplicati\\Controller\\TaskController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/urbanduplicati/api/v1/tasks/{id}",
+      "target": "OCA\\UrbanDuplicati\\Controller\\TaskController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/urbanduplicati/api/v1/tasks/{id}",
+      "target": "OCA\\UrbanDuplicati\\Controller\\TaskController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/urbanduplicati/api/v1/tasks/{id}/all-group-ids",
+      "target": "OCA\\UrbanDuplicati\\Controller\\TaskController::allGroupIds",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/urbanduplicati/api/v1/tasks/{id}/all-group-ids",
+      "target": "OCA\\UrbanDuplicati\\Controller\\TaskController::allGroupIds",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/urbanduplicati/api/v1/tasks/{id}/bulk-delete",
+      "target": "OCA\\UrbanDuplicati\\Controller\\TaskController::bulkDelete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/urbanduplicati/api/v1/tasks/{id}/bulk-remove",
+      "target": "OCA\\UrbanDuplicati\\Controller\\TaskController::bulkRemove",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/urbanduplicati/api/v1/tasks/{id}/dry-run",
+      "target": "OCA\\UrbanDuplicati\\Controller\\TaskController::dryRun",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/urbanduplicati/api/v1/tasks/{id}/groups",
+      "target": "OCA\\UrbanDuplicati\\Controller\\TaskController::groups",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/urbanduplicati/api/v1/tasks/{id}/groups/{groupId}/files/{fileId}",
+      "target": "OCA\\UrbanDuplicati\\Controller\\TaskController::deleteFile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/urbanduplicati/api/v1/tasks/{id}/terminate",
+      "target": "OCA\\UrbanDuplicati\\Controller\\TaskController::terminate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/urbanduplicati/api/v1/tasks/run",
+      "target": "OCA\\UrbanDuplicati\\Controller\\TaskController::run",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

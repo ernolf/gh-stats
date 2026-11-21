@@ -1,0 +1,121 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer/composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer/composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Command/AddClient.php:20 OC\\Core\\Command\\Base",
+        "lib/Command/DeleteClient.php:20 OC\\Core\\Command\\Base",
+        "lib/Controller/LoginRedirectorController.php:94 OC\\Core\\Controller\\ClientFlowLoginController",
+        "lib/Controller/OauthApiController.php:52 OC\\Authentication\\Token\\IProvider",
+        "lib/Migration/SetTokenExpiration.php:24 OC\\Authentication\\Token\\IProvider",
+        "lib/Service/ClientService.php:33 OC\\Authentication\\Token\\IProvider"
+      ],
+      "lines": [
+        "6 uses of the private API of the server in 6 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Command/AddClient.php:20 OC\\Core\\Command\\Base",
+        "  lib/Command/DeleteClient.php:20 OC\\Core\\Command\\Base",
+        "  lib/Controller/LoginRedirectorController.php:94 OC\\Core\\Controller\\ClientFlowLoginController",
+        "  lib/Controller/OauthApiController.php:52 OC\\Authentication\\Token\\IProvider",
+        "  lib/Migration/SetTokenExpiration.php:24 OC\\Authentication\\Token\\IProvider",
+        "  lib/Service/ClientService.php:33 OC\\Authentication\\Token\\IProvider"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/oauth2/authorize  oauth2.loginredirector.authorize  appinfo/routes.php:9 routes",
+        "POST /index.php/apps/oauth2/api/v1/token  oauth2.oauthapi.gettoken  appinfo/routes.php:9 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 3 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/oauth2/authorize  oauth2.loginredirector.authorize  appinfo/routes.php:9 routes",
+        "  POST /index.php/apps/oauth2/api/v1/token  oauth2.oauthapi.gettoken  appinfo/routes.php:9 routes"
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Controller/OauthApiController.php:199"
+      ],
+      "lines": [
+        "1 transaction is opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Controller/OauthApiController.php:199"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Controller/LoginRedirectorController.php:88 getValueArray()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 1 place and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Controller/LoginRedirectorController.php:88 getValueArray()"
+      ]
+    }
+  ],
+  "endpoints": 5,
+  "endpointList": [
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oauth2/api/v1/pushtoken",
+      "target": "OCA\\OAuth2\\Controller\\OauthApiController::pushToken",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oauth2/api/v1/token",
+      "target": "OCA\\OAuth2\\Controller\\OauthApiController::getToken",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/oauth2/authorize",
+      "target": "OCA\\OAuth2\\Controller\\LoginRedirectorController::authorize",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oauth2/clients",
+      "target": "OCA\\OAuth2\\Controller\\SettingsController::addClient",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/oauth2/clients/{id}",
+      "target": "OCA\\OAuth2\\Controller\\SettingsController::deleteClient",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

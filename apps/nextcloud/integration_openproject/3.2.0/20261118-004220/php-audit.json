@@ -1,0 +1,990 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\OpenProject\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/ConfigController.php:192 OC\\User\\NoUserException",
+        "lib/Controller/DirectUploadController.php:174 OC\\Files\\Filesystem",
+        "lib/Controller/DirectUploadController.php:175 OC\\ForbiddenException",
+        "lib/Controller/DirectUploadController.php:248 OC\\User\\NoUserException",
+        "lib/Listener/BeforeNodeInsideOpenProjectGroupfilderChangedListener.php:62 OC_User",
+        "lib/Listener/BeforeNodeInsideOpenProjectGroupfilderChangedListener.php:77 OC\\HintException",
+        "lib/Listener/LoadSidebarScript.php:76 OC",
+        "lib/Listener/LoadSidebarScript.php:76 OC::$server",
+        "lib/Migration/Version2640Date20240628114301.php:33 OC\\Authentication\\Token\\PublicKeyTokenMapper",
+        "lib/Reference/WorkPackageReferenceProvider.php:28 OC\\Collaboration\\Reference\\ReferenceManager",
+        "lib/Service/DirectDownloadService.php:36 OC\\Files\\Node\\File",
+        "lib/Service/OpenProjectAPIService.php:143 OC\\Authentication\\Token\\IProvider",
+        "lib/Service/OpenProjectAPIService.php:1185 OC",
+        "lib/Service/OpenProjectAPIService.php:1348 OC\\Authentication\\Events\\AppPasswordCreatedEvent"
+      ],
+      "lines": [
+        "14 uses of the private API of the server in 8 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/ConfigController.php:192 OC\\User\\NoUserException",
+        "  lib/Controller/DirectUploadController.php:174 OC\\Files\\Filesystem",
+        "  lib/Controller/DirectUploadController.php:175 OC\\ForbiddenException",
+        "  lib/Controller/DirectUploadController.php:248 OC\\User\\NoUserException",
+        "  lib/Listener/BeforeNodeInsideOpenProjectGroupfilderChangedListener.php:62 OC_User",
+        "  lib/Listener/BeforeNodeInsideOpenProjectGroupfilderChangedListener.php:77 OC\\HintException",
+        "  lib/Listener/LoadSidebarScript.php:76 OC",
+        "  lib/Listener/LoadSidebarScript.php:76 OC::$server",
+        "  lib/Migration/Version2640Date20240628114301.php:33 OC\\Authentication\\Token\\PublicKeyTokenMapper",
+        "  lib/Reference/WorkPackageReferenceProvider.php:28 OC\\Collaboration\\Reference\\ReferenceManager",
+        "  lib/Service/DirectDownloadService.php:36 OC\\Files\\Node\\File",
+        "  lib/Service/OpenProjectAPIService.php:143 OC\\Authentication\\Token\\IProvider",
+        "  lib/Service/OpenProjectAPIService.php:1185 OC",
+        "  lib/Service/OpenProjectAPIService.php:1348 OC\\Authentication\\Events\\AppPasswordCreatedEvent"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 11
+        }
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:151 injectFn()",
+        "lib/AppInfo/Application.php:152 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 2 places. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:151 injectFn()",
+        "  lib/AppInfo/Application.php:152 injectFn()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/integration_openproject/oauth-redirect  integration_openproject.config.oauthredirect  appinfo/routes.php:13 routes",
+        "GET /index.php/apps/integration_openproject/check-config  integration_openproject.config.checkconfig  appinfo/routes.php:13 routes",
+        "GET /index.php/apps/integration_openproject/check-admin-config  integration_openproject.config.checkadminconfigok  appinfo/routes.php:13 routes",
+        "POST /index.php/apps/integration_openproject/direct-upload-token  integration_openproject.directupload.preparedirectupload  appinfo/routes.php:13 routes",
+        "POST /index.php/apps/integration_openproject/setup  integration_openproject.config.setupintegration  appinfo/routes.php:13 routes",
+        "DELETE /index.php/apps/integration_openproject/setup  integration_openproject.config.resetintegration  appinfo/routes.php:13 routes",
+        "PATCH /index.php/apps/integration_openproject/setup  integration_openproject.config.updateintegration  appinfo/routes.php:13 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 7 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 41 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/integration_openproject/oauth-redirect  integration_openproject.config.oauthredirect  appinfo/routes.php:13 routes",
+        "  GET /index.php/apps/integration_openproject/check-config  integration_openproject.config.checkconfig  appinfo/routes.php:13 routes",
+        "  GET /index.php/apps/integration_openproject/check-admin-config  integration_openproject.config.checkadminconfigok  appinfo/routes.php:13 routes",
+        "  POST /index.php/apps/integration_openproject/direct-upload-token  integration_openproject.directupload.preparedirectupload  appinfo/routes.php:13 routes",
+        "  POST /index.php/apps/integration_openproject/setup  integration_openproject.config.setupintegration  appinfo/routes.php:13 routes",
+        "  DELETE /index.php/apps/integration_openproject/setup  integration_openproject.config.resetintegration  appinfo/routes.php:13 routes",
+        "  PATCH /index.php/apps/integration_openproject/setup  integration_openproject.config.updateintegration  appinfo/routes.php:13 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "vimeo/psalm, friendsofphp/php-cs-fixer, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/ConfigController.php:114 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/ConfigController.php:115 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/ConfigController.php:116 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/ConfigController.php:117 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/ConfigController.php:118 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/ConfigController.php:119 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/ConfigController.php:127 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:128 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:136 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:137 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:150 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ConfigController.php:206 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:209 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:233 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:236 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:257 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:260 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:274 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:289 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:329 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:336 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:413 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ConfigController.php:414 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:415 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:416 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ConfigController.php:419 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ConfigController.php:451 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/ConfigController.php:465 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:482 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ConfigController.php:505 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ConfigController.php:508 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ConfigController.php:526 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:535 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:648 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:654 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:711 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:713 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/OpenProjectAPIController.php:40 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/OpenProjectController.php:203 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/OpenProjectController.php:212 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Dashboard/OpenProjectWidget.php:111 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Dashboard/OpenProjectWidget.php:114 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Dashboard/OpenProjectWidget.php:118 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Dashboard/OpenProjectWidget.php:132 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Dashboard/OpenProjectWidget.php:135 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Listener/LoadAdditionalScriptsListener.php:46 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Listener/LoadSidebarScript.php:77 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Listener/LoadSidebarScript.php:80 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Listener/LoadSidebarScript.php:83 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Listener/LoadSidebarScript.php:86 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Listener/LoadSidebarScript.php:93 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Listener/LoadSidebarScript.php:100 OCP\\Util::getVersion(): deprecated since Nextcloud 31; Use \\OCP\\ServerVersion::getVersion",
+        "lib/Listener/LoadSidebarScript.php:111 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Listener/OpenProjectReferenceListener.php:54 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Listener/OpenProjectReferenceListener.php:65 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Listener/OpenProjectReferenceListener.php:73 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Migration/Version2001Date20221213083550.php:40 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Migration/Version2001Date20221213083550.php:43 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Migration/Version2001Date20221213083550.php:46 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Migration/Version2001Date20221213083550.php:50 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Migration/Version2001Date20221213083550.php:53 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Migration/Version2001Date20221213083550.php:56 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Migration/Version2001Date20221213083550.php:60 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Migration/Version2001Date20221213083550.php:61 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Migration/Version2001Date20221213083550.php:62 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Migration/Version2400Date20230504144300.php:40 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Migration/Version2900Date20250718065820.php:33 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Migration/Version2900Date20250718065820.php:34 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Migration/Version2900Date20250718065820.php:35 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Migration/Version2900Date20250718065820.php:36 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Migration/Version2900Date20250718065820.php:42 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Reference/WorkPackageReferenceProvider.php:79 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Reference/WorkPackageReferenceProvider.php:94 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Reference/WorkPackageReferenceProvider.php:99 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Search/OpenProjectSearchProvider.php:97 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Search/OpenProjectSearchProvider.php:99 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Search/OpenProjectSearchProvider.php:102 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:352 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:494 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:586 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OpenProjectAPIService.php:601 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OpenProjectAPIService.php:604 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OpenProjectAPIService.php:682 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:683 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:903 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:904 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:924 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:931 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:932 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:933 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:948 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:953 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:954 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:955 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:956 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:986 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:1184 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Service/OpenProjectAPIService.php:1196 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Service/OpenProjectAPIService.php:1204 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Service/OpenProjectAPIService.php:1207 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:1328 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:1618 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:1643 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:1645 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:1668 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OpenProjectAPIService.php:1669 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OpenProjectAPIService.php:1680 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OpenProjectAPIService.php:1698 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OpenProjectAPIService.php:1699 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:1712 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/OpenProjectAPIService.php:1713 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/OpenProjectAPIService.php:1720 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OpenProjectAPIService.php:1721 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:1722 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:1723 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:1757 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OpenProjectAPIService.php:1758 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OpenProjectAPIService.php:1763 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OpenProjectAPIService.php:1775 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OpenProjectAPIService.php:1776 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OpenProjectAPIService.php:1798 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Service/OpenProjectAPIService.php:1815 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Service/OpenProjectAPIService.php:1830 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:55 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:56 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:57 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:61 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:73 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:76 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:89 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:90 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:93 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:94 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:97 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:101 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:102 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:109 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Personal.php:55 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Personal.php:57 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Settings/Personal.php:59 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Settings/Personal.php:63 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Personal.php:65 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Settings/Personal.php:69 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Personal.php:83 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Settings/Personal.php:86 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Settings/Personal.php:92 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Settings/Personal.php:95 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/TokenEventFactory.php:29 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/TokenEventFactory.php:30 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/TokenEventFactory.php:31 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "lines": [
+        "150 uses in 16 files of the public API that is deprecated in Nextcloud 33 to 34. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/ConfigController.php:114 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/ConfigController.php:115 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/ConfigController.php:116 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/ConfigController.php:117 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/ConfigController.php:118 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/ConfigController.php:119 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/ConfigController.php:127 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:128 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:136 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:137 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:150 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ConfigController.php:206 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:209 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:233 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:236 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:257 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:260 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:274 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:289 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:329 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:336 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:413 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ConfigController.php:414 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:415 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:416 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ConfigController.php:419 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ConfigController.php:451 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/ConfigController.php:465 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:482 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ConfigController.php:505 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ConfigController.php:508 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ConfigController.php:526 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:535 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:648 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:654 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:711 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:713 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/OpenProjectAPIController.php:40 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/OpenProjectController.php:203 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/OpenProjectController.php:212 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Dashboard/OpenProjectWidget.php:111 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Dashboard/OpenProjectWidget.php:114 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Dashboard/OpenProjectWidget.php:118 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Dashboard/OpenProjectWidget.php:132 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Dashboard/OpenProjectWidget.php:135 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Listener/LoadAdditionalScriptsListener.php:46 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Listener/LoadSidebarScript.php:77 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Listener/LoadSidebarScript.php:80 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Listener/LoadSidebarScript.php:83 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Listener/LoadSidebarScript.php:86 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Listener/LoadSidebarScript.php:93 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Listener/LoadSidebarScript.php:100 OCP\\Util::getVersion(): deprecated since Nextcloud 31; Use \\OCP\\ServerVersion::getVersion",
+        "  lib/Listener/LoadSidebarScript.php:111 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Listener/OpenProjectReferenceListener.php:54 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Listener/OpenProjectReferenceListener.php:65 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Listener/OpenProjectReferenceListener.php:73 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Migration/Version2001Date20221213083550.php:40 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Migration/Version2001Date20221213083550.php:43 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Migration/Version2001Date20221213083550.php:46 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Migration/Version2001Date20221213083550.php:50 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Migration/Version2001Date20221213083550.php:53 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Migration/Version2001Date20221213083550.php:56 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Migration/Version2001Date20221213083550.php:60 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Migration/Version2001Date20221213083550.php:61 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Migration/Version2001Date20221213083550.php:62 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Migration/Version2400Date20230504144300.php:40 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Migration/Version2900Date20250718065820.php:33 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Migration/Version2900Date20250718065820.php:34 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Migration/Version2900Date20250718065820.php:35 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Migration/Version2900Date20250718065820.php:36 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Migration/Version2900Date20250718065820.php:42 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Reference/WorkPackageReferenceProvider.php:79 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Reference/WorkPackageReferenceProvider.php:94 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Reference/WorkPackageReferenceProvider.php:99 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Search/OpenProjectSearchProvider.php:97 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Search/OpenProjectSearchProvider.php:99 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Search/OpenProjectSearchProvider.php:102 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:352 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:494 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:586 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:601 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:604 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:682 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:683 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:903 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:904 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:924 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:931 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:932 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:933 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:948 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:953 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:954 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:955 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:956 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:986 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:1184 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Service/OpenProjectAPIService.php:1196 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Service/OpenProjectAPIService.php:1204 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Service/OpenProjectAPIService.php:1207 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:1328 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:1618 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:1643 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:1645 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:1668 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:1669 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:1680 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:1698 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:1699 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:1712 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:1713 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:1720 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:1721 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:1722 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:1723 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:1757 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:1758 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:1763 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:1775 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:1776 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OpenProjectAPIService.php:1798 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Service/OpenProjectAPIService.php:1815 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Service/OpenProjectAPIService.php:1830 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:55 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:56 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:57 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:61 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:73 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:76 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:89 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:90 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:93 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:94 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:97 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:101 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:102 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:109 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Personal.php:55 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Personal.php:57 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Settings/Personal.php:59 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Settings/Personal.php:63 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Personal.php:65 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Settings/Personal.php:69 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Personal.php:83 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Settings/Personal.php:86 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Settings/Personal.php:92 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Settings/Personal.php:95 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/TokenEventFactory.php:29 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/TokenEventFactory.php:30 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/TokenEventFactory.php:31 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 147
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/RemoveExpiredDirectUploadTokens.php OCA\\OpenProject\\BackgroundJob\\RemoveExpiredDirectUploadTokens"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/RemoveExpiredDirectUploadTokens.php OCA\\OpenProject\\BackgroundJob\\RemoveExpiredDirectUploadTokens"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/DirectUploadController.php:240 new DateTime()",
+        "lib/Service/DatabaseService.php:96 time()",
+        "lib/Service/DirectDownloadService.php:51 new DateTime()",
+        "lib/Service/DirectUploadService.php:63 new DateTime()",
+        "lib/Service/DirectUploadService.php:97 new DateTime()",
+        "lib/Service/OpenProjectAPIService.php:204 new DateTime()",
+        "lib/Service/OpenProjectAPIService.php:593 time()",
+        "lib/Service/OpenProjectAPIService.php:1273 time()",
+        "lib/Service/OpenProjectAPIService.php:1685 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 9 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/DirectUploadController.php:240 new DateTime()",
+        "  lib/Service/DatabaseService.php:96 time()",
+        "  lib/Service/DirectDownloadService.php:51 new DateTime()",
+        "  lib/Service/DirectUploadService.php:63 new DateTime()",
+        "  lib/Service/DirectUploadService.php:97 new DateTime()",
+        "  lib/Service/OpenProjectAPIService.php:204 new DateTime()",
+        "  lib/Service/OpenProjectAPIService.php:593 time()",
+        "  lib/Service/OpenProjectAPIService.php:1273 time()",
+        "  lib/Service/OpenProjectAPIService.php:1685 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 6
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Controller/ConfigController.php:127 setAppValue()",
+        "lib/Controller/ConfigController.php:128 setAppValue()",
+        "lib/Controller/ConfigController.php:136 setAppValue()",
+        "lib/Controller/ConfigController.php:137 setAppValue()",
+        "lib/Controller/ConfigController.php:206 getAppValue()",
+        "lib/Controller/ConfigController.php:209 getAppValue()",
+        "lib/Controller/ConfigController.php:233 getAppValue()",
+        "lib/Controller/ConfigController.php:236 getAppValue()",
+        "lib/Controller/ConfigController.php:257 getAppValue()",
+        "lib/Controller/ConfigController.php:260 getAppValue()",
+        "lib/Controller/ConfigController.php:274 setAppValue()",
+        "lib/Controller/ConfigController.php:289 getAppValue()",
+        "lib/Controller/ConfigController.php:329 setAppValue()",
+        "lib/Controller/ConfigController.php:336 setAppValue()",
+        "lib/Controller/ConfigController.php:414 getAppValue()",
+        "lib/Controller/ConfigController.php:415 getAppValue()",
+        "lib/Controller/ConfigController.php:465 getAppValue()",
+        "lib/Controller/ConfigController.php:526 getAppValue()",
+        "lib/Controller/ConfigController.php:648 getAppValue()",
+        "lib/Controller/ConfigController.php:654 getAppValue()",
+        "lib/Controller/ConfigController.php:711 getAppValue()",
+        "lib/Controller/ConfigController.php:713 setAppValue()",
+        "lib/Controller/OpenProjectAPIController.php:40 getAppValue()",
+        "lib/Dashboard/OpenProjectWidget.php:118 getAppValue()",
+        "lib/Listener/LoadAdditionalScriptsListener.php:46 getAppValue()",
+        "lib/Listener/LoadSidebarScript.php:93 getAppValue()",
+        "lib/Listener/LoadSidebarScript.php:111 getAppValue()",
+        "lib/Listener/OpenProjectReferenceListener.php:54 getAppValue()",
+        "lib/Listener/OpenProjectReferenceListener.php:65 getAppValue()",
+        "lib/Listener/OpenProjectReferenceListener.php:73 getAppValue()",
+        "lib/Migration/Version2001Date20221213083550.php:40 getAppValue()",
+        "lib/Migration/Version2001Date20221213083550.php:43 getAppValue()",
+        "lib/Migration/Version2001Date20221213083550.php:46 getAppValue()",
+        "lib/Migration/Version2001Date20221213083550.php:50 setAppValue()",
+        "lib/Migration/Version2001Date20221213083550.php:53 setAppValue()",
+        "lib/Migration/Version2001Date20221213083550.php:56 setAppValue()",
+        "lib/Migration/Version2400Date20230504144300.php:40 setAppValue()",
+        "lib/Migration/Version2900Date20250718065820.php:33 getAppValue()",
+        "lib/Migration/Version2900Date20250718065820.php:34 getAppValue()",
+        "lib/Migration/Version2900Date20250718065820.php:35 getAppValue()",
+        "lib/Migration/Version2900Date20250718065820.php:36 getAppValue()",
+        "lib/Migration/Version2900Date20250718065820.php:42 setAppValue()",
+        "lib/Reference/WorkPackageReferenceProvider.php:79 getAppValue()",
+        "lib/Reference/WorkPackageReferenceProvider.php:99 getAppValue()",
+        "lib/Search/OpenProjectSearchProvider.php:97 getAppValue()",
+        "lib/Search/OpenProjectSearchProvider.php:102 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:352 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:494 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:682 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:683 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:903 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:904 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:924 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:931 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:932 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:933 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:948 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:953 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:954 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:955 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:956 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:986 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:1207 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:1328 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:1618 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:1643 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:1645 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:1699 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:1721 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:1722 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:1723 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:1763 getAppValue()",
+        "lib/Service/OpenProjectAPIService.php:1830 getAppValue()",
+        "lib/Settings/Admin.php:55 getAppValue()",
+        "lib/Settings/Admin.php:56 getAppValue()",
+        "lib/Settings/Admin.php:57 getAppValue()",
+        "lib/Settings/Admin.php:61 getAppValue()",
+        "lib/Settings/Admin.php:73 getAppValue()",
+        "lib/Settings/Admin.php:76 setAppValue()",
+        "lib/Settings/Admin.php:89 getAppValue()",
+        "lib/Settings/Admin.php:90 getAppValue()",
+        "lib/Settings/Admin.php:93 getAppValue()",
+        "lib/Settings/Admin.php:94 getAppValue()",
+        "lib/Settings/Admin.php:97 getAppValue()",
+        "lib/Settings/Admin.php:101 getAppValue()",
+        "lib/Settings/Admin.php:102 getAppValue()",
+        "lib/Settings/Admin.php:109 getAppValue()",
+        "lib/Settings/Personal.php:55 getAppValue()",
+        "lib/Settings/Personal.php:63 getAppValue()",
+        "lib/Settings/Personal.php:69 getAppValue()",
+        "lib/TokenEventFactory.php:29 getAppValue()",
+        "lib/TokenEventFactory.php:30 getAppValue()",
+        "lib/TokenEventFactory.php:31 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 93 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Controller/ConfigController.php:127 setAppValue()",
+        "  lib/Controller/ConfigController.php:128 setAppValue()",
+        "  lib/Controller/ConfigController.php:136 setAppValue()",
+        "  lib/Controller/ConfigController.php:137 setAppValue()",
+        "  lib/Controller/ConfigController.php:206 getAppValue()",
+        "  lib/Controller/ConfigController.php:209 getAppValue()",
+        "  lib/Controller/ConfigController.php:233 getAppValue()",
+        "  lib/Controller/ConfigController.php:236 getAppValue()",
+        "  lib/Controller/ConfigController.php:257 getAppValue()",
+        "  lib/Controller/ConfigController.php:260 getAppValue()",
+        "  lib/Controller/ConfigController.php:274 setAppValue()",
+        "  lib/Controller/ConfigController.php:289 getAppValue()",
+        "  lib/Controller/ConfigController.php:329 setAppValue()",
+        "  lib/Controller/ConfigController.php:336 setAppValue()",
+        "  lib/Controller/ConfigController.php:414 getAppValue()",
+        "  lib/Controller/ConfigController.php:415 getAppValue()",
+        "  lib/Controller/ConfigController.php:465 getAppValue()",
+        "  lib/Controller/ConfigController.php:526 getAppValue()",
+        "  lib/Controller/ConfigController.php:648 getAppValue()",
+        "  lib/Controller/ConfigController.php:654 getAppValue()",
+        "  lib/Controller/ConfigController.php:711 getAppValue()",
+        "  lib/Controller/ConfigController.php:713 setAppValue()",
+        "  lib/Controller/OpenProjectAPIController.php:40 getAppValue()",
+        "  lib/Dashboard/OpenProjectWidget.php:118 getAppValue()",
+        "  lib/Listener/LoadAdditionalScriptsListener.php:46 getAppValue()",
+        "  lib/Listener/LoadSidebarScript.php:93 getAppValue()",
+        "  lib/Listener/LoadSidebarScript.php:111 getAppValue()",
+        "  lib/Listener/OpenProjectReferenceListener.php:54 getAppValue()",
+        "  lib/Listener/OpenProjectReferenceListener.php:65 getAppValue()",
+        "  lib/Listener/OpenProjectReferenceListener.php:73 getAppValue()",
+        "  lib/Migration/Version2001Date20221213083550.php:40 getAppValue()",
+        "  lib/Migration/Version2001Date20221213083550.php:43 getAppValue()",
+        "  lib/Migration/Version2001Date20221213083550.php:46 getAppValue()",
+        "  lib/Migration/Version2001Date20221213083550.php:50 setAppValue()",
+        "  lib/Migration/Version2001Date20221213083550.php:53 setAppValue()",
+        "  lib/Migration/Version2001Date20221213083550.php:56 setAppValue()",
+        "  lib/Migration/Version2400Date20230504144300.php:40 setAppValue()",
+        "  lib/Migration/Version2900Date20250718065820.php:33 getAppValue()",
+        "  lib/Migration/Version2900Date20250718065820.php:34 getAppValue()",
+        "  lib/Migration/Version2900Date20250718065820.php:35 getAppValue()",
+        "  lib/Migration/Version2900Date20250718065820.php:36 getAppValue()",
+        "  lib/Migration/Version2900Date20250718065820.php:42 setAppValue()",
+        "  lib/Reference/WorkPackageReferenceProvider.php:79 getAppValue()",
+        "  lib/Reference/WorkPackageReferenceProvider.php:99 getAppValue()",
+        "  lib/Search/OpenProjectSearchProvider.php:97 getAppValue()",
+        "  lib/Search/OpenProjectSearchProvider.php:102 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:352 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:494 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:682 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:683 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:903 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:904 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:924 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:931 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:932 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:933 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:948 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:953 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:954 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:955 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:956 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:986 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:1207 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:1328 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:1618 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:1643 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:1645 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:1699 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:1721 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:1722 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:1723 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:1763 getAppValue()",
+        "  lib/Service/OpenProjectAPIService.php:1830 getAppValue()",
+        "  lib/Settings/Admin.php:55 getAppValue()",
+        "  lib/Settings/Admin.php:56 getAppValue()",
+        "  lib/Settings/Admin.php:57 getAppValue()",
+        "  lib/Settings/Admin.php:61 getAppValue()",
+        "  lib/Settings/Admin.php:73 getAppValue()",
+        "  lib/Settings/Admin.php:76 setAppValue()",
+        "  lib/Settings/Admin.php:89 getAppValue()",
+        "  lib/Settings/Admin.php:90 getAppValue()",
+        "  lib/Settings/Admin.php:93 getAppValue()",
+        "  lib/Settings/Admin.php:94 getAppValue()",
+        "  lib/Settings/Admin.php:97 getAppValue()",
+        "  lib/Settings/Admin.php:101 getAppValue()",
+        "  lib/Settings/Admin.php:102 getAppValue()",
+        "  lib/Settings/Admin.php:109 getAppValue()",
+        "  lib/Settings/Personal.php:55 getAppValue()",
+        "  lib/Settings/Personal.php:63 getAppValue()",
+        "  lib/Settings/Personal.php:69 getAppValue()",
+        "  lib/TokenEventFactory.php:29 getAppValue()",
+        "  lib/TokenEventFactory.php:30 getAppValue()",
+        "  lib/TokenEventFactory.php:31 getAppValue()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 90
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "POST /ocs/v2.php/apps/integration_openproject/filesinfo  ocs.integration_openproject.files.getfilesinfo  appinfo/routes.php:13 ocs"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 OCS route. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  POST /ocs/v2.php/apps/integration_openproject/filesinfo  ocs.integration_openproject.files.getfilesinfo  appinfo/routes.php:13 ocs"
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/ConfigController.php:110 OCA\\OpenProject\\Controller\\ConfigController::clearUserInfo()",
+        "lib/Controller/ConfigController.php:125 OCA\\OpenProject\\Controller\\ConfigController::resetOauth2Configs()",
+        "lib/Controller/ConfigController.php:135 OCA\\OpenProject\\Controller\\ConfigController::resetOIDCConfigs()",
+        "lib/Controller/FilesController.php:295 OCA\\OpenProject\\Controller\\FilesController::getDavPermissions()"
+      ],
+      "lines": [
+        "4 public methods of controllers are reached by no route.",
+        "  lib/Controller/ConfigController.php:110 OCA\\OpenProject\\Controller\\ConfigController::clearUserInfo()",
+        "  lib/Controller/ConfigController.php:125 OCA\\OpenProject\\Controller\\ConfigController::resetOauth2Configs()",
+        "  lib/Controller/ConfigController.php:135 OCA\\OpenProject\\Controller\\ConfigController::resetOIDCConfigs()",
+        "  lib/Controller/FilesController.php:295 OCA\\OpenProject\\Controller\\FilesController::getDavPermissions()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 17 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 35,
+  "endpointList": [
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/integration_openproject/admin-config",
+      "target": "OCA\\OpenProject\\Controller\\ConfigController::setAdminConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_openproject/check-admin-config",
+      "target": "OCA\\OpenProject\\Controller\\ConfigController::checkAdminConfigOk",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_openproject/check-config",
+      "target": "OCA\\OpenProject\\Controller\\ConfigController::checkConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/integration_openproject/config",
+      "target": "OCA\\OpenProject\\Controller\\ConfigController::setConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/integration_openproject/direct-upload-token",
+      "target": "OCA\\OpenProject\\Controller\\DirectUploadController::prepareDirectUpload",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/integration_openproject/direct-upload/{token}",
+      "target": "OCA\\OpenProject\\Controller\\DirectUploadController::preflightedCors",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/integration_openproject/direct-upload/{token}",
+      "target": "OCA\\OpenProject\\Controller\\DirectUploadController::directUpload",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_openproject/direct/{token}/{fileName}",
+      "target": "OCA\\OpenProject\\Controller\\DirectDownloadController::directDownload",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/integration_openproject/is-valid-op-instance",
+      "target": "OCA\\OpenProject\\Controller\\OpenProjectController::isValidOpenProjectInstance",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/integration_openproject/nc-oauth",
+      "target": "OCA\\OpenProject\\Controller\\ConfigController::autoOauthCreation",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_openproject/oauth-redirect",
+      "target": "OCA\\OpenProject\\Controller\\ConfigController::oauthRedirect",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_openproject/op-oauth-url",
+      "target": "OCA\\OpenProject\\Controller\\OpenProjectController::getOpenProjectOauthURLWithStateAndPKCE",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_openproject/project-folder-status",
+      "target": "OCA\\OpenProject\\Controller\\OpenProjectController::getProjectFolderSetupStatus",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/integration_openproject/setup",
+      "target": "OCA\\OpenProject\\Controller\\ConfigController::resetIntegration",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/index.php/apps/integration_openproject/setup",
+      "target": "OCA\\OpenProject\\Controller\\ConfigController::updateIntegration",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/integration_openproject/setup",
+      "target": "OCA\\OpenProject\\Controller\\ConfigController::setUpIntegration",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/integration_openproject/sign-term-of-service",
+      "target": "OCA\\OpenProject\\Controller\\ConfigController::signTermsOfServiceForUserOpenProject",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/integration_openproject/api/{apiVersion}/avatar",
+      "target": "OCA\\OpenProject\\Controller\\OpenProjectAPIController::getOpenProjectAvatar",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/integration_openproject/api/{apiVersion}/configuration",
+      "target": "OCA\\OpenProject\\Controller\\OpenProjectAPIController::getOpenProjectConfiguration",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/integration_openproject/api/{apiVersion}/create/work-packages",
+      "target": "OCA\\OpenProject\\Controller\\OpenProjectAPIController::createWorkPackage",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/integration_openproject/api/{apiVersion}/file-links/{id}",
+      "target": "OCA\\OpenProject\\Controller\\OpenProjectAPIController::deleteFileLink",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/integration_openproject/api/{apiVersion}/notifications",
+      "target": "OCA\\OpenProject\\Controller\\OpenProjectAPIController::getNotifications",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/integration_openproject/api/{apiVersion}/projects",
+      "target": "OCA\\OpenProject\\Controller\\OpenProjectAPIController::getAvailableOpenProjectProjects",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/integration_openproject/api/{apiVersion}/projects/{projectId}/available-assignees",
+      "target": "OCA\\OpenProject\\Controller\\OpenProjectAPIController::getAvailableAssigneesOfAProject",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/integration_openproject/api/{apiVersion}/projects/{projectId}/work-packages/form",
+      "target": "OCA\\OpenProject\\Controller\\OpenProjectAPIController::getOpenProjectWorkPackageForm",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/integration_openproject/api/{apiVersion}/statuses/{id}",
+      "target": "OCA\\OpenProject\\Controller\\OpenProjectAPIController::getOpenProjectWorkPackageStatus",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/integration_openproject/api/{apiVersion}/types/{id}",
+      "target": "OCA\\OpenProject\\Controller\\OpenProjectAPIController::getOpenProjectWorkPackageType",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/integration_openproject/api/{apiVersion}/url",
+      "target": "OCA\\OpenProject\\Controller\\OpenProjectAPIController::getOpenProjectUrl",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/integration_openproject/api/{apiVersion}/work-packages",
+      "target": "OCA\\OpenProject\\Controller\\OpenProjectAPIController::getSearchedWorkPackages",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/integration_openproject/api/{apiVersion}/work-packages",
+      "target": "OCA\\OpenProject\\Controller\\OpenProjectAPIController::linkWorkPackageToFile",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/integration_openproject/api/{apiVersion}/work-packages/{id}/file-links",
+      "target": "OCA\\OpenProject\\Controller\\OpenProjectAPIController::getWorkPackageFileLinks",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/integration_openproject/api/{apiVersion}/work-packages/{workpackageId}/notifications",
+      "target": "OCA\\OpenProject\\Controller\\OpenProjectAPIController::markNotificationAsRead",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/integration_openproject/fileinfo/{fileId}",
+      "target": "OCA\\OpenProject\\Controller\\FilesController::getFileInfo",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/integration_openproject/filesinfo",
+      "target": "OCA\\OpenProject\\Controller\\FilesController::getFilesInfo",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/capabilities",
+      "target": "OCA\\OpenProject\\Capabilities",
+      "openapi": [],
+      "kind": "capability"
+    }
+  ]
+}

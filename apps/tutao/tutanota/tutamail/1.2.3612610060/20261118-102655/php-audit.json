@@ -1,0 +1,173 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\TutaMail\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "namespace-mismatch",
+      "level": "warn",
+      "places": [
+        "lib/Controller/ProxyController.php:241 OCA\\TutaMail\\Controller\\PreflightException, by its path OCA\\TutaMail\\Controller\\ProxyController",
+        "lib/Controller/ProxyController.php:251 OCA\\TutaMail\\Controller\\ForbiddenProxyPathException, by its path OCA\\TutaMail\\Controller\\ProxyController",
+        "lib/Controller/ProxyController.php:259 OCA\\TutaMail\\Controller\\ForbiddenOriginException, by its path OCA\\TutaMail\\Controller\\ProxyController"
+      ],
+      "lines": [
+        "3 classes in lib/ whose name does not follow PSR-4 below OCA\\TutaMail, the namespace the server derives from <namespace> of info.xml. The loader of the server does not find such a class.",
+        "  lib/Controller/ProxyController.php:241 OCA\\TutaMail\\Controller\\PreflightException, by its path OCA\\TutaMail\\Controller\\ProxyController",
+        "  lib/Controller/ProxyController.php:251 OCA\\TutaMail\\Controller\\ForbiddenProxyPathException, by its path OCA\\TutaMail\\Controller\\ProxyController",
+        "  lib/Controller/ProxyController.php:259 OCA\\TutaMail\\Controller\\ForbiddenOriginException, by its path OCA\\TutaMail\\Controller\\ProxyController"
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "psr/event-dispatcher 1.0.0, in 3rdparty/ of Nextcloud 33 to 36",
+        "symfony/event-dispatcher v8.0.15, in 3rdparty/ of Nextcloud 33 to 36",
+        "symfony/event-dispatcher-contracts v3.7.1, in 3rdparty/ of Nextcloud 33 to 36"
+      ],
+      "lines": [
+        "vendor/ ships 3 packages that the server ships itself in a major of Nextcloud 33 to 36. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  psr/event-dispatcher 1.0.0, in 3rdparty/ of Nextcloud 33 to 36",
+        "  symfony/event-dispatcher v8.0.15, in 3rdparty/ of Nextcloud 33 to 36",
+        "  symfony/event-dispatcher-contracts v3.7.1, in 3rdparty/ of Nextcloud 33 to 36"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/tutamail/{path}  tutamail.page.spafallback  appinfo/routes.php:2 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 route outside OCS. Looked for: a route name or a path in the PHP source and the templates and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/tutamail/{path}  tutamail.page.spafallback  appinfo/routes.php:2 routes"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/PageController.php:35 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated in Nextcloud 33 to 36. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/PageController.php:35 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ]
+    },
+    {
+      "id": "cors-unreferenced",
+      "level": "info",
+      "places": [
+        "OPTIONS /index.php/apps/tutamail/api/v1/proxy/{path}  tutamail.proxy.handlecors  appinfo/routes.php:2 routes",
+        "GET /index.php/apps/tutamail/api/v1/proxy/{targetUrl}  tutamail.proxy.proxyget  appinfo/routes.php:2 routes",
+        "PUT /index.php/apps/tutamail/api/v1/proxy/{targetUrl}  tutamail.proxy.proxyput  appinfo/routes.php:2 routes",
+        "POST /index.php/apps/tutamail/api/v1/proxy/{targetUrl}  tutamail.proxy.proxypost  appinfo/routes.php:2 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 4 routes outside OCS whose method allows requests from other origins (CORS), or that answer the preflight of such a request (OPTIONS). They are there for clients outside the app, so this is no defect in itself.",
+        "  OPTIONS /index.php/apps/tutamail/api/v1/proxy/{path}  tutamail.proxy.handlecors  appinfo/routes.php:2 routes",
+        "  GET /index.php/apps/tutamail/api/v1/proxy/{targetUrl}  tutamail.proxy.proxyget  appinfo/routes.php:2 routes",
+        "  PUT /index.php/apps/tutamail/api/v1/proxy/{targetUrl}  tutamail.proxy.proxyput  appinfo/routes.php:2 routes",
+        "  POST /index.php/apps/tutamail/api/v1/proxy/{targetUrl}  tutamail.proxy.proxypost  appinfo/routes.php:2 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/tutamail/api/v1/version  ocs.tutamail.inapp.version  lib/Controller/InAppController.php:25"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 OCS route. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/tutamail/api/v1/version  ocs.tutamail.inapp.version  lib/Controller/InAppController.php:25"
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 1 OCS route and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 7,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tutamail/",
+      "target": "OCA\\TutaMail\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tutamail/{path}",
+      "target": "OCA\\TutaMail\\Controller\\PageController::spaFallback",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/tutamail/api/v1/proxy/{path}",
+      "target": "OCA\\TutaMail\\Controller\\ProxyController::handleCors",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tutamail/api/v1/proxy/{targetUrl}",
+      "target": "OCA\\TutaMail\\Controller\\ProxyController::proxyGET",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tutamail/api/v1/proxy/{targetUrl}",
+      "target": "OCA\\TutaMail\\Controller\\ProxyController::proxyPOST",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/tutamail/api/v1/proxy/{targetUrl}",
+      "target": "OCA\\TutaMail\\Controller\\ProxyController::proxyPUT",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/tutamail/api/v1/version",
+      "target": "OCA\\TutaMail\\Controller\\InAppController::version",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

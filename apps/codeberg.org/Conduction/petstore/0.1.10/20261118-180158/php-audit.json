@@ -1,0 +1,240 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\PetStore\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "templates/settings/admin.php:11 OC",
+        "templates/settings/admin.php:11 OC::$server"
+      ],
+      "lines": [
+        "2 uses of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  templates/settings/admin.php:11 OC",
+        "  templates/settings/admin.php:11 OC::$server"
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/Service/ActionAuthService.php:170 OCP\\IAppConfig::getValueString(): there since Nextcloud 29, the app declares from 28",
+        "lib/Service/ActionAuthService.php:233 OCP\\IAppConfig::setValueString(): there since Nextcloud 29, the app declares from 28",
+        "lib/Service/SettingsService.php:96 OCP\\IAppConfig::getValueString(): there since Nextcloud 29, the app declares from 28",
+        "lib/Service/SettingsService.php:124 OCP\\IAppConfig::setValueString(): there since Nextcloud 29, the app declares from 28"
+      ],
+      "lines": [
+        "4 uses in 2 files of the public API that the oldest majors of Nextcloud 28 to 34 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/Service/ActionAuthService.php:170 OCP\\IAppConfig::getValueString(): there since Nextcloud 29, the app declares from 28",
+        "  lib/Service/ActionAuthService.php:233 OCP\\IAppConfig::setValueString(): there since Nextcloud 29, the app declares from 28",
+        "  lib/Service/SettingsService.php:96 OCP\\IAppConfig::getValueString(): there since Nextcloud 29, the app declares from 28",
+        "  lib/Service/SettingsService.php:124 OCP\\IAppConfig::setValueString(): there since Nextcloud 29, the app declares from 28"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "POST /index.php/apps/petstore/api/settings/load  petstore.settings.load  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/petstore/api/preferences/{key}  petstore.preferences.getpreference  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/petstore/api/preferences/{key}  petstore.preferences.setpreference  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/petstore/api/metrics  petstore.metrics.index  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/petstore/api/health  petstore.health.index  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/petstore/api/portal/pets/rename  petstore.portal_action.renameownedpet  appinfo/routes.php:5 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 6 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 22 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  POST /index.php/apps/petstore/api/settings/load  petstore.settings.load  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/petstore/api/preferences/{key}  petstore.preferences.getpreference  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/petstore/api/preferences/{key}  petstore.preferences.setpreference  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/petstore/api/metrics  petstore.metrics.index  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/petstore/api/health  petstore.health.index  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/petstore/api/portal/pets/rename  petstore.portal_action.renameownedpet  appinfo/routes.php:5 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "frontend-url-without-route",
+      "level": "warn",
+      "places": [
+        "src/views/widgets/ExampleWidget.vue:78 /apps/petstore/examples/..."
+      ],
+      "lines": [
+        "The frontend or a template builds 1 URL below /apps/petstore/ that no route of the app matches. The request fails at run time.",
+        "  src/views/widgets/ExampleWidget.vue:78 /apps/petstore/examples/..."
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "vimeo/psalm, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/PreferencesController.php:80 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/PreferencesController.php:123 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/PreferencesController.php:129 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Portal/PortalAssertionVerifier.php:250 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/SettingsService.php:79 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "templates/settings/admin.php:11 OCP\\IInitialStateService: deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "templates/settings/admin.php:11 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider"
+      ],
+      "lines": [
+        "7 uses in 4 files of the public API that is deprecated in Nextcloud 28 to 34. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/PreferencesController.php:80 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/PreferencesController.php:123 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/PreferencesController.php:129 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Portal/PortalAssertionVerifier.php:250 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/SettingsService.php:79 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  templates/settings/admin.php:11 OCP\\IInitialStateService: deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "  templates/settings/admin.php:11 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Portal/PortalAssertionVerifier.php:212 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 1 place. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Portal/PortalAssertionVerifier.php:212 time()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Portal/PortalAssertionVerifier.php:250 getAppValue()",
+        "lib/Service/ActionAuthService.php:170 getValueString()",
+        "lib/Service/ActionAuthService.php:233 setValueString()",
+        "lib/Service/SettingsService.php:96 getValueString()",
+        "lib/Service/SettingsService.php:124 setValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 5 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Portal/PortalAssertionVerifier.php:250 getAppValue()",
+        "  lib/Service/ActionAuthService.php:170 getValueString()",
+        "  lib/Service/ActionAuthService.php:233 setValueString()",
+        "  lib/Service/SettingsService.php:96 getValueString()",
+        "  lib/Service/SettingsService.php:124 setValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    }
+  ],
+  "endpoints": 11,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/petstore/",
+      "target": "OCA\\PetStore\\Controller\\DashboardController::page",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/petstore/{path}",
+      "target": "OCA\\PetStore\\Controller\\DashboardController::catchAll",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/petstore/api/health",
+      "target": "OCA\\PetStore\\Controller\\HealthController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/petstore/api/metrics",
+      "target": "OCA\\PetStore\\Controller\\MetricsController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/petstore/api/orders/{id}/cancel",
+      "target": "OCA\\PetStore\\Controller\\OrderController::cancel",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/petstore/api/portal/pets/rename",
+      "target": "OCA\\PetStore\\Controller\\PortalActionController::renameOwnedPet",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/petstore/api/preferences/{key}",
+      "target": "OCA\\PetStore\\Controller\\PreferencesController::getPreference",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/petstore/api/preferences/{key}",
+      "target": "OCA\\PetStore\\Controller\\PreferencesController::setPreference",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/petstore/api/settings",
+      "target": "OCA\\PetStore\\Controller\\SettingsController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/petstore/api/settings",
+      "target": "OCA\\PetStore\\Controller\\SettingsController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/petstore/api/settings/load",
+      "target": "OCA\\PetStore\\Controller\\SettingsController::load",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

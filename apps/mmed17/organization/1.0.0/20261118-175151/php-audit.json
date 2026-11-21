@@ -1,0 +1,192 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Organization\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Middleware/SubscriptionMiddleware.php:122 OC\\Core\\Controller\\LoginController"
+      ],
+      "lines": [
+        "1 use of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Middleware/SubscriptionMiddleware.php:122 OC\\Core\\Controller\\LoginController"
+      ]
+    },
+    {
+      "id": "migration-bool-notnull",
+      "level": "warn",
+      "places": [
+        "lib/Migration/Version010001Date20260203000001.php:68 plans.is_public, in Nextcloud 31"
+      ],
+      "lines": [
+        "1 boolean column is NotNull. Oracle cannot store false in such a column, so the server stops the migration with an exception. A boolean column needs notnull false.",
+        "  Up to Nextcloud 32 the server checks this only where info.xml lists no database, or lists oci among them. From Nextcloud 33 on the server makes the column nullable on Oracle itself.",
+        "  lib/Migration/Version010001Date20260203000001.php:68 plans.is_public, in Nextcloud 31"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Middleware/SubscriptionMiddleware.php:26 OCP\\AppFramework\\Utility\\IControllerMethodReflector: deprecated since Nextcloud 22; will be obsolete with native attributes in PHP8",
+        "lib/Middleware/SubscriptionMiddleware.php:118 OCP\\AppFramework\\Utility\\IControllerMethodReflector::hasAnnotation(): deprecated since Nextcloud 22; will be obsolete with native attributes in PHP8"
+      ],
+      "lines": [
+        "2 uses in 1 file of the public API that is deprecated in Nextcloud 31. The text of the tag names the replacement where it has one.",
+        "  lib/Middleware/SubscriptionMiddleware.php:26 OCP\\AppFramework\\Utility\\IControllerMethodReflector: deprecated since Nextcloud 22; will be obsolete with native attributes in PHP8",
+        "  lib/Middleware/SubscriptionMiddleware.php:118 OCP\\AppFramework\\Utility\\IControllerMethodReflector::hasAnnotation(): deprecated since Nextcloud 22; will be obsolete with native attributes in PHP8"
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/errors/unauthorized.php:7 <style> with content"
+      ],
+      "lines": [
+        "1 inline style in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/errors/unauthorized.php:7 <style> with content"
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Controller/OrganizationController.php:162",
+        "lib/Controller/OrganizationController.php:226"
+      ],
+      "lines": [
+        "2 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Controller/OrganizationController.php:162",
+        "  lib/Controller/OrganizationController.php:226"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/CheckExpiredSubscriptions.php OCA\\Organization\\BackgroundJob\\CheckExpiredSubscriptions"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/CheckExpiredSubscriptions.php OCA\\Organization\\BackgroundJob\\CheckExpiredSubscriptions"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Db/SubscriptionHistoryMapper.php:36 new DateTime()",
+        "lib/Db/SubscriptionMapper.php:70 new DateTime()",
+        "lib/Middleware/SubscriptionMiddleware.php:90 new DateTime()",
+        "lib/Service/SubscriptionService.php:55 new DateTime()",
+        "lib/Service/SubscriptionService.php:136 new DateTime()",
+        "lib/Service/SubscriptionService.php:165 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 6 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Db/SubscriptionHistoryMapper.php:36 new DateTime()",
+        "  lib/Db/SubscriptionMapper.php:70 new DateTime()",
+        "  lib/Middleware/SubscriptionMiddleware.php:90 new DateTime()",
+        "  lib/Service/SubscriptionService.php:55 new DateTime()",
+        "  lib/Service/SubscriptionService.php:136 new DateTime()",
+        "  lib/Service/SubscriptionService.php:165 new DateTime()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/organization/organizations  ocs.organization.organization.getorganizations  appinfo/routes.php:7 ocs",
+        "GET /ocs/v2.php/apps/organization/organizations/{organizationId}  ocs.organization.organization.getorganization  appinfo/routes.php:7 ocs",
+        "POST /ocs/v2.php/apps/organization/organizations  ocs.organization.organization.createorganization  appinfo/routes.php:7 ocs",
+        "PUT /ocs/v2.php/apps/organization/organizations/{organizationId}/subscription  ocs.organization.organization.updatesubscription  appinfo/routes.php:7 ocs",
+        "GET /ocs/v2.php/apps/organization/plans  ocs.organization.plan.getplans  appinfo/routes.php:7 ocs"
+      ],
+      "lines": [
+        "Nothing in the app calls 5 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/organization/organizations  ocs.organization.organization.getorganizations  appinfo/routes.php:7 ocs",
+        "  GET /ocs/v2.php/apps/organization/organizations/{organizationId}  ocs.organization.organization.getorganization  appinfo/routes.php:7 ocs",
+        "  POST /ocs/v2.php/apps/organization/organizations  ocs.organization.organization.createorganization  appinfo/routes.php:7 ocs",
+        "  PUT /ocs/v2.php/apps/organization/organizations/{organizationId}/subscription  ocs.organization.organization.updatesubscription  appinfo/routes.php:7 ocs",
+        "  GET /ocs/v2.php/apps/organization/plans  ocs.organization.plan.getplans  appinfo/routes.php:7 ocs"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 5 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 5,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/organization/organizations",
+      "target": "OCA\\Organization\\Controller\\OrganizationController::getOrganizations",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/organization/organizations",
+      "target": "OCA\\Organization\\Controller\\OrganizationController::createOrganization",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/organization/organizations/{organizationId}",
+      "target": "OCA\\Organization\\Controller\\OrganizationController::getOrganization",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/organization/organizations/{organizationId}/subscription",
+      "target": "OCA\\Organization\\Controller\\OrganizationController::updateSubscription",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/organization/plans",
+      "target": "OCA\\Organization\\Controller\\PlanController::getPlans",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

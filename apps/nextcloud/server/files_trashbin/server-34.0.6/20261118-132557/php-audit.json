@@ -1,0 +1,242 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer/composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer/composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Command/CleanUp.php:27 OC\\Core\\Command\\Base",
+        "lib/Command/CleanUp.php:33 OC\\Files\\SetupManager",
+        "lib/Command/CleanUp.php:88 OC\\User\\LazyUser",
+        "lib/Command/Expire.php:22 OC\\Command\\FileAccess",
+        "lib/Command/Expire.php:40 OC\\Files\\SetupManager",
+        "lib/Command/ExpireTrash.php:25 OC\\Core\\Command\\Base",
+        "lib/Command/ExpireTrash.php:30 OC\\Files\\SetupManager",
+        "lib/Command/RestoreAllFiles.php:26 OC\\Core\\Command\\Base",
+        "lib/Command/RestoreAllFiles.php:53 OC\\Files\\SetupManager",
+        "lib/Command/Size.php:24 OC\\Core\\Command\\Base",
+        "lib/Helper.php:30 OC\\Files\\View",
+        "lib/Helper.php:55 OC\\Files\\FileInfo",
+        "lib/Sabre/TrashbinPlugin.php:193 OC\\Files\\FileInfo",
+        "lib/Storage.php:25 OC\\Files\\Storage\\Wrapper\\Wrapper",
+        "lib/Storage.php:78 OC\\Files\\Filesystem",
+        "lib/Trash/LegacyTrashBackend.php:98 OC\\Files\\Filesystem",
+        "lib/Trash/LegacyTrashBackend.php:100 OC\\Files\\View",
+        "lib/Trashbin.php:88 OC\\Files\\Filesystem",
+        "lib/Trashbin.php:94 OC_User",
+        "lib/Trashbin.php:103 OC\\Files\\View",
+        "lib/Trashbin.php:673 OC",
+        "lib/Trashbin.php:673 OC::$server",
+        "lib/Trashbin.php:691 OC_Hook",
+        "lib/Trashbin.php:748 OC::$server",
+        "lib/Trashbin.php:1100 OC\\Files\\Cache\\CacheQueryBuilder",
+        "lib/Trashbin.php:1121 OC\\Files\\Cache\\Cache",
+        "lib/Trashbin.php:1276 OC\\Files\\Node\\NonExistingFolder",
+        "lib/Trashbin.php:1278 OC\\Files\\Node\\NonExistingFile"
+      ],
+      "lines": [
+        "28 uses of the private API of the server in 10 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Command/CleanUp.php:27 OC\\Core\\Command\\Base",
+        "  lib/Command/CleanUp.php:33 OC\\Files\\SetupManager",
+        "  lib/Command/CleanUp.php:88 OC\\User\\LazyUser",
+        "  lib/Command/Expire.php:22 OC\\Command\\FileAccess",
+        "  lib/Command/Expire.php:40 OC\\Files\\SetupManager",
+        "  lib/Command/ExpireTrash.php:25 OC\\Core\\Command\\Base",
+        "  lib/Command/ExpireTrash.php:30 OC\\Files\\SetupManager",
+        "  lib/Command/RestoreAllFiles.php:26 OC\\Core\\Command\\Base",
+        "  lib/Command/RestoreAllFiles.php:53 OC\\Files\\SetupManager",
+        "  lib/Command/Size.php:24 OC\\Core\\Command\\Base",
+        "  lib/Helper.php:30 OC\\Files\\View",
+        "  lib/Helper.php:55 OC\\Files\\FileInfo",
+        "  lib/Sabre/TrashbinPlugin.php:193 OC\\Files\\FileInfo",
+        "  lib/Storage.php:25 OC\\Files\\Storage\\Wrapper\\Wrapper",
+        "  lib/Storage.php:78 OC\\Files\\Filesystem",
+        "  lib/Trash/LegacyTrashBackend.php:98 OC\\Files\\Filesystem",
+        "  lib/Trash/LegacyTrashBackend.php:100 OC\\Files\\View",
+        "  lib/Trashbin.php:88 OC\\Files\\Filesystem",
+        "  lib/Trashbin.php:94 OC_User",
+        "  lib/Trashbin.php:103 OC\\Files\\View",
+        "  lib/Trashbin.php:673 OC",
+        "  lib/Trashbin.php:673 OC::$server",
+        "  lib/Trashbin.php:691 OC_Hook",
+        "  lib/Trashbin.php:748 OC::$server",
+        "  lib/Trashbin.php:1100 OC\\Files\\Cache\\CacheQueryBuilder",
+        "  lib/Trashbin.php:1121 OC\\Files\\Cache\\Cache",
+        "  lib/Trashbin.php:1276 OC\\Files\\Node\\NonExistingFolder",
+        "  lib/Trashbin.php:1278 OC\\Files\\Node\\NonExistingFile"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 25
+        }
+      ]
+    },
+    {
+      "id": "implements-consumable",
+      "level": "warn",
+      "places": [
+        "lib/Trash/ITrashItem.php:17 OCA\\Files_Trashbin\\Trash\\ITrashItem extends OCP\\Files\\FileInfo"
+      ],
+      "lines": [
+        "1 class implements or extends what the public API marks #[Consumable] in a major of Nextcloud 34: an app calls it, and the server may add a method to it in any release, which breaks a class that implements it.",
+        "  lib/Trash/ITrashItem.php:17 OCA\\Files_Trashbin\\Trash\\ITrashItem extends OCP\\Files\\FileInfo"
+      ]
+    },
+    {
+      "id": "dav-without-preload",
+      "level": "warn",
+      "places": [
+        "lib/Sabre/TrashbinPlugin.php:56 OCA\\Files_Trashbin\\Sabre\\TrashbinPlugin"
+      ],
+      "lines": [
+        "1 DAV plugin listens to propFind and not to preloadCollection, which the server emits from Nextcloud 32 on before it reads the children of a collection. Without that listener a PROPFIND with Depth above 0 runs the queries of the plugin once per child.",
+        "  lib/Sabre/TrashbinPlugin.php:56 OCA\\Files_Trashbin\\Sabre\\TrashbinPlugin"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:76 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:76 injectFn()"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Command/Expire.php:21 OCP\\Command\\ICommand: deprecated since Nextcloud 31; The interface is considered internal going forward and should not be implemented by apps anymore",
+        "lib/Command/Size.php:29 OCP\\Command\\IBus: deprecated since Nextcloud 31; The interface is considered internal going forward and should not be implemented by apps anymore",
+        "lib/Command/Size.php:60 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Command/Size.php:83 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Command/Size.php:107 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "lib/Helper.php:108 OCP\\Constants::PERMISSION_ALL: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_ALL instead",
+        "lib/Helper.php:108 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "lib/Storage.php:96 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "lib/Trashbin.php:410 OCP\\Util::emitHook(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTypedEvent",
+        "lib/Trashbin.php:603 OCP\\Util::emitHook(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTypedEvent",
+        "lib/Trashbin.php:936 OCP\\Command\\IBus: deprecated since Nextcloud 31; The interface is considered internal going forward and should not be implemented by apps anymore"
+      ],
+      "lines": [
+        "11 uses in 5 files of the public API that is deprecated in Nextcloud 34. The text of the tag names the replacement where it has one.",
+        "  lib/Command/Expire.php:21 OCP\\Command\\ICommand: deprecated since Nextcloud 31; The interface is considered internal going forward and should not be implemented by apps anymore",
+        "  lib/Command/Size.php:29 OCP\\Command\\IBus: deprecated since Nextcloud 31; The interface is considered internal going forward and should not be implemented by apps anymore",
+        "  lib/Command/Size.php:60 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Command/Size.php:83 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Command/Size.php:107 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "  lib/Helper.php:108 OCP\\Constants::PERMISSION_ALL: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_ALL instead",
+        "  lib/Helper.php:108 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "  lib/Storage.php:96 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "  lib/Trashbin.php:410 OCP\\Util::emitHook(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTypedEvent",
+        "  lib/Trashbin.php:603 OCP\\Util::emitHook(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTypedEvent",
+        "  lib/Trashbin.php:936 OCP\\Command\\IBus: deprecated since Nextcloud 31; The interface is considered internal going forward and should not be implemented by apps anymore"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 8
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/ExpireTrash.php OCA\\Files_Trashbin\\BackgroundJob\\ExpireTrash"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/ExpireTrash.php OCA\\Files_Trashbin\\BackgroundJob\\ExpireTrash"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/ExpireTrash.php:58 time()",
+        "lib/BackgroundJob/ExpireTrash.php:61 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 2 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/BackgroundJob/ExpireTrash.php:58 time()",
+        "  lib/BackgroundJob/ExpireTrash.php:61 time()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/ExpireTrash.php:48 getValueBool()",
+        "lib/BackgroundJob/ExpireTrash.php:103 getValueInt()",
+        "lib/BackgroundJob/ExpireTrash.php:104 setValueInt()",
+        "lib/BackgroundJob/ExpireTrash.php:113 setValueInt()",
+        "lib/Command/Size.php:63 setValueInt()",
+        "lib/Command/Size.php:75 getValueInt()",
+        "lib/Trashbin.php:441 getValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 7 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/BackgroundJob/ExpireTrash.php:48 getValueBool()",
+        "  lib/BackgroundJob/ExpireTrash.php:103 getValueInt()",
+        "  lib/BackgroundJob/ExpireTrash.php:104 setValueInt()",
+        "  lib/BackgroundJob/ExpireTrash.php:113 setValueInt()",
+        "  lib/Command/Size.php:63 setValueInt()",
+        "  lib/Command/Size.php:75 getValueInt()",
+        "  lib/Trashbin.php:441 getValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    }
+  ],
+  "endpoints": 4,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/files_trashbin/preview",
+      "target": "OCA\\Files_Trashbin\\Controller\\PreviewController::getPreview",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": null,
+      "path": "/remote.php/dav",
+      "target": "OCA\\Files_Trashbin\\Sabre\\TrashbinPlugin",
+      "openapi": [],
+      "kind": "DAV"
+    },
+    {
+      "verb": null,
+      "path": "/remote.php/dav",
+      "target": "OCA\\Files_Trashbin\\Sabre\\RootCollection",
+      "openapi": [],
+      "kind": "DAV"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/capabilities",
+      "target": "OCA\\Files_Trashbin\\Capabilities",
+      "openapi": [],
+      "kind": "capability"
+    }
+  ]
+}

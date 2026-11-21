@@ -1,0 +1,1047 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\RequrvHive\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "psr/container 2.0.2, in 3rdparty/ of Nextcloud 33 to 35",
+        "psr/http-factory 1.1.0, in 3rdparty/ of Nextcloud 33 to 35",
+        "psr/http-message 2.0, in 3rdparty/ of Nextcloud 33 to 35",
+        "psr/log 3.0.2, in 3rdparty/ of Nextcloud 33 to 35",
+        "symfony/deprecation-contracts v3.7.1, in 3rdparty/ of Nextcloud 33 to 35",
+        "symfony/service-contracts v3.7.3, in 3rdparty/ of Nextcloud 33 to 35"
+      ],
+      "lines": [
+        "vendor/ ships 6 packages that the server ships itself in a major of Nextcloud 33 to 35. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  psr/container 2.0.2, in 3rdparty/ of Nextcloud 33 to 35",
+        "  psr/http-factory 1.1.0, in 3rdparty/ of Nextcloud 33 to 35",
+        "  psr/http-message 2.0, in 3rdparty/ of Nextcloud 33 to 35",
+        "  psr/log 3.0.2, in 3rdparty/ of Nextcloud 33 to 35",
+        "  symfony/deprecation-contracts v3.7.1, in 3rdparty/ of Nextcloud 33 to 35",
+        "  symfony/service-contracts v3.7.3, in 3rdparty/ of Nextcloud 33 to 35"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Command/ConfigureCommand.php:14 OC\\Core\\Command\\Base",
+        "lib/Command/DoctorCommand.php:15 OC\\Core\\Command\\Base",
+        "lib/Command/McpAddCommand.php:15 OC\\Core\\Command\\Base",
+        "lib/Command/ProbeCommand.php:25 OC\\Core\\Command\\Base",
+        "lib/Command/TalkRegisterCommand.php:20 OC\\Core\\Command\\Base",
+        "lib/Controller/OccController.php:89 OC",
+        "lib/Template/ViteAssets.php:68 OC\\Security\\CSP\\ContentSecurityPolicyNonceManager"
+      ],
+      "lines": [
+        "7 uses of the private API of the server in 7 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Command/ConfigureCommand.php:14 OC\\Core\\Command\\Base",
+        "  lib/Command/DoctorCommand.php:15 OC\\Core\\Command\\Base",
+        "  lib/Command/McpAddCommand.php:15 OC\\Core\\Command\\Base",
+        "  lib/Command/ProbeCommand.php:25 OC\\Core\\Command\\Base",
+        "  lib/Command/TalkRegisterCommand.php:20 OC\\Core\\Command\\Base",
+        "  lib/Controller/OccController.php:89 OC",
+        "  lib/Template/ViteAssets.php:68 OC\\Security\\CSP\\ContentSecurityPolicyNonceManager"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/Service/ContextChatService.php:142 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 33"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that the oldest majors of Nextcloud 33 to 35 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/Service/ContextChatService.php:142 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 33"
+      ]
+    },
+    {
+      "id": "ocp-removed-soon",
+      "level": "warn",
+      "places": [
+        "lib/Service/ContextChatService.php:40 OCP\\IServerContainer: deprecated since Nextcloud 25, Nextcloud 35 is the last major to have it"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated and that Nextcloud 36 no longer has: the app fails on the first major without it, once it declares that one.",
+        "  lib/Service/ContextChatService.php:40 OCP\\IServerContainer: deprecated since Nextcloud 25, Nextcloud 35 is the last major to have it"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:141 get()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:141 get()"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "vimeo/psalm, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Capabilities/RequrvHiveCapability.php:43 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Capabilities/RequrvHiveCapability.php:46 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Command/ConfigureCommand.php:102 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Command/ConfigureCommand.php:124 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Command/ConfigureCommand.php:148 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Command/ConfigureCommand.php:161 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Command/ConfigureCommand.php:174 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Command/ConfigureCommand.php:195 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Command/DoctorCommand.php:47 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Controller/CoworkerController.php:337 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/CoworkerController.php:356 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/CoworkerController.php:364 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ProviderSettingsController.php:98 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ProviderSettingsController.php:99 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ProviderSettingsController.php:155 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ProviderSettingsController.php:162 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/ProviderSettingsController.php:181 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ProviderSettingsController.php:217 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:87 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/SettingsController.php:105 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/SettingsController.php:113 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/SettingsController.php:119 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/SettingsController.php:120 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/SettingsController.php:124 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/SettingsController.php:125 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/SettingsController.php:189 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/SettingsController.php:191 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/SettingsController.php:221 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/SettingsController.php:223 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/SettingsController.php:229 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/SettingsController.php:231 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/SettingsController.php:236 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/SettingsController.php:240 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/SettingsController.php:244 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/SettingsController.php:272 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:281 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/CredentialService.php:60 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/CredentialService.php:62 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/CredentialService.php:69 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/CredentialService.php:71 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/CredentialService.php:102 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/CredentialService.php:104 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/CredentialService.php:122 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/CredentialService.php:124 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/CredentialService.php:150 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/CredentialService.php:152 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/Provider/AbstractOpenAiCompatibleProvider.php:86 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/Provider/LLMProviderFactory.php:82 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/Provider/LLMProviderFactory.php:88 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/Provider/ProviderSettingsService.php:154 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/Provider/ProviderSettingsService.php:156 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/Provider/ProviderSettingsService.php:222 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/Provider/ProviderSettingsService.php:482 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/Provider/ProviderSettingsService.php:491 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Settings/AdminSettings.php:28 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/TaskProcessing/FormalizationProvider.php:30 OCP\\TaskProcessing\\TaskTypes\\TextToTextFormalization: deprecated since Nextcloud 35",
+        "lib/TaskProcessing/ReformulationProvider.php:30 OCP\\TaskProcessing\\TaskTypes\\TextToTextReformulation: deprecated since Nextcloud 35",
+        "lib/TaskProcessing/SimplificationProvider.php:30 OCP\\TaskProcessing\\TaskTypes\\TextToTextSimplification: deprecated since Nextcloud 35"
+      ],
+      "lines": [
+        "58 uses in 14 files of the public API that is deprecated in Nextcloud 33 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Capabilities/RequrvHiveCapability.php:43 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Capabilities/RequrvHiveCapability.php:46 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Command/ConfigureCommand.php:102 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Command/ConfigureCommand.php:124 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Command/ConfigureCommand.php:148 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Command/ConfigureCommand.php:161 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Command/ConfigureCommand.php:174 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Command/ConfigureCommand.php:195 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Command/DoctorCommand.php:47 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Controller/CoworkerController.php:337 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/CoworkerController.php:356 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/CoworkerController.php:364 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ProviderSettingsController.php:98 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ProviderSettingsController.php:99 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ProviderSettingsController.php:155 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ProviderSettingsController.php:162 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/ProviderSettingsController.php:181 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ProviderSettingsController.php:217 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:87 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/SettingsController.php:105 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/SettingsController.php:113 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/SettingsController.php:119 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/SettingsController.php:120 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/SettingsController.php:124 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/SettingsController.php:125 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/SettingsController.php:189 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/SettingsController.php:191 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/SettingsController.php:221 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/SettingsController.php:223 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/SettingsController.php:229 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/SettingsController.php:231 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/SettingsController.php:236 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/SettingsController.php:240 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/SettingsController.php:244 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/SettingsController.php:272 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:281 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/CredentialService.php:60 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/CredentialService.php:62 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/CredentialService.php:69 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/CredentialService.php:71 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/CredentialService.php:102 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/CredentialService.php:104 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/CredentialService.php:122 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/CredentialService.php:124 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/CredentialService.php:150 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/CredentialService.php:152 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/Provider/AbstractOpenAiCompatibleProvider.php:86 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/Provider/LLMProviderFactory.php:82 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/Provider/LLMProviderFactory.php:88 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/Provider/ProviderSettingsService.php:154 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/Provider/ProviderSettingsService.php:156 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/Provider/ProviderSettingsService.php:222 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/Provider/ProviderSettingsService.php:482 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/Provider/ProviderSettingsService.php:491 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Settings/AdminSettings.php:28 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/TaskProcessing/FormalizationProvider.php:30 OCP\\TaskProcessing\\TaskTypes\\TextToTextFormalization: deprecated since Nextcloud 35",
+        "  lib/TaskProcessing/ReformulationProvider.php:30 OCP\\TaskProcessing\\TaskTypes\\TextToTextReformulation: deprecated since Nextcloud 35",
+        "  lib/TaskProcessing/SimplificationProvider.php:30 OCP\\TaskProcessing\\TaskTypes\\TextToTextSimplification: deprecated since Nextcloud 35"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 55
+        }
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Service/CalendarToolsService.php:341"
+      ],
+      "lines": [
+        "1 transaction is opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Service/CalendarToolsService.php:341"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/CoworkerRunJob.php OCA\\RequrvHive\\BackgroundJob\\CoworkerRunJob"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/CoworkerRunJob.php OCA\\RequrvHive\\BackgroundJob\\CoworkerRunJob"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Command/McpAddCommand.php:53 time()",
+        "lib/Controller/ConversationController.php:117 time()",
+        "lib/Controller/ConversationController.php:197 time()",
+        "lib/Controller/ConversationController.php:365 time()",
+        "lib/Controller/ConversationController.php:508 time()",
+        "lib/Controller/McpServerController.php:93 time()",
+        "lib/Controller/McpServerController.php:188 time()",
+        "lib/Controller/OccController.php:117 time()",
+        "lib/Controller/OccController.php:128 time()",
+        "lib/Controller/ProjectController.php:91 time()",
+        "lib/Controller/ProjectController.php:161 time()",
+        "lib/Controller/ProjectController.php:241 time()",
+        "lib/Listener/TaskFailedListener.php:73 new DateTime()",
+        "lib/Listener/TaskSuccessfulListener.php:70 new DateTime()",
+        "lib/Migration/RepairEncryptMcpTokens.php:53 time()",
+        "lib/Service/CalendarToolsService.php:305 time()",
+        "lib/Service/CalendarToolsService.php:308 time()",
+        "lib/Service/CalendarToolsService.php:349 time()",
+        "lib/Service/CalendarToolsService.php:377 time()",
+        "lib/Service/CalendarToolsService.php:507 new DateTimeImmutable()",
+        "lib/Service/ContextChatService.php:126 new DateTime()",
+        "lib/Service/ConversationChatService.php:89 time()",
+        "lib/Service/ConversationChatService.php:128 time()",
+        "lib/Service/ConversationChatService.php:131 time()",
+        "lib/Service/ConversationChatService.php:159 time()",
+        "lib/Service/ConversationChatService.php:167 time()",
+        "lib/Service/ConversationChatService.php:205 time()",
+        "lib/Service/ConversationChatService.php:307 time()",
+        "lib/Service/ConversationChatService.php:314 time()",
+        "lib/Service/McpClientService.php:337 time()",
+        "lib/Service/McpClientService.php:339 time()",
+        "lib/Service/McpClientService.php:368 time()",
+        "lib/Service/McpClientService.php:432 time()",
+        "lib/Service/McpClientService.php:464 time()",
+        "lib/Service/McpClientService.php:514 time()",
+        "lib/Service/McpClientService.php:518 time()",
+        "lib/Service/McpClientService.php:553 time()",
+        "lib/Service/McpClientService.php:554 time()",
+        "lib/Service/McpClientService.php:568 time()",
+        "lib/Service/McpClientService.php:593 time()",
+        "lib/Service/RequrvHiveService.php:263 new DateTime()",
+        "lib/Talk/TalkContextService.php:78 time()",
+        "lib/Talk/TalkContextService.php:130 time()",
+        "lib/Talk/TalkContextService.php:147 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 44 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Command/McpAddCommand.php:53 time()",
+        "  lib/Controller/ConversationController.php:117 time()",
+        "  lib/Controller/ConversationController.php:197 time()",
+        "  lib/Controller/ConversationController.php:365 time()",
+        "  lib/Controller/ConversationController.php:508 time()",
+        "  lib/Controller/McpServerController.php:93 time()",
+        "  lib/Controller/McpServerController.php:188 time()",
+        "  lib/Controller/OccController.php:117 time()",
+        "  lib/Controller/OccController.php:128 time()",
+        "  lib/Controller/ProjectController.php:91 time()",
+        "  lib/Controller/ProjectController.php:161 time()",
+        "  lib/Controller/ProjectController.php:241 time()",
+        "  lib/Listener/TaskFailedListener.php:73 new DateTime()",
+        "  lib/Listener/TaskSuccessfulListener.php:70 new DateTime()",
+        "  lib/Migration/RepairEncryptMcpTokens.php:53 time()",
+        "  lib/Service/CalendarToolsService.php:305 time()",
+        "  lib/Service/CalendarToolsService.php:308 time()",
+        "  lib/Service/CalendarToolsService.php:349 time()",
+        "  lib/Service/CalendarToolsService.php:377 time()",
+        "  lib/Service/CalendarToolsService.php:507 new DateTimeImmutable()",
+        "  lib/Service/ContextChatService.php:126 new DateTime()",
+        "  lib/Service/ConversationChatService.php:89 time()",
+        "  lib/Service/ConversationChatService.php:128 time()",
+        "  lib/Service/ConversationChatService.php:131 time()",
+        "  lib/Service/ConversationChatService.php:159 time()",
+        "  lib/Service/ConversationChatService.php:167 time()",
+        "  lib/Service/ConversationChatService.php:205 time()",
+        "  lib/Service/ConversationChatService.php:307 time()",
+        "  lib/Service/ConversationChatService.php:314 time()",
+        "  lib/Service/McpClientService.php:337 time()",
+        "  lib/Service/McpClientService.php:339 time()",
+        "  lib/Service/McpClientService.php:368 time()",
+        "  lib/Service/McpClientService.php:432 time()",
+        "  lib/Service/McpClientService.php:464 time()",
+        "  lib/Service/McpClientService.php:514 time()",
+        "  lib/Service/McpClientService.php:518 time()",
+        "  lib/Service/McpClientService.php:553 time()",
+        "  lib/Service/McpClientService.php:554 time()",
+        "  lib/Service/McpClientService.php:568 time()",
+        "  lib/Service/McpClientService.php:593 time()",
+        "  lib/Service/RequrvHiveService.php:263 new DateTime()",
+        "  lib/Talk/TalkContextService.php:78 time()",
+        "  lib/Talk/TalkContextService.php:130 time()",
+        "  lib/Talk/TalkContextService.php:147 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 41
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Capabilities/RequrvHiveCapability.php:43 getAppValue()",
+        "lib/Capabilities/RequrvHiveCapability.php:46 getAppValue()",
+        "lib/Command/ConfigureCommand.php:102 setAppValue()",
+        "lib/Command/ConfigureCommand.php:124 setAppValue()",
+        "lib/Command/ConfigureCommand.php:148 setAppValue()",
+        "lib/Command/ConfigureCommand.php:161 setAppValue()",
+        "lib/Command/ConfigureCommand.php:174 setAppValue()",
+        "lib/Command/ConfigureCommand.php:195 getAppValue()",
+        "lib/Controller/ProviderSettingsController.php:99 getAppValue()",
+        "lib/Controller/ProviderSettingsController.php:181 getAppValue()",
+        "lib/Controller/ProviderSettingsController.php:217 setAppValue()",
+        "lib/Controller/SettingsController.php:272 setAppValue()",
+        "lib/Controller/SettingsController.php:281 setAppValue()",
+        "lib/Service/CredentialService.php:62 getAppValue()",
+        "lib/Service/CredentialService.php:152 getAppValue()",
+        "lib/Service/Provider/AbstractOpenAiCompatibleProvider.php:86 getAppValue()",
+        "lib/Service/Provider/LLMProviderFactory.php:88 getAppValue()",
+        "lib/Service/Provider/ProviderSettingsService.php:222 setAppValue()",
+        "lib/Service/Provider/ProviderSettingsService.php:482 getAppValue()",
+        "lib/Settings/AdminSettings.php:28 getAppValue()",
+        "lib/Talk/TalkBotRegistration.php:77 getValueString()",
+        "lib/Talk/TalkBotRegistration.php:80 setValueString()",
+        "lib/Talk/TalkBotRegistration.php:100 getValueString()",
+        "lib/Talk/TalkBotRegistration.php:105 setValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 24 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Capabilities/RequrvHiveCapability.php:43 getAppValue()",
+        "  lib/Capabilities/RequrvHiveCapability.php:46 getAppValue()",
+        "  lib/Command/ConfigureCommand.php:102 setAppValue()",
+        "  lib/Command/ConfigureCommand.php:124 setAppValue()",
+        "  lib/Command/ConfigureCommand.php:148 setAppValue()",
+        "  lib/Command/ConfigureCommand.php:161 setAppValue()",
+        "  lib/Command/ConfigureCommand.php:174 setAppValue()",
+        "  lib/Command/ConfigureCommand.php:195 getAppValue()",
+        "  lib/Controller/ProviderSettingsController.php:99 getAppValue()",
+        "  lib/Controller/ProviderSettingsController.php:181 getAppValue()",
+        "  lib/Controller/ProviderSettingsController.php:217 setAppValue()",
+        "  lib/Controller/SettingsController.php:272 setAppValue()",
+        "  lib/Controller/SettingsController.php:281 setAppValue()",
+        "  lib/Service/CredentialService.php:62 getAppValue()",
+        "  lib/Service/CredentialService.php:152 getAppValue()",
+        "  lib/Service/Provider/AbstractOpenAiCompatibleProvider.php:86 getAppValue()",
+        "  lib/Service/Provider/LLMProviderFactory.php:88 getAppValue()",
+        "  lib/Service/Provider/ProviderSettingsService.php:222 setAppValue()",
+        "  lib/Service/Provider/ProviderSettingsService.php:482 getAppValue()",
+        "  lib/Settings/AdminSettings.php:28 getAppValue()",
+        "  lib/Talk/TalkBotRegistration.php:77 getValueString()",
+        "  lib/Talk/TalkBotRegistration.php:80 setValueString()",
+        "  lib/Talk/TalkBotRegistration.php:100 getValueString()",
+        "  lib/Talk/TalkBotRegistration.php:105 setValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 21
+        }
+      ]
+    }
+  ],
+  "endpoints": 69,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/",
+      "target": "OCA\\RequrvHive\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/admin/mcp-servers",
+      "target": "OCA\\RequrvHive\\Controller\\McpServerController::index",
+      "openapi": [
+        "administration"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/admin/mcp-servers",
+      "target": "OCA\\RequrvHive\\Controller\\McpServerController::create",
+      "openapi": [
+        "administration"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/requrvhive/api/admin/mcp-servers/{id}",
+      "target": "OCA\\RequrvHive\\Controller\\McpServerController::destroy",
+      "openapi": [
+        "administration"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/requrvhive/api/admin/mcp-servers/{id}",
+      "target": "OCA\\RequrvHive\\Controller\\McpServerController::update",
+      "openapi": [
+        "administration"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/admin/mcp-servers/{id}/oauth/authorize",
+      "target": "OCA\\RequrvHive\\Controller\\McpServerController::authorize",
+      "openapi": [
+        "administration"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/admin/mcp-servers/{id}/oauth/callback",
+      "target": "OCA\\RequrvHive\\Controller\\McpServerController::oauthCallback",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/admin/mcp-servers/{id}/test",
+      "target": "OCA\\RequrvHive\\Controller\\McpServerController::test",
+      "openapi": [
+        "administration"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/admin/mcp-servers/{id}/tools",
+      "target": "OCA\\RequrvHive\\Controller\\McpServerController::tools",
+      "openapi": [
+        "administration"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/admin/principals",
+      "target": "OCA\\RequrvHive\\Controller\\ProviderSettingsController::principals",
+      "openapi": [
+        "administration"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/admin/providers",
+      "target": "OCA\\RequrvHive\\Controller\\ProviderSettingsController::adminIndex",
+      "openapi": [
+        "administration"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/admin/providers/{providerId}",
+      "target": "OCA\\RequrvHive\\Controller\\ProviderSettingsController::adminUpdate",
+      "openapi": [
+        "administration"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/admin/providers/{providerId}/action/{actionId}",
+      "target": "OCA\\RequrvHive\\Controller\\ProviderSettingsController::adminAction",
+      "openapi": [
+        "administration"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/admin/providers/{providerId}/status",
+      "target": "OCA\\RequrvHive\\Controller\\ProviderSettingsController::adminStatus",
+      "openapi": [
+        "administration"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/admin/providers/{providerId}/test",
+      "target": "OCA\\RequrvHive\\Controller\\ProviderSettingsController::test",
+      "openapi": [
+        "administration"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/admin/settings",
+      "target": "OCA\\RequrvHive\\Controller\\SettingsController::saveAdmin",
+      "openapi": [
+        "administration"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/analyze-file",
+      "target": "OCA\\RequrvHive\\Controller\\ChatController::analyzeFile",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/ask",
+      "target": "OCA\\RequrvHive\\Controller\\ChatController::ask",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/chat",
+      "target": "OCA\\RequrvHive\\Controller\\ChatController::chat",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/conversations",
+      "target": "OCA\\RequrvHive\\Controller\\ConversationController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/conversations",
+      "target": "OCA\\RequrvHive\\Controller\\ConversationController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/requrvhive/api/conversations/{id}",
+      "target": "OCA\\RequrvHive\\Controller\\ConversationController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/conversations/{id}",
+      "target": "OCA\\RequrvHive\\Controller\\ConversationController::show",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/requrvhive/api/conversations/{id}",
+      "target": "OCA\\RequrvHive\\Controller\\ConversationController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/conversations/{id}/duplicate",
+      "target": "OCA\\RequrvHive\\Controller\\ConversationController::duplicate",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/conversations/{id}/messages",
+      "target": "OCA\\RequrvHive\\Controller\\ConversationController::message",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/conversations/{id}/messages/stream",
+      "target": "OCA\\RequrvHive\\Controller\\ConversationController::messageStream",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/requrvhive/api/conversations/{id}/model",
+      "target": "OCA\\RequrvHive\\Controller\\ConversationController::setModel",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/conversations/search",
+      "target": "OCA\\RequrvHive\\Controller\\ConversationController::search",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/coworkers",
+      "target": "OCA\\RequrvHive\\Controller\\CoworkerController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/coworkers",
+      "target": "OCA\\RequrvHive\\Controller\\CoworkerController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/requrvhive/api/coworkers/{id}",
+      "target": "OCA\\RequrvHive\\Controller\\CoworkerController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/coworkers/{id}",
+      "target": "OCA\\RequrvHive\\Controller\\CoworkerController::show",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/requrvhive/api/coworkers/{id}",
+      "target": "OCA\\RequrvHive\\Controller\\CoworkerController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/coworkers/{id}/disable",
+      "target": "OCA\\RequrvHive\\Controller\\CoworkerController::disable",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/coworkers/{id}/enable",
+      "target": "OCA\\RequrvHive\\Controller\\CoworkerController::enable",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/coworkers/{id}/pause",
+      "target": "OCA\\RequrvHive\\Controller\\CoworkerController::pause",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/coworkers/{id}/resume",
+      "target": "OCA\\RequrvHive\\Controller\\CoworkerController::resume",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/coworkers/{id}/run",
+      "target": "OCA\\RequrvHive\\Controller\\CoworkerController::run",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/coworkers/{id}/runs",
+      "target": "OCA\\RequrvHive\\Controller\\CoworkerController::runs",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/coworkers/templates",
+      "target": "OCA\\RequrvHive\\Controller\\CoworkerController::templates",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/coworkers/templates",
+      "target": "OCA\\RequrvHive\\Controller\\CoworkerController::createFromTemplate",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/dashboard/coworker-output",
+      "target": "OCA\\RequrvHive\\Controller\\CoworkerController::getDashboardCoworker",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/requrvhive/api/dashboard/coworker-output",
+      "target": "OCA\\RequrvHive\\Controller\\CoworkerController::setDashboardCoworker",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/files/content",
+      "target": "OCA\\RequrvHive\\Controller\\FileController::content",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/files/download",
+      "target": "OCA\\RequrvHive\\Controller\\FileController::download",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/files/info",
+      "target": "OCA\\RequrvHive\\Controller\\FileController::info",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/files/list",
+      "target": "OCA\\RequrvHive\\Controller\\FileController::listDir",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/files/preview",
+      "target": "OCA\\RequrvHive\\Controller\\FileController::preview",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/files/search",
+      "target": "OCA\\RequrvHive\\Controller\\FileController::search",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/files/unzip",
+      "target": "OCA\\RequrvHive\\Controller\\FileController::extract",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/files/zip",
+      "target": "OCA\\RequrvHive\\Controller\\FileController::compress",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/files/zip/list",
+      "target": "OCA\\RequrvHive\\Controller\\FileController::listArchive",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/occ",
+      "target": "OCA\\RequrvHive\\Controller\\OccController::execute",
+      "openapi": [
+        "administration"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/projects",
+      "target": "OCA\\RequrvHive\\Controller\\ProjectController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/projects",
+      "target": "OCA\\RequrvHive\\Controller\\ProjectController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/requrvhive/api/projects/{id}",
+      "target": "OCA\\RequrvHive\\Controller\\ProjectController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/projects/{id}",
+      "target": "OCA\\RequrvHive\\Controller\\ProjectController::show",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/requrvhive/api/projects/{id}",
+      "target": "OCA\\RequrvHive\\Controller\\ProjectController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/projects/{id}/paths",
+      "target": "OCA\\RequrvHive\\Controller\\ProjectController::addPath",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/requrvhive/api/projects/{id}/paths/{pathId}",
+      "target": "OCA\\RequrvHive\\Controller\\ProjectController::removePath",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/providers",
+      "target": "OCA\\RequrvHive\\Controller\\ProviderSettingsController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/providers/{providerId}",
+      "target": "OCA\\RequrvHive\\Controller\\ProviderSettingsController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/providers/{providerId}/status",
+      "target": "OCA\\RequrvHive\\Controller\\ProviderSettingsController::status",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/settings",
+      "target": "OCA\\RequrvHive\\Controller\\SettingsController::get",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/settings",
+      "target": "OCA\\RequrvHive\\Controller\\SettingsController::save",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/requrvhive/api/stream-probe",
+      "target": "OCA\\RequrvHive\\Controller\\StreamProbeController::probe",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/requrvhive/api/summarize",
+      "target": "OCA\\RequrvHive\\Controller\\ChatController::summarize",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/capabilities",
+      "target": "OCA\\RequrvHive\\Capabilities\\RequrvHiveCapability",
+      "openapi": [],
+      "kind": "capability"
+    }
+  ]
+}

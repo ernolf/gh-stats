@@ -1,0 +1,125 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	  xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>versioniq</id>
+	<name>Versioniq</name>
+	<summary>Install any earlier or newer version of already installed Nextcloud apps</summary>
+	<description>> ⚠️ **Active development — not for production use yet.** This app is under active development. Although it may carry a stable release status, **please do not use it in production environments before 12 June 2026.** See [conduction.nl/apps](https://conduction.nl/apps) for release planning and what this app does.
+
+Versioniq gives Nextcloud administrators the ability to roll back apps to previous versions or install specific newer versions. Essential for debugging, testing compatibility, and recovering from broken updates.</description>
+	<version>1.5.2</version>
+	<licence>EUPL-1.2</licence>
+	<author mail="info@conduction.nl" homepage="https://conduction.nl">Conduction B.V.</author>
+	<namespace>Versioniq</namespace>
+	<category>tools</category>
+	<bugs>https://github.com/ConductionNL/versioniq/issues</bugs>
+	<repository>https://github.com/ConductionNL/versioniq</repository>
+	<dependencies>
+		<!-- Floor raised 31 -> 32 with the fleet. composer.json requires php ^8.3
+		     and nextcloud/ocp dev-master, so this app has never been analysed
+		     against the NC 31 API surface — the 31 claim was advertised and
+		     backed by nothing. Every core Conduction app declares 32-34. -->
+		<nextcloud min-version="32" max-version="34"/>
+	</dependencies>
+	<background-jobs>
+		<job>OCA\Versioniq\BackgroundJob\AdvisoryRefreshJob</job>
+		<job>OCA\Versioniq\BackgroundJob\PatExpiryWarningJob</job>
+		<job>OCA\Versioniq\BackgroundJob\AutoUpdateJob</job>
+		<job>OCA\Versioniq\BackgroundJob\PruneAuditJob</job>
+		<job>OCA\Versioniq\BackgroundJob\PinReconcileJob</job>
+	</background-jobs>
+	<repair-steps>
+		<!-- THE app_versions -> versioniq RENAME IS A DATA MIGRATION.
+		     Nextcloud has no in-place app-id upgrade: the new id is simply a
+		     different app, so every store keyed by app id (oc_appconfig,
+		     oc_preferences) becomes unreachable the moment <id> changes. The
+		     two Migrate* steps carry those rows across.
+
+		     They are registered under BOTH <install> and <post-migration>, and
+		     FIRST in each. <install> is the path a real deployment takes,
+		     because Nextcloud discovers `versioniq` as a brand-new app rather
+		     than as an upgrade of `app_versions`; <post-migration> covers a
+		     dev box whose app directory was renamed in place.
+
+		     FIRST in the list matters: anything that writes fresh defaults
+		     must run after the copy, or the never-overwrite guard in the copy
+		     sees the fresh value and silently discards the admin's stored one.
+
+		     NOT MIGRATED, deliberately:
+		       - the `app_versions_pats` and `app_versions_audit` TABLES keep
+		         their old prefix — see the comment on their TABLE_NAME
+		         constants in lib/Db/. Table names are not keyed by app id, so
+		         the rename does not touch them and renaming them by hand would
+		         be a destructive migration for no gain.
+		       - oc_activity / oc_notifications rows written under the old app
+		         id: Nextcloud owns those tables and offers no supported way to
+		         re-key them. Historic entries simply stop being listed. -->
+		<post-migration>
+			<step>OCA\Versioniq\Repair\MigrateAppConfigKeys</step>
+			<step>OCA\Versioniq\Repair\MigrateUserPreferences</step>
+			<!--
+				THE THIRD STORE KEYED BY APP ID, AND THE TWO ABOVE DO NOT COVER
+				IT. `oc_appconfig` and `oc_preferences` are Nextcloud's; this one
+				is OpenRegister's `openregister_schemas.application`.
+
+				OpenRegister resolves the two halves of a configuration by
+				DIFFERENT keys: a REGISTER by slug alone, a SCHEMA by the PAIR
+				(application, slug) via findByApplicationAndSlug(). An import
+				passes `appId: Application::APP_ID` = `versioniq`, while any
+				schema written under the old id still carries
+				`application = app_versions` — so the pair matches nothing, and
+				ImportHandler's not-found branch is not an error path, it is the
+				"create a new one" path. The import then builds a SECOND, EMPTY
+				schema set while every stored object stays bound to the old rows.
+				Nothing errors; the collections just render empty.
+
+				`app_versions`, not `app-versions`: the hyphen is the GitHub
+				repository name, the underscore is the app id this column holds.
+
+				This app keeps its own data in the `app_versions_*` tables rather
+				than in OpenRegister, so on a clean instance the step finds
+				nothing and says "nothing to do". It is registered as the guard
+				for an instance that DOES carry such rows, where the failure is
+				silent rather than loud.
+
+				Refuses rather than merges where a slug already has a twin under
+				the new application id, never deletes a schema, and never throws
+				— an escaping exception in <install> aborts the install.
+			-->
+			<step>OCA\Versioniq\Repair\MigrateSchemaApplicationId</step>
+			<!--
+				The background jobs moved from OCA\Versioniq\Cron to
+				OCA\Versioniq\BackgroundJob (ADR-100 Decision 3), and the <job>
+				entries below are a REGISTRATION instruction rather than a
+				description of state: on upgrade Nextcloud ADDS a job it does
+				not have, but never removes one whose class disappeared —
+				it cannot tell a renamed class from one that is merely
+				unavailable this boot.
+
+				So without this step the instance holds BOTH rows, and the dead
+				one cannot be instantiated on any cron tick. Measured on a live
+				instance during this move: oc_jobs carried
+				OCA\OpenCatalogi\Cron\DirectorySync alongside its BackgroundJob
+				replacement. Idempotent — a fresh install removes nothing.
+			-->
+			<step>OCA\Versioniq\Repair\RemoveRetiredCronJobs</step>
+		</post-migration>
+		<install>
+			<step>OCA\Versioniq\Repair\MigrateAppConfigKeys</step>
+			<step>OCA\Versioniq\Repair\MigrateUserPreferences</step>
+			<!-- Schema half of the same rename; see the <post-migration> block.
+			     An app-id rename presents to Nextcloud as a FRESH INSTALL, so
+			     this block is the one that actually fires on the upgrade the
+			     step exists for. -->
+			<step>OCA\Versioniq\Repair\MigrateSchemaApplicationId</step>
+		</install>
+	</repair-steps>
+	<commands>
+		<command>OCA\Versioniq\Command\ListVersions</command>
+		<command>OCA\Versioniq\Command\InstallVersion</command>
+	</commands>
+	<settings>
+		<admin>OCA\Versioniq\Settings\Admin</admin>
+		<admin-section>OCA\Versioniq\Sections\AdminSection</admin-section>
+	</settings>
+</info>

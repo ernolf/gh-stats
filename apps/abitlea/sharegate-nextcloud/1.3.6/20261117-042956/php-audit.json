@@ -1,0 +1,706 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\ShareGate\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "guzzlehttp/guzzle 7.11.0, in 3rdparty/ of Nextcloud 28 to 33",
+        "guzzlehttp/promises 2.5.0, in 3rdparty/ of Nextcloud 28 to 33",
+        "guzzlehttp/psr7 2.11.0, in 3rdparty/ of Nextcloud 28 to 33",
+        "psr/http-client 1.0.3, in 3rdparty/ of Nextcloud 28 to 33",
+        "psr/http-factory 1.1.0, in 3rdparty/ of Nextcloud 28 to 33",
+        "psr/http-message 2.0, in 3rdparty/ of Nextcloud 28 to 33",
+        "ralouphie/getallheaders 3.0.3, in 3rdparty/ of Nextcloud 28 to 33",
+        "symfony/deprecation-contracts v3.7.0, in 3rdparty/ of Nextcloud 28 to 33",
+        "symfony/polyfill-php80 v1.37.0, in 3rdparty/ of Nextcloud 28 to 31"
+      ],
+      "lines": [
+        "vendor/ ships 9 packages that the server ships itself in a major of Nextcloud 28 to 33. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  guzzlehttp/guzzle 7.11.0, in 3rdparty/ of Nextcloud 28 to 33",
+        "  guzzlehttp/promises 2.5.0, in 3rdparty/ of Nextcloud 28 to 33",
+        "  guzzlehttp/psr7 2.11.0, in 3rdparty/ of Nextcloud 28 to 33",
+        "  psr/http-client 1.0.3, in 3rdparty/ of Nextcloud 28 to 33",
+        "  psr/http-factory 1.1.0, in 3rdparty/ of Nextcloud 28 to 33",
+        "  psr/http-message 2.0, in 3rdparty/ of Nextcloud 28 to 33",
+        "  ralouphie/getallheaders 3.0.3, in 3rdparty/ of Nextcloud 28 to 33",
+        "  symfony/deprecation-contracts v3.7.0, in 3rdparty/ of Nextcloud 28 to 33",
+        "  symfony/polyfill-php80 v1.37.0, in 3rdparty/ of Nextcloud 28 to 31"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 6
+        }
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/ShareController.php:300 OC",
+        "lib/Controller/ShareController.php:300 OC::$server",
+        "lib/Controller/ShareController.php:304 OC::$server",
+        "lib/Controller/ShareController.php:363 OC::$server",
+        "lib/Controller/ShareController.php:369 OC::$server"
+      ],
+      "lines": [
+        "5 uses of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/ShareController.php:300 OC",
+        "  lib/Controller/ShareController.php:300 OC::$server",
+        "  lib/Controller/ShareController.php:304 OC::$server",
+        "  lib/Controller/ShareController.php:363 OC::$server",
+        "  lib/Controller/ShareController.php:369 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/Listener/RegisterNavigationListener.php:25 OCP\\Navigation\\Events\\LoadAdditionalEntriesEvent: there since Nextcloud 31, the app declares from 28",
+        "lib/Util/CspNonce.php:21 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 28"
+      ],
+      "lines": [
+        "2 uses in 2 files of the public API that the oldest majors of Nextcloud 28 to 33 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/Listener/RegisterNavigationListener.php:25 OCP\\Navigation\\Events\\LoadAdditionalEntriesEvent: there since Nextcloud 31, the app declares from 28",
+        "  lib/Util/CspNonce.php:21 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 28"
+      ]
+    },
+    {
+      "id": "ocp-removed-soon",
+      "level": "warn",
+      "places": [
+        "lib/Util/CspNonce.php:15 OCP\\IServerContainer: deprecated since Nextcloud 25, Nextcloud 35 is the last major to have it"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated and that Nextcloud 36 no longer has: the app fails on the first major without it, once it declares that one.",
+        "  lib/Util/CspNonce.php:15 OCP\\IServerContainer: deprecated since Nextcloud 25, Nextcloud 35 is the last major to have it"
+      ]
+    },
+    {
+      "id": "template-inline-script",
+      "level": "warn",
+      "places": [
+        "templates/embed/create.php:16 oninput= attribute",
+        "templates/embed/create.php:47 onclick= attribute",
+        "templates/payment/mock.php:14 onclick= attribute"
+      ],
+      "lines": [
+        "3 inline scripts in templates/. The Content Security Policy of the server runs neither a <script> without a source or the nonce of the response nor an event handler attribute, so the browser does not run them. A script added with OCP\\Util::addScript() or addInitScript() runs.",
+        "  templates/embed/create.php:16 oninput= attribute",
+        "  templates/embed/create.php:47 onclick= attribute",
+        "  templates/payment/mock.php:14 onclick= attribute"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/sharegate/share/{shareId}/settings  sharegate.share.settings  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/sharegate/payment/notify/alipay_f2f  sharegate.payment.notifyalipayhealth  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/sharegate/payment/notify/stripe  sharegate.payment.notifystripehealth  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/sharegate/payment/notify/paypal  sharegate.payment.notifypaypalhealth  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/sharegate/payment/manual-confirm  sharegate.payment.manualconfirm  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/sharegate/admin/shares  sharegate.admin.shares  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/sharegate/admin/payments  sharegate.admin.payments  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/sharegate/admin/stats  sharegate.admin.stats  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/sharegate/admin/settings  sharegate.admin.settings  appinfo/routes.php:5 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 9 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 24 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/sharegate/share/{shareId}/settings  sharegate.share.settings  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/sharegate/payment/notify/alipay_f2f  sharegate.payment.notifyalipayhealth  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/sharegate/payment/notify/stripe  sharegate.payment.notifystripehealth  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/sharegate/payment/notify/paypal  sharegate.payment.notifypaypalhealth  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/sharegate/payment/manual-confirm  sharegate.payment.manualconfirm  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/sharegate/admin/shares  sharegate.admin.shares  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/sharegate/admin/payments  sharegate.admin.payments  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/sharegate/admin/stats  sharegate.admin.stats  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/sharegate/admin/settings  sharegate.admin.settings  appinfo/routes.php:5 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 6
+        }
+      ]
+    },
+    {
+      "id": "migration-name-length",
+      "level": "warn",
+      "places": [
+        "lib/Migration/Version000001Date20250101000000.php:74 the primary key of sharegate_access_grants, named after the table: 23 characters and the prefix oc_, in Nextcloud 28 to 32"
+      ],
+      "lines": [
+        "1 name in the migrations is longer than the server allows, so it stops the install or the update of the app with an exception. The table names are counted with the default prefix oc_.",
+        "  Up to Nextcloud 32 the server checks this only where info.xml lists no database, or lists oci among them.",
+        "  lib/Migration/Version000001Date20250101000000.php:74 the primary key of sharegate_access_grants, named after the table: 23 characters and the prefix oc_, in Nextcloud 28 to 32"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Service/BuyerAccessTokenService.php:116 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/BuyerAccessTokenService.php:121 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/BuyerPurchasesTokenService.php:174 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/BuyerPurchasesTokenService.php:179 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:60 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:68 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:76 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:230 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:231 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:232 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:234 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:235 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:264 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:265 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:266 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:292 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:293 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:295 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:296 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:297 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:317 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:318 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:319 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:321 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:322 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:333 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:334 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:339 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:346 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:347 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:348 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:350 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PaymentConfigService.php:355 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/ShareService.php:61 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/ShareService.php:62 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/ShareService.php:229 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/ShareService.php:230 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "lines": [
+        "37 uses in 4 files of the public API that is deprecated in Nextcloud 28 to 33. The text of the tag names the replacement where it has one.",
+        "  lib/Service/BuyerAccessTokenService.php:116 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/BuyerAccessTokenService.php:121 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/BuyerPurchasesTokenService.php:174 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/BuyerPurchasesTokenService.php:179 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:60 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:68 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:76 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:230 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:231 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:232 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:234 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:235 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:264 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:265 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:266 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:292 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:293 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:295 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:296 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:297 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:317 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:318 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:319 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:321 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:322 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:333 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:334 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:339 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:346 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:347 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:348 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:350 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PaymentConfigService.php:355 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/ShareService.php:61 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/ShareService.php:62 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/ShareService.php:229 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/ShareService.php:230 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 34
+        }
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/buyer/view.php:6 style= attribute",
+        "templates/buyer/view.php:8 style= attribute",
+        "templates/buyer/view.php:11 style= attribute",
+        "templates/buyer/view.php:29 style= attribute",
+        "templates/buyer/view.php:49 style= attribute",
+        "templates/buyer/view.php:58 style= attribute",
+        "templates/buyer/view.php:65 style= attribute",
+        "templates/buyer/view.php:70 style= attribute",
+        "templates/buyer/view.php:71 style= attribute",
+        "templates/buyer/view.php:77 style= attribute",
+        "templates/dashboard/navigation.php:83 style= attribute",
+        "templates/embed/create.php:54 style= attribute",
+        "templates/payment/mock.php:15 style= attribute"
+      ],
+      "lines": [
+        "13 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/buyer/view.php:6 style= attribute",
+        "  templates/buyer/view.php:8 style= attribute",
+        "  templates/buyer/view.php:11 style= attribute",
+        "  templates/buyer/view.php:29 style= attribute",
+        "  templates/buyer/view.php:49 style= attribute",
+        "  templates/buyer/view.php:58 style= attribute",
+        "  templates/buyer/view.php:65 style= attribute",
+        "  templates/buyer/view.php:70 style= attribute",
+        "  templates/buyer/view.php:71 style= attribute",
+        "  templates/buyer/view.php:77 style= attribute",
+        "  templates/dashboard/navigation.php:83 style= attribute",
+        "  templates/embed/create.php:54 style= attribute",
+        "  templates/payment/mock.php:15 style= attribute"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 10
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Payment/StripeProvider.php:214 time()",
+        "lib/Service/PaymentService.php:44 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 2 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Payment/StripeProvider.php:214 time()",
+        "  lib/Service/PaymentService.php:44 time()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/BuyerAccessTokenService.php:116 getAppValue()",
+        "lib/Service/BuyerAccessTokenService.php:121 setAppValue()",
+        "lib/Service/BuyerPurchasesTokenService.php:174 getAppValue()",
+        "lib/Service/BuyerPurchasesTokenService.php:179 setAppValue()",
+        "lib/Service/PaymentConfigService.php:60 getAppValue()",
+        "lib/Service/PaymentConfigService.php:68 setAppValue()",
+        "lib/Service/PaymentConfigService.php:76 getAppValue()",
+        "lib/Service/PaymentConfigService.php:230 getAppValue()",
+        "lib/Service/PaymentConfigService.php:231 getAppValue()",
+        "lib/Service/PaymentConfigService.php:232 getAppValue()",
+        "lib/Service/PaymentConfigService.php:234 getAppValue()",
+        "lib/Service/PaymentConfigService.php:235 getAppValue()",
+        "lib/Service/PaymentConfigService.php:264 getAppValue()",
+        "lib/Service/PaymentConfigService.php:265 getAppValue()",
+        "lib/Service/PaymentConfigService.php:266 getAppValue()",
+        "lib/Service/PaymentConfigService.php:292 getAppValue()",
+        "lib/Service/PaymentConfigService.php:293 getAppValue()",
+        "lib/Service/PaymentConfigService.php:295 getAppValue()",
+        "lib/Service/PaymentConfigService.php:296 getAppValue()",
+        "lib/Service/PaymentConfigService.php:297 getAppValue()",
+        "lib/Service/PaymentConfigService.php:317 setAppValue()",
+        "lib/Service/PaymentConfigService.php:318 setAppValue()",
+        "lib/Service/PaymentConfigService.php:319 setAppValue()",
+        "lib/Service/PaymentConfigService.php:321 setAppValue()",
+        "lib/Service/PaymentConfigService.php:322 setAppValue()",
+        "lib/Service/PaymentConfigService.php:333 setAppValue()",
+        "lib/Service/PaymentConfigService.php:334 setAppValue()",
+        "lib/Service/PaymentConfigService.php:339 setAppValue()",
+        "lib/Service/PaymentConfigService.php:346 setAppValue()",
+        "lib/Service/PaymentConfigService.php:347 setAppValue()",
+        "lib/Service/PaymentConfigService.php:348 setAppValue()",
+        "lib/Service/PaymentConfigService.php:350 setAppValue()",
+        "lib/Service/PaymentConfigService.php:355 setAppValue()",
+        "lib/Service/ShareService.php:61 getAppValue()",
+        "lib/Service/ShareService.php:62 getAppValue()",
+        "lib/Service/ShareService.php:229 getAppValue()",
+        "lib/Service/ShareService.php:230 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 37 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/BuyerAccessTokenService.php:116 getAppValue()",
+        "  lib/Service/BuyerAccessTokenService.php:121 setAppValue()",
+        "  lib/Service/BuyerPurchasesTokenService.php:174 getAppValue()",
+        "  lib/Service/BuyerPurchasesTokenService.php:179 setAppValue()",
+        "  lib/Service/PaymentConfigService.php:60 getAppValue()",
+        "  lib/Service/PaymentConfigService.php:68 setAppValue()",
+        "  lib/Service/PaymentConfigService.php:76 getAppValue()",
+        "  lib/Service/PaymentConfigService.php:230 getAppValue()",
+        "  lib/Service/PaymentConfigService.php:231 getAppValue()",
+        "  lib/Service/PaymentConfigService.php:232 getAppValue()",
+        "  lib/Service/PaymentConfigService.php:234 getAppValue()",
+        "  lib/Service/PaymentConfigService.php:235 getAppValue()",
+        "  lib/Service/PaymentConfigService.php:264 getAppValue()",
+        "  lib/Service/PaymentConfigService.php:265 getAppValue()",
+        "  lib/Service/PaymentConfigService.php:266 getAppValue()",
+        "  lib/Service/PaymentConfigService.php:292 getAppValue()",
+        "  lib/Service/PaymentConfigService.php:293 getAppValue()",
+        "  lib/Service/PaymentConfigService.php:295 getAppValue()",
+        "  lib/Service/PaymentConfigService.php:296 getAppValue()",
+        "  lib/Service/PaymentConfigService.php:297 getAppValue()",
+        "  lib/Service/PaymentConfigService.php:317 setAppValue()",
+        "  lib/Service/PaymentConfigService.php:318 setAppValue()",
+        "  lib/Service/PaymentConfigService.php:319 setAppValue()",
+        "  lib/Service/PaymentConfigService.php:321 setAppValue()",
+        "  lib/Service/PaymentConfigService.php:322 setAppValue()",
+        "  lib/Service/PaymentConfigService.php:333 setAppValue()",
+        "  lib/Service/PaymentConfigService.php:334 setAppValue()",
+        "  lib/Service/PaymentConfigService.php:339 setAppValue()",
+        "  lib/Service/PaymentConfigService.php:346 setAppValue()",
+        "  lib/Service/PaymentConfigService.php:347 setAppValue()",
+        "  lib/Service/PaymentConfigService.php:348 setAppValue()",
+        "  lib/Service/PaymentConfigService.php:350 setAppValue()",
+        "  lib/Service/PaymentConfigService.php:355 setAppValue()",
+        "  lib/Service/ShareService.php:61 getAppValue()",
+        "  lib/Service/ShareService.php:62 getAppValue()",
+        "  lib/Service/ShareService.php:229 getAppValue()",
+        "  lib/Service/ShareService.php:230 getAppValue()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 34
+        }
+      ]
+    }
+  ],
+  "endpoints": 44,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/",
+      "target": "OCA\\ShareGate\\Controller\\DashboardController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/admin/payment-config",
+      "target": "OCA\\ShareGate\\Controller\\AdminController::paymentConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sharegate/admin/payment-config",
+      "target": "OCA\\ShareGate\\Controller\\AdminController::savePaymentConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/admin/payments",
+      "target": "OCA\\ShareGate\\Controller\\AdminController::payments",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sharegate/admin/settings",
+      "target": "OCA\\ShareGate\\Controller\\AdminController::settings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/admin/shares",
+      "target": "OCA\\ShareGate\\Controller\\AdminController::shares",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/admin/stats",
+      "target": "OCA\\ShareGate\\Controller\\AdminController::stats",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sharegate/api/buyer/link-purchases",
+      "target": "OCA\\ShareGate\\Controller\\BuyerController::linkPurchases",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/api/buyer/purchases",
+      "target": "OCA\\ShareGate\\Controller\\BuyerController::purchases",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sharegate/api/buyer/recover-access/{shareId}",
+      "target": "OCA\\ShareGate\\Controller\\BuyerController::recoverAccess",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sharegate/api/buyer/verify-payer",
+      "target": "OCA\\ShareGate\\Controller\\BuyerController::verifyPayer",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/api/dashboard/account",
+      "target": "OCA\\ShareGate\\Controller\\DashboardController::account",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/api/dashboard/payment-ledger",
+      "target": "OCA\\ShareGate\\Controller\\DashboardController::paymentLedger",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/api/dashboard/shares",
+      "target": "OCA\\ShareGate\\Controller\\DashboardController::list",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/api/dashboard/stats",
+      "target": "OCA\\ShareGate\\Controller\\DashboardController::stats",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/api/dashboard/summary",
+      "target": "OCA\\ShareGate\\Controller\\DashboardController::summary",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/api/files/public-links",
+      "target": "OCA\\ShareGate\\Controller\\FilesController::publicLinks",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/api/share/{shareId}",
+      "target": "OCA\\ShareGate\\Controller\\ShareController::getShareSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/buyer/purchases",
+      "target": "OCA\\ShareGate\\Controller\\BuyerController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/embed/create",
+      "target": "OCA\\ShareGate\\Controller\\ShareController::createEmbed",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/pay/mock/{orderId}",
+      "target": "OCA\\ShareGate\\Controller\\PaymentController::mockPay",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/payment/check/{shareId}",
+      "target": "OCA\\ShareGate\\Controller\\PaymentController::check",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sharegate/payment/create",
+      "target": "OCA\\ShareGate\\Controller\\PaymentController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sharegate/payment/manual-confirm",
+      "target": "OCA\\ShareGate\\Controller\\PaymentController::manualConfirm",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/payment/notify/alipay_f2f",
+      "target": "OCA\\ShareGate\\Controller\\PaymentController::notifyAlipayHealth",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sharegate/payment/notify/alipay_f2f",
+      "target": "OCA\\ShareGate\\Controller\\PaymentController::notifyAlipay",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/payment/notify/paypal",
+      "target": "OCA\\ShareGate\\Controller\\PaymentController::notifyPaypalHealth",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sharegate/payment/notify/paypal",
+      "target": "OCA\\ShareGate\\Controller\\PaymentController::notifyPaypal",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/payment/notify/stripe",
+      "target": "OCA\\ShareGate\\Controller\\PaymentController::notifyStripeHealth",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sharegate/payment/notify/stripe",
+      "target": "OCA\\ShareGate\\Controller\\PaymentController::notifyStripe",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/payment/qr/{orderId}",
+      "target": "OCA\\ShareGate\\Controller\\PaymentController::qrImage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/payment/status/{orderId}",
+      "target": "OCA\\ShareGate\\Controller\\PaymentController::status",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sharegate/payment/verify",
+      "target": "OCA\\ShareGate\\Controller\\PaymentController::verify",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sharegate/payment/webhook",
+      "target": "OCA\\ShareGate\\Controller\\PaymentController::webhook",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/s/{shareId}",
+      "target": "OCA\\ShareGate\\Controller\\ShareController::view",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/s/{shareId}/download",
+      "target": "OCA\\ShareGate\\Controller\\ShareController::downloadFile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/s/{shareId}/icon",
+      "target": "OCA\\ShareGate\\Controller\\ShareController::fileIcon",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/s/{shareId}/info",
+      "target": "OCA\\ShareGate\\Controller\\ShareController::getShareInfo",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sharegate/s/{shareId}/save-to-cloud",
+      "target": "OCA\\ShareGate\\Controller\\ShareController::saveToCloud",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sharegate/s/{shareId}/verify",
+      "target": "OCA\\ShareGate\\Controller\\ShareController::download",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/sharegate/share/{shareId}",
+      "target": "OCA\\ShareGate\\Controller\\ShareController::updateShare",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/index.php/apps/sharegate/share/{shareId}/disable",
+      "target": "OCA\\ShareGate\\Controller\\ShareController::disable",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sharegate/share/{shareId}/settings",
+      "target": "OCA\\ShareGate\\Controller\\ShareController::settings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sharegate/share/create",
+      "target": "OCA\\ShareGate\\Controller\\ShareController::createShare",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

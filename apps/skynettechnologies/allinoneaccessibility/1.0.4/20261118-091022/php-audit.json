@@ -1,0 +1,192 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\AllInOneAccessibility\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:34 OC\\Security\\CSP\\ContentSecurityPolicyNonceManager",
+        "lib/AppInfo/Application.php:69 OC\\Security\\CSP\\ContentSecurityPolicy",
+        "templates/index.php:18 OC\\Security\\CSP\\ContentSecurityPolicyNonceManager",
+        "templates/index.php:48 OC\\Security\\CSP\\ContentSecurityPolicy"
+      ],
+      "lines": [
+        "4 uses of the private API of the server in 2 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/AppInfo/Application.php:34 OC\\Security\\CSP\\ContentSecurityPolicyNonceManager",
+        "  lib/AppInfo/Application.php:69 OC\\Security\\CSP\\ContentSecurityPolicy",
+        "  templates/index.php:18 OC\\Security\\CSP\\ContentSecurityPolicyNonceManager",
+        "  templates/index.php:48 OC\\Security\\CSP\\ContentSecurityPolicy"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "template-inline-script",
+      "level": "warn",
+      "places": [
+        "templates/index.php:282 onkeyup= attribute",
+        "templates/index.php:312 oninput= attribute",
+        "templates/index.php:328 oninput= attribute",
+        "templates/index.php:459 oninput= attribute"
+      ],
+      "lines": [
+        "4 inline scripts in templates/. The Content Security Policy of the server runs neither a <script> without a source or the nonce of the response nor an event handler attribute, so the browser does not run them. A script added with OCP\\Util::addScript() or addInitScript() runs.",
+        "  templates/index.php:282 onkeyup= attribute",
+        "  templates/index.php:312 oninput= attribute",
+        "  templates/index.php:328 oninput= attribute",
+        "  templates/index.php:459 oninput= attribute"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:32 get()",
+        "lib/AppInfo/Application.php:33 get()",
+        "lib/AppInfo/Application.php:34 get()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 3 places. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:32 get()",
+        "  lib/AppInfo/Application.php:33 get()",
+        "  lib/AppInfo/Application.php:34 get()"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:33 OCP\\Security\\IContentSecurityPolicyManager: deprecated since Nextcloud 17; listen to the AddContentSecurityPolicyEvent to add a policy",
+        "lib/AppInfo/Application.php:78 OCP\\Security\\IContentSecurityPolicyManager::addDefaultPolicy(): deprecated since Nextcloud 17; listen to the AddContentSecurityPolicyEvent to add a policy",
+        "lib/AppInfo/Application.php:84 OCP\\Security\\IContentSecurityPolicyManager::addDefaultPolicy(): deprecated since Nextcloud 17; listen to the AddContentSecurityPolicyEvent to add a policy",
+        "lib/AppInfo/Application.php:90 OCP\\Security\\IContentSecurityPolicyManager::addDefaultPolicy(): deprecated since Nextcloud 17; listen to the AddContentSecurityPolicyEvent to add a policy",
+        "lib/Settings/ASettings.php:47 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "templates/index.php:17 OCP\\Security\\IContentSecurityPolicyManager: deprecated since Nextcloud 17; listen to the AddContentSecurityPolicyEvent to add a policy"
+      ],
+      "lines": [
+        "6 uses in 3 files of the public API that is deprecated in Nextcloud 29 to 34. The text of the tag names the replacement where it has one.",
+        "  lib/AppInfo/Application.php:33 OCP\\Security\\IContentSecurityPolicyManager: deprecated since Nextcloud 17; listen to the AddContentSecurityPolicyEvent to add a policy",
+        "  lib/AppInfo/Application.php:78 OCP\\Security\\IContentSecurityPolicyManager::addDefaultPolicy(): deprecated since Nextcloud 17; listen to the AddContentSecurityPolicyEvent to add a policy",
+        "  lib/AppInfo/Application.php:84 OCP\\Security\\IContentSecurityPolicyManager::addDefaultPolicy(): deprecated since Nextcloud 17; listen to the AddContentSecurityPolicyEvent to add a policy",
+        "  lib/AppInfo/Application.php:90 OCP\\Security\\IContentSecurityPolicyManager::addDefaultPolicy(): deprecated since Nextcloud 17; listen to the AddContentSecurityPolicyEvent to add a policy",
+        "  lib/Settings/ASettings.php:47 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "  templates/index.php:17 OCP\\Security\\IContentSecurityPolicyManager: deprecated since Nextcloud 17; listen to the AddContentSecurityPolicyEvent to add a policy"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/index.php:144 <style> with content",
+        "templates/index.php:290 style= attribute",
+        "templates/index.php:310 style= attribute",
+        "templates/index.php:313 style= attribute",
+        "templates/index.php:317 style= attribute",
+        "templates/index.php:326 style= attribute",
+        "templates/index.php:329 style= attribute",
+        "templates/index.php:333 style= attribute",
+        "templates/index.php:418 style= attribute",
+        "templates/index.php:422 style= attribute",
+        "templates/index.php:423 style= attribute",
+        "templates/index.php:433 style= attribute",
+        "templates/index.php:459 style= attribute",
+        "templates/index.php:460 style= attribute",
+        "templates/index.php:472 style= attribute",
+        "templates/index.php:481 style= attribute",
+        "templates/index.php:493 style= attribute",
+        "templates/index.php:505 style= attribute",
+        "templates/index.php:517 style= attribute",
+        "templates/index.php:529 style= attribute",
+        "templates/index.php:538 style= attribute",
+        "templates/index.php:606 style= attribute"
+      ],
+      "lines": [
+        "22 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/index.php:144 <style> with content",
+        "  templates/index.php:290 style= attribute",
+        "  templates/index.php:310 style= attribute",
+        "  templates/index.php:313 style= attribute",
+        "  templates/index.php:317 style= attribute",
+        "  templates/index.php:326 style= attribute",
+        "  templates/index.php:329 style= attribute",
+        "  templates/index.php:333 style= attribute",
+        "  templates/index.php:418 style= attribute",
+        "  templates/index.php:422 style= attribute",
+        "  templates/index.php:423 style= attribute",
+        "  templates/index.php:433 style= attribute",
+        "  templates/index.php:459 style= attribute",
+        "  templates/index.php:460 style= attribute",
+        "  templates/index.php:472 style= attribute",
+        "  templates/index.php:481 style= attribute",
+        "  templates/index.php:493 style= attribute",
+        "  templates/index.php:505 style= attribute",
+        "  templates/index.php:517 style= attribute",
+        "  templates/index.php:529 style= attribute",
+        "  templates/index.php:538 style= attribute",
+        "  templates/index.php:606 style= attribute"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 19
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/allinoneaccessibility/api  ocs.allinoneaccessibility.api.index  lib/Controller/ApiController.php:25"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 OCS route. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/allinoneaccessibility/api  ocs.allinoneaccessibility.api.index  lib/Controller/ApiController.php:25"
+      ]
+    }
+  ],
+  "endpoints": 2,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/allinoneaccessibility/",
+      "target": "OCA\\AllInOneAccessibility\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/allinoneaccessibility/api",
+      "target": "OCA\\AllInOneAccessibility\\Controller\\ApiController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

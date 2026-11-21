@@ -1,0 +1,221 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Secrets\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/secrets/show/{token}  secrets.redirect.share  appinfo/routes.php:15 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 route outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 11 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/secrets/show/{token}  secrets.redirect.share  appinfo/routes.php:15 routes"
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/public.php:7 style= attribute",
+        "templates/publicshareauth.php:16 style= attribute",
+        "templates/redirect.php:9 style= attribute"
+      ],
+      "lines": [
+        "3 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/public.php:7 style= attribute",
+        "  templates/publicshareauth.php:16 style= attribute",
+        "  templates/redirect.php:9 style= attribute"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/Cron/SecretCleanup.php OCA\\Secrets\\Cron\\SecretCleanup",
+        "lib/Cron/SecretExpiry.php OCA\\Secrets\\Cron\\SecretExpiry"
+      ],
+      "lines": [
+        "2 timed jobs do not say whether they are time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/Cron/SecretCleanup.php OCA\\Secrets\\Cron\\SecretCleanup",
+        "  lib/Cron/SecretExpiry.php OCA\\Secrets\\Cron\\SecretExpiry"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Cron/SecretCleanup.php:33 new DateTime()",
+        "lib/Cron/SecretExpiry.php:31 new DateTime()",
+        "lib/Service/NotificationService.php:66 new DateTime()",
+        "lib/Service/NotificationService.php:80 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 4 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Cron/SecretCleanup.php:33 new DateTime()",
+        "  lib/Cron/SecretExpiry.php:31 new DateTime()",
+        "  lib/Service/NotificationService.php:66 new DateTime()",
+        "  lib/Service/NotificationService.php:80 new DateTime()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/secrets/api/v1/secrets  ocs.secrets.secretapi.getall  appinfo/routes.php:15 ocs",
+        "POST /ocs/v2.php/apps/secrets/api/v1/secrets  ocs.secrets.secretapi.createsecret  appinfo/routes.php:15 ocs",
+        "GET /ocs/v2.php/apps/secrets/api/v1/secrets/{uuid}  ocs.secrets.secretapi.get  appinfo/routes.php:15 ocs",
+        "DELETE /ocs/v2.php/apps/secrets/api/v1/secrets/{uuid}  ocs.secrets.secretapi.delete  appinfo/routes.php:15 ocs",
+        "PUT /ocs/v2.php/apps/secrets/api/v1/secrets/{uuid}/title  ocs.secrets.secretapi.updatetitle  appinfo/routes.php:15 ocs",
+        "GET /ocs/v2.php/apps/secrets/version  ocs.secrets.secretapi.getversion  appinfo/routes.php:15 ocs"
+      ],
+      "lines": [
+        "Nothing in the app calls 6 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/secrets/api/v1/secrets  ocs.secrets.secretapi.getall  appinfo/routes.php:15 ocs",
+        "  POST /ocs/v2.php/apps/secrets/api/v1/secrets  ocs.secrets.secretapi.createsecret  appinfo/routes.php:15 ocs",
+        "  GET /ocs/v2.php/apps/secrets/api/v1/secrets/{uuid}  ocs.secrets.secretapi.get  appinfo/routes.php:15 ocs",
+        "  DELETE /ocs/v2.php/apps/secrets/api/v1/secrets/{uuid}  ocs.secrets.secretapi.delete  appinfo/routes.php:15 ocs",
+        "  PUT /ocs/v2.php/apps/secrets/api/v1/secrets/{uuid}/title  ocs.secrets.secretapi.updatetitle  appinfo/routes.php:15 ocs",
+        "  GET /ocs/v2.php/apps/secrets/version  ocs.secrets.secretapi.getversion  appinfo/routes.php:15 ocs"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    }
+  ],
+  "endpoints": 13,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/secrets/",
+      "target": "OCA\\Secrets\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/secrets/s/{uuid}",
+      "target": "OCA\\Secrets\\Controller\\PageController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/secrets/share/{token}",
+      "target": "OCA\\Secrets\\Controller\\SecretShareController::showShare",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/secrets/share/{token}/authenticate/{redirect}",
+      "target": "OCA\\Secrets\\Controller\\SecretShareController::showAuthenticate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/secrets/share/{token}/authenticate/{redirect}",
+      "target": "OCA\\Secrets\\Controller\\SecretShareController::authenticate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/secrets/show/{token}",
+      "target": "OCA\\Secrets\\Controller\\RedirectController::share",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/secrets/api/v1/secrets",
+      "target": "OCA\\Secrets\\Controller\\SecretApiController::getAll",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/secrets/api/v1/secrets",
+      "target": "OCA\\Secrets\\Controller\\SecretApiController::createSecret",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/secrets/api/v1/secrets/{uuid}",
+      "target": "OCA\\Secrets\\Controller\\SecretApiController::delete",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/secrets/api/v1/secrets/{uuid}",
+      "target": "OCA\\Secrets\\Controller\\SecretApiController::get",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/secrets/api/v1/secrets/{uuid}/title",
+      "target": "OCA\\Secrets\\Controller\\SecretApiController::updateTitle",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/secrets/api/v1/share",
+      "target": "OCA\\Secrets\\Controller\\SecretApiController::retrieveSharedSecret",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/secrets/version",
+      "target": "OCA\\Secrets\\Controller\\SecretApiController::getVersion",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

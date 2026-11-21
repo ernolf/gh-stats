@@ -1,0 +1,234 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\ElectronicSignatures\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "guzzlehttp/guzzle 7.5.0, in 3rdparty/ of Nextcloud 25 to 27",
+        "guzzlehttp/promises 1.5.2, in 3rdparty/ of Nextcloud 25 to 27",
+        "guzzlehttp/psr7 2.4.3, in 3rdparty/ of Nextcloud 25 to 27",
+        "psr/http-client 1.0.1, in 3rdparty/ of Nextcloud 25 to 27",
+        "psr/http-factory 1.0.1, in 3rdparty/ of Nextcloud 25 to 27",
+        "psr/http-message 1.0.1, in 3rdparty/ of Nextcloud 25 to 27",
+        "ralouphie/getallheaders 3.0.3, in 3rdparty/ of Nextcloud 25 to 27",
+        "symfony/deprecation-contracts v2.5.2, in 3rdparty/ of Nextcloud 25 to 27"
+      ],
+      "lines": [
+        "vendor/ ships 8 packages that the server ships itself in a major of Nextcloud 25 to 27. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  guzzlehttp/guzzle 7.5.0, in 3rdparty/ of Nextcloud 25 to 27",
+        "  guzzlehttp/promises 1.5.2, in 3rdparty/ of Nextcloud 25 to 27",
+        "  guzzlehttp/psr7 2.4.3, in 3rdparty/ of Nextcloud 25 to 27",
+        "  psr/http-client 1.0.1, in 3rdparty/ of Nextcloud 25 to 27",
+        "  psr/http-factory 1.0.1, in 3rdparty/ of Nextcloud 25 to 27",
+        "  psr/http-message 1.0.1, in 3rdparty/ of Nextcloud 25 to 27",
+        "  ralouphie/getallheaders 3.0.3, in 3rdparty/ of Nextcloud 25 to 27",
+        "  symfony/deprecation-contracts v2.5.2, in 3rdparty/ of Nextcloud 25 to 27"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "POST /index.php/apps/electronicsignatures/update_settings  electronicsignatures.settingsapi.updatesettingsdepr  appinfo/routes.php:10 routes",
+        "GET /index.php/apps/electronicsignatures/sign  electronicsignatures.sign.showsigningpagedepr  appinfo/routes.php:10 routes",
+        "GET /index.php/apps/electronicsignatures/download-signed-file/{doc_id}  electronicsignatures.sign.downloadsignedfile  appinfo/routes.php:10 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 3 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 24 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  POST /index.php/apps/electronicsignatures/update_settings  electronicsignatures.settingsapi.updatesettingsdepr  appinfo/routes.php:10 routes",
+        "  GET /index.php/apps/electronicsignatures/sign  electronicsignatures.sign.showsigningpagedepr  appinfo/routes.php:10 routes",
+        "  GET /index.php/apps/electronicsignatures/download-signed-file/{doc_id}  electronicsignatures.sign.downloadsignedfile  appinfo/routes.php:10 routes"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/SignController.php:69 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated in Nextcloud 25 to 27. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/SignController.php:69 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/success.php:6 <style> with content"
+      ],
+      "lines": [
+        "1 inline style in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/success.php:6 <style> with content"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Activity/ActivityManager.php:76 time()",
+        "lib/Commands/GetSignLinkLocal.php:126 new DateTime()",
+        "lib/Service/SigningLinkService.php:198 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 3 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Activity/ActivityManager.php:76 time()",
+        "  lib/Commands/GetSignLinkLocal.php:126 new DateTime()",
+        "  lib/Service/SigningLinkService.php:198 new DateTime()"
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Commands/FetchSignedFile.php:57 OCA\\ElectronicSignatures\\Commands\\FetchSignedFile::fetchByToken()",
+        "lib/Commands/FetchSignedFile.php:65 OCA\\ElectronicSignatures\\Commands\\FetchSignedFile::fetchByDocId()",
+        "lib/Commands/FetchSignedFile.php:73 OCA\\ElectronicSignatures\\Commands\\FetchSignedFile::fetchFileAndSendNextEmail()",
+        "lib/Commands/GetFileForPreview.php:27 OCA\\ElectronicSignatures\\Commands\\GetFileForPreview::getOriginalFileData()",
+        "lib/Commands/GetFileForPreview.php:33 OCA\\ElectronicSignatures\\Commands\\GetFileForPreview::getSignedFileData()",
+        "lib/Commands/GetSignLinkLocal.php:75 OCA\\ElectronicSignatures\\Commands\\GetSignLinkLocal::getSignLink()",
+        "lib/Commands/GetSignLinkRemote.php:57 OCA\\ElectronicSignatures\\Commands\\GetSignLinkRemote::getSignLink()"
+      ],
+      "lines": [
+        "7 public methods of controllers are reached by no route.",
+        "  lib/Commands/FetchSignedFile.php:57 OCA\\ElectronicSignatures\\Commands\\FetchSignedFile::fetchByToken()",
+        "  lib/Commands/FetchSignedFile.php:65 OCA\\ElectronicSignatures\\Commands\\FetchSignedFile::fetchByDocId()",
+        "  lib/Commands/FetchSignedFile.php:73 OCA\\ElectronicSignatures\\Commands\\FetchSignedFile::fetchFileAndSendNextEmail()",
+        "  lib/Commands/GetFileForPreview.php:27 OCA\\ElectronicSignatures\\Commands\\GetFileForPreview::getOriginalFileData()",
+        "  lib/Commands/GetFileForPreview.php:33 OCA\\ElectronicSignatures\\Commands\\GetFileForPreview::getSignedFileData()",
+        "  lib/Commands/GetSignLinkLocal.php:75 OCA\\ElectronicSignatures\\Commands\\GetSignLinkLocal::getSignLink()",
+        "  lib/Commands/GetSignLinkRemote.php:57 OCA\\ElectronicSignatures\\Commands\\GetSignLinkRemote::getSignLink()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    }
+  ],
+  "endpoints": 14,
+  "endpointList": [
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/electronicsignatures/create_signing_queue",
+      "target": "OCA\\ElectronicSignatures\\Controller\\SignApiController::createSigningQueue",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/electronicsignatures/create_signing_queue_remote",
+      "target": "OCA\\ElectronicSignatures\\Controller\\RemoteQueueApiController::createRemoteSigningQueue",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/electronicsignatures/download-preview/{doc_id}",
+      "target": "OCA\\ElectronicSignatures\\Controller\\SignController::downloadFilePreview",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/electronicsignatures/download-signed-file/{doc_id}",
+      "target": "OCA\\ElectronicSignatures\\Controller\\SignController::downloadSignedFile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/electronicsignatures/fetch_signed_file",
+      "target": "OCA\\ElectronicSignatures\\Controller\\SignApiController::fetchSignedFile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/electronicsignatures/fetch_signing_queue_file",
+      "target": "OCA\\ElectronicSignatures\\Controller\\RemoteQueueApiController::fetchSigningQueueFile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/electronicsignatures/settings",
+      "target": "OCA\\ElectronicSignatures\\Controller\\SettingsApiController::getSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/electronicsignatures/settings",
+      "target": "OCA\\ElectronicSignatures\\Controller\\SettingsApiController::updateSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/electronicsignatures/sign",
+      "target": "OCA\\ElectronicSignatures\\Controller\\SignController::showSigningPageDepr",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/electronicsignatures/sign/{doc_id}",
+      "target": "OCA\\ElectronicSignatures\\Controller\\SignController::showSigningPage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/electronicsignatures/signing_queue",
+      "target": "OCA\\ElectronicSignatures\\Controller\\SignApiController::getSigningQueue",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/electronicsignatures/signing_queue",
+      "target": "OCA\\ElectronicSignatures\\Controller\\SignApiController::updateSigningQueue",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/electronicsignatures/success/{token}",
+      "target": "OCA\\ElectronicSignatures\\Controller\\SignController::showSuccessPage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/electronicsignatures/update_settings",
+      "target": "OCA\\ElectronicSignatures\\Controller\\SettingsApiController::updateSettingsDepr",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

@@ -1,0 +1,149 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\TVShowNamer\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Utils/Files.php:23 OC\\Files\\Filesystem",
+        "lib/Utils/Files.php:48 OC\\Files\\Node\\File",
+        "templates/settings/index.php:7 OC",
+        "templates/settings/index.php:7 OC::$server",
+        "templates/settings/index.php:18 OC::$server"
+      ],
+      "lines": [
+        "5 uses of the private API of the server in 2 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Utils/Files.php:23 OC\\Files\\Filesystem",
+        "  lib/Utils/Files.php:48 OC\\Files\\Node\\File",
+        "  templates/settings/index.php:7 OC",
+        "  templates/settings/index.php:7 OC::$server",
+        "  templates/settings/index.php:18 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/tvshownamer/home  tvshownamer.page.home  appinfo/routes.php:10 routes",
+        "GET /index.php/apps/tvshownamer/{src}/image  tvshownamer.page.image  appinfo/routes.php:10 routes",
+        "POST /index.php/apps/tvshownamer/scan  tvshownamer.page.scan  appinfo/routes.php:10 routes",
+        "POST /index.php/apps/tvshownamer/rename  tvshownamer.page.rename  appinfo/routes.php:10 routes",
+        "POST /index.php/apps/tvshownamer/save_setting  tvshownamer.page.save_setting  appinfo/routes.php:10 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 5 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 2 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/tvshownamer/home  tvshownamer.page.home  appinfo/routes.php:10 routes",
+        "  GET /index.php/apps/tvshownamer/{src}/image  tvshownamer.page.image  appinfo/routes.php:10 routes",
+        "  POST /index.php/apps/tvshownamer/scan  tvshownamer.page.scan  appinfo/routes.php:10 routes",
+        "  POST /index.php/apps/tvshownamer/rename  tvshownamer.page.rename  appinfo/routes.php:10 routes",
+        "  POST /index.php/apps/tvshownamer/save_setting  tvshownamer.page.save_setting  appinfo/routes.php:10 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/PageController.php:52 OCP\\IInitialStateService: deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated in Nextcloud 16 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/PageController.php:52 OCP\\IInitialStateService: deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider"
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/content/index.php:1 style= attribute"
+      ],
+      "lines": [
+        "1 inline style in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/content/index.php:1 style= attribute"
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/PageController.php:94 OCA\\TVShowNamer\\Controller\\PageController::getLanguageCode()"
+      ],
+      "lines": [
+        "1 public method of a controller is reached by no route.",
+        "  lib/Controller/PageController.php:94 OCA\\TVShowNamer\\Controller\\PageController::getLanguageCode()"
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "ncmake has no checks of MigrationService for Nextcloud 16 to 17; the migrations are not held against them."
+      ]
+    }
+  ],
+  "endpoints": 6,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tvshownamer/",
+      "target": "OCA\\TVShowNamer\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tvshownamer/{src}/image",
+      "target": "OCA\\TVShowNamer\\Controller\\PageController::image",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tvshownamer/home",
+      "target": "OCA\\TVShowNamer\\Controller\\PageController::home",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tvshownamer/rename",
+      "target": "OCA\\TVShowNamer\\Controller\\PageController::rename",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tvshownamer/save_setting",
+      "target": "OCA\\TVShowNamer\\Controller\\PageController::saveSetting",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tvshownamer/scan",
+      "target": "OCA\\TVShowNamer\\Controller\\PageController::scan",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

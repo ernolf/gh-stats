@@ -1,0 +1,257 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\AdminPage\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/Service/ProjectTimelineService.php:59 OCP\\App\\IAppManager::isEnabledForAnyone(): there since Nextcloud 32, the app declares from 28",
+        "lib/Service/StorageMonitoringService.php:95 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 28"
+      ],
+      "lines": [
+        "2 uses in 2 files of the public API that the oldest majors of Nextcloud 28 to 34 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/Service/ProjectTimelineService.php:59 OCP\\App\\IAppManager::isEnabledForAnyone(): there since Nextcloud 32, the app declares from 28",
+        "  lib/Service/StorageMonitoringService.php:95 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 28"
+      ]
+    },
+    {
+      "id": "ocp-removed-soon",
+      "level": "warn",
+      "places": [
+        "lib/Service/StorageMonitoringService.php:23 OCP\\IServerContainer: deprecated since Nextcloud 25, Nextcloud 35 is the last major to have it"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated and that Nextcloud 36 no longer has: the app fails on the first major without it, once it declares that one.",
+        "  lib/Service/StorageMonitoringService.php:23 OCP\\IServerContainer: deprecated since Nextcloud 25, Nextcloud 35 is the last major to have it"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:47 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:47 injectFn()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/adminpage/  adminpage.page.index  appinfo/routes.php:3 routes",
+        "GET /index.php/apps/adminpage/api/upcoming-tasks  adminpage.dashboard.getupcomingtasks  appinfo/routes.php:3 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 48 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/adminpage/  adminpage.page.index  appinfo/routes.php:3 routes",
+        "  GET /index.php/apps/adminpage/api/upcoming-tasks  adminpage.dashboard.getupcomingtasks  appinfo/routes.php:3 routes"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Service/PublicTokenService.php:42 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated in Nextcloud 28 to 34. The text of the tag names the replacement where it has one.",
+        "  lib/Service/PublicTokenService.php:42 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId"
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/public_expired.php:9 style= attribute",
+        "templates/public_expired.php:15 style= attribute",
+        "templates/public_expired.php:16 style= attribute"
+      ],
+      "lines": [
+        "3 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/public_expired.php:9 style= attribute",
+        "  templates/public_expired.php:15 style= attribute",
+        "  templates/public_expired.php:16 style= attribute"
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Service/ProjectTimelineService.php:69"
+      ],
+      "lines": [
+        "1 transaction is opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Service/ProjectTimelineService.php:69"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/AlertService.php:109 time()",
+        "lib/Service/AlertService.php:128 time()",
+        "lib/Service/CalendarService.php:51 new DateTimeImmutable()",
+        "lib/Service/DeckService.php:305 new DateTime()",
+        "lib/Service/DeckService.php:351 new DateTime()",
+        "lib/Service/DeckService.php:365 new DateTime()",
+        "lib/Service/DeckService.php:592 new DateTime()",
+        "lib/Service/DeckService.php:604 new DateTime()",
+        "lib/Service/DeckService.php:626 new DateTime()",
+        "lib/Service/DeckService.php:632 new DateTime()",
+        "lib/Service/DeckService.php:682 new DateTime()",
+        "lib/Service/GeocodeService.php:191 time()",
+        "lib/Service/KpiService.php:165 time()",
+        "lib/Service/OrgOverviewService.php:237 new DateTime()",
+        "lib/Service/OrgOverviewService.php:338 time()",
+        "lib/Service/PublicTokenService.php:28 new DateTime()",
+        "lib/Service/PublicTokenService.php:78 new DateTime()",
+        "lib/Service/PublicTokenService.php:98 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 18 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/AlertService.php:109 time()",
+        "  lib/Service/AlertService.php:128 time()",
+        "  lib/Service/CalendarService.php:51 new DateTimeImmutable()",
+        "  lib/Service/DeckService.php:305 new DateTime()",
+        "  lib/Service/DeckService.php:351 new DateTime()",
+        "  lib/Service/DeckService.php:365 new DateTime()",
+        "  lib/Service/DeckService.php:592 new DateTime()",
+        "  lib/Service/DeckService.php:604 new DateTime()",
+        "  lib/Service/DeckService.php:626 new DateTime()",
+        "  lib/Service/DeckService.php:632 new DateTime()",
+        "  lib/Service/DeckService.php:682 new DateTime()",
+        "  lib/Service/GeocodeService.php:191 time()",
+        "  lib/Service/KpiService.php:165 time()",
+        "  lib/Service/OrgOverviewService.php:237 new DateTime()",
+        "  lib/Service/OrgOverviewService.php:338 time()",
+        "  lib/Service/PublicTokenService.php:28 new DateTime()",
+        "  lib/Service/PublicTokenService.php:78 new DateTime()",
+        "  lib/Service/PublicTokenService.php:98 new DateTime()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 15
+        }
+      ]
+    }
+  ],
+  "endpoints": 15,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/adminpage/",
+      "target": "OCA\\AdminPage\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/adminpage/api/backup-jobs",
+      "target": "OCA\\AdminPage\\Controller\\DashboardController::getBackupJobs",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/adminpage/api/data",
+      "target": "OCA\\AdminPage\\Controller\\DashboardController::getData",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/adminpage/api/projects/{projectId}/geocode",
+      "target": "OCA\\AdminPage\\Controller\\DashboardController::getProjectGeocode",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/adminpage/api/projects/geocodes",
+      "target": "OCA\\AdminPage\\Controller\\DashboardController::getProjectGeocodes",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/adminpage/api/public-links",
+      "target": "OCA\\AdminPage\\Controller\\DashboardController::listPublicLinks",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/adminpage/api/public-links",
+      "target": "OCA\\AdminPage\\Controller\\DashboardController::createPublicLink",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/adminpage/api/public-links/{id}",
+      "target": "OCA\\AdminPage\\Controller\\DashboardController::revokePublicLink",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/adminpage/api/public-links/{id}/delete",
+      "target": "OCA\\AdminPage\\Controller\\DashboardController::deletePublicLink",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/adminpage/api/public/{token}",
+      "target": "OCA\\AdminPage\\Controller\\PublicDashboardController::getData",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/adminpage/api/public/{token}/projects/{projectId}/timeline",
+      "target": "OCA\\AdminPage\\Controller\\PublicDashboardController::getProjectTimeline",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/adminpage/api/storage",
+      "target": "OCA\\AdminPage\\Controller\\DashboardController::getStorage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/adminpage/api/upcoming-events",
+      "target": "OCA\\AdminPage\\Controller\\DashboardController::getUpcomingEvents",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/adminpage/api/upcoming-tasks",
+      "target": "OCA\\AdminPage\\Controller\\DashboardController::getUpcomingTasks",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/adminpage/public/{token}",
+      "target": "OCA\\AdminPage\\Controller\\PublicPageController::index",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

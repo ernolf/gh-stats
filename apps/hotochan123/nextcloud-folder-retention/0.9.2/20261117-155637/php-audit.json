@@ -1,0 +1,338 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\FolderRetention\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Service/Deleter.php:881 OC_Util",
+        "lib/Service/Deleter.php:902 OC\\Files\\Filesystem"
+      ],
+      "lines": [
+        "2 uses of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Service/Deleter.php:881 OC_Util",
+        "  lib/Service/Deleter.php:902 OC\\Files\\Filesystem"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/folder_retention/api/rules  folder_retention.api.listrules  lib/Controller/ApiController.php:65",
+        "PUT /index.php/apps/folder_retention/api/rules/{folderId}  folder_retention.api.putrule  lib/Controller/ApiController.php:79",
+        "DELETE /index.php/apps/folder_retention/api/rules/{folderId}  folder_retention.api.deleterule  lib/Controller/ApiController.php:110",
+        "GET /index.php/apps/folder_retention/api/tree  folder_retention.api.tree  lib/Controller/ApiController.php:129",
+        "GET /index.php/apps/folder_retention/api/folders/{folderId}/descendants  folder_retention.api.descendants  lib/Controller/ApiController.php:141",
+        "GET /index.php/apps/folder_retention/api/folders/{folderId}/impact  folder_retention.api.impact  lib/Controller/ApiController.php:150",
+        "GET /index.php/apps/folder_retention/api/preview  folder_retention.api.preview  lib/Controller/ApiController.php:163",
+        "GET /index.php/apps/folder_retention/api/log  folder_retention.api.log  lib/Controller/ApiController.php:177",
+        "GET /index.php/apps/folder_retention/api/log/days  folder_retention.api.logdays  lib/Controller/ApiController.php:194",
+        "GET /index.php/apps/folder_retention/api/log/folders  folder_retention.api.logfolders  lib/Controller/ApiController.php:210",
+        "GET /index.php/apps/folder_retention/api/log/export  folder_retention.api.exportlog  lib/Controller/ApiController.php:223",
+        "GET /index.php/apps/folder_retention/api/settings  folder_retention.api.getsettings  lib/Controller/ApiController.php:318",
+        "PUT /index.php/apps/folder_retention/api/settings  folder_retention.api.putsettings  lib/Controller/ApiController.php:332",
+        "PUT /index.php/apps/folder_retention/api/accounts/{uid}/workspace  folder_retention.api.setworkspace  lib/Controller/ApiController.php:389"
+      ],
+      "lines": [
+        "Nothing in the app calls 14 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 21 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/folder_retention/api/rules  folder_retention.api.listrules  lib/Controller/ApiController.php:65",
+        "  PUT /index.php/apps/folder_retention/api/rules/{folderId}  folder_retention.api.putrule  lib/Controller/ApiController.php:79",
+        "  DELETE /index.php/apps/folder_retention/api/rules/{folderId}  folder_retention.api.deleterule  lib/Controller/ApiController.php:110",
+        "  GET /index.php/apps/folder_retention/api/tree  folder_retention.api.tree  lib/Controller/ApiController.php:129",
+        "  GET /index.php/apps/folder_retention/api/folders/{folderId}/descendants  folder_retention.api.descendants  lib/Controller/ApiController.php:141",
+        "  GET /index.php/apps/folder_retention/api/folders/{folderId}/impact  folder_retention.api.impact  lib/Controller/ApiController.php:150",
+        "  GET /index.php/apps/folder_retention/api/preview  folder_retention.api.preview  lib/Controller/ApiController.php:163",
+        "  GET /index.php/apps/folder_retention/api/log  folder_retention.api.log  lib/Controller/ApiController.php:177",
+        "  GET /index.php/apps/folder_retention/api/log/days  folder_retention.api.logdays  lib/Controller/ApiController.php:194",
+        "  GET /index.php/apps/folder_retention/api/log/folders  folder_retention.api.logfolders  lib/Controller/ApiController.php:210",
+        "  GET /index.php/apps/folder_retention/api/log/export  folder_retention.api.exportlog  lib/Controller/ApiController.php:223",
+        "  GET /index.php/apps/folder_retention/api/settings  folder_retention.api.getsettings  lib/Controller/ApiController.php:318",
+        "  PUT /index.php/apps/folder_retention/api/settings  folder_retention.api.putsettings  lib/Controller/ApiController.php:332",
+        "  PUT /index.php/apps/folder_retention/api/accounts/{uid}/workspace  folder_retention.api.setworkspace  lib/Controller/ApiController.php:389"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 11
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Service/ContentLanguage.php:143 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Service/Deleter.php:348 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/Settings.php:164 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Service/Settings.php:245 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Service/Settings.php:382 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Service/Settings.php:465 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig"
+      ],
+      "lines": [
+        "6 uses in 3 files of the public API that is deprecated in Nextcloud 34 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Service/ContentLanguage.php:143 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Service/Deleter.php:348 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/Settings.php:164 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Service/Settings.php:245 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Service/Settings.php:382 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Service/Settings.php:465 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Service/FirstSeen.php:105",
+        "lib/Service/FirstSeen.php:128",
+        "lib/Service/RuleService.php:111",
+        "lib/Service/TagService.php:135"
+      ],
+      "lines": [
+        "4 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Service/FirstSeen.php:105",
+        "  lib/Service/FirstSeen.php:128",
+        "  lib/Service/RuleService.php:111",
+        "  lib/Service/TagService.php:135"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/ApiController.php:226 new DateTimeImmutable()",
+        "lib/Service/Deleter.php:873 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 2 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/ApiController.php:226 new DateTimeImmutable()",
+        "  lib/Service/Deleter.php:873 time()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/ContentLanguage.php:75 getValueString()",
+        "lib/Service/ContentLanguage.php:92 getValueString()",
+        "lib/Service/ContentLanguage.php:97 setValueString()",
+        "lib/Service/ContentLanguage.php:104 getValueString()",
+        "lib/Service/ContentLanguage.php:140 setValueString()",
+        "lib/Service/ContentLanguage.php:146 setValueString()",
+        "lib/Service/ContentLanguage.php:250 getValueString()",
+        "lib/Service/Deleter.php:351 getValueString()",
+        "lib/Service/Settings.php:49 getValueBool()",
+        "lib/Service/Settings.php:70 setValueBool()",
+        "lib/Service/Settings.php:75 hasKey()",
+        "lib/Service/Settings.php:85 getValueBool()",
+        "lib/Service/Settings.php:89 setValueBool()",
+        "lib/Service/Settings.php:94 getValueBool()",
+        "lib/Service/Settings.php:98 setValueBool()",
+        "lib/Service/Settings.php:103 getValueBool()",
+        "lib/Service/Settings.php:107 setValueBool()",
+        "lib/Service/Settings.php:115 getValueInt()",
+        "lib/Service/Settings.php:125 getValueInt()",
+        "lib/Service/Settings.php:133 setValueInt()",
+        "lib/Service/Settings.php:138 getValueInt()",
+        "lib/Service/Settings.php:142 setValueInt()",
+        "lib/Service/Settings.php:151 getValueString()",
+        "lib/Service/Settings.php:159 setValueString()",
+        "lib/Service/Settings.php:173 setValueInt()",
+        "lib/Service/Settings.php:183 getValueString()",
+        "lib/Service/Settings.php:197 setValueString()",
+        "lib/Service/Settings.php:202 getValueInt()",
+        "lib/Service/Settings.php:206 getValueInt()",
+        "lib/Service/Settings.php:212 getValueString()",
+        "lib/Service/Settings.php:232 getValueString()",
+        "lib/Service/Settings.php:248 setValueString()",
+        "lib/Service/Settings.php:265 getValueInt()",
+        "lib/Service/Settings.php:269 setValueInt()",
+        "lib/Service/Settings.php:358 getValueInt()",
+        "lib/Service/Settings.php:366 setValueInt()",
+        "lib/Service/Settings.php:376 getValueInt()",
+        "lib/Service/Settings.php:451 getValueString()",
+        "lib/Service/Settings.php:455 getValueString()",
+        "lib/Service/TagService.php:289 getValueString()",
+        "lib/Service/TagService.php:309 setValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 41 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/ContentLanguage.php:75 getValueString()",
+        "  lib/Service/ContentLanguage.php:92 getValueString()",
+        "  lib/Service/ContentLanguage.php:97 setValueString()",
+        "  lib/Service/ContentLanguage.php:104 getValueString()",
+        "  lib/Service/ContentLanguage.php:140 setValueString()",
+        "  lib/Service/ContentLanguage.php:146 setValueString()",
+        "  lib/Service/ContentLanguage.php:250 getValueString()",
+        "  lib/Service/Deleter.php:351 getValueString()",
+        "  lib/Service/Settings.php:49 getValueBool()",
+        "  lib/Service/Settings.php:70 setValueBool()",
+        "  lib/Service/Settings.php:75 hasKey()",
+        "  lib/Service/Settings.php:85 getValueBool()",
+        "  lib/Service/Settings.php:89 setValueBool()",
+        "  lib/Service/Settings.php:94 getValueBool()",
+        "  lib/Service/Settings.php:98 setValueBool()",
+        "  lib/Service/Settings.php:103 getValueBool()",
+        "  lib/Service/Settings.php:107 setValueBool()",
+        "  lib/Service/Settings.php:115 getValueInt()",
+        "  lib/Service/Settings.php:125 getValueInt()",
+        "  lib/Service/Settings.php:133 setValueInt()",
+        "  lib/Service/Settings.php:138 getValueInt()",
+        "  lib/Service/Settings.php:142 setValueInt()",
+        "  lib/Service/Settings.php:151 getValueString()",
+        "  lib/Service/Settings.php:159 setValueString()",
+        "  lib/Service/Settings.php:173 setValueInt()",
+        "  lib/Service/Settings.php:183 getValueString()",
+        "  lib/Service/Settings.php:197 setValueString()",
+        "  lib/Service/Settings.php:202 getValueInt()",
+        "  lib/Service/Settings.php:206 getValueInt()",
+        "  lib/Service/Settings.php:212 getValueString()",
+        "  lib/Service/Settings.php:232 getValueString()",
+        "  lib/Service/Settings.php:248 setValueString()",
+        "  lib/Service/Settings.php:265 getValueInt()",
+        "  lib/Service/Settings.php:269 setValueInt()",
+        "  lib/Service/Settings.php:358 getValueInt()",
+        "  lib/Service/Settings.php:366 setValueInt()",
+        "  lib/Service/Settings.php:376 getValueInt()",
+        "  lib/Service/Settings.php:451 getValueString()",
+        "  lib/Service/Settings.php:455 getValueString()",
+        "  lib/Service/TagService.php:289 getValueString()",
+        "  lib/Service/TagService.php:309 setValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 38
+        }
+      ]
+    }
+  ],
+  "endpoints": 14,
+  "endpointList": [
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/folder_retention/api/accounts/{uid}/workspace",
+      "target": "OCA\\FolderRetention\\Controller\\ApiController::setWorkspace",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/folder_retention/api/folders/{folderId}/descendants",
+      "target": "OCA\\FolderRetention\\Controller\\ApiController::descendants",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/folder_retention/api/folders/{folderId}/impact",
+      "target": "OCA\\FolderRetention\\Controller\\ApiController::impact",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/folder_retention/api/log",
+      "target": "OCA\\FolderRetention\\Controller\\ApiController::log",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/folder_retention/api/log/days",
+      "target": "OCA\\FolderRetention\\Controller\\ApiController::logDays",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/folder_retention/api/log/export",
+      "target": "OCA\\FolderRetention\\Controller\\ApiController::exportLog",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/folder_retention/api/log/folders",
+      "target": "OCA\\FolderRetention\\Controller\\ApiController::logFolders",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/folder_retention/api/preview",
+      "target": "OCA\\FolderRetention\\Controller\\ApiController::preview",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/folder_retention/api/rules",
+      "target": "OCA\\FolderRetention\\Controller\\ApiController::listRules",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/folder_retention/api/rules/{folderId}",
+      "target": "OCA\\FolderRetention\\Controller\\ApiController::deleteRule",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/folder_retention/api/rules/{folderId}",
+      "target": "OCA\\FolderRetention\\Controller\\ApiController::putRule",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/folder_retention/api/settings",
+      "target": "OCA\\FolderRetention\\Controller\\ApiController::getSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/folder_retention/api/settings",
+      "target": "OCA\\FolderRetention\\Controller\\ApiController::putSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/folder_retention/api/tree",
+      "target": "OCA\\FolderRetention\\Controller\\ApiController::tree",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

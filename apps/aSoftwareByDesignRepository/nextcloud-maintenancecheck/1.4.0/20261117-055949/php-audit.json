@@ -1,0 +1,2128 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\MaintenanceCheck\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "namespace-mismatch",
+      "level": "warn",
+      "places": [
+        "lib/Vendor/splitbrain/phpQRCode/QRCode.php:33 splitbrain\\phpQRCode\\QRCode, by its path OCA\\MaintenanceCheck\\Vendor\\splitbrain\\phpQRCode\\QRCode"
+      ],
+      "lines": [
+        "1 class in lib/ whose name does not follow PSR-4 below OCA\\MaintenanceCheck, the namespace the server derives from <namespace> of info.xml. The loader of the server does not find such a class.",
+        "  lib/Vendor/splitbrain/phpQRCode/QRCode.php:33 splitbrain\\phpQRCode\\QRCode, by its path OCA\\MaintenanceCheck\\Vendor\\splitbrain\\phpQRCode\\QRCode"
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "masterminds/html5 2.10.1, in 3rdparty/ of Nextcloud 32 to 35"
+      ],
+      "lines": [
+        "vendor/ ships 1 package that the server ships itself in a major of Nextcloud 32 to 35. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  masterminds/html5 2.10.1, in 3rdparty/ of Nextcloud 32 to 35"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Public/CrmFieldCustomerFacade.php:226 OC",
+        "lib/Public/CrmFieldCustomerFacade.php:226 OC::$server",
+        "lib/Repair/EnsureMaintenanceCheckSchema.php:67 OC\\DB\\MigrationService",
+        "lib/Repair/EnsureMaintenanceCheckSchema.php:69 OC\\DB\\Connection",
+        "lib/Service/DutyCheckOnDutyService.php:104 OC",
+        "lib/Service/DutyCheckOnDutyService.php:104 OC::$server",
+        "lib/Service/DutyCheckOnDutyService.php:122 OC::$server"
+      ],
+      "lines": [
+        "7 uses of the private API of the server in 3 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Public/CrmFieldCustomerFacade.php:226 OC",
+        "  lib/Public/CrmFieldCustomerFacade.php:226 OC::$server",
+        "  lib/Repair/EnsureMaintenanceCheckSchema.php:67 OC\\DB\\MigrationService",
+        "  lib/Repair/EnsureMaintenanceCheckSchema.php:69 OC\\DB\\Connection",
+        "  lib/Service/DutyCheckOnDutyService.php:104 OC",
+        "  lib/Service/DutyCheckOnDutyService.php:104 OC::$server",
+        "  lib/Service/DutyCheckOnDutyService.php:122 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/Support/NavGate.php:61 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "lib/Support/NavGate.php:65 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "lib/Support/NavGate.php:74 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "lib/Support/NavGate.php:91 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "lib/Support/NavGate.php:104 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32"
+      ],
+      "lines": [
+        "5 uses in 1 file of the public API that the oldest majors of Nextcloud 32 to 35 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/Support/NavGate.php:61 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "  lib/Support/NavGate.php:65 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "  lib/Support/NavGate.php:74 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "  lib/Support/NavGate.php:91 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "  lib/Support/NavGate.php:104 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "display-name-lookup",
+      "level": "warn",
+      "places": [
+        "lib/Service/DispatchService.php:82",
+        "lib/Service/DispatchService.php:126",
+        "lib/Service/LicenseService.php:157",
+        "lib/Service/LicenseService.php:279",
+        "lib/Service/TourService.php:443"
+      ],
+      "lines": [
+        "5 places load a user with IUserManager::get() only to ask for the display name. IUserManager::getDisplayName(), there since Nextcloud 25, answers from a cache and loads no user.",
+        "  lib/Service/DispatchService.php:82",
+        "  lib/Service/DispatchService.php:126",
+        "  lib/Service/LicenseService.php:157",
+        "  lib/Service/LicenseService.php:279",
+        "  lib/Service/TourService.php:443"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/maintenancecheck/due  maintenancecheck.page.duealias  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/customers  maintenancecheck.page.customers  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/customers/{id}  maintenancecheck.page.customer  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/catalogs  maintenancecheck.page.catalogs  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/settings  maintenancecheck.page.settings  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/calendar  maintenancecheck.page.calendar  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/dispatch  maintenancecheck.page.dispatch  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/tours  maintenancecheck.page.tours  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/kpi  maintenancecheck.page.kpi  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/exceptions  maintenancecheck.page.exceptions  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/customers  maintenancecheck.customer.index  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/customers/{id}  maintenancecheck.customer.show  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/customers  maintenancecheck.customer.create  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/maintenancecheck/api/customers/{id}  maintenancecheck.customer.update  appinfo/routes.php:5 routes",
+        "DELETE /index.php/apps/maintenancecheck/api/customers/{id}  maintenancecheck.customer.destroy  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/equipment  maintenancecheck.equipment.index  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/equipment/{id}  maintenancecheck.equipment.show  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/equipment  maintenancecheck.equipment.create  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/maintenancecheck/api/equipment/{id}  maintenancecheck.equipment.update  appinfo/routes.php:5 routes",
+        "DELETE /index.php/apps/maintenancecheck/api/equipment/{id}  maintenancecheck.equipment.destroy  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/equipment/{id}/qr/rotate  maintenancecheck.equipment.rotateqr  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/equipment/{id}/plans  maintenancecheck.plan.indexforequipment  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/equipment/{id}/plans  maintenancecheck.plan.create  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/maintenancecheck/api/plans/{id}  maintenancecheck.plan.update  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/plans/{id}/deactivate  maintenancecheck.plan.deactivate  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/plans/{id}/schedule  maintenancecheck.plan.schedule  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/visits  maintenancecheck.visit.index  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/visits/due  maintenancecheck.visit.due  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/visits/{id}  maintenancecheck.visit.show  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/maintenancecheck/api/visits/{id}  maintenancecheck.visit.update  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/visits/{id}/complete  maintenancecheck.visit.complete  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/visits/{id}/skip  maintenancecheck.visit.skip  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/visits/{id}/cancel  maintenancecheck.visit.cancel  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/maintenancecheck/api/visits/{id}/assign  maintenancecheck.visit.assign  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/equip-types  maintenancecheck.catalog.equiptypes  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/equip-types  maintenancecheck.catalog.createequiptype  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/maintenancecheck/api/equip-types/{id}  maintenancecheck.catalog.updateequiptype  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/maint-types  maintenancecheck.catalog.mainttypes  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/maint-types  maintenancecheck.catalog.createmainttype  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/maintenancecheck/api/maint-types/{id}  maintenancecheck.catalog.updatemainttype  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/config  maintenancecheck.config.index  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/config/access  maintenancecheck.config.saveaccess  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/config/office  maintenancecheck.config.saveoffice  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/config/inventory-flange  maintenancecheck.config.saveinventoryflange  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/config/policies  maintenancecheck.config.savepolicies  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/config/user-access  maintenancecheck.config.useraccess  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/users/search  maintenancecheck.config.searchusers  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/groups/search  maintenancecheck.config.searchgroups  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/license  maintenancecheck.license.show  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/license  maintenancecheck.license.apply  appinfo/routes.php:5 routes",
+        "DELETE /index.php/apps/maintenancecheck/api/license  maintenancecheck.license.remove  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/license/seats  maintenancecheck.license.seats  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/license/seats  maintenancecheck.license.assignseat  appinfo/routes.php:5 routes",
+        "DELETE /index.php/apps/maintenancecheck/api/license/seats/{uid}  maintenancecheck.license.removeseat  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/calendar  maintenancecheck.calendar.index  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/work-orders  maintenancecheck.work_order.index  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/work-orders  maintenancecheck.work_order.create  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/work-orders/{id}  maintenancecheck.work_order.show  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/maintenancecheck/api/work-orders/{id}  maintenancecheck.work_order.update  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/visits/{visitId}/work-orders  maintenancecheck.work_order.createfromvisit  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/maintenancecheck/api/work-orders/{id}/assign  maintenancecheck.work_order.assign  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/work-orders/{id}/transition  maintenancecheck.work_order.transition  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/maintenancecheck/api/work-orders/{id}/checklist/{itemCode}  maintenancecheck.work_order.setchecklistresult  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/maintenancecheck/api/work-orders/{id}/skills  maintenancecheck.work_order.setskills  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/work-orders/{id}/photos  maintenancecheck.work_order.listphotos  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/work-orders/{id}/photos  maintenancecheck.work_order.addphoto  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/work-orders/{id}/photos/{photoId}  maintenancecheck.work_order.downloadphoto  appinfo/routes.php:5 routes",
+        "DELETE /index.php/apps/maintenancecheck/api/work-orders/{id}/photos/{photoId}  maintenancecheck.work_order.deletephoto  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/work-orders/{id}/signature  maintenancecheck.work_order.setsignature  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/work-orders/{id}/signature  maintenancecheck.work_order.downloadsignature  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/work-orders/{id}/pdf/job-pack  maintenancecheck.work_order.jobpackpdf  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/work-orders/{id}/pdf/servicebericht  maintenancecheck.work_order.serviceberichtpdf  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/work-orders/{id}/pdf/inspection-evidence  maintenancecheck.work_order.inspectionevidencepdf  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/kit-templates  maintenancecheck.kit.indextemplates  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/kit-templates  maintenancecheck.kit.createtemplate  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/kit-templates/{id}  maintenancecheck.kit.showtemplate  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/maintenancecheck/api/kit-templates/{id}  maintenancecheck.kit.updatetemplate  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/work-orders/{id}/kit  maintenancecheck.kit.attach  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/work-orders/{id}/kit/lines  maintenancecheck.kit.addline  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/work-orders/{id}/kit/lines/{lineId}/pack  maintenancecheck.kit.packline  appinfo/routes.php:5 routes",
+        "DELETE /index.php/apps/maintenancecheck/api/work-orders/{id}/kit/lines/{lineId}  maintenancecheck.kit.removeline  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/customers/{customerId}/sites  maintenancecheck.site.indexforcustomer  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/customers/{customerId}/sites  maintenancecheck.site.create  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/maintenancecheck/api/sites/{id}  maintenancecheck.site.update  appinfo/routes.php:5 routes",
+        "DELETE /index.php/apps/maintenancecheck/api/sites/{id}  maintenancecheck.site.destroy  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/procedures  maintenancecheck.procedure.index  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/procedures  maintenancecheck.procedure.create  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/procedures/pack  maintenancecheck.procedure.exportpack  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/procedures/pack  maintenancecheck.procedure.importpack  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/procedures/{id}  maintenancecheck.procedure.show  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/maintenancecheck/api/procedures/{id}  maintenancecheck.procedure.update  appinfo/routes.php:5 routes",
+        "DELETE /index.php/apps/maintenancecheck/api/procedures/{id}  maintenancecheck.procedure.destroy  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/procedures/{id}/fork  maintenancecheck.procedure.fork  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/skills  maintenancecheck.skill.index  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/skills  maintenancecheck.skill.create  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/maintenancecheck/api/skills/{id}  maintenancecheck.skill.update  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/users/{uid}/skills  maintenancecheck.skill.userskills  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/maintenancecheck/api/users/{uid}/skills  maintenancecheck.skill.setuserskills  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/capacity  maintenancecheck.capacity.index  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/maintenancecheck/api/capacity/{uid}  maintenancecheck.capacity.set  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/dispatch  maintenancecheck.dispatch.board  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/tours  maintenancecheck.tour.index  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/tours  maintenancecheck.tour.create  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/tours/{id}  maintenancecheck.tour.show  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/maintenancecheck/api/tours/{id}  maintenancecheck.tour.update  appinfo/routes.php:5 routes",
+        "DELETE /index.php/apps/maintenancecheck/api/tours/{id}  maintenancecheck.tour.destroy  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/tours/{id}/stops  maintenancecheck.tour.addstop  appinfo/routes.php:5 routes",
+        "DELETE /index.php/apps/maintenancecheck/api/tours/{id}/stops/{stopId}  maintenancecheck.tour.removestop  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/maintenancecheck/api/tours/{id}/reorder  maintenancecheck.tour.reorder  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/tours/{id}/suggest-order  maintenancecheck.tour.suggestorder  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/equipment/{equipmentId}/meters  maintenancecheck.meter.indexforequipment  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/equipment/{equipmentId}/meters  maintenancecheck.meter.create  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/maintenancecheck/api/meters/{id}  maintenancecheck.meter.update  appinfo/routes.php:5 routes",
+        "DELETE /index.php/apps/maintenancecheck/api/meters/{id}  maintenancecheck.meter.destroy  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/meters/{id}/readings  maintenancecheck.meter.readings  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/meters/{id}/readings  maintenancecheck.meter.addreading  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/equipment/{equipmentId}/meters/import  maintenancecheck.meter.importcsv  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/mobile/v1/bootstrap  maintenancecheck.mobile.bootstrap  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/mobile/v1/due  maintenancecheck.mobile.due  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/mobile/v1/calendar  maintenancecheck.mobile.calendar  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/mobile/v1/equipment/by-qr/{token}  maintenancecheck.mobile.equipmentbyqr  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/mobile/v1/equipment/{id}  maintenancecheck.mobile.equipment  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/mobile/v1/visits  maintenancecheck.mobile.visits  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/mobile/v1/visits/{id}  maintenancecheck.mobile.visit  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/mobile/v1/visits/{id}/complete  maintenancecheck.mobile.complete  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/mobile/v1/visits/{id}/skip  maintenancecheck.mobile.skip  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/mobile/v1/customers  maintenancecheck.mobile.customers  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/mobile/v1/work-orders  maintenancecheck.mobile.workorders  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/mobile/v1/visits/{visitId}/work-orders  maintenancecheck.mobile.createworkorderfromvisit  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}  maintenancecheck.mobile.workorder  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/transition  maintenancecheck.mobile.workordertransition  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/checklist/{itemCode}  maintenancecheck.mobile.workorderchecklist  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/photos  maintenancecheck.mobile.workorderphotos  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/photos  maintenancecheck.mobile.workorderaddphoto  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/kit  maintenancecheck.mobile.workorderkit  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/kit/lines/{lineId}/pack  maintenancecheck.mobile.workorderpackline  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/signature  maintenancecheck.mobile.workordersignature  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/pdf/servicebericht  maintenancecheck.mobile.servicebericht  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/pdf/inspection-evidence  maintenancecheck.mobile.inspectionevidence  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/inspection-evidence.pdf  maintenancecheck.mobile.inspectionevidencealias  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/mobile/v1/equipment/{equipmentId}/obligations  maintenancecheck.mobile.equipmentobligations  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/mobile/v1/tours/today  maintenancecheck.mobile.tourtoday  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/mobile/v1/equipment/{equipmentId}/meters  maintenancecheck.mobile.equipmentmeters  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/mobile/v1/meters/{id}/readings  maintenancecheck.mobile.addmeterreading  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/comments  maintenancecheck.mobile.workordercomments  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/comments  maintenancecheck.mobile.workorderaddcomment  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/mobile/v1/equipment/{equipmentId}/docs  maintenancecheck.mobile.equipmentdocs  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/mobile/v1/equip-docs/{id}/download  maintenancecheck.mobile.downloadequipdoc  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/mobile/v1/failure-codes  maintenancecheck.mobile.failurecodes  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/mobile/v1/exceptions  maintenancecheck.mobile.exceptions  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/ops/kpi  maintenancecheck.ops.kpi  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/ops/kpi.csv  maintenancecheck.ops.kpicsv  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/ops/exceptions  maintenancecheck.ops.exceptions  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/failure-codes  maintenancecheck.ops.failurecodes  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/failure-codes  maintenancecheck.ops.createfailurecode  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/maintenancecheck/api/failure-codes/{id}  maintenancecheck.ops.updatefailurecode  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/ops/reminders/dry-run  maintenancecheck.ops.reminderdryrun  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/admin/transfer/reconcile  maintenancecheck.transfer_api.reconcile  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/equipment/{equipmentId}/docs  maintenancecheck.equip_doc.index  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/equipment/{equipmentId}/docs  maintenancecheck.equip_doc.create  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/equipment-classes  maintenancecheck.inspection_obligation.classes  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/equipment/{equipmentId}/obligations  maintenancecheck.inspection_obligation.index  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/equipment/{equipmentId}/obligations  maintenancecheck.inspection_obligation.create  appinfo/routes.php:5 routes",
+        "DELETE /index.php/apps/maintenancecheck/api/equip-docs/{id}  maintenancecheck.equip_doc.destroy  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/equip-docs/{id}/download  maintenancecheck.equip_doc.download  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/work-orders/{id}/comments  maintenancecheck.work_order.comments  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/maintenancecheck/api/work-orders/{id}/comments  maintenancecheck.work_order.addcomment  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/maintenancecheck/api/widget-snapshot  maintenancecheck.mobile.widgetsnapshot  appinfo/routes.php:5 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 168 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 9 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/maintenancecheck/due  maintenancecheck.page.duealias  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/customers  maintenancecheck.page.customers  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/customers/{id}  maintenancecheck.page.customer  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/catalogs  maintenancecheck.page.catalogs  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/settings  maintenancecheck.page.settings  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/calendar  maintenancecheck.page.calendar  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/dispatch  maintenancecheck.page.dispatch  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/tours  maintenancecheck.page.tours  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/kpi  maintenancecheck.page.kpi  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/exceptions  maintenancecheck.page.exceptions  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/customers  maintenancecheck.customer.index  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/customers/{id}  maintenancecheck.customer.show  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/customers  maintenancecheck.customer.create  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/maintenancecheck/api/customers/{id}  maintenancecheck.customer.update  appinfo/routes.php:5 routes",
+        "  DELETE /index.php/apps/maintenancecheck/api/customers/{id}  maintenancecheck.customer.destroy  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/equipment  maintenancecheck.equipment.index  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/equipment/{id}  maintenancecheck.equipment.show  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/equipment  maintenancecheck.equipment.create  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/maintenancecheck/api/equipment/{id}  maintenancecheck.equipment.update  appinfo/routes.php:5 routes",
+        "  DELETE /index.php/apps/maintenancecheck/api/equipment/{id}  maintenancecheck.equipment.destroy  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/equipment/{id}/qr/rotate  maintenancecheck.equipment.rotateqr  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/equipment/{id}/plans  maintenancecheck.plan.indexforequipment  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/equipment/{id}/plans  maintenancecheck.plan.create  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/maintenancecheck/api/plans/{id}  maintenancecheck.plan.update  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/plans/{id}/deactivate  maintenancecheck.plan.deactivate  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/plans/{id}/schedule  maintenancecheck.plan.schedule  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/visits  maintenancecheck.visit.index  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/visits/due  maintenancecheck.visit.due  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/visits/{id}  maintenancecheck.visit.show  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/maintenancecheck/api/visits/{id}  maintenancecheck.visit.update  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/visits/{id}/complete  maintenancecheck.visit.complete  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/visits/{id}/skip  maintenancecheck.visit.skip  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/visits/{id}/cancel  maintenancecheck.visit.cancel  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/maintenancecheck/api/visits/{id}/assign  maintenancecheck.visit.assign  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/equip-types  maintenancecheck.catalog.equiptypes  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/equip-types  maintenancecheck.catalog.createequiptype  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/maintenancecheck/api/equip-types/{id}  maintenancecheck.catalog.updateequiptype  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/maint-types  maintenancecheck.catalog.mainttypes  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/maint-types  maintenancecheck.catalog.createmainttype  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/maintenancecheck/api/maint-types/{id}  maintenancecheck.catalog.updatemainttype  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/config  maintenancecheck.config.index  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/config/access  maintenancecheck.config.saveaccess  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/config/office  maintenancecheck.config.saveoffice  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/config/inventory-flange  maintenancecheck.config.saveinventoryflange  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/config/policies  maintenancecheck.config.savepolicies  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/config/user-access  maintenancecheck.config.useraccess  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/users/search  maintenancecheck.config.searchusers  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/groups/search  maintenancecheck.config.searchgroups  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/license  maintenancecheck.license.show  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/license  maintenancecheck.license.apply  appinfo/routes.php:5 routes",
+        "  DELETE /index.php/apps/maintenancecheck/api/license  maintenancecheck.license.remove  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/license/seats  maintenancecheck.license.seats  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/license/seats  maintenancecheck.license.assignseat  appinfo/routes.php:5 routes",
+        "  DELETE /index.php/apps/maintenancecheck/api/license/seats/{uid}  maintenancecheck.license.removeseat  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/calendar  maintenancecheck.calendar.index  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/work-orders  maintenancecheck.work_order.index  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/work-orders  maintenancecheck.work_order.create  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/work-orders/{id}  maintenancecheck.work_order.show  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/maintenancecheck/api/work-orders/{id}  maintenancecheck.work_order.update  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/visits/{visitId}/work-orders  maintenancecheck.work_order.createfromvisit  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/maintenancecheck/api/work-orders/{id}/assign  maintenancecheck.work_order.assign  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/work-orders/{id}/transition  maintenancecheck.work_order.transition  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/maintenancecheck/api/work-orders/{id}/checklist/{itemCode}  maintenancecheck.work_order.setchecklistresult  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/maintenancecheck/api/work-orders/{id}/skills  maintenancecheck.work_order.setskills  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/work-orders/{id}/photos  maintenancecheck.work_order.listphotos  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/work-orders/{id}/photos  maintenancecheck.work_order.addphoto  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/work-orders/{id}/photos/{photoId}  maintenancecheck.work_order.downloadphoto  appinfo/routes.php:5 routes",
+        "  DELETE /index.php/apps/maintenancecheck/api/work-orders/{id}/photos/{photoId}  maintenancecheck.work_order.deletephoto  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/work-orders/{id}/signature  maintenancecheck.work_order.setsignature  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/work-orders/{id}/signature  maintenancecheck.work_order.downloadsignature  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/work-orders/{id}/pdf/job-pack  maintenancecheck.work_order.jobpackpdf  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/work-orders/{id}/pdf/servicebericht  maintenancecheck.work_order.serviceberichtpdf  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/work-orders/{id}/pdf/inspection-evidence  maintenancecheck.work_order.inspectionevidencepdf  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/kit-templates  maintenancecheck.kit.indextemplates  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/kit-templates  maintenancecheck.kit.createtemplate  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/kit-templates/{id}  maintenancecheck.kit.showtemplate  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/maintenancecheck/api/kit-templates/{id}  maintenancecheck.kit.updatetemplate  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/work-orders/{id}/kit  maintenancecheck.kit.attach  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/work-orders/{id}/kit/lines  maintenancecheck.kit.addline  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/work-orders/{id}/kit/lines/{lineId}/pack  maintenancecheck.kit.packline  appinfo/routes.php:5 routes",
+        "  DELETE /index.php/apps/maintenancecheck/api/work-orders/{id}/kit/lines/{lineId}  maintenancecheck.kit.removeline  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/customers/{customerId}/sites  maintenancecheck.site.indexforcustomer  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/customers/{customerId}/sites  maintenancecheck.site.create  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/maintenancecheck/api/sites/{id}  maintenancecheck.site.update  appinfo/routes.php:5 routes",
+        "  DELETE /index.php/apps/maintenancecheck/api/sites/{id}  maintenancecheck.site.destroy  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/procedures  maintenancecheck.procedure.index  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/procedures  maintenancecheck.procedure.create  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/procedures/pack  maintenancecheck.procedure.exportpack  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/procedures/pack  maintenancecheck.procedure.importpack  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/procedures/{id}  maintenancecheck.procedure.show  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/maintenancecheck/api/procedures/{id}  maintenancecheck.procedure.update  appinfo/routes.php:5 routes",
+        "  DELETE /index.php/apps/maintenancecheck/api/procedures/{id}  maintenancecheck.procedure.destroy  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/procedures/{id}/fork  maintenancecheck.procedure.fork  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/skills  maintenancecheck.skill.index  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/skills  maintenancecheck.skill.create  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/maintenancecheck/api/skills/{id}  maintenancecheck.skill.update  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/users/{uid}/skills  maintenancecheck.skill.userskills  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/maintenancecheck/api/users/{uid}/skills  maintenancecheck.skill.setuserskills  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/capacity  maintenancecheck.capacity.index  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/maintenancecheck/api/capacity/{uid}  maintenancecheck.capacity.set  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/dispatch  maintenancecheck.dispatch.board  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/tours  maintenancecheck.tour.index  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/tours  maintenancecheck.tour.create  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/tours/{id}  maintenancecheck.tour.show  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/maintenancecheck/api/tours/{id}  maintenancecheck.tour.update  appinfo/routes.php:5 routes",
+        "  DELETE /index.php/apps/maintenancecheck/api/tours/{id}  maintenancecheck.tour.destroy  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/tours/{id}/stops  maintenancecheck.tour.addstop  appinfo/routes.php:5 routes",
+        "  DELETE /index.php/apps/maintenancecheck/api/tours/{id}/stops/{stopId}  maintenancecheck.tour.removestop  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/maintenancecheck/api/tours/{id}/reorder  maintenancecheck.tour.reorder  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/tours/{id}/suggest-order  maintenancecheck.tour.suggestorder  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/equipment/{equipmentId}/meters  maintenancecheck.meter.indexforequipment  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/equipment/{equipmentId}/meters  maintenancecheck.meter.create  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/maintenancecheck/api/meters/{id}  maintenancecheck.meter.update  appinfo/routes.php:5 routes",
+        "  DELETE /index.php/apps/maintenancecheck/api/meters/{id}  maintenancecheck.meter.destroy  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/meters/{id}/readings  maintenancecheck.meter.readings  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/meters/{id}/readings  maintenancecheck.meter.addreading  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/equipment/{equipmentId}/meters/import  maintenancecheck.meter.importcsv  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/mobile/v1/bootstrap  maintenancecheck.mobile.bootstrap  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/mobile/v1/due  maintenancecheck.mobile.due  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/mobile/v1/calendar  maintenancecheck.mobile.calendar  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/mobile/v1/equipment/by-qr/{token}  maintenancecheck.mobile.equipmentbyqr  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/mobile/v1/equipment/{id}  maintenancecheck.mobile.equipment  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/mobile/v1/visits  maintenancecheck.mobile.visits  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/mobile/v1/visits/{id}  maintenancecheck.mobile.visit  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/mobile/v1/visits/{id}/complete  maintenancecheck.mobile.complete  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/mobile/v1/visits/{id}/skip  maintenancecheck.mobile.skip  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/mobile/v1/customers  maintenancecheck.mobile.customers  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/mobile/v1/work-orders  maintenancecheck.mobile.workorders  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/mobile/v1/visits/{visitId}/work-orders  maintenancecheck.mobile.createworkorderfromvisit  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}  maintenancecheck.mobile.workorder  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/transition  maintenancecheck.mobile.workordertransition  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/checklist/{itemCode}  maintenancecheck.mobile.workorderchecklist  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/photos  maintenancecheck.mobile.workorderphotos  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/photos  maintenancecheck.mobile.workorderaddphoto  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/kit  maintenancecheck.mobile.workorderkit  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/kit/lines/{lineId}/pack  maintenancecheck.mobile.workorderpackline  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/signature  maintenancecheck.mobile.workordersignature  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/pdf/servicebericht  maintenancecheck.mobile.servicebericht  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/pdf/inspection-evidence  maintenancecheck.mobile.inspectionevidence  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/inspection-evidence.pdf  maintenancecheck.mobile.inspectionevidencealias  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/mobile/v1/equipment/{equipmentId}/obligations  maintenancecheck.mobile.equipmentobligations  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/mobile/v1/tours/today  maintenancecheck.mobile.tourtoday  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/mobile/v1/equipment/{equipmentId}/meters  maintenancecheck.mobile.equipmentmeters  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/mobile/v1/meters/{id}/readings  maintenancecheck.mobile.addmeterreading  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/comments  maintenancecheck.mobile.workordercomments  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/comments  maintenancecheck.mobile.workorderaddcomment  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/mobile/v1/equipment/{equipmentId}/docs  maintenancecheck.mobile.equipmentdocs  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/mobile/v1/equip-docs/{id}/download  maintenancecheck.mobile.downloadequipdoc  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/mobile/v1/failure-codes  maintenancecheck.mobile.failurecodes  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/mobile/v1/exceptions  maintenancecheck.mobile.exceptions  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/ops/kpi  maintenancecheck.ops.kpi  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/ops/kpi.csv  maintenancecheck.ops.kpicsv  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/ops/exceptions  maintenancecheck.ops.exceptions  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/failure-codes  maintenancecheck.ops.failurecodes  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/failure-codes  maintenancecheck.ops.createfailurecode  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/maintenancecheck/api/failure-codes/{id}  maintenancecheck.ops.updatefailurecode  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/ops/reminders/dry-run  maintenancecheck.ops.reminderdryrun  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/admin/transfer/reconcile  maintenancecheck.transfer_api.reconcile  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/equipment/{equipmentId}/docs  maintenancecheck.equip_doc.index  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/equipment/{equipmentId}/docs  maintenancecheck.equip_doc.create  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/equipment-classes  maintenancecheck.inspection_obligation.classes  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/equipment/{equipmentId}/obligations  maintenancecheck.inspection_obligation.index  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/equipment/{equipmentId}/obligations  maintenancecheck.inspection_obligation.create  appinfo/routes.php:5 routes",
+        "  DELETE /index.php/apps/maintenancecheck/api/equip-docs/{id}  maintenancecheck.equip_doc.destroy  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/equip-docs/{id}/download  maintenancecheck.equip_doc.download  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/work-orders/{id}/comments  maintenancecheck.work_order.comments  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/maintenancecheck/api/work-orders/{id}/comments  maintenancecheck.work_order.addcomment  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/maintenancecheck/api/widget-snapshot  maintenancecheck.mobile.widgetsnapshot  appinfo/routes.php:5 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 165
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/ConfigTransfer/TransferReceiptStore.php:44 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferReceiptStore.php:46 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferReceiptStore.php:55 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferReceiptStore.php:67 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferReceiptStore.php:83 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferReceiptStore.php:91 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferReceiptStore.php:101 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferService.php:1015 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/ConfigTransfer/TransferService.php:1536 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferService.php:1555 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferService.php:1595 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferService.php:1619 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Controller/PageController.php:281 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Public/CrmFieldCustomerFacade.php:40 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Repair/EnsureMaintenanceCheckSchema.php:54 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Repair/UninstallDropTables.php:111 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Repair/UninstallDropTables.php:143 OCP\\IConfig::deleteAppValues(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/AccessControlService.php:64 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/AccessControlService.php:154 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/AccessControlService.php:181 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/AccessControlService.php:190 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/InventoryFlangeService.php:44 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/InventoryFlangeService.php:49 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/InventoryFlangeService.php:54 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/InventoryFlangeService.php:69 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/InventoryFlangeService.php:74 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/InventoryFlangeService.php:85 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/InventoryFlangeService.php:88 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/InventoryFlangeService.php:136 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PolicyService.php:63 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PolicyService.php:69 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PolicyService.php:90 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PolicyService.php:101 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PolicyService.php:107 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PolicyService.php:114 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PolicyService.php:121 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PolicyService.php:130 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PolicyService.php:167 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PolicyService.php:176 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PolicyService.php:189 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PolicyService.php:199 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PolicyService.php:208 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PolicyService.php:217 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PolicyService.php:226 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PolicyService.php:235 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PolicyService.php:244 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PolicyService.php:251 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:139 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:321 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:532 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:536 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:779 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:783 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:790 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:852 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Support/NavGate.php:53 OCP\\AppFramework\\IAppContainer: deprecated since Nextcloud 25",
+        "lib/Support/UserDirectorySearch.php:33 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead"
+      ],
+      "lines": [
+        "57 uses in 12 files of the public API that is deprecated in Nextcloud 32 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:44 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:46 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:55 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:67 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:83 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:91 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:101 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferService.php:1015 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/ConfigTransfer/TransferService.php:1536 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferService.php:1555 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferService.php:1595 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferService.php:1619 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Controller/PageController.php:281 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Public/CrmFieldCustomerFacade.php:40 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Repair/EnsureMaintenanceCheckSchema.php:54 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Repair/UninstallDropTables.php:111 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Repair/UninstallDropTables.php:143 OCP\\IConfig::deleteAppValues(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/AccessControlService.php:64 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/AccessControlService.php:154 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/AccessControlService.php:181 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/AccessControlService.php:190 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/InventoryFlangeService.php:44 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/InventoryFlangeService.php:49 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/InventoryFlangeService.php:54 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/InventoryFlangeService.php:69 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/InventoryFlangeService.php:74 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/InventoryFlangeService.php:85 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/InventoryFlangeService.php:88 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/InventoryFlangeService.php:136 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PolicyService.php:63 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PolicyService.php:69 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PolicyService.php:90 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PolicyService.php:101 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PolicyService.php:107 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PolicyService.php:114 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PolicyService.php:121 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PolicyService.php:130 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PolicyService.php:167 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PolicyService.php:176 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PolicyService.php:189 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PolicyService.php:199 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PolicyService.php:208 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PolicyService.php:217 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PolicyService.php:226 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PolicyService.php:235 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PolicyService.php:244 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PolicyService.php:251 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:139 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:321 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:532 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:536 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:779 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:783 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:790 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:852 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Support/NavGate.php:53 OCP\\AppFramework\\IAppContainer: deprecated since Nextcloud 25",
+        "  lib/Support/UserDirectorySearch.php:33 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 54
+        }
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/ConfigTransfer/TransferService.php:392",
+        "lib/ConfigTransfer/TransferService.php:1234",
+        "lib/Service/CustomerService.php:143",
+        "lib/Service/KitService.php:99",
+        "lib/Service/KitService.php:142",
+        "lib/Service/KitService.php:190",
+        "lib/Service/KitService.php:287",
+        "lib/Service/LicenseService.php:113",
+        "lib/Service/MeterService.php:132",
+        "lib/Service/MeterService.php:178",
+        "lib/Service/MeterService.php:264",
+        "lib/Service/PlanService.php:109",
+        "lib/Service/PlanService.php:183",
+        "lib/Service/PlanService.php:243",
+        "lib/Service/ProcedureService.php:103",
+        "lib/Service/ProcedureService.php:153",
+        "lib/Service/ProcedureService.php:183",
+        "lib/Service/ProcedureService.php:220",
+        "lib/Service/ProcedureService.php:301",
+        "lib/Service/TourService.php:151",
+        "lib/Service/TourService.php:191",
+        "lib/Service/TourService.php:245",
+        "lib/Service/TourService.php:291",
+        "lib/Service/UpgradeBackupService.php:259",
+        "lib/Service/VisitService.php:237",
+        "lib/Service/VisitService.php:393",
+        "lib/Service/WoChecklistService.php:140",
+        "lib/Service/WoEvidenceService.php:59",
+        "lib/Service/WorkOrderService.php:440",
+        "lib/Service/WorkOrderService.php:538",
+        "lib/Service/WorkOrderService.php:655",
+        "lib/Service/WorkOrderService.php:755",
+        "lib/Service/WorkOrderService.php:1426"
+      ],
+      "lines": [
+        "33 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/ConfigTransfer/TransferService.php:392",
+        "  lib/ConfigTransfer/TransferService.php:1234",
+        "  lib/Service/CustomerService.php:143",
+        "  lib/Service/KitService.php:99",
+        "  lib/Service/KitService.php:142",
+        "  lib/Service/KitService.php:190",
+        "  lib/Service/KitService.php:287",
+        "  lib/Service/LicenseService.php:113",
+        "  lib/Service/MeterService.php:132",
+        "  lib/Service/MeterService.php:178",
+        "  lib/Service/MeterService.php:264",
+        "  lib/Service/PlanService.php:109",
+        "  lib/Service/PlanService.php:183",
+        "  lib/Service/PlanService.php:243",
+        "  lib/Service/ProcedureService.php:103",
+        "  lib/Service/ProcedureService.php:153",
+        "  lib/Service/ProcedureService.php:183",
+        "  lib/Service/ProcedureService.php:220",
+        "  lib/Service/ProcedureService.php:301",
+        "  lib/Service/TourService.php:151",
+        "  lib/Service/TourService.php:191",
+        "  lib/Service/TourService.php:245",
+        "  lib/Service/TourService.php:291",
+        "  lib/Service/UpgradeBackupService.php:259",
+        "  lib/Service/VisitService.php:237",
+        "  lib/Service/VisitService.php:393",
+        "  lib/Service/WoChecklistService.php:140",
+        "  lib/Service/WoEvidenceService.php:59",
+        "  lib/Service/WorkOrderService.php:440",
+        "  lib/Service/WorkOrderService.php:538",
+        "  lib/Service/WorkOrderService.php:655",
+        "  lib/Service/WorkOrderService.php:755",
+        "  lib/Service/WorkOrderService.php:1426"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 30
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/OverdueReminderJob.php OCA\\MaintenanceCheck\\BackgroundJob\\OverdueReminderJob"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/OverdueReminderJob.php OCA\\MaintenanceCheck\\BackgroundJob\\OverdueReminderJob"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/ConfigTransfer/TransferPendingStore.php:47 time()",
+        "lib/ConfigTransfer/TransferPendingStore.php:79 time()",
+        "lib/ConfigTransfer/TransferPendingStore.php:126 time()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:46 time()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:81 time()",
+        "lib/ConfigTransfer/TransferService.php:355 time()",
+        "lib/ConfigTransfer/TransferService.php:1493 time()",
+        "lib/Controller/MobileController.php:582 new DateTimeImmutable()",
+        "lib/Service/Clock.php:16 new DateTimeImmutable()",
+        "lib/Service/Clock.php:21 time()",
+        "lib/Service/UpgradeBackupService.php:131 new DateTimeImmutable()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 11 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/ConfigTransfer/TransferPendingStore.php:47 time()",
+        "  lib/ConfigTransfer/TransferPendingStore.php:79 time()",
+        "  lib/ConfigTransfer/TransferPendingStore.php:126 time()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:46 time()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:81 time()",
+        "  lib/ConfigTransfer/TransferService.php:355 time()",
+        "  lib/ConfigTransfer/TransferService.php:1493 time()",
+        "  lib/Controller/MobileController.php:582 new DateTimeImmutable()",
+        "  lib/Service/Clock.php:16 new DateTimeImmutable()",
+        "  lib/Service/Clock.php:21 time()",
+        "  lib/Service/UpgradeBackupService.php:131 new DateTimeImmutable()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 8
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/ConfigTransfer/TransferReceiptStore.php:44 setAppValue()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:46 setAppValue()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:55 getAppValue()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:67 getAppValue()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:83 setAppValue()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:91 getAppValue()",
+        "lib/ConfigTransfer/TransferService.php:1555 getAppValue()",
+        "lib/ConfigTransfer/TransferService.php:1595 setAppValue()",
+        "lib/ConfigTransfer/TransferService.php:1600 setValueString()",
+        "lib/ConfigTransfer/TransferService.php:1617 setValueString()",
+        "lib/ConfigTransfer/TransferService.php:1620 setValueString()",
+        "lib/Public/CrmFieldCustomerFacade.php:40 getAppValue()",
+        "lib/Service/AccessControlService.php:64 getAppValue()",
+        "lib/Service/AccessControlService.php:154 getAppValue()",
+        "lib/Service/AccessControlService.php:181 setAppValue()",
+        "lib/Service/AccessControlService.php:190 setAppValue()",
+        "lib/Service/InventoryFlangeService.php:44 getAppValue()",
+        "lib/Service/InventoryFlangeService.php:49 setAppValue()",
+        "lib/Service/InventoryFlangeService.php:54 getAppValue()",
+        "lib/Service/InventoryFlangeService.php:69 setAppValue()",
+        "lib/Service/InventoryFlangeService.php:74 getAppValue()",
+        "lib/Service/InventoryFlangeService.php:88 setAppValue()",
+        "lib/Service/InventoryFlangeService.php:136 getAppValue()",
+        "lib/Service/PolicyService.php:63 getAppValue()",
+        "lib/Service/PolicyService.php:69 getAppValue()",
+        "lib/Service/PolicyService.php:90 getAppValue()",
+        "lib/Service/PolicyService.php:101 getAppValue()",
+        "lib/Service/PolicyService.php:107 getAppValue()",
+        "lib/Service/PolicyService.php:114 getAppValue()",
+        "lib/Service/PolicyService.php:121 getAppValue()",
+        "lib/Service/PolicyService.php:130 getAppValue()",
+        "lib/Service/PolicyService.php:167 setAppValue()",
+        "lib/Service/PolicyService.php:176 setAppValue()",
+        "lib/Service/PolicyService.php:189 setAppValue()",
+        "lib/Service/PolicyService.php:199 setAppValue()",
+        "lib/Service/PolicyService.php:208 setAppValue()",
+        "lib/Service/PolicyService.php:217 setAppValue()",
+        "lib/Service/PolicyService.php:226 setAppValue()",
+        "lib/Service/PolicyService.php:235 setAppValue()",
+        "lib/Service/PolicyService.php:244 setAppValue()",
+        "lib/Service/PolicyService.php:251 getAppValue()",
+        "lib/Service/UpgradeBackupService.php:139 setAppValue()",
+        "lib/Service/UpgradeBackupService.php:321 setAppValue()",
+        "lib/Service/UpgradeBackupService.php:536 getAppValue()",
+        "lib/Service/UpgradeBackupService.php:790 setAppValue()",
+        "lib/Service/UpgradeBackupService.php:852 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 46 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:44 setAppValue()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:46 setAppValue()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:55 getAppValue()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:67 getAppValue()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:83 setAppValue()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:91 getAppValue()",
+        "  lib/ConfigTransfer/TransferService.php:1555 getAppValue()",
+        "  lib/ConfigTransfer/TransferService.php:1595 setAppValue()",
+        "  lib/ConfigTransfer/TransferService.php:1600 setValueString()",
+        "  lib/ConfigTransfer/TransferService.php:1617 setValueString()",
+        "  lib/ConfigTransfer/TransferService.php:1620 setValueString()",
+        "  lib/Public/CrmFieldCustomerFacade.php:40 getAppValue()",
+        "  lib/Service/AccessControlService.php:64 getAppValue()",
+        "  lib/Service/AccessControlService.php:154 getAppValue()",
+        "  lib/Service/AccessControlService.php:181 setAppValue()",
+        "  lib/Service/AccessControlService.php:190 setAppValue()",
+        "  lib/Service/InventoryFlangeService.php:44 getAppValue()",
+        "  lib/Service/InventoryFlangeService.php:49 setAppValue()",
+        "  lib/Service/InventoryFlangeService.php:54 getAppValue()",
+        "  lib/Service/InventoryFlangeService.php:69 setAppValue()",
+        "  lib/Service/InventoryFlangeService.php:74 getAppValue()",
+        "  lib/Service/InventoryFlangeService.php:88 setAppValue()",
+        "  lib/Service/InventoryFlangeService.php:136 getAppValue()",
+        "  lib/Service/PolicyService.php:63 getAppValue()",
+        "  lib/Service/PolicyService.php:69 getAppValue()",
+        "  lib/Service/PolicyService.php:90 getAppValue()",
+        "  lib/Service/PolicyService.php:101 getAppValue()",
+        "  lib/Service/PolicyService.php:107 getAppValue()",
+        "  lib/Service/PolicyService.php:114 getAppValue()",
+        "  lib/Service/PolicyService.php:121 getAppValue()",
+        "  lib/Service/PolicyService.php:130 getAppValue()",
+        "  lib/Service/PolicyService.php:167 setAppValue()",
+        "  lib/Service/PolicyService.php:176 setAppValue()",
+        "  lib/Service/PolicyService.php:189 setAppValue()",
+        "  lib/Service/PolicyService.php:199 setAppValue()",
+        "  lib/Service/PolicyService.php:208 setAppValue()",
+        "  lib/Service/PolicyService.php:217 setAppValue()",
+        "  lib/Service/PolicyService.php:226 setAppValue()",
+        "  lib/Service/PolicyService.php:235 setAppValue()",
+        "  lib/Service/PolicyService.php:244 setAppValue()",
+        "  lib/Service/PolicyService.php:251 getAppValue()",
+        "  lib/Service/UpgradeBackupService.php:139 setAppValue()",
+        "  lib/Service/UpgradeBackupService.php:321 setAppValue()",
+        "  lib/Service/UpgradeBackupService.php:536 getAppValue()",
+        "  lib/Service/UpgradeBackupService.php:790 setAppValue()",
+        "  lib/Service/UpgradeBackupService.php:852 getAppValue()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 43
+        }
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version1020Date20260801180000.php:38 a column of mn_work_orders whose name is no constant",
+        "lib/Migration/Version1030Date20260801190000.php:49 a column of mn_work_orders whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version1020Date20260801180000.php:38 a column of mn_work_orders whose name is no constant",
+        "  lib/Migration/Version1030Date20260801190000.php:49 a column of mn_work_orders whose name is no constant"
+      ]
+    }
+  ],
+  "endpoints": 182,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/",
+      "target": "OCA\\MaintenanceCheck\\Controller\\PageController::due",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/admin/transfer/apply",
+      "target": "OCA\\MaintenanceCheck\\Controller\\TransferApiController::apply",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/admin/transfer/export",
+      "target": "OCA\\MaintenanceCheck\\Controller\\TransferApiController::export",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/admin/transfer/preview",
+      "target": "OCA\\MaintenanceCheck\\Controller\\TransferApiController::preview",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/admin/transfer/reconcile",
+      "target": "OCA\\MaintenanceCheck\\Controller\\TransferApiController::reconcile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/admin/transfer/status",
+      "target": "OCA\\MaintenanceCheck\\Controller\\TransferApiController::status",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/calendar",
+      "target": "OCA\\MaintenanceCheck\\Controller\\CalendarController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/capacity",
+      "target": "OCA\\MaintenanceCheck\\Controller\\CapacityController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/maintenancecheck/api/capacity/{uid}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\CapacityController::set",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/config",
+      "target": "OCA\\MaintenanceCheck\\Controller\\ConfigController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/config/access",
+      "target": "OCA\\MaintenanceCheck\\Controller\\ConfigController::saveAccess",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/config/inventory-flange",
+      "target": "OCA\\MaintenanceCheck\\Controller\\ConfigController::saveInventoryFlange",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/config/office",
+      "target": "OCA\\MaintenanceCheck\\Controller\\ConfigController::saveOffice",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/config/policies",
+      "target": "OCA\\MaintenanceCheck\\Controller\\ConfigController::savePolicies",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/config/user-access",
+      "target": "OCA\\MaintenanceCheck\\Controller\\ConfigController::userAccess",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/customers",
+      "target": "OCA\\MaintenanceCheck\\Controller\\CustomerController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/customers",
+      "target": "OCA\\MaintenanceCheck\\Controller\\CustomerController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/customers/{customerId}/sites",
+      "target": "OCA\\MaintenanceCheck\\Controller\\SiteController::indexForCustomer",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/customers/{customerId}/sites",
+      "target": "OCA\\MaintenanceCheck\\Controller\\SiteController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/maintenancecheck/api/customers/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\CustomerController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/customers/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\CustomerController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/maintenancecheck/api/customers/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\CustomerController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/customers/{id}/ensure-link",
+      "target": "OCA\\MaintenanceCheck\\Controller\\CustomerController::ensureLink",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/customers/{id}/unlink-identity",
+      "target": "OCA\\MaintenanceCheck\\Controller\\CustomerController::unlinkIdentity",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/dispatch",
+      "target": "OCA\\MaintenanceCheck\\Controller\\DispatchController::board",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/maintenancecheck/api/equip-docs/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\EquipDocController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/equip-docs/{id}/download",
+      "target": "OCA\\MaintenanceCheck\\Controller\\EquipDocController::download",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/equip-types",
+      "target": "OCA\\MaintenanceCheck\\Controller\\CatalogController::equipTypes",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/equip-types",
+      "target": "OCA\\MaintenanceCheck\\Controller\\CatalogController::createEquipType",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/maintenancecheck/api/equip-types/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\CatalogController::updateEquipType",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/equipment",
+      "target": "OCA\\MaintenanceCheck\\Controller\\EquipmentController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/equipment",
+      "target": "OCA\\MaintenanceCheck\\Controller\\EquipmentController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/equipment-classes",
+      "target": "OCA\\MaintenanceCheck\\Controller\\InspectionObligationController::classes",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/equipment/{equipmentId}/docs",
+      "target": "OCA\\MaintenanceCheck\\Controller\\EquipDocController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/equipment/{equipmentId}/docs",
+      "target": "OCA\\MaintenanceCheck\\Controller\\EquipDocController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/equipment/{equipmentId}/meters",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MeterController::indexForEquipment",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/equipment/{equipmentId}/meters",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MeterController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/equipment/{equipmentId}/meters/import",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MeterController::importCsv",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/equipment/{equipmentId}/obligations",
+      "target": "OCA\\MaintenanceCheck\\Controller\\InspectionObligationController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/equipment/{equipmentId}/obligations",
+      "target": "OCA\\MaintenanceCheck\\Controller\\InspectionObligationController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/maintenancecheck/api/equipment/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\EquipmentController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/equipment/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\EquipmentController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/maintenancecheck/api/equipment/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\EquipmentController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/equipment/{id}/plans",
+      "target": "OCA\\MaintenanceCheck\\Controller\\PlanController::indexForEquipment",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/equipment/{id}/plans",
+      "target": "OCA\\MaintenanceCheck\\Controller\\PlanController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/equipment/{id}/qr/rotate",
+      "target": "OCA\\MaintenanceCheck\\Controller\\EquipmentController::rotateQr",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/failure-codes",
+      "target": "OCA\\MaintenanceCheck\\Controller\\OpsController::failureCodes",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/failure-codes",
+      "target": "OCA\\MaintenanceCheck\\Controller\\OpsController::createFailureCode",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/maintenancecheck/api/failure-codes/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\OpsController::updateFailureCode",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/groups/search",
+      "target": "OCA\\MaintenanceCheck\\Controller\\ConfigController::searchGroups",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/kit-templates",
+      "target": "OCA\\MaintenanceCheck\\Controller\\KitController::indexTemplates",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/kit-templates",
+      "target": "OCA\\MaintenanceCheck\\Controller\\KitController::createTemplate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/kit-templates/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\KitController::showTemplate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/maintenancecheck/api/kit-templates/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\KitController::updateTemplate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/maintenancecheck/api/license",
+      "target": "OCA\\MaintenanceCheck\\Controller\\LicenseController::remove",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/license",
+      "target": "OCA\\MaintenanceCheck\\Controller\\LicenseController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/license",
+      "target": "OCA\\MaintenanceCheck\\Controller\\LicenseController::apply",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/license/seats",
+      "target": "OCA\\MaintenanceCheck\\Controller\\LicenseController::seats",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/license/seats",
+      "target": "OCA\\MaintenanceCheck\\Controller\\LicenseController::assignSeat",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/maintenancecheck/api/license/seats/{uid}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\LicenseController::removeSeat",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/maint-types",
+      "target": "OCA\\MaintenanceCheck\\Controller\\CatalogController::maintTypes",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/maint-types",
+      "target": "OCA\\MaintenanceCheck\\Controller\\CatalogController::createMaintType",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/maintenancecheck/api/maint-types/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\CatalogController::updateMaintType",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/maintenancecheck/api/meters/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MeterController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/maintenancecheck/api/meters/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MeterController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/meters/{id}/readings",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MeterController::readings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/meters/{id}/readings",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MeterController::addReading",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/ops/exceptions",
+      "target": "OCA\\MaintenanceCheck\\Controller\\OpsController::exceptions",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/ops/kpi",
+      "target": "OCA\\MaintenanceCheck\\Controller\\OpsController::kpi",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/ops/kpi.csv",
+      "target": "OCA\\MaintenanceCheck\\Controller\\OpsController::kpiCsv",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/ops/reminders/dry-run",
+      "target": "OCA\\MaintenanceCheck\\Controller\\OpsController::reminderDryRun",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/maintenancecheck/api/plans/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\PlanController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/plans/{id}/deactivate",
+      "target": "OCA\\MaintenanceCheck\\Controller\\PlanController::deactivate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/plans/{id}/schedule",
+      "target": "OCA\\MaintenanceCheck\\Controller\\PlanController::schedule",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/procedures",
+      "target": "OCA\\MaintenanceCheck\\Controller\\ProcedureController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/procedures",
+      "target": "OCA\\MaintenanceCheck\\Controller\\ProcedureController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/maintenancecheck/api/procedures/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\ProcedureController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/procedures/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\ProcedureController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/maintenancecheck/api/procedures/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\ProcedureController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/procedures/{id}/fork",
+      "target": "OCA\\MaintenanceCheck\\Controller\\ProcedureController::fork",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/procedures/pack",
+      "target": "OCA\\MaintenanceCheck\\Controller\\ProcedureController::exportPack",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/procedures/pack",
+      "target": "OCA\\MaintenanceCheck\\Controller\\ProcedureController::importPack",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/maintenancecheck/api/sites/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\SiteController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/maintenancecheck/api/sites/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\SiteController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/skills",
+      "target": "OCA\\MaintenanceCheck\\Controller\\SkillController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/skills",
+      "target": "OCA\\MaintenanceCheck\\Controller\\SkillController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/maintenancecheck/api/skills/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\SkillController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/tours",
+      "target": "OCA\\MaintenanceCheck\\Controller\\TourController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/tours",
+      "target": "OCA\\MaintenanceCheck\\Controller\\TourController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/maintenancecheck/api/tours/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\TourController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/tours/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\TourController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/maintenancecheck/api/tours/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\TourController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/maintenancecheck/api/tours/{id}/reorder",
+      "target": "OCA\\MaintenanceCheck\\Controller\\TourController::reorder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/tours/{id}/stops",
+      "target": "OCA\\MaintenanceCheck\\Controller\\TourController::addStop",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/maintenancecheck/api/tours/{id}/stops/{stopId}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\TourController::removeStop",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/tours/{id}/suggest-order",
+      "target": "OCA\\MaintenanceCheck\\Controller\\TourController::suggestOrder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/users/{uid}/skills",
+      "target": "OCA\\MaintenanceCheck\\Controller\\SkillController::userSkills",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/maintenancecheck/api/users/{uid}/skills",
+      "target": "OCA\\MaintenanceCheck\\Controller\\SkillController::setUserSkills",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/users/search",
+      "target": "OCA\\MaintenanceCheck\\Controller\\ConfigController::searchUsers",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/visits",
+      "target": "OCA\\MaintenanceCheck\\Controller\\VisitController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/visits/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\VisitController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/maintenancecheck/api/visits/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\VisitController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/maintenancecheck/api/visits/{id}/assign",
+      "target": "OCA\\MaintenanceCheck\\Controller\\VisitController::assign",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/visits/{id}/cancel",
+      "target": "OCA\\MaintenanceCheck\\Controller\\VisitController::cancel",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/visits/{id}/complete",
+      "target": "OCA\\MaintenanceCheck\\Controller\\VisitController::complete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/visits/{id}/skip",
+      "target": "OCA\\MaintenanceCheck\\Controller\\VisitController::skip",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/visits/{visitId}/work-orders",
+      "target": "OCA\\MaintenanceCheck\\Controller\\WorkOrderController::createFromVisit",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/visits/due",
+      "target": "OCA\\MaintenanceCheck\\Controller\\VisitController::due",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/widget-snapshot",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::widgetSnapshot",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/work-orders",
+      "target": "OCA\\MaintenanceCheck\\Controller\\WorkOrderController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/work-orders",
+      "target": "OCA\\MaintenanceCheck\\Controller\\WorkOrderController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/work-orders/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\WorkOrderController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/maintenancecheck/api/work-orders/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\WorkOrderController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/maintenancecheck/api/work-orders/{id}/assign",
+      "target": "OCA\\MaintenanceCheck\\Controller\\WorkOrderController::assign",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/maintenancecheck/api/work-orders/{id}/checklist/{itemCode}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\WorkOrderController::setChecklistResult",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/work-orders/{id}/comments",
+      "target": "OCA\\MaintenanceCheck\\Controller\\WorkOrderController::comments",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/work-orders/{id}/comments",
+      "target": "OCA\\MaintenanceCheck\\Controller\\WorkOrderController::addComment",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/work-orders/{id}/kit",
+      "target": "OCA\\MaintenanceCheck\\Controller\\KitController::attach",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/work-orders/{id}/kit/lines",
+      "target": "OCA\\MaintenanceCheck\\Controller\\KitController::addLine",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/maintenancecheck/api/work-orders/{id}/kit/lines/{lineId}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\KitController::removeLine",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/work-orders/{id}/kit/lines/{lineId}/pack",
+      "target": "OCA\\MaintenanceCheck\\Controller\\KitController::packLine",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/work-orders/{id}/pdf/inspection-evidence",
+      "target": "OCA\\MaintenanceCheck\\Controller\\WorkOrderController::inspectionEvidencePdf",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/work-orders/{id}/pdf/job-pack",
+      "target": "OCA\\MaintenanceCheck\\Controller\\WorkOrderController::jobPackPdf",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/work-orders/{id}/pdf/servicebericht",
+      "target": "OCA\\MaintenanceCheck\\Controller\\WorkOrderController::serviceberichtPdf",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/work-orders/{id}/photos",
+      "target": "OCA\\MaintenanceCheck\\Controller\\WorkOrderController::listPhotos",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/work-orders/{id}/photos",
+      "target": "OCA\\MaintenanceCheck\\Controller\\WorkOrderController::addPhoto",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/maintenancecheck/api/work-orders/{id}/photos/{photoId}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\WorkOrderController::deletePhoto",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/work-orders/{id}/photos/{photoId}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\WorkOrderController::downloadPhoto",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/api/work-orders/{id}/signature",
+      "target": "OCA\\MaintenanceCheck\\Controller\\WorkOrderController::downloadSignature",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/work-orders/{id}/signature",
+      "target": "OCA\\MaintenanceCheck\\Controller\\WorkOrderController::setSignature",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/maintenancecheck/api/work-orders/{id}/skills",
+      "target": "OCA\\MaintenanceCheck\\Controller\\WorkOrderController::setSkills",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/api/work-orders/{id}/transition",
+      "target": "OCA\\MaintenanceCheck\\Controller\\WorkOrderController::transition",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/calendar",
+      "target": "OCA\\MaintenanceCheck\\Controller\\PageController::calendar",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/catalogs",
+      "target": "OCA\\MaintenanceCheck\\Controller\\PageController::catalogs",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/customers",
+      "target": "OCA\\MaintenanceCheck\\Controller\\PageController::customers",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/customers/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\PageController::customer",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/dispatch",
+      "target": "OCA\\MaintenanceCheck\\Controller\\PageController::dispatch",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/due",
+      "target": "OCA\\MaintenanceCheck\\Controller\\PageController::dueAlias",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/equipment",
+      "target": "OCA\\MaintenanceCheck\\Controller\\PageController::equipment",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/equipment/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\PageController::equipmentShow",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/equipment/by-qr/{token}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\PageController::equipmentByQr",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/exceptions",
+      "target": "OCA\\MaintenanceCheck\\Controller\\PageController::exceptions",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/kpi",
+      "target": "OCA\\MaintenanceCheck\\Controller\\PageController::kpi",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/bootstrap",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::bootstrap",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/calendar",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::calendar",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/customers",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::customers",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/due",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::due",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/equip-docs/{id}/download",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::downloadEquipDoc",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/equipment/{equipmentId}/docs",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::equipmentDocs",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/equipment/{equipmentId}/meters",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::equipmentMeters",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/equipment/{equipmentId}/obligations",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::equipmentObligations",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/equipment/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::equipment",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/equipment/by-qr/{token}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::equipmentByQr",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/exceptions",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::exceptions",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/failure-codes",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::failureCodes",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/meters/{id}/readings",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::addMeterReading",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/tours/today",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::tourToday",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/visits",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::visits",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/visits/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::visit",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/visits/{id}/complete",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::complete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/visits/{id}/skip",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::skip",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/visits/{visitId}/work-orders",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::createWorkOrderFromVisit",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/work-orders",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::workOrders",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::workOrder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/checklist/{itemCode}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::workOrderChecklist",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/comments",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::workOrderComments",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/comments",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::workOrderAddComment",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/inspection-evidence.pdf",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::inspectionEvidenceAlias",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/kit",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::workOrderKit",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/kit/lines/{lineId}/pack",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::workOrderPackLine",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/pdf/inspection-evidence",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::inspectionEvidence",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/pdf/servicebericht",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::servicebericht",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/photos",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::workOrderPhotos",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/photos",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::workOrderAddPhoto",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/signature",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::workOrderSignature",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/maintenancecheck/mobile/v1/work-orders/{id}/transition",
+      "target": "OCA\\MaintenanceCheck\\Controller\\MobileController::workOrderTransition",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/settings",
+      "target": "OCA\\MaintenanceCheck\\Controller\\PageController::settings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/settings/{section}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\PageController::settingsSection",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/tours",
+      "target": "OCA\\MaintenanceCheck\\Controller\\PageController::tours",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/visits",
+      "target": "OCA\\MaintenanceCheck\\Controller\\PageController::visits",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/work-orders",
+      "target": "OCA\\MaintenanceCheck\\Controller\\PageController::workOrders",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/maintenancecheck/work-orders/{id}",
+      "target": "OCA\\MaintenanceCheck\\Controller\\PageController::workOrderShow",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

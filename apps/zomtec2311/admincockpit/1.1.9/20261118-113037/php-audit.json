@@ -1,0 +1,475 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\AdminCockpit\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/AppsController.php:82 OC\\Installer",
+        "lib/Controller/AppsController.php:86 OC\\App\\AppStore\\Fetcher\\CategoryFetcher",
+        "lib/Controller/AppsController.php:276 OC_App",
+        "lib/Controller/SystemController.php:70 OC\\Updater\\VersionCheck"
+      ],
+      "lines": [
+        "4 uses of the private API of the server in 2 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/AppsController.php:82 OC\\Installer",
+        "  lib/Controller/AppsController.php:86 OC\\App\\AppStore\\Fetcher\\CategoryFetcher",
+        "  lib/Controller/AppsController.php:276 OC_App",
+        "  lib/Controller/SystemController.php:70 OC\\Updater\\VersionCheck"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/Controller/AppsController.php:113 OCP\\App\\IAppManager::getEnabledApps(): there since Nextcloud 32, the app declares from 31",
+        "lib/Controller/AppsController.php:274 OCP\\App\\IAppManager::getEnabledApps(): there since Nextcloud 32, the app declares from 31",
+        "lib/Controller/AppsController.php:321 OCP\\App\\IAppManager::getEnabledApps(): there since Nextcloud 32, the app declares from 31",
+        "lib/Controller/AppsController.php:339 OCP\\App\\IAppManager::getEnabledApps(): there since Nextcloud 32, the app declares from 31"
+      ],
+      "lines": [
+        "4 uses in 1 file of the public API that the oldest majors of Nextcloud 31 to 33 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/Controller/AppsController.php:113 OCP\\App\\IAppManager::getEnabledApps(): there since Nextcloud 32, the app declares from 31",
+        "  lib/Controller/AppsController.php:274 OCP\\App\\IAppManager::getEnabledApps(): there since Nextcloud 32, the app declares from 31",
+        "  lib/Controller/AppsController.php:321 OCP\\App\\IAppManager::getEnabledApps(): there since Nextcloud 32, the app declares from 31",
+        "  lib/Controller/AppsController.php:339 OCP\\App\\IAppManager::getEnabledApps(): there since Nextcloud 32, the app declares from 31"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:34 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:34 injectFn()"
+      ]
+    },
+    {
+      "id": "route-duplicate",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/admincockpit/: admincockpit.page.index at appinfo/routes.php:2 routes, admincockpit.page.index at lib/Controller/PageController.php:36, admincockpit.page.apps at lib/Controller/PageController.php:47, admincockpit.page.system at lib/Controller/PageController.php:58, admincockpit.page.user at lib/Controller/PageController.php:69",
+        "admincockpit.page.index: admincockpit.page.index at appinfo/routes.php:2 routes, admincockpit.page.index at lib/Controller/PageController.php:36",
+        "admincockpit.page.apps: admincockpit.page.apps at appinfo/routes.php:2 routes, admincockpit.page.apps at lib/Controller/PageController.php:47",
+        "admincockpit.page.system: admincockpit.page.system at appinfo/routes.php:2 routes, admincockpit.page.system at lib/Controller/PageController.php:58",
+        "admincockpit.page.user: admincockpit.page.user at appinfo/routes.php:2 routes, admincockpit.page.user at lib/Controller/PageController.php:69"
+      ],
+      "lines": [
+        "5 verbs and paths or route names are declared more than once. The server keeps one route per name and takes the first that matches a request, so the other one is never reached.",
+        "  GET /index.php/apps/admincockpit/: admincockpit.page.index at appinfo/routes.php:2 routes, admincockpit.page.index at lib/Controller/PageController.php:36, admincockpit.page.apps at lib/Controller/PageController.php:47, admincockpit.page.system at lib/Controller/PageController.php:58, admincockpit.page.user at lib/Controller/PageController.php:69",
+        "  admincockpit.page.index: admincockpit.page.index at appinfo/routes.php:2 routes, admincockpit.page.index at lib/Controller/PageController.php:36",
+        "  admincockpit.page.apps: admincockpit.page.apps at appinfo/routes.php:2 routes, admincockpit.page.apps at lib/Controller/PageController.php:47",
+        "  admincockpit.page.system: admincockpit.page.system at appinfo/routes.php:2 routes, admincockpit.page.system at lib/Controller/PageController.php:58",
+        "  admincockpit.page.user: admincockpit.page.user at appinfo/routes.php:2 routes, admincockpit.page.user at lib/Controller/PageController.php:69"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "frontend-url-without-route",
+      "level": "warn",
+      "places": [
+        "js/admincockpit-apps.js:2 /apps/admincockpit/newuser/...",
+        "js/admincockpit-main.js:2 /apps/admincockpit/newuser/...",
+        "js/admincockpit-system.js:2 /apps/admincockpit/newuser/...",
+        "js/admincockpit-user.js:2 /apps/admincockpit/newuser/..."
+      ],
+      "lines": [
+        "The frontend or a template builds 4 URLs below /apps/admincockpit/ that no route of the app matches. The request fails at run time.",
+        "  js/admincockpit-apps.js:2 /apps/admincockpit/newuser/...",
+        "  js/admincockpit-main.js:2 /apps/admincockpit/newuser/...",
+        "  js/admincockpit-system.js:2 /apps/admincockpit/newuser/...",
+        "  js/admincockpit-user.js:2 /apps/admincockpit/newuser/..."
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/AppsController.php:200 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Controller/AppsController.php:226 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Controller/Helper.php:57 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/Helper.php:61 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SystemController.php:266 OCP\\Util::getVersion(): deprecated since Nextcloud 31; Use \\OCP\\ServerVersion::getVersion",
+        "lib/Controller/SystemController.php:284 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/UserController.php:92 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead"
+      ],
+      "lines": [
+        "7 uses in 4 files of the public API that is deprecated in Nextcloud 31 to 33. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/AppsController.php:200 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Controller/AppsController.php:226 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Controller/Helper.php:57 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/Helper.php:61 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SystemController.php:266 OCP\\Util::getVersion(): deprecated since Nextcloud 31; Use \\OCP\\ServerVersion::getVersion",
+        "  lib/Controller/SystemController.php:284 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/UserController.php:92 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/UserController.php:356 new DateTime()",
+        "lib/Controller/UserController.php:389 new DateTime()",
+        "lib/Db/MyRepository.php:30 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 3 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/UserController.php:356 new DateTime()",
+        "  lib/Controller/UserController.php:389 new DateTime()",
+        "  lib/Db/MyRepository.php:30 new DateTime()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Controller/Helper.php:57 getAppValue()",
+        "lib/Controller/Helper.php:61 setAppValue()",
+        "lib/Controller/SystemController.php:284 getAppValue()",
+        "lib/Controller/SystemController.php:339 getAppValueInt()",
+        "lib/Controller/SystemController.php:340 setAppValueInt()",
+        "lib/Controller/SystemController.php:346 setAppValueInt()",
+        "lib/Controller/UserController.php:233 getValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 7 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Controller/Helper.php:57 getAppValue()",
+        "  lib/Controller/Helper.php:61 setAppValue()",
+        "  lib/Controller/SystemController.php:284 getAppValue()",
+        "  lib/Controller/SystemController.php:339 getAppValueInt()",
+        "  lib/Controller/SystemController.php:340 setAppValueInt()",
+        "  lib/Controller/SystemController.php:346 setAppValueInt()",
+        "  lib/Controller/UserController.php:233 getValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/AppsController.php:176 OCA\\AdminCockpit\\Controller\\AppsController::appsfull()",
+        "lib/Controller/AppsController.php:223 OCA\\AdminCockpit\\Controller\\AppsController::uuupdateapp()",
+        "lib/Controller/SystemController.php:151 OCA\\AdminCockpit\\Controller\\SystemController::detectEnvironment()",
+        "lib/Controller/SystemController.php:165 OCA\\AdminCockpit\\Controller\\SystemController::isRunningInDocker()",
+        "lib/Controller/SystemController.php:169 OCA\\AdminCockpit\\Controller\\SystemController::isDockerCgroup()",
+        "lib/Controller/SystemController.php:174 OCA\\AdminCockpit\\Controller\\SystemController::isRunningInSnap()",
+        "lib/Controller/SystemController.php:182 OCA\\AdminCockpit\\Controller\\SystemController::isSnapDaemonRunning()",
+        "lib/Controller/SystemController.php:187 OCA\\AdminCockpit\\Controller\\SystemController::isRunningInLXC()",
+        "lib/Controller/SystemController.php:192 OCA\\AdminCockpit\\Controller\\SystemController::isRunningInVM()",
+        "lib/Controller/SystemController.php:197 OCA\\AdminCockpit\\Controller\\SystemController::isBehindProxy()",
+        "lib/Controller/SystemController.php:206 OCA\\AdminCockpit\\Controller\\SystemController::getServerType()",
+        "lib/Controller/SystemController.php:265 OCA\\AdminCockpit\\Controller\\SystemController::getSystemStatus()",
+        "lib/Controller/SystemController.php:295 OCA\\AdminCockpit\\Controller\\SystemController::getlogfile()",
+        "lib/Controller/SystemController.php:318 OCA\\AdminCockpit\\Controller\\SystemController::show_filesize()",
+        "lib/Controller/UserController.php:335 OCA\\AdminCockpit\\Controller\\UserController::setuser()"
+      ],
+      "lines": [
+        "15 public methods of controllers are reached by no route.",
+        "  lib/Controller/AppsController.php:176 OCA\\AdminCockpit\\Controller\\AppsController::appsfull()",
+        "  lib/Controller/AppsController.php:223 OCA\\AdminCockpit\\Controller\\AppsController::uuupdateapp()",
+        "  lib/Controller/SystemController.php:151 OCA\\AdminCockpit\\Controller\\SystemController::detectEnvironment()",
+        "  lib/Controller/SystemController.php:165 OCA\\AdminCockpit\\Controller\\SystemController::isRunningInDocker()",
+        "  lib/Controller/SystemController.php:169 OCA\\AdminCockpit\\Controller\\SystemController::isDockerCgroup()",
+        "  lib/Controller/SystemController.php:174 OCA\\AdminCockpit\\Controller\\SystemController::isRunningInSnap()",
+        "  lib/Controller/SystemController.php:182 OCA\\AdminCockpit\\Controller\\SystemController::isSnapDaemonRunning()",
+        "  lib/Controller/SystemController.php:187 OCA\\AdminCockpit\\Controller\\SystemController::isRunningInLXC()",
+        "  lib/Controller/SystemController.php:192 OCA\\AdminCockpit\\Controller\\SystemController::isRunningInVM()",
+        "  lib/Controller/SystemController.php:197 OCA\\AdminCockpit\\Controller\\SystemController::isBehindProxy()",
+        "  lib/Controller/SystemController.php:206 OCA\\AdminCockpit\\Controller\\SystemController::getServerType()",
+        "  lib/Controller/SystemController.php:265 OCA\\AdminCockpit\\Controller\\SystemController::getSystemStatus()",
+        "  lib/Controller/SystemController.php:295 OCA\\AdminCockpit\\Controller\\SystemController::getlogfile()",
+        "  lib/Controller/SystemController.php:318 OCA\\AdminCockpit\\Controller\\SystemController::show_filesize()",
+        "  lib/Controller/UserController.php:335 OCA\\AdminCockpit\\Controller\\UserController::setuser()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 12
+        }
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 1 OCS route and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 30,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/admincockpit/",
+      "target": "OCA\\AdminCockpit\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/admincockpit/",
+      "target": "OCA\\AdminCockpit\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/admincockpit/",
+      "target": "OCA\\AdminCockpit\\Controller\\PageController::apps",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/admincockpit/",
+      "target": "OCA\\AdminCockpit\\Controller\\PageController::system",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/admincockpit/",
+      "target": "OCA\\AdminCockpit\\Controller\\PageController::user",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/admincockpit/addgroup/{who}",
+      "target": "OCA\\AdminCockpit\\Controller\\GroupController::addgroup",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/admincockpit/apps",
+      "target": "OCA\\AdminCockpit\\Controller\\PageController::apps",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/admincockpit/appsasc",
+      "target": "OCA\\AdminCockpit\\Controller\\AppsController::listCategories",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/admincockpit/appsinfo",
+      "target": "OCA\\AdminCockpit\\Controller\\AppsController::appsinfo",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/admincockpit/appupdates",
+      "target": "OCA\\AdminCockpit\\Controller\\AppsController::getAppsWithUpdates",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/admincockpit/deletegroup/{who}",
+      "target": "OCA\\AdminCockpit\\Controller\\GroupController::deletegroup",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/admincockpit/deleteuser/{who}",
+      "target": "OCA\\AdminCockpit\\Controller\\UserController::deleteuser",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/admincockpit/disableapp/{who}",
+      "target": "OCA\\AdminCockpit\\Controller\\AppsController::disableapp",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/admincockpit/edituser/{who}",
+      "target": "OCA\\AdminCockpit\\Controller\\UserController::edituser",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/admincockpit/enableapp/{who}",
+      "target": "OCA\\AdminCockpit\\Controller\\AppsController::enableapp",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/admincockpit/islogcleaner",
+      "target": "OCA\\AdminCockpit\\Controller\\AppsController::islogcleaner",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/admincockpit/isnoti",
+      "target": "OCA\\AdminCockpit\\Controller\\AppsController::isnoti",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/admincockpit/newuser",
+      "target": "OCA\\AdminCockpit\\Controller\\UserController::newuser",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/admincockpit/notifygroup",
+      "target": "OCA\\AdminCockpit\\Controller\\UserController::notifygroup",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/admincockpit/notifyuser",
+      "target": "OCA\\AdminCockpit\\Controller\\UserController::notifyuser",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/admincockpit/saveuser",
+      "target": "OCA\\AdminCockpit\\Controller\\UserController::saveuser",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/admincockpit/sqlinfo",
+      "target": "OCA\\AdminCockpit\\Controller\\SystemController::sqlinfo",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/admincockpit/storage",
+      "target": "OCA\\AdminCockpit\\Controller\\SystemController::storage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/admincockpit/system",
+      "target": "OCA\\AdminCockpit\\Controller\\PageController::system",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/admincockpit/systeminfo",
+      "target": "OCA\\AdminCockpit\\Controller\\SystemController::systeminfo",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/admincockpit/updateapp/{who}",
+      "target": "OCA\\AdminCockpit\\Controller\\AppsController::updateapp",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/admincockpit/user",
+      "target": "OCA\\AdminCockpit\\Controller\\PageController::user",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/admincockpit/usercount",
+      "target": "OCA\\AdminCockpit\\Controller\\UserController::usercount",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/admincockpit/userexists/{who}",
+      "target": "OCA\\AdminCockpit\\Controller\\UserController::userexists",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/admincockpit/api",
+      "target": "OCA\\AdminCockpit\\Controller\\ApiController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

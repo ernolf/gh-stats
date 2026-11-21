@@ -1,0 +1,94 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>sealdoc</id>
+	<name>SealDoc</name>
+	<summary>Turn stored documents into evidence: PDF/A-3B, chain of custody, and a panel that says what is in each seal</summary>
+	<description><![CDATA[
+Nextcloud stores your documents. It does not, on its own, prove that a document
+has not changed since you filed it, or that it existed on the date you claim.
+For invoices, contracts and personnel records that have to survive a statutory
+retention period, that difference only becomes visible at the moment somebody
+asks, which is usually years later.
+
+This app connects Nextcloud to SealDoc. Every document it processes comes back
+as a **PDF/A-3B** file validated against ISO 19005-3, together with an evidence
+pack: a **SHA-384 hash chain**, a **chain-of-custody** record and, where the
+SealDoc instance attaches one, an **RFC 3161 timestamp** from a trusted
+authority.
+
+**How you use it**
+
+- As a Flow (workflow) action: *when a file is created in /Invoices, seal it*.
+- Or one file at a time, from the row menu in Files.
+- The sealed file is written back next to the original, so it stays in the
+  folder and the sharing you already have.
+- A shield marks sealed documents in the file list, and a **Seal panel** in the
+  sidebar reports what that particular seal contains.
+
+**It tells you what is missing**
+
+The panel is not a row of green ticks. It reports each guarantee as present,
+absent or unknown, because a document can come back a perfectly valid PDF/A-3B
+with a complete chain of custody and no timestamp at all. A tick over a missing
+guarantee is worse than no panel, so a missing one is shown in red and named,
+with a sentence saying what it costs.
+
+The shield in the file list follows the same rule and has three states, so you
+can see which documents will not hold up without opening any of them:
+
+- a tick, where every guarantee is present;
+- an exclamation mark, where at least one is missing;
+- a question mark, where the seal could not be read back.
+
+**What it does not do**
+
+- It does not provide electronic signatures. It proves a document has not
+  changed, not who agreed to it. Those are different questions.
+- It does not guarantee a timestamp. Whether one is attached depends on the
+  SealDoc instance and its timestamping authority; the panel reports, per
+  document, whether it actually got one.
+- Where a timestamp is attached it is an RFC 3161 timestamp from a trusted
+  authority. It is **not** a qualified timestamp under eIDAS.
+- It does not decide how long anything has to be kept. An administrator can
+  record the organisation's own retention policy, and it is shown as exactly
+  that.
+- It is not an archive. It produces evidence designed to outlive the service;
+  the file stays in your Nextcloud.
+
+**Sealing runs as a background job**, so Nextcloud has to be set to run those on
+Cron. On the AJAX default a queued document can wait a long time or never be
+picked up; the settings page and the panel both say so rather than leaving you
+guessing.
+
+**Where the processing happens**
+
+You choose. Point the app at the hosted service in the EU, or at your own
+self-hosted SealDoc instance. The app talks to nothing else.
+	]]></description>
+	<version>0.5.2</version>
+	<licence>agpl</licence>
+	<author mail="bryan@fefem.nl">Bryan van Rijn</author>
+	<namespace>SealDoc</namespace>
+
+	<types>
+		<filesystem/>
+	</types>
+
+	<category>files</category>
+	<category>integration</category>
+
+	<website>https://www.sealdoc.eu</website>
+	<bugs>https://github.com/bryanvanrijn/SealDoc-NextCloud/issues</bugs>
+	<repository type="git">https://github.com/bryanvanrijn/SealDoc-NextCloud.git</repository>
+
+	<dependencies>
+		<php min-version="8.1"/>
+		<nextcloud min-version="29" max-version="31"/>
+	</dependencies>
+
+	<settings>
+		<admin>OCA\SealDoc\Settings\Admin</admin>
+		<admin-section>OCA\SealDoc\Settings\AdminSection</admin-section>
+	</settings>
+</info>

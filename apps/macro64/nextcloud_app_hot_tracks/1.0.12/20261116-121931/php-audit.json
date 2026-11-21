@@ -1,0 +1,253 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\HotTracks\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "templates/index.php:6 OC\\Security\\CSP\\ContentSecurityPolicyNonceManager"
+      ],
+      "lines": [
+        "1 use of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  templates/index.php:6 OC\\Security\\CSP\\ContentSecurityPolicyNonceManager"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "POST /index.php/apps/hot_tracks/api/disconnect  hot_tracks.api.disconnect  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/hot_tracks/api/activities/{activityId}  hot_tracks.api.activity  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/hot_tracks/admin/strava  hot_tracks.admin.savestrava  appinfo/routes.php:5 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 3 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 9 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well.",
+        "  POST /index.php/apps/hot_tracks/api/disconnect  hot_tracks.api.disconnect  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/hot_tracks/api/activities/{activityId}  hot_tracks.api.activity  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/hot_tracks/admin/strava  hot_tracks.admin.savestrava  appinfo/routes.php:5 routes"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/SyncJob.php OCA\\HotTracks\\BackgroundJob\\SyncJob"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/SyncJob.php OCA\\HotTracks\\BackgroundJob\\SyncJob"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/ApiController.php:173 time()",
+        "lib/Controller/PageController.php:35 time()",
+        "lib/Service/SyncRange.php:25 time()",
+        "lib/Service/SyncService.php:60 time()",
+        "lib/Service/SyncService.php:116 time()",
+        "lib/Service/SyncService.php:207 new DateTimeImmutable()",
+        "lib/Service/SyncService.php:245 time()",
+        "lib/Service/SyncService.php:297 time()",
+        "lib/Service/SyncService.php:301 time()",
+        "lib/Service/TokenStore.php:50 time()",
+        "lib/Service/WeekStats.php:12 new DateTimeImmutable()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 11 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/ApiController.php:173 time()",
+        "  lib/Controller/PageController.php:35 time()",
+        "  lib/Service/SyncRange.php:25 time()",
+        "  lib/Service/SyncService.php:60 time()",
+        "  lib/Service/SyncService.php:116 time()",
+        "  lib/Service/SyncService.php:207 new DateTimeImmutable()",
+        "  lib/Service/SyncService.php:245 time()",
+        "  lib/Service/SyncService.php:297 time()",
+        "  lib/Service/SyncService.php:301 time()",
+        "  lib/Service/TokenStore.php:50 time()",
+        "  lib/Service/WeekStats.php:12 new DateTimeImmutable()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 8
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/AppConfig.php:27 getAppValue()",
+        "lib/Service/AppConfig.php:36 getAppValue()",
+        "lib/Service/AppConfig.php:41 getAppValue()",
+        "lib/Service/AppConfig.php:60 getAppValue()",
+        "lib/Service/AppConfig.php:80 getAppValue()",
+        "lib/Service/AppConfig.php:98 getAppValue()",
+        "lib/Service/AppConfig.php:102 getAppValue()",
+        "lib/Service/AppConfig.php:122 setAppValue()",
+        "lib/Service/AppConfig.php:129 setAppValue()",
+        "lib/Service/AppConfig.php:130 setAppValue()",
+        "lib/Service/AppConfig.php:137 setAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 11 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/AppConfig.php:27 getAppValue()",
+        "  lib/Service/AppConfig.php:36 getAppValue()",
+        "  lib/Service/AppConfig.php:41 getAppValue()",
+        "  lib/Service/AppConfig.php:60 getAppValue()",
+        "  lib/Service/AppConfig.php:80 getAppValue()",
+        "  lib/Service/AppConfig.php:98 getAppValue()",
+        "  lib/Service/AppConfig.php:102 getAppValue()",
+        "  lib/Service/AppConfig.php:122 setAppValue()",
+        "  lib/Service/AppConfig.php:129 setAppValue()",
+        "  lib/Service/AppConfig.php:130 setAppValue()",
+        "  lib/Service/AppConfig.php:137 setAppValue()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 8
+        }
+      ]
+    }
+  ],
+  "endpoints": 18,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/hot_tracks/",
+      "target": "OCA\\HotTracks\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/hot_tracks/admin",
+      "target": "OCA\\HotTracks\\Controller\\AdminController::save",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/hot_tracks/admin/strava",
+      "target": "OCA\\HotTracks\\Controller\\AdminController::saveStrava",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/hot_tracks/api/activities/{activityId}",
+      "target": "OCA\\HotTracks\\Controller\\ApiController::activity",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/hot_tracks/api/activities/{activityId}/gpx",
+      "target": "OCA\\HotTracks\\Controller\\ApiController::gpx",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/hot_tracks/api/disconnect",
+      "target": "OCA\\HotTracks\\Controller\\ApiController::disconnect",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/hot_tracks/api/overview",
+      "target": "OCA\\HotTracks\\Controller\\ApiController::overview",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/hot_tracks/api/sync",
+      "target": "OCA\\HotTracks\\Controller\\ApiController::sync",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/hot_tracks/api/week/tracks",
+      "target": "OCA\\HotTracks\\Controller\\ApiController::weekTracks",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/hot_tracks/api/week/zip",
+      "target": "OCA\\HotTracks\\Controller\\ApiController::weekZip",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/hot_tracks/oauth/callback",
+      "target": "OCA\\HotTracks\\Controller\\AuthController::callback",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/hot_tracks/oauth/start",
+      "target": "OCA\\HotTracks\\Controller\\AuthController::start",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/hot_tracks/settings/athlete-id",
+      "target": "OCA\\HotTracks\\Controller\\PersonalController::saveAthleteId",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/hot_tracks/settings/copy-folder",
+      "target": "OCA\\HotTracks\\Controller\\PersonalController::saveCopyFolder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/hot_tracks/settings/disconnect",
+      "target": "OCA\\HotTracks\\Controller\\PersonalController::disconnect",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/hot_tracks/settings/personal",
+      "target": "OCA\\HotTracks\\Controller\\PersonalController::save",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/hot_tracks/settings/sports",
+      "target": "OCA\\HotTracks\\Controller\\PersonalController::saveSports",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/hot_tracks/webhook/activity/{token}",
+      "target": "OCA\\HotTracks\\Controller\\WebhookController::receive",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

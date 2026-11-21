@@ -1,0 +1,116 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\AdminGroupManager\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Middleware/InjectionMiddleware.php:54 OC\\Security\\Ip\\Address",
+        "lib/Middleware/InjectionMiddleware.php:62 OC\\Security\\Ip\\Range"
+      ],
+      "lines": [
+        "2 uses of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Middleware/InjectionMiddleware.php:54 OC\\Security\\Ip\\Address",
+        "  lib/Middleware/InjectionMiddleware.php:62 OC\\Security\\Ip\\Range"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/AdminGroupController.php:81 OCP\\Mail\\IMailer::validateMailAddress(): deprecated since Nextcloud 32; use IEmailValidator::isValid() instead"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated in Nextcloud 32 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/AdminGroupController.php:81 OCP\\Mail\\IMailer::validateMailAddress(): deprecated since Nextcloud 32; use IEmailValidator::isValid() instead"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/EnableAppsForGroup.php:38 getValueString()",
+        "lib/BackgroundJob/EnableAppsForGroup.php:42 getValueArray()",
+        "lib/BackgroundJob/EnableAppsForGroup.php:60 getValueArray()",
+        "lib/BackgroundJob/EnableAppsForGroup.php:65 setValueArray()",
+        "lib/Controller/AdminGroupController.php:260 setValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 5 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/BackgroundJob/EnableAppsForGroup.php:38 getValueString()",
+        "  lib/BackgroundJob/EnableAppsForGroup.php:42 getValueArray()",
+        "  lib/BackgroundJob/EnableAppsForGroup.php:60 getValueArray()",
+        "  lib/BackgroundJob/EnableAppsForGroup.php:65 setValueArray()",
+        "  lib/Controller/AdminGroupController.php:260 setValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/AEnvironmentAwareOCSController.php:16 OCA\\AdminGroupManager\\Controller\\AEnvironmentAwareOCSController::setAPIVersion()",
+        "lib/Controller/AEnvironmentAwareOCSController.php:20 OCA\\AdminGroupManager\\Controller\\AEnvironmentAwareOCSController::getAPIVersion()"
+      ],
+      "lines": [
+        "2 public methods of controllers are reached by no route.",
+        "  lib/Controller/AEnvironmentAwareOCSController.php:16 OCA\\AdminGroupManager\\Controller\\AEnvironmentAwareOCSController::setAPIVersion()",
+        "  lib/Controller/AEnvironmentAwareOCSController.php:20 OCA\\AdminGroupManager\\Controller\\AEnvironmentAwareOCSController::getAPIVersion()"
+      ]
+    }
+  ],
+  "endpoints": 3,
+  "endpointList": [
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/admin_group_manager/api/{apiVersion}/admin-group",
+      "target": "OCA\\AdminGroupManager\\Controller\\AdminGroupController::createAdminGroup",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/admin_group_manager/api/{apiVersion}/change-admin-email",
+      "target": "OCA\\AdminGroupManager\\Controller\\AdminGroupController::changeAdminEmail",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/admin_group_manager/api/{apiVersion}/users-of-group/set-enabled",
+      "target": "OCA\\AdminGroupManager\\Controller\\AdminGroupController::setEnabled",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

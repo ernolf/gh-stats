@@ -1,0 +1,1253 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Bookmarks\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/AugmentedTemplateResponse.php:22 OC",
+        "lib/AugmentedTemplateResponse.php:22 OC::$server",
+        "lib/Db/BookmarkMapper.php:491 OC",
+        "lib/Db/BookmarkMapper.php:491 OC::$server",
+        "lib/ExportResponse.php:28 OC",
+        "lib/ExportResponse.php:28 OC::$server",
+        "lib/ExportResponse.php:30 OC\\HintException",
+        "lib/Flow/CreateBookmark.php:76 OC",
+        "lib/Flow/CreateBookmark.php:76 OC::$server",
+        "lib/Flow/CreateBookmark.php:81 OC::$server",
+        "lib/Service/CrawlService.php:153 OC\\User\\NoUserException"
+      ],
+      "lines": [
+        "11 uses of the private API of the server in 5 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/AugmentedTemplateResponse.php:22 OC",
+        "  lib/AugmentedTemplateResponse.php:22 OC::$server",
+        "  lib/Db/BookmarkMapper.php:491 OC",
+        "  lib/Db/BookmarkMapper.php:491 OC::$server",
+        "  lib/ExportResponse.php:28 OC",
+        "  lib/ExportResponse.php:28 OC::$server",
+        "  lib/ExportResponse.php:30 OC\\HintException",
+        "  lib/Flow/CreateBookmark.php:76 OC",
+        "  lib/Flow/CreateBookmark.php:76 OC::$server",
+        "  lib/Flow/CreateBookmark.php:81 OC::$server",
+        "  lib/Service/CrawlService.php:153 OC\\User\\NoUserException"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 8
+        }
+      ]
+    },
+    {
+      "id": "ocp-removed-soon",
+      "level": "warn",
+      "places": [
+        "lib/Db/TreeMapper.php:144 OCP\\DB\\QueryBuilder\\IQueryBuilder::execute(): deprecated since Nextcloud 22, Nextcloud 32 is the last major to have it; Use executeQuery or executeStatement",
+        "lib/Db/TreeMapper.php:680 OCP\\DB\\QueryBuilder\\IQueryBuilder::execute(): deprecated since Nextcloud 22, Nextcloud 32 is the last major to have it; Use executeQuery or executeStatement",
+        "lib/Db/TreeMapper.php:748 OCP\\DB\\QueryBuilder\\IQueryBuilder::execute(): deprecated since Nextcloud 22, Nextcloud 32 is the last major to have it; Use executeQuery or executeStatement",
+        "lib/Db/TreeMapper.php:866 OCP\\DB\\QueryBuilder\\IQueryBuilder::execute(): deprecated since Nextcloud 22, Nextcloud 32 is the last major to have it; Use executeQuery or executeStatement"
+      ],
+      "lines": [
+        "4 uses in 1 file of the public API that is deprecated and that Nextcloud 36 no longer has: the app fails on the first major without it, once it declares that one.",
+        "  lib/Db/TreeMapper.php:144 OCP\\DB\\QueryBuilder\\IQueryBuilder::execute(): deprecated since Nextcloud 22, Nextcloud 32 is the last major to have it; Use executeQuery or executeStatement",
+        "  lib/Db/TreeMapper.php:680 OCP\\DB\\QueryBuilder\\IQueryBuilder::execute(): deprecated since Nextcloud 22, Nextcloud 32 is the last major to have it; Use executeQuery or executeStatement",
+        "  lib/Db/TreeMapper.php:748 OCP\\DB\\QueryBuilder\\IQueryBuilder::execute(): deprecated since Nextcloud 22, Nextcloud 32 is the last major to have it; Use executeQuery or executeStatement",
+        "  lib/Db/TreeMapper.php:866 OCP\\DB\\QueryBuilder\\IQueryBuilder::execute(): deprecated since Nextcloud 22, Nextcloud 32 is the last major to have it; Use executeQuery or executeStatement"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "display-name-lookup",
+      "level": "warn",
+      "places": [
+        "lib/Controller/FoldersController.php:133",
+        "lib/Controller/FoldersController.php:143",
+        "lib/Db/Share.php:84",
+        "lib/Db/TreeMapper.php:934",
+        "lib/Db/TreeMapper.php:951"
+      ],
+      "lines": [
+        "5 places load a user with IUserManager::get() only to ask for the display name. IUserManager::getDisplayName(), there since Nextcloud 25, answers from a cache and loads no user.",
+        "  lib/Controller/FoldersController.php:133",
+        "  lib/Controller/FoldersController.php:143",
+        "  lib/Db/Share.php:84",
+        "  lib/Db/TreeMapper.php:934",
+        "  lib/Db/TreeMapper.php:951"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:123 addServiceListener()",
+        "lib/AppInfo/Application.php:124 addServiceListener()",
+        "lib/AppInfo/Application.php:125 addServiceListener()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 3 places. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:123 addServiceListener()",
+        "  lib/AppInfo/Application.php:124 addServiceListener()",
+        "  lib/AppInfo/Application.php:125 addServiceListener()"
+      ]
+    },
+    {
+      "id": "route-target-missing",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/bookmarks/folder/{folderId}  bookmarks.internal_folders.get_folder  appinfo/routes.php:21 routes: OCA\\Bookmarks\\Controller\\InternalFoldersController has no method getFolder()",
+        "GET /index.php/apps/bookmarks/folder/{folderId}/children  bookmarks.internal_folders.get_folder_children  appinfo/routes.php:21 routes: OCA\\Bookmarks\\Controller\\InternalFoldersController has no method getFolderChildren()",
+        "GET /index.php/apps/bookmarks/share/{shareId}  bookmarks.internal_folders.get_share  appinfo/routes.php:21 routes: OCA\\Bookmarks\\Controller\\InternalFoldersController has no method getShare()"
+      ],
+      "lines": [
+        "3 routes name a controller class or a method that does not exist, or a method that is not public. A request to such a route ends in an error.",
+        "  GET /index.php/apps/bookmarks/folder/{folderId}  bookmarks.internal_folders.get_folder  appinfo/routes.php:21 routes: OCA\\Bookmarks\\Controller\\InternalFoldersController has no method getFolder()",
+        "  GET /index.php/apps/bookmarks/folder/{folderId}/children  bookmarks.internal_folders.get_folder_children  appinfo/routes.php:21 routes: OCA\\Bookmarks\\Controller\\InternalFoldersController has no method getFolderChildren()",
+        "  GET /index.php/apps/bookmarks/share/{shareId}  bookmarks.internal_folders.get_share  appinfo/routes.php:21 routes: OCA\\Bookmarks\\Controller\\InternalFoldersController has no method getShare()"
+      ]
+    },
+    {
+      "id": "route-duplicate",
+      "level": "warn",
+      "places": [
+        "bookmarks.internal_bookmark.import_bookmark: bookmarks.internal_bookmark.import_bookmark at appinfo/routes.php:21 routes, bookmarks.internal_bookmark.import_bookmark at appinfo/routes.php:21 routes",
+        "bookmarks.internal_tags.rename_tag: bookmarks.internal_tags.rename_tag at appinfo/routes.php:21 routes, bookmarks.internal_tags.rename_tag at appinfo/routes.php:21 routes, bookmarks.internal_tags.rename_tag at appinfo/routes.php:21 routes",
+        "bookmarks.internal_tags.delete_tag: bookmarks.internal_tags.delete_tag at appinfo/routes.php:21 routes, bookmarks.internal_tags.delete_tag at appinfo/routes.php:21 routes",
+        "bookmarks.bookmark.import_bookmark: bookmarks.bookmark.import_bookmark at appinfo/routes.php:21 routes, bookmarks.bookmark.import_bookmark at appinfo/routes.php:21 routes",
+        "bookmarks.tags.rename_tag: bookmarks.tags.rename_tag at appinfo/routes.php:21 routes, bookmarks.tags.rename_tag at appinfo/routes.php:21 routes, bookmarks.tags.rename_tag at appinfo/routes.php:21 routes",
+        "bookmarks.tags.delete_tag: bookmarks.tags.delete_tag at appinfo/routes.php:21 routes, bookmarks.tags.delete_tag at appinfo/routes.php:21 routes"
+      ],
+      "lines": [
+        "6 verbs and paths or route names are declared more than once. The server keeps one route per name and takes the first that matches a request, so the other one is never reached.",
+        "  bookmarks.internal_bookmark.import_bookmark: bookmarks.internal_bookmark.import_bookmark at appinfo/routes.php:21 routes, bookmarks.internal_bookmark.import_bookmark at appinfo/routes.php:21 routes",
+        "  bookmarks.internal_tags.rename_tag: bookmarks.internal_tags.rename_tag at appinfo/routes.php:21 routes, bookmarks.internal_tags.rename_tag at appinfo/routes.php:21 routes, bookmarks.internal_tags.rename_tag at appinfo/routes.php:21 routes",
+        "  bookmarks.internal_tags.delete_tag: bookmarks.internal_tags.delete_tag at appinfo/routes.php:21 routes, bookmarks.internal_tags.delete_tag at appinfo/routes.php:21 routes",
+        "  bookmarks.bookmark.import_bookmark: bookmarks.bookmark.import_bookmark at appinfo/routes.php:21 routes, bookmarks.bookmark.import_bookmark at appinfo/routes.php:21 routes",
+        "  bookmarks.tags.rename_tag: bookmarks.tags.rename_tag at appinfo/routes.php:21 routes, bookmarks.tags.rename_tag at appinfo/routes.php:21 routes, bookmarks.tags.rename_tag at appinfo/routes.php:21 routes",
+        "  bookmarks.tags.delete_tag: bookmarks.tags.delete_tag at appinfo/routes.php:21 routes, bookmarks.tags.delete_tag at appinfo/routes.php:21 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/bookmarks/service-worker.js  bookmarks.web_view.service_worker  appinfo/routes.php:21 routes",
+        "POST /index.php/apps/bookmarks/lock  bookmarks.internal_bookmark.acquire_lock  appinfo/routes.php:21 routes",
+        "DELETE /index.php/apps/bookmarks/lock  bookmarks.internal_bookmark.release_lock  appinfo/routes.php:21 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 3 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 52 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/bookmarks/service-worker.js  bookmarks.web_view.service_worker  appinfo/routes.php:21 routes",
+        "  POST /index.php/apps/bookmarks/lock  bookmarks.internal_bookmark.acquire_lock  appinfo/routes.php:21 routes",
+        "  DELETE /index.php/apps/bookmarks/lock  bookmarks.internal_bookmark.release_lock  appinfo/routes.php:21 routes"
+      ]
+    },
+    {
+      "id": "frontend-url-without-route",
+      "level": "warn",
+      "places": [
+        "src/main.js:37 /apps/bookmarks/bookmarks-service-worker.js"
+      ],
+      "lines": [
+        "The frontend or a template builds 1 URL below /apps/bookmarks/ that no route of the app matches. The request fails at run time.",
+        "  src/main.js:37 /apps/bookmarks/bookmarks-service-worker.js"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "vimeo/psalm, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJobs/CrawlJob.php:48 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/BackgroundJobs/IndividualCrawlJob.php:51 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/WebViewController.php:48 OCP\\IInitialStateService: deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "lib/Controller/WebViewController.php:69 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Controller/WebViewController.php:76 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "lib/Controller/WebViewController.php:77 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "lib/Controller/WebViewController.php:78 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "lib/Controller/WebViewController.php:79 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "lib/Controller/WebViewController.php:80 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "lib/Controller/WebViewController.php:81 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "lib/Controller/WebViewController.php:82 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "lib/Controller/WebViewController.php:83 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "lib/Controller/WebViewController.php:84 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "lib/Controller/WebViewController.php:85 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "lib/Controller/WebViewController.php:86 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "lib/Controller/WebViewController.php:90 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "lib/Db/BookmarkMapper.php:96 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Db/BookmarkMapper.php:765 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "lib/Db/SharedFolderMapper.php:241 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "lib/Db/TreeMapper.php:386 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "lib/Db/TreeMapper.php:481 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Db/TreeMapper.php:495 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Db/TreeMapper.php:508 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Db/TreeMapper.php:551 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Db/TreeMapper.php:562 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Db/TreeMapper.php:577 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Db/TreeMapper.php:683 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "lib/Db/TreeMapper.php:750 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "lib/Db/TreeMapper.php:779 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "lib/Db/TreeMapper.php:845 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "lib/Db/TreeMapper.php:1252 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Service/BookmarkPreviewer.php:50 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/BookmarkService.php:187 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "lib/Service/BookmarkService.php:315 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "lib/Service/CrawlService.php:140 OCP\\AppFramework\\Db\\Entity::slugify(): deprecated since Nextcloud 24",
+        "lib/Service/FaviconPreviewer.php:61 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LinkExplorer.php:35 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/Previewers/GenericUrlBookmarkPreviewer.php:56 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/Previewers/PageresBookmarkPreviewer.php:77 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/Previewers/ScreeenlyBookmarkPreviewer.php:56 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/Previewers/ScreeenlyBookmarkPreviewer.php:57 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/Previewers/ScreenshotMachineBookmarkPreviewer.php:51 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/Previewers/WebshotBookmarkPreviewer.php:59 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/SettingsService.php:39 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Service/SettingsService.php:51 OCP\\AppFramework\\Services\\IAppConfig::setAppValue(): deprecated since Nextcloud 29; use setAppValueString()",
+        "lib/Service/SettingsService.php:66 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UserSettingsService.php:49 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UserSettingsService.php:55 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/AdminSettings.php:27 OCP\\IInitialStateService: deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "lib/Settings/AdminSettings.php:35 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider"
+      ],
+      "lines": [
+        "50 uses in 19 files of the public API that is deprecated in Nextcloud 32. The text of the tag names the replacement where it has one.",
+        "  lib/BackgroundJobs/CrawlJob.php:48 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/BackgroundJobs/IndividualCrawlJob.php:51 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/WebViewController.php:48 OCP\\IInitialStateService: deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "  lib/Controller/WebViewController.php:69 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Controller/WebViewController.php:76 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "  lib/Controller/WebViewController.php:77 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "  lib/Controller/WebViewController.php:78 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "  lib/Controller/WebViewController.php:79 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "  lib/Controller/WebViewController.php:80 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "  lib/Controller/WebViewController.php:81 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "  lib/Controller/WebViewController.php:82 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "  lib/Controller/WebViewController.php:83 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "  lib/Controller/WebViewController.php:84 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "  lib/Controller/WebViewController.php:85 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "  lib/Controller/WebViewController.php:86 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "  lib/Controller/WebViewController.php:90 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "  lib/Db/BookmarkMapper.php:96 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Db/BookmarkMapper.php:765 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "  lib/Db/SharedFolderMapper.php:241 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "  lib/Db/TreeMapper.php:386 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "  lib/Db/TreeMapper.php:481 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Db/TreeMapper.php:495 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Db/TreeMapper.php:508 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Db/TreeMapper.php:551 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Db/TreeMapper.php:562 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Db/TreeMapper.php:577 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Db/TreeMapper.php:683 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "  lib/Db/TreeMapper.php:750 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "  lib/Db/TreeMapper.php:779 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "  lib/Db/TreeMapper.php:845 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "  lib/Db/TreeMapper.php:1252 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Service/BookmarkPreviewer.php:50 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/BookmarkService.php:187 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "  lib/Service/BookmarkService.php:315 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "  lib/Service/CrawlService.php:140 OCP\\AppFramework\\Db\\Entity::slugify(): deprecated since Nextcloud 24",
+        "  lib/Service/FaviconPreviewer.php:61 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LinkExplorer.php:35 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/Previewers/GenericUrlBookmarkPreviewer.php:56 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/Previewers/PageresBookmarkPreviewer.php:77 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/Previewers/ScreeenlyBookmarkPreviewer.php:56 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/Previewers/ScreeenlyBookmarkPreviewer.php:57 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/Previewers/ScreenshotMachineBookmarkPreviewer.php:51 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/Previewers/WebshotBookmarkPreviewer.php:59 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/SettingsService.php:39 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Service/SettingsService.php:51 OCP\\AppFramework\\Services\\IAppConfig::setAppValue(): deprecated since Nextcloud 29; use setAppValueString()",
+        "  lib/Service/SettingsService.php:66 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UserSettingsService.php:49 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UserSettingsService.php:55 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/AdminSettings.php:27 OCP\\IInitialStateService: deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider",
+        "  lib/Settings/AdminSettings.php:35 OCP\\IInitialStateService::provideInitialState(): deprecated since Nextcloud 21; Use \\OCP\\AppFramework\\Services\\IInitialState or \\OCP\\AppFramework\\Services\\InitialStateProvider"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 47
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJobs/CrawlJob.php OCA\\Bookmarks\\BackgroundJobs\\CrawlJob",
+        "lib/BackgroundJobs/FileCacheGCJob.php OCA\\Bookmarks\\BackgroundJobs\\FileCacheGCJob"
+      ],
+      "lines": [
+        "2 timed jobs do not say whether they are time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJobs/CrawlJob.php OCA\\Bookmarks\\BackgroundJobs\\CrawlJob",
+        "  lib/BackgroundJobs/FileCacheGCJob.php OCA\\Bookmarks\\BackgroundJobs\\FileCacheGCJob"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Activity/ActivityPublisher.php:107 time()",
+        "lib/Activity/ActivityPublisher.php:142 time()",
+        "lib/Activity/ActivityPublisher.php:194 time()",
+        "lib/Controller/BookmarkController.php:678 new DateTime()",
+        "lib/Db/Bookmark.php:98 time()",
+        "lib/Db/BookmarkMapper.php:792 time()",
+        "lib/Db/BookmarkMapper.php:818 time()",
+        "lib/Db/BookmarkMapper.php:820 time()",
+        "lib/Db/ShareMapper.php:165 time()",
+        "lib/Db/ShareMapper.php:176 time()",
+        "lib/ExportResponse.php:38 time()",
+        "lib/Migration/Version010002000Date20220319124721.php:81 new DateTime()",
+        "lib/Service/Authorizer.php:332 time()",
+        "lib/Service/Authorizer.php:349 time()",
+        "lib/Service/BookmarksParser.php:271 new DateTime()",
+        "lib/Service/BookmarksParser.php:282 new DateTime()",
+        "lib/Service/HtmlImporter.php:216 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 17 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Activity/ActivityPublisher.php:107 time()",
+        "  lib/Activity/ActivityPublisher.php:142 time()",
+        "  lib/Activity/ActivityPublisher.php:194 time()",
+        "  lib/Controller/BookmarkController.php:678 new DateTime()",
+        "  lib/Db/Bookmark.php:98 time()",
+        "  lib/Db/BookmarkMapper.php:792 time()",
+        "  lib/Db/BookmarkMapper.php:818 time()",
+        "  lib/Db/BookmarkMapper.php:820 time()",
+        "  lib/Db/ShareMapper.php:165 time()",
+        "  lib/Db/ShareMapper.php:176 time()",
+        "  lib/ExportResponse.php:38 time()",
+        "  lib/Migration/Version010002000Date20220319124721.php:81 new DateTime()",
+        "  lib/Service/Authorizer.php:332 time()",
+        "  lib/Service/Authorizer.php:349 time()",
+        "  lib/Service/BookmarksParser.php:271 new DateTime()",
+        "  lib/Service/BookmarksParser.php:282 new DateTime()",
+        "  lib/Service/HtmlImporter.php:216 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 14
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJobs/CrawlJob.php:48 getAppValue()",
+        "lib/BackgroundJobs/IndividualCrawlJob.php:51 getAppValue()",
+        "lib/Db/BookmarkMapper.php:96 getAppValue()",
+        "lib/Service/BookmarkPreviewer.php:50 getAppValue()",
+        "lib/Service/FaviconPreviewer.php:61 getAppValue()",
+        "lib/Service/LinkExplorer.php:35 getAppValue()",
+        "lib/Service/Previewers/GenericUrlBookmarkPreviewer.php:56 getAppValue()",
+        "lib/Service/Previewers/PageresBookmarkPreviewer.php:77 getAppValue()",
+        "lib/Service/Previewers/ScreeenlyBookmarkPreviewer.php:56 getAppValue()",
+        "lib/Service/Previewers/ScreeenlyBookmarkPreviewer.php:57 getAppValue()",
+        "lib/Service/Previewers/ScreenshotMachineBookmarkPreviewer.php:51 getAppValue()",
+        "lib/Service/Previewers/WebshotBookmarkPreviewer.php:59 getAppValue()",
+        "lib/Service/SettingsService.php:39 getAppValue()",
+        "lib/Service/SettingsService.php:51 setAppValue()",
+        "lib/Service/SettingsService.php:66 getAppValue()",
+        "lib/Service/UserSettingsService.php:49 getAppValue()",
+        "lib/Service/UserSettingsService.php:55 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 17 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/BackgroundJobs/CrawlJob.php:48 getAppValue()",
+        "  lib/BackgroundJobs/IndividualCrawlJob.php:51 getAppValue()",
+        "  lib/Db/BookmarkMapper.php:96 getAppValue()",
+        "  lib/Service/BookmarkPreviewer.php:50 getAppValue()",
+        "  lib/Service/FaviconPreviewer.php:61 getAppValue()",
+        "  lib/Service/LinkExplorer.php:35 getAppValue()",
+        "  lib/Service/Previewers/GenericUrlBookmarkPreviewer.php:56 getAppValue()",
+        "  lib/Service/Previewers/PageresBookmarkPreviewer.php:77 getAppValue()",
+        "  lib/Service/Previewers/ScreeenlyBookmarkPreviewer.php:56 getAppValue()",
+        "  lib/Service/Previewers/ScreeenlyBookmarkPreviewer.php:57 getAppValue()",
+        "  lib/Service/Previewers/ScreenshotMachineBookmarkPreviewer.php:51 getAppValue()",
+        "  lib/Service/Previewers/WebshotBookmarkPreviewer.php:59 getAppValue()",
+        "  lib/Service/SettingsService.php:39 getAppValue()",
+        "  lib/Service/SettingsService.php:51 setAppValue()",
+        "  lib/Service/SettingsService.php:66 getAppValue()",
+        "  lib/Service/UserSettingsService.php:49 getAppValue()",
+        "  lib/Service/UserSettingsService.php:55 getAppValue()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 14
+        }
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/BookmarkController.php:669 OCA\\Bookmarks\\Controller\\BookmarkController::doImageResponse()",
+        "lib/Controller/BookmarkController.php:847 OCA\\Bookmarks\\Controller\\BookmarkController::countArchived()",
+        "lib/Controller/BookmarkController.php:866 OCA\\Bookmarks\\Controller\\BookmarkController::countDuplicated()",
+        "lib/Controller/BookmarkController.php:940 OCA\\Bookmarks\\Controller\\BookmarkController::getDeletedBookmarks()",
+        "lib/Controller/BookmarkController.php:962 OCA\\Bookmarks\\Controller\\BookmarkController::countAllClicks()",
+        "lib/Controller/BookmarkController.php:983 OCA\\Bookmarks\\Controller\\BookmarkController::countWithClicks()",
+        "lib/Controller/FoldersController.php:747 OCA\\Bookmarks\\Controller\\FoldersController::findSharedFolders()",
+        "lib/Controller/FoldersController.php:775 OCA\\Bookmarks\\Controller\\FoldersController::findShares()",
+        "lib/Controller/FoldersController.php:951 OCA\\Bookmarks\\Controller\\FoldersController::getDeletedFolders()",
+        "lib/Controller/InternalBookmarkController.php:278 OCA\\Bookmarks\\Controller\\InternalBookmarkController::countAllClicks()",
+        "lib/Controller/InternalBookmarkController.php:286 OCA\\Bookmarks\\Controller\\InternalBookmarkController::countWithClicks()"
+      ],
+      "lines": [
+        "11 public methods of controllers are reached by no route.",
+        "  lib/Controller/BookmarkController.php:669 OCA\\Bookmarks\\Controller\\BookmarkController::doImageResponse()",
+        "  lib/Controller/BookmarkController.php:847 OCA\\Bookmarks\\Controller\\BookmarkController::countArchived()",
+        "  lib/Controller/BookmarkController.php:866 OCA\\Bookmarks\\Controller\\BookmarkController::countDuplicated()",
+        "  lib/Controller/BookmarkController.php:940 OCA\\Bookmarks\\Controller\\BookmarkController::getDeletedBookmarks()",
+        "  lib/Controller/BookmarkController.php:962 OCA\\Bookmarks\\Controller\\BookmarkController::countAllClicks()",
+        "  lib/Controller/BookmarkController.php:983 OCA\\Bookmarks\\Controller\\BookmarkController::countWithClicks()",
+        "  lib/Controller/FoldersController.php:747 OCA\\Bookmarks\\Controller\\FoldersController::findSharedFolders()",
+        "  lib/Controller/FoldersController.php:775 OCA\\Bookmarks\\Controller\\FoldersController::findShares()",
+        "  lib/Controller/FoldersController.php:951 OCA\\Bookmarks\\Controller\\FoldersController::getDeletedFolders()",
+        "  lib/Controller/InternalBookmarkController.php:278 OCA\\Bookmarks\\Controller\\InternalBookmarkController::countAllClicks()",
+        "  lib/Controller/InternalBookmarkController.php:286 OCA\\Bookmarks\\Controller\\InternalBookmarkController::countWithClicks()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 8
+        }
+      ]
+    }
+  ],
+  "endpoints": 114,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/",
+      "target": "OCA\\Bookmarks\\Controller\\WebViewController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/admin/previewers/{previewer}",
+      "target": "OCA\\Bookmarks\\Controller\\AdminController::checkPreviewer",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/admin/settings/{setting}",
+      "target": "OCA\\Bookmarks\\Controller\\AdminController::getSetting",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/bookmarks/admin/settings/{setting}",
+      "target": "OCA\\Bookmarks\\Controller\\AdminController::setSetting",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/archived",
+      "target": "OCA\\Bookmarks\\Controller\\WebViewController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/bookmarks/bookmark",
+      "target": "OCA\\Bookmarks\\Controller\\InternalBookmarkController::deleteAllBookmarks",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/bookmark",
+      "target": "OCA\\Bookmarks\\Controller\\InternalBookmarkController::getBookmarks",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/bookmark",
+      "target": "OCA\\Bookmarks\\Controller\\InternalBookmarkController::newBookmark",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/bookmarks/bookmark/{id}",
+      "target": "OCA\\Bookmarks\\Controller\\InternalBookmarkController::deleteBookmark",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/bookmark/{id}",
+      "target": "OCA\\Bookmarks\\Controller\\InternalBookmarkController::getSingleBookmark",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/bookmarks/bookmark/{id}",
+      "target": "OCA\\Bookmarks\\Controller\\InternalBookmarkController::editBookmark",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/bookmark/{id}/favicon",
+      "target": "OCA\\Bookmarks\\Controller\\InternalBookmarkController::getBookmarkFavicon",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/bookmark/{id}/image",
+      "target": "OCA\\Bookmarks\\Controller\\InternalBookmarkController::getBookmarkImage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/bookmark/archived",
+      "target": "OCA\\Bookmarks\\Controller\\InternalBookmarkController::countArchived",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/bookmark/click",
+      "target": "OCA\\Bookmarks\\Controller\\InternalBookmarkController::clickBookmark",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/bookmark/deleted",
+      "target": "OCA\\Bookmarks\\Controller\\InternalBookmarkController::getDeletedBookmarks",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/bookmark/duplicated",
+      "target": "OCA\\Bookmarks\\Controller\\InternalBookmarkController::countDuplicated",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/bookmark/export",
+      "target": "OCA\\Bookmarks\\Controller\\InternalBookmarkController::exportBookmark",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/bookmark/import",
+      "target": "OCA\\Bookmarks\\Controller\\InternalBookmarkController::importBookmark",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/bookmark/unavailable",
+      "target": "OCA\\Bookmarks\\Controller\\InternalBookmarkController::countUnavailable",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/bookmarklet",
+      "target": "OCA\\Bookmarks\\Controller\\WebViewController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/bookmarks/{bookmark}",
+      "target": "OCA\\Bookmarks\\Controller\\WebViewController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/duplicated",
+      "target": "OCA\\Bookmarks\\Controller\\WebViewController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/folder",
+      "target": "OCA\\Bookmarks\\Controller\\InternalFoldersController::getFolders",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/folder",
+      "target": "OCA\\Bookmarks\\Controller\\InternalFoldersController::addFolder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/folder/{folder}/count",
+      "target": "OCA\\Bookmarks\\Controller\\InternalBookmarkController::countBookmarks",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/folder/{folder}/import",
+      "target": "OCA\\Bookmarks\\Controller\\InternalBookmarkController::importBookmark",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/bookmarks/folder/{folderId}",
+      "target": "OCA\\Bookmarks\\Controller\\InternalFoldersController::deleteFolder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/folder/{folderId}",
+      "target": "OCA\\Bookmarks\\Controller\\InternalFoldersController::getFolder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/bookmarks/folder/{folderId}",
+      "target": "OCA\\Bookmarks\\Controller\\InternalFoldersController::editFolder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/bookmarks/folder/{folderId}/bookmarks/{bookmarkId}",
+      "target": "OCA\\Bookmarks\\Controller\\InternalFoldersController::removeFromFolder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/folder/{folderId}/bookmarks/{bookmarkId}",
+      "target": "OCA\\Bookmarks\\Controller\\InternalFoldersController::addToFolder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/folder/{folderId}/bookmarks/{bookmarkId}/undelete",
+      "target": "OCA\\Bookmarks\\Controller\\InternalFoldersController::undeleteFromFolder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/folder/{folderId}/childorder",
+      "target": "OCA\\Bookmarks\\Controller\\InternalFoldersController::getFolderChildrenOrder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/index.php/apps/bookmarks/folder/{folderId}/childorder",
+      "target": "OCA\\Bookmarks\\Controller\\InternalFoldersController::setFolderChildrenOrder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/folder/{folderId}/children",
+      "target": "OCA\\Bookmarks\\Controller\\InternalFoldersController::getFolderChildren",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/folder/{folderId}/hash",
+      "target": "OCA\\Bookmarks\\Controller\\InternalFoldersController::hashFolder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/bookmarks/folder/{folderId}/publictoken",
+      "target": "OCA\\Bookmarks\\Controller\\InternalFoldersController::deleteFolderPublicToken",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/folder/{folderId}/publictoken",
+      "target": "OCA\\Bookmarks\\Controller\\InternalFoldersController::getFolderPublicToken",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/folder/{folderId}/publictoken",
+      "target": "OCA\\Bookmarks\\Controller\\InternalFoldersController::createFolderPublicToken",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/folder/{folderId}/shares",
+      "target": "OCA\\Bookmarks\\Controller\\InternalFoldersController::getShares",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/folder/{folderId}/shares",
+      "target": "OCA\\Bookmarks\\Controller\\InternalFoldersController::createShare",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/folder/{folderId}/undelete",
+      "target": "OCA\\Bookmarks\\Controller\\InternalFoldersController::undeleteFolder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/folder/deleted",
+      "target": "OCA\\Bookmarks\\Controller\\InternalFoldersController::getDeletedFolders",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/folder/shared",
+      "target": "OCA\\Bookmarks\\Controller\\InternalFoldersController::findSharedFolders",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/folders/{folder}",
+      "target": "OCA\\Bookmarks\\Controller\\WebViewController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/folders/{folder}/search/{search}",
+      "target": "OCA\\Bookmarks\\Controller\\WebViewController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/bookmarks/lock",
+      "target": "OCA\\Bookmarks\\Controller\\InternalBookmarkController::releaseLock",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/lock",
+      "target": "OCA\\Bookmarks\\Controller\\InternalBookmarkController::acquireLock",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/manifest.webmanifest",
+      "target": "OCA\\Bookmarks\\Controller\\WebViewController::manifest",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/public/{token}",
+      "target": "OCA\\Bookmarks\\Controller\\WebViewController::link",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/{path}",
+      "target": "OCA\\Bookmarks\\Controller\\BookmarkController::preflightedCors",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/bookmark",
+      "target": "OCA\\Bookmarks\\Controller\\BookmarkController::getBookmarks",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/bookmark",
+      "target": "OCA\\Bookmarks\\Controller\\BookmarkController::newBookmark",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/bookmark/{id}",
+      "target": "OCA\\Bookmarks\\Controller\\BookmarkController::deleteBookmark",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/bookmark/{id}",
+      "target": "OCA\\Bookmarks\\Controller\\BookmarkController::getSingleBookmark",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/bookmark/{id}",
+      "target": "OCA\\Bookmarks\\Controller\\BookmarkController::editBookmark",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/bookmark/{id}/favicon",
+      "target": "OCA\\Bookmarks\\Controller\\BookmarkController::getBookmarkFavicon",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/bookmark/{id}/image",
+      "target": "OCA\\Bookmarks\\Controller\\BookmarkController::getBookmarkImage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/bookmark/click",
+      "target": "OCA\\Bookmarks\\Controller\\BookmarkController::clickBookmark",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/bookmark/export",
+      "target": "OCA\\Bookmarks\\Controller\\BookmarkController::exportBookmark",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/bookmark/import",
+      "target": "OCA\\Bookmarks\\Controller\\BookmarkController::importBookmark",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/bookmark/unavailable",
+      "target": "OCA\\Bookmarks\\Controller\\BookmarkController::countUnavailable",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/folder",
+      "target": "OCA\\Bookmarks\\Controller\\FoldersController::getFolders",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/folder",
+      "target": "OCA\\Bookmarks\\Controller\\FoldersController::addFolder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/folder/{folder}/count",
+      "target": "OCA\\Bookmarks\\Controller\\BookmarkController::countBookmarks",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/folder/{folder}/import",
+      "target": "OCA\\Bookmarks\\Controller\\BookmarkController::importBookmark",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/folder/{folderId}",
+      "target": "OCA\\Bookmarks\\Controller\\FoldersController::deleteFolder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/folder/{folderId}",
+      "target": "OCA\\Bookmarks\\Controller\\FoldersController::getFolder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/folder/{folderId}",
+      "target": "OCA\\Bookmarks\\Controller\\FoldersController::editFolder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/folder/{folderId}/bookmarks/{bookmarkId}",
+      "target": "OCA\\Bookmarks\\Controller\\FoldersController::removeFromFolder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/folder/{folderId}/bookmarks/{bookmarkId}",
+      "target": "OCA\\Bookmarks\\Controller\\FoldersController::addToFolder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/folder/{folderId}/bookmarks/{bookmarkId}/undelete",
+      "target": "OCA\\Bookmarks\\Controller\\FoldersController::undeleteFromFolder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/folder/{folderId}/childorder",
+      "target": "OCA\\Bookmarks\\Controller\\FoldersController::getFolderChildrenOrder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/folder/{folderId}/childorder",
+      "target": "OCA\\Bookmarks\\Controller\\FoldersController::setFolderChildrenOrder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/folder/{folderId}/children",
+      "target": "OCA\\Bookmarks\\Controller\\FoldersController::getFolderChildren",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/folder/{folderId}/hash",
+      "target": "OCA\\Bookmarks\\Controller\\FoldersController::hashFolder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/folder/{folderId}/publictoken",
+      "target": "OCA\\Bookmarks\\Controller\\FoldersController::deleteFolderPublicToken",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/folder/{folderId}/publictoken",
+      "target": "OCA\\Bookmarks\\Controller\\FoldersController::getFolderPublicToken",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/folder/{folderId}/publictoken",
+      "target": "OCA\\Bookmarks\\Controller\\FoldersController::createFolderPublicToken",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/folder/{folderId}/shares",
+      "target": "OCA\\Bookmarks\\Controller\\FoldersController::getShares",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/folder/{folderId}/shares",
+      "target": "OCA\\Bookmarks\\Controller\\FoldersController::createShare",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/folder/{folderId}/undelete",
+      "target": "OCA\\Bookmarks\\Controller\\FoldersController::undeleteFolder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/lock",
+      "target": "OCA\\Bookmarks\\Controller\\BookmarkController::releaseLock",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/lock",
+      "target": "OCA\\Bookmarks\\Controller\\BookmarkController::acquireLock",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/share/{shareId}",
+      "target": "OCA\\Bookmarks\\Controller\\FoldersController::deleteShare",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/share/{shareId}",
+      "target": "OCA\\Bookmarks\\Controller\\FoldersController::getShare",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/share/{shareId}",
+      "target": "OCA\\Bookmarks\\Controller\\FoldersController::editShare",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/tag",
+      "target": "OCA\\Bookmarks\\Controller\\TagsController::deleteTag",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/tag",
+      "target": "OCA\\Bookmarks\\Controller\\TagsController::fullTags",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/tag",
+      "target": "OCA\\Bookmarks\\Controller\\TagsController::renameTag",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/tag/{old_name}",
+      "target": "OCA\\Bookmarks\\Controller\\TagsController::deleteTag",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/tag/{old_name}",
+      "target": "OCA\\Bookmarks\\Controller\\TagsController::renameTag",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/bookmarks/public/rest/v2/tag/{old_name}",
+      "target": "OCA\\Bookmarks\\Controller\\TagsController::renameTag",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/recent",
+      "target": "OCA\\Bookmarks\\Controller\\WebViewController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/service-worker.js",
+      "target": "OCA\\Bookmarks\\Controller\\WebViewController::serviceWorker",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/settings/{key}",
+      "target": "OCA\\Bookmarks\\Controller\\SettingsController::getSetting",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/settings/{key}",
+      "target": "OCA\\Bookmarks\\Controller\\SettingsController::setSetting",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/share",
+      "target": "OCA\\Bookmarks\\Controller\\InternalFoldersController::findShares",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/bookmarks/share/{shareId}",
+      "target": "OCA\\Bookmarks\\Controller\\InternalFoldersController::deleteShare",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/share/{shareId}",
+      "target": "OCA\\Bookmarks\\Controller\\InternalFoldersController::getShare",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/bookmarks/share/{shareId}",
+      "target": "OCA\\Bookmarks\\Controller\\InternalFoldersController::editShare",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/shared",
+      "target": "OCA\\Bookmarks\\Controller\\WebViewController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/bookmarks/tag",
+      "target": "OCA\\Bookmarks\\Controller\\InternalTagsController::deleteTag",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/tag",
+      "target": "OCA\\Bookmarks\\Controller\\InternalTagsController::fullTags",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/tag",
+      "target": "OCA\\Bookmarks\\Controller\\InternalTagsController::renameTag",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/bookmarks/tag/{old_name}",
+      "target": "OCA\\Bookmarks\\Controller\\InternalTagsController::deleteTag",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bookmarks/tag/{old_name}",
+      "target": "OCA\\Bookmarks\\Controller\\InternalTagsController::renameTag",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/bookmarks/tag/{old_name}",
+      "target": "OCA\\Bookmarks\\Controller\\InternalTagsController::renameTag",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/tags/{tags}",
+      "target": "OCA\\Bookmarks\\Controller\\WebViewController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/trashbin",
+      "target": "OCA\\Bookmarks\\Controller\\WebViewController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/unavailable",
+      "target": "OCA\\Bookmarks\\Controller\\WebViewController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bookmarks/untagged",
+      "target": "OCA\\Bookmarks\\Controller\\WebViewController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/capabilities",
+      "target": "OCA\\Bookmarks\\Capabilities",
+      "openapi": [],
+      "kind": "capability"
+    }
+  ]
+}

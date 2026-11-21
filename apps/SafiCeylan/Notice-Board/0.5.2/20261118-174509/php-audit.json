@@ -1,0 +1,280 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\NoticeBoard\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/Service/TalkGateway.php:235 OCP\\App\\IAppManager::isEnabledForAnyone(): there since Nextcloud 32, the app declares from 30"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that the oldest majors of Nextcloud 30 to 36 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/Service/TalkGateway.php:235 OCP\\App\\IAppManager::isEnabledForAnyone(): there since Nextcloud 32, the app declares from 30"
+      ]
+    },
+    {
+      "id": "display-name-lookup",
+      "level": "warn",
+      "places": [
+        "lib/Activity/Provider.php:58",
+        "lib/Service/CommentService.php:154",
+        "lib/Service/MailService.php:53",
+        "lib/Service/TalkService.php:124"
+      ],
+      "lines": [
+        "4 places load a user with IUserManager::get() only to ask for the display name. IUserManager::getDisplayName(), there since Nextcloud 25, answers from a cache and loads no user.",
+        "  lib/Activity/Provider.php:58",
+        "  lib/Service/CommentService.php:154",
+        "  lib/Service/MailService.php:53",
+        "  lib/Service/TalkService.php:124"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Service/TalkGateway.php:236 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Service/TalkService.php:146 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/TalkService.php:149 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "lines": [
+        "3 uses in 2 files of the public API that is deprecated in Nextcloud 30 to 36. The text of the tag names the replacement where it has one.",
+        "  lib/Service/TalkGateway.php:236 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Service/TalkService.php:146 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/TalkService.php:149 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/PublisherService.php:86 getValueArray()",
+        "lib/Service/PublisherService.php:93 getValueArray()",
+        "lib/Service/PublisherService.php:101 setValueArray()",
+        "lib/Service/PublisherService.php:102 setValueArray()",
+        "lib/Service/SpotlightSettings.php:40 getValueInt()",
+        "lib/Service/SpotlightSettings.php:41 getValueString()",
+        "lib/Service/SpotlightSettings.php:61 setValueInt()",
+        "lib/Service/SpotlightSettings.php:62 setValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 8 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/PublisherService.php:86 getValueArray()",
+        "  lib/Service/PublisherService.php:93 getValueArray()",
+        "  lib/Service/PublisherService.php:101 setValueArray()",
+        "  lib/Service/PublisherService.php:102 setValueArray()",
+        "  lib/Service/SpotlightSettings.php:40 getValueInt()",
+        "  lib/Service/SpotlightSettings.php:41 getValueString()",
+        "  lib/Service/SpotlightSettings.php:61 setValueInt()",
+        "  lib/Service/SpotlightSettings.php:62 setValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 15 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version000300Date20261005120000.php:37 a column of noticeboard_posts whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version000300Date20261005120000.php:37 a column of noticeboard_posts whose name is no constant"
+      ]
+    }
+  ],
+  "endpoints": 19,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/noticeboard/",
+      "target": "OCA\\NoticeBoard\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/noticeboard/announcements/{id}/attachments/{attachmentId}",
+      "target": "OCA\\NoticeBoard\\Controller\\FileController::attachment",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/noticeboard/announcements/{id}/cover",
+      "target": "OCA\\NoticeBoard\\Controller\\FileController::cover",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/noticeboard/announcements/{id}/images/{fileId}",
+      "target": "OCA\\NoticeBoard\\Controller\\FileController::image",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/noticeboard/api/v1/announcements",
+      "target": "OCA\\NoticeBoard\\Controller\\AnnouncementController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/noticeboard/api/v1/announcements",
+      "target": "OCA\\NoticeBoard\\Controller\\AnnouncementController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/noticeboard/api/v1/announcements/{id}",
+      "target": "OCA\\NoticeBoard\\Controller\\AnnouncementController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/noticeboard/api/v1/announcements/{id}",
+      "target": "OCA\\NoticeBoard\\Controller\\AnnouncementController::show",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/noticeboard/api/v1/announcements/{id}",
+      "target": "OCA\\NoticeBoard\\Controller\\AnnouncementController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/noticeboard/api/v1/announcements/{id}/comments",
+      "target": "OCA\\NoticeBoard\\Controller\\CommentController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/noticeboard/api/v1/announcements/{id}/comments",
+      "target": "OCA\\NoticeBoard\\Controller\\CommentController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/noticeboard/api/v1/announcements/{id}/comments/{commentId}",
+      "target": "OCA\\NoticeBoard\\Controller\\CommentController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/noticeboard/api/v1/announcements/all",
+      "target": "OCA\\NoticeBoard\\Controller\\AnnouncementController::all",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/noticeboard/api/v1/groups",
+      "target": "OCA\\NoticeBoard\\Controller\\PickerController::groups",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/noticeboard/api/v1/settings/publishers",
+      "target": "OCA\\NoticeBoard\\Controller\\AdminController::getSettings",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/noticeboard/api/v1/settings/publishers",
+      "target": "OCA\\NoticeBoard\\Controller\\AdminController::saveSettings",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/noticeboard/api/v1/settings/spotlight",
+      "target": "OCA\\NoticeBoard\\Controller\\AdminController::getSpotlight",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/noticeboard/api/v1/settings/spotlight",
+      "target": "OCA\\NoticeBoard\\Controller\\AdminController::saveSpotlight",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/noticeboard/api/v1/settings/users",
+      "target": "OCA\\NoticeBoard\\Controller\\AdminController::searchUsers",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

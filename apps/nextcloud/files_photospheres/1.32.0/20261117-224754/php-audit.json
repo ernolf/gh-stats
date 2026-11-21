@@ -1,0 +1,120 @@
+{
+  "findings": [
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/PageController.php:63 OC",
+        "lib/Controller/PageController.php:63 OC::$server"
+      ],
+      "lines": [
+        "2 uses of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/PageController.php:63 OC",
+        "  lib/Controller/PageController.php:63 OC::$server"
+      ]
+    },
+    {
+      "id": "ocp-removed-soon",
+      "level": "warn",
+      "places": [
+        "lib/Controller/PageController.php:90 OCP\\AppFramework\\Http\\EmptyContentSecurityPolicy::allowEvalScript(): deprecated since Nextcloud 17, Nextcloud 33 is the last major to have it; Eval should not be used anymore. Please update your scripts. This function will stop functioning in a future version of Nextcloud."
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated and that Nextcloud 36 no longer has: the app fails on the first major without it, once it declares that one.",
+        "  lib/Controller/PageController.php:90 OCP\\AppFramework\\Http\\EmptyContentSecurityPolicy::allowEvalScript(): deprecated since Nextcloud 17, Nextcloud 33 is the last major to have it; Eval should not be used anymore. Please update your scripts. This function will stop functioning in a future version of Nextcloud."
+      ]
+    },
+    {
+      "id": "dav-without-preload",
+      "level": "warn",
+      "places": [
+        "lib/Sabre/PhotosphereViewerPlugin.php:74 OCA\\Files_PhotoSpheres\\Sabre\\PhotosphereViewerPlugin"
+      ],
+      "lines": [
+        "1 DAV plugin listens to propFind and not to preloadCollection, which the server emits from Nextcloud 32 on before it reads the children of a collection. Without that listener a PROPFIND with Depth above 0 runs the queries of the plugin once per child.",
+        "  lib/Sabre/PhotosphereViewerPlugin.php:74 OCA\\Files_PhotoSpheres\\Sabre\\PhotosphereViewerPlugin"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/files_photospheres/userfiles/xmpdata/{fileId}  files_photospheres.userfiles.get_xmp_data  appinfo/routes.php:11 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 route outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 2 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/files_photospheres/userfiles/xmpdata/{fileId}  files_photospheres.userfiles.get_xmp_data  appinfo/routes.php:11 routes"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/PageController.php:89 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Service/ShareService.php:62 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead"
+      ],
+      "lines": [
+        "2 uses in 2 files of the public API that is deprecated in Nextcloud 32. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/PageController.php:89 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Service/ShareService.php:62 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead"
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/viewer_video.php:15 <style> with content"
+      ],
+      "lines": [
+        "1 inline style in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/viewer_video.php:15 <style> with content"
+      ]
+    }
+  ],
+  "endpoints": 5,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/files_photospheres/",
+      "target": "OCA\\Files_PhotoSpheres\\Controller\\PageController::image",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/files_photospheres/sharefiles/xmpdata/{shareToken}",
+      "target": "OCA\\Files_PhotoSpheres\\Controller\\SharefilesController::getXmpData",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/files_photospheres/userfiles/xmpdata/{fileId}",
+      "target": "OCA\\Files_PhotoSpheres\\Controller\\UserfilesController::getXmpData",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/files_photospheres/video",
+      "target": "OCA\\Files_PhotoSpheres\\Controller\\PageController::video",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": null,
+      "path": "/remote.php/dav",
+      "target": "OCA\\Files_PhotoSpheres\\Sabre\\PhotosphereViewerPlugin",
+      "openapi": [],
+      "kind": "DAV"
+    }
+  ]
+}

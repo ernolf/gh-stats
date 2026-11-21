@@ -1,0 +1,320 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\PenpotSync\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Listener/TrashPurgeHook.php:99 OC_User",
+        "lib/Migration/RegisterMimetype.php:94 OC",
+        "lib/Migration/RegisterMimetype.php:133 OC\\Core\\Command\\Maintenance\\Mimetype\\GenerateMimetypeFileBuilder",
+        "lib/Migration/UnregisterMimetype.php:72 OC",
+        "lib/Migration/UnregisterMimetype.php:103 OC\\Core\\Command\\Maintenance\\Mimetype\\GenerateMimetypeFileBuilder",
+        "lib/Service/TeamFolderService.php:204 OC_Util",
+        "lib/Service/TrashControl.php:384 OC_Util"
+      ],
+      "lines": [
+        "7 uses of the private API of the server in 5 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Listener/TrashPurgeHook.php:99 OC_User",
+        "  lib/Migration/RegisterMimetype.php:94 OC",
+        "  lib/Migration/RegisterMimetype.php:133 OC\\Core\\Command\\Maintenance\\Mimetype\\GenerateMimetypeFileBuilder",
+        "  lib/Migration/UnregisterMimetype.php:72 OC",
+        "  lib/Migration/UnregisterMimetype.php:103 OC\\Core\\Command\\Maintenance\\Mimetype\\GenerateMimetypeFileBuilder",
+        "  lib/Service/TeamFolderService.php:204 OC_Util",
+        "  lib/Service/TrashControl.php:384 OC_Util"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "legacy-hook",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:244 OCP\\Trashbin::preDelete: the manual names no replacement event",
+        "lib/AppInfo/Application.php:260 OCA\\Files_Trashbin\\Trashbin::post_restore: the manual names no replacement event"
+      ],
+      "lines": [
+        "2 connections to a legacy hook of the server. A hook the server removed is never emitted, and the listener never runs; the typed events of OCP\\EventDispatcher replace the hooks.",
+        "OCP\\Util::connectHook() is deprecated since Nextcloud 21: use \\OCP\\EventDispatcher\\IEventDispatcher::addListener. ocp-deprecated leaves these calls to this finding.",
+        "  lib/AppInfo/Application.php:244 OCP\\Trashbin::preDelete: the manual names no replacement event",
+        "  lib/AppInfo/Application.php:260 OCA\\Files_Trashbin\\Trashbin::post_restore: the manual names no replacement event"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:222 get()",
+        "lib/AppInfo/Application.php:228 get()",
+        "lib/AppInfo/Application.php:242 get()",
+        "lib/AppInfo/Application.php:258 get()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 4 places. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:222 get()",
+        "  lib/AppInfo/Application.php:228 get()",
+        "  lib/AppInfo/Application.php:242 get()",
+        "  lib/AppInfo/Application.php:258 get()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/penpot_sync/mappings  penpot_sync.mapping.index  appinfo/routes.php:18 routes",
+        "POST /index.php/apps/penpot_sync/mappings  penpot_sync.mapping.create  appinfo/routes.php:18 routes",
+        "PUT /index.php/apps/penpot_sync/mappings/{id}  penpot_sync.mapping.update  appinfo/routes.php:18 routes",
+        "DELETE /index.php/apps/penpot_sync/mappings/{id}  penpot_sync.mapping.destroy  appinfo/routes.php:18 routes",
+        "POST /index.php/apps/penpot_sync/test-connection  penpot_sync.mapping.testconnection  appinfo/routes.php:18 routes",
+        "POST /index.php/apps/penpot_sync/mappings/{id}/sync  penpot_sync.mapping.sync  appinfo/routes.php:18 routes",
+        "POST /index.php/apps/penpot_sync/sync/pull  penpot_sync.sync.pull  appinfo/routes.php:18 routes",
+        "GET /index.php/apps/penpot_sync/sync/status  penpot_sync.sync.status  appinfo/routes.php:18 routes",
+        "POST /index.php/apps/penpot_sync/sync/push  penpot_sync.sync.push  appinfo/routes.php:18 routes",
+        "GET /index.php/apps/penpot_sync/sync/push-status  penpot_sync.sync.pushstatus  appinfo/routes.php:18 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 10 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 2 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/penpot_sync/mappings  penpot_sync.mapping.index  appinfo/routes.php:18 routes",
+        "  POST /index.php/apps/penpot_sync/mappings  penpot_sync.mapping.create  appinfo/routes.php:18 routes",
+        "  PUT /index.php/apps/penpot_sync/mappings/{id}  penpot_sync.mapping.update  appinfo/routes.php:18 routes",
+        "  DELETE /index.php/apps/penpot_sync/mappings/{id}  penpot_sync.mapping.destroy  appinfo/routes.php:18 routes",
+        "  POST /index.php/apps/penpot_sync/test-connection  penpot_sync.mapping.testconnection  appinfo/routes.php:18 routes",
+        "  POST /index.php/apps/penpot_sync/mappings/{id}/sync  penpot_sync.mapping.sync  appinfo/routes.php:18 routes",
+        "  POST /index.php/apps/penpot_sync/sync/pull  penpot_sync.sync.pull  appinfo/routes.php:18 routes",
+        "  GET /index.php/apps/penpot_sync/sync/status  penpot_sync.sync.status  appinfo/routes.php:18 routes",
+        "  POST /index.php/apps/penpot_sync/sync/push  penpot_sync.sync.push  appinfo/routes.php:18 routes",
+        "  GET /index.php/apps/penpot_sync/sync/push-status  penpot_sync.sync.pushstatus  appinfo/routes.php:18 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "vimeo/psalm, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Migration/RetypeScheduleToggle.php:94 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Service/PenpotMetadata.php:233 OCP\\FilesMetadata\\IFilesMetadataManager::getMetadata(): deprecated since Nextcloud 34; use `getMetadataForNode` instead.",
+        "lib/Service/PenpotMetadata.php:244 OCP\\FilesMetadata\\IFilesMetadataManager::getMetadata(): deprecated since Nextcloud 34; use `getMetadataForNode` instead.",
+        "lib/Service/PersonalTokenService.php:90 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/PersonalTokenService.php:126 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/PersonalTokenService.php:141 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/StorageService.php:102 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Service/StorageService.php:103 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Service/StorageService.php:104 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/Service/StorageService.php:105 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead",
+        "lib/Service/TeamFolderService.php:71 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Service/TeamFolderService.php:72 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Service/TeamFolderService.php:73 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/Service/TeamFolderService.php:74 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead",
+        "lib/Service/TeamFolderService.php:125 OCP\\Constants::PERMISSION_ALL: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_ALL instead",
+        "lib/Service/TeamFolderService.php:154 OCP\\Constants::PERMISSION_ALL: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_ALL instead",
+        "lib/Service/TeamFolderService.php:188 OCP\\Constants::PERMISSION_ALL: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_ALL instead"
+      ],
+      "lines": [
+        "17 uses in 5 files of the public API that is deprecated in Nextcloud 32 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Migration/RetypeScheduleToggle.php:94 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Service/PenpotMetadata.php:233 OCP\\FilesMetadata\\IFilesMetadataManager::getMetadata(): deprecated since Nextcloud 34; use `getMetadataForNode` instead.",
+        "  lib/Service/PenpotMetadata.php:244 OCP\\FilesMetadata\\IFilesMetadataManager::getMetadata(): deprecated since Nextcloud 34; use `getMetadataForNode` instead.",
+        "  lib/Service/PersonalTokenService.php:90 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/PersonalTokenService.php:126 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/PersonalTokenService.php:141 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/StorageService.php:102 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Service/StorageService.php:103 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Service/StorageService.php:104 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/Service/StorageService.php:105 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead",
+        "  lib/Service/TeamFolderService.php:71 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Service/TeamFolderService.php:72 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Service/TeamFolderService.php:73 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/Service/TeamFolderService.php:74 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead",
+        "  lib/Service/TeamFolderService.php:125 OCP\\Constants::PERMISSION_ALL: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_ALL instead",
+        "  lib/Service/TeamFolderService.php:154 OCP\\Constants::PERMISSION_ALL: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_ALL instead",
+        "  lib/Service/TeamFolderService.php:188 OCP\\Constants::PERMISSION_ALL: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_ALL instead"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 14
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/ScheduledPullJob.php OCA\\PenpotSync\\BackgroundJob\\ScheduledPullJob"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/ScheduledPullJob.php OCA\\PenpotSync\\BackgroundJob\\ScheduledPullJob"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Command/SetToken.php:64 setValueString()",
+        "lib/Command/SetUrl.php:73 setValueString()",
+        "lib/Command/ShowConfig.php:68 getValueString()",
+        "lib/Migration/RetypeScheduleToggle.php:73 hasKey()",
+        "lib/Migration/RetypeScheduleToggle.php:104 setValueBool()",
+        "lib/Migration/RetypeScheduleToggle.php:136 getValueBool()",
+        "lib/Migration/RetypeScheduleToggle.php:158 setValueString()",
+        "lib/Service/AppConfigReader.php:55 getValueBool()",
+        "lib/Service/AppConfigReader.php:63 getValueString()",
+        "lib/Service/MappingService.php:71 getValueString()",
+        "lib/Service/MappingService.php:474 setValueString()",
+        "lib/Service/PenpotClient.php:1531 getValueString()",
+        "lib/Service/PenpotClient.php:1554 getValueString()",
+        "lib/Service/PullStatus.php:83 getValueString()",
+        "lib/Service/PullStatus.php:141 setValueString()",
+        "lib/Service/ScheduleConfig.php:92 getValueString()",
+        "lib/Service/StorageService.php:324 getValueString()",
+        "lib/Service/TeamFolderService.php:228 getValueString()",
+        "lib/Settings/AutoSyncSettings.php:162 setValueBool()",
+        "lib/Settings/AutoSyncSettings.php:166 setValueString()",
+        "lib/Settings/InstanceSettings.php:118 getValueString()",
+        "lib/Settings/InstanceSettings.php:184 getValueString()",
+        "lib/Settings/InstanceSettings.php:210 setValueString()",
+        "lib/Settings/InstanceSettings.php:217 setValueString()",
+        "lib/Settings/InstanceSettings.php:234 getValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 25 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Command/SetToken.php:64 setValueString()",
+        "  lib/Command/SetUrl.php:73 setValueString()",
+        "  lib/Command/ShowConfig.php:68 getValueString()",
+        "  lib/Migration/RetypeScheduleToggle.php:73 hasKey()",
+        "  lib/Migration/RetypeScheduleToggle.php:104 setValueBool()",
+        "  lib/Migration/RetypeScheduleToggle.php:136 getValueBool()",
+        "  lib/Migration/RetypeScheduleToggle.php:158 setValueString()",
+        "  lib/Service/AppConfigReader.php:55 getValueBool()",
+        "  lib/Service/AppConfigReader.php:63 getValueString()",
+        "  lib/Service/MappingService.php:71 getValueString()",
+        "  lib/Service/MappingService.php:474 setValueString()",
+        "  lib/Service/PenpotClient.php:1531 getValueString()",
+        "  lib/Service/PenpotClient.php:1554 getValueString()",
+        "  lib/Service/PullStatus.php:83 getValueString()",
+        "  lib/Service/PullStatus.php:141 setValueString()",
+        "  lib/Service/ScheduleConfig.php:92 getValueString()",
+        "  lib/Service/StorageService.php:324 getValueString()",
+        "  lib/Service/TeamFolderService.php:228 getValueString()",
+        "  lib/Settings/AutoSyncSettings.php:162 setValueBool()",
+        "  lib/Settings/AutoSyncSettings.php:166 setValueString()",
+        "  lib/Settings/InstanceSettings.php:118 getValueString()",
+        "  lib/Settings/InstanceSettings.php:184 getValueString()",
+        "  lib/Settings/InstanceSettings.php:210 setValueString()",
+        "  lib/Settings/InstanceSettings.php:217 setValueString()",
+        "  lib/Settings/InstanceSettings.php:234 getValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 22
+        }
+      ]
+    }
+  ],
+  "endpoints": 10,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/penpot_sync/mappings",
+      "target": "OCA\\PenpotSync\\Controller\\MappingController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/penpot_sync/mappings",
+      "target": "OCA\\PenpotSync\\Controller\\MappingController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/penpot_sync/mappings/{id}",
+      "target": "OCA\\PenpotSync\\Controller\\MappingController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/penpot_sync/mappings/{id}",
+      "target": "OCA\\PenpotSync\\Controller\\MappingController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/penpot_sync/mappings/{id}/sync",
+      "target": "OCA\\PenpotSync\\Controller\\MappingController::sync",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/penpot_sync/sync/pull",
+      "target": "OCA\\PenpotSync\\Controller\\SyncController::pull",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/penpot_sync/sync/push",
+      "target": "OCA\\PenpotSync\\Controller\\SyncController::push",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/penpot_sync/sync/push-status",
+      "target": "OCA\\PenpotSync\\Controller\\SyncController::pushStatus",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/penpot_sync/sync/status",
+      "target": "OCA\\PenpotSync\\Controller\\SyncController::status",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/penpot_sync/test-connection",
+      "target": "OCA\\PenpotSync\\Controller\\MappingController::testConnection",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

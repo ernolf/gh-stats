@@ -1,0 +1,540 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\MarkdownNotes\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "appinfo/notes.php:28 OC_User",
+        "appinfo/notes.php:46 OC",
+        "appinfo/notes.php:46 OC::$server",
+        "appinfo/notes.php:47 OC\\AppFramework\\App",
+        "lib/BackgroundJob/ReindexJob.php:37 OC_Util",
+        "lib/Service/NotebookPlacer.php:63 OC_Util"
+      ],
+      "lines": [
+        "6 uses of the private API of the server in 3 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  appinfo/notes.php:28 OC_User",
+        "  appinfo/notes.php:46 OC",
+        "  appinfo/notes.php:46 OC::$server",
+        "  appinfo/notes.php:47 OC\\AppFramework\\App",
+        "  lib/BackgroundJob/ReindexJob.php:37 OC_Util",
+        "  lib/Service/NotebookPlacer.php:63 OC_Util"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/Service/FileLinkService.php:104 OCP\\App\\IAppManager::isEnabledForAnyone(): there since Nextcloud 32, the app declares from 28",
+        "lib/Service/LinkedFiles.php:237 OCP\\App\\IAppManager::isEnabledForAnyone(): there since Nextcloud 32, the app declares from 28",
+        "lib/Service/NotesService.php:131 OCP\\Files\\Storage\\ISharedStorage: there since Nextcloud 30, the app declares from 28",
+        "lib/Service/SystemTagSync.php:208 OCP\\SystemTag\\TagCreationForbiddenException: there since Nextcloud 31, the app declares from 28"
+      ],
+      "lines": [
+        "4 uses in 4 files of the public API that the oldest majors of Nextcloud 28 to 35 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/Service/FileLinkService.php:104 OCP\\App\\IAppManager::isEnabledForAnyone(): there since Nextcloud 32, the app declares from 28",
+        "  lib/Service/LinkedFiles.php:237 OCP\\App\\IAppManager::isEnabledForAnyone(): there since Nextcloud 32, the app declares from 28",
+        "  lib/Service/NotesService.php:131 OCP\\Files\\Storage\\ISharedStorage: there since Nextcloud 30, the app declares from 28",
+        "  lib/Service/SystemTagSync.php:208 OCP\\SystemTag\\TagCreationForbiddenException: there since Nextcloud 31, the app declares from 28"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/markdown_notes/resource/{id}  markdown_notes.resource.show  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/markdown_notes/resource  markdown_notes.resource.create  appinfo/routes.php:5 routes",
+        "PROPFIND /index.php/apps/markdown_notes/joplin  markdown_notes.webdav.davroot-propfind  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/markdown_notes/joplin/{path}  markdown_notes.webdav.davget  appinfo/routes.php:5 routes",
+        "HEAD /index.php/apps/markdown_notes/joplin/{path}  markdown_notes.webdav.davhead  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/markdown_notes/joplin/{path}  markdown_notes.webdav.davput  appinfo/routes.php:5 routes",
+        "DELETE /index.php/apps/markdown_notes/joplin/{path}  markdown_notes.webdav.davdelete  appinfo/routes.php:5 routes",
+        "PROPFIND /index.php/apps/markdown_notes/joplin/{path}  markdown_notes.webdav.davpropfind  appinfo/routes.php:5 routes",
+        "MKCOL /index.php/apps/markdown_notes/joplin/{path}  markdown_notes.webdav.davmkcol  appinfo/routes.php:5 routes",
+        "MOVE /index.php/apps/markdown_notes/joplin/{path}  markdown_notes.webdav.davmove  appinfo/routes.php:5 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 10 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 1 file of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/markdown_notes/resource/{id}  markdown_notes.resource.show  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/markdown_notes/resource  markdown_notes.resource.create  appinfo/routes.php:5 routes",
+        "  PROPFIND /index.php/apps/markdown_notes/joplin  markdown_notes.webdav.davroot-propfind  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/markdown_notes/joplin/{path}  markdown_notes.webdav.davget  appinfo/routes.php:5 routes",
+        "  HEAD /index.php/apps/markdown_notes/joplin/{path}  markdown_notes.webdav.davhead  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/markdown_notes/joplin/{path}  markdown_notes.webdav.davput  appinfo/routes.php:5 routes",
+        "  DELETE /index.php/apps/markdown_notes/joplin/{path}  markdown_notes.webdav.davdelete  appinfo/routes.php:5 routes",
+        "  PROPFIND /index.php/apps/markdown_notes/joplin/{path}  markdown_notes.webdav.davpropfind  appinfo/routes.php:5 routes",
+        "  MKCOL /index.php/apps/markdown_notes/joplin/{path}  markdown_notes.webdav.davmkcol  appinfo/routes.php:5 routes",
+        "  MOVE /index.php/apps/markdown_notes/joplin/{path}  markdown_notes.webdav.davmove  appinfo/routes.php:5 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:27 OCP\\SystemTag\\MapperEvent::EVENT_ASSIGN: deprecated since Nextcloud 22",
+        "lib/AppInfo/Application.php:28 OCP\\SystemTag\\MapperEvent::EVENT_UNASSIGN: deprecated since Nextcloud 22",
+        "lib/Listener/LoadFilesScriptsListener.php:43 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/MetaDataBridge.php:144 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Service/NotesService.php:36 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/NotesService.php:41 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/NotesService.php:1024 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/NotesService.php:1046 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "lines": [
+        "8 uses in 4 files of the public API that is deprecated in Nextcloud 28 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/AppInfo/Application.php:27 OCP\\SystemTag\\MapperEvent::EVENT_ASSIGN: deprecated since Nextcloud 22",
+        "  lib/AppInfo/Application.php:28 OCP\\SystemTag\\MapperEvent::EVENT_UNASSIGN: deprecated since Nextcloud 22",
+        "  lib/Listener/LoadFilesScriptsListener.php:43 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/MetaDataBridge.php:144 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Service/NotesService.php:36 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/NotesService.php:41 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/NotesService.php:1024 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/NotesService.php:1046 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/index.php:13 style= attribute",
+        "templates/index.php:54 style= attribute",
+        "templates/index.php:56 style= attribute",
+        "templates/index.php:61 style= attribute",
+        "templates/index.php:68 style= attribute",
+        "templates/index.php:80 style= attribute",
+        "templates/index.php:95 style= attribute",
+        "templates/index.php:99 style= attribute"
+      ],
+      "lines": [
+        "8 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/index.php:13 style= attribute",
+        "  templates/index.php:54 style= attribute",
+        "  templates/index.php:56 style= attribute",
+        "  templates/index.php:61 style= attribute",
+        "  templates/index.php:68 style= attribute",
+        "  templates/index.php:80 style= attribute",
+        "  templates/index.php:95 style= attribute",
+        "  templates/index.php:99 style= attribute"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/NotesService.php:1139 time()",
+        "lib/Service/TimestampService.php:452 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 2 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/NotesService.php:1139 time()",
+        "  lib/Service/TimestampService.php:452 time()"
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/markdown_notes/api/v1/tree  ocs.markdown_notes.api.tree  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/markdown_notes/api/v1/notes  ocs.markdown_notes.api.listnotes  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/markdown_notes/api/v1/note  ocs.markdown_notes.api.getnote  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/markdown_notes/api/v1/templates  ocs.markdown_notes.api.templates  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/markdown_notes/api/v1/template/info  ocs.markdown_notes.api.templateinfo  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/markdown_notes/api/v1/note/save  ocs.markdown_notes.api.savenote  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/markdown_notes/api/v1/note/complete  ocs.markdown_notes.api.setcompleted  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/markdown_notes/api/v1/note/due  ocs.markdown_notes.api.setdue  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/markdown_notes/api/v1/note/todo  ocs.markdown_notes.api.settodo  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/markdown_notes/api/v1/note/meta  ocs.markdown_notes.api.setmeta  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/markdown_notes/api/v1/note/create  ocs.markdown_notes.api.createnote  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/markdown_notes/api/v1/note/tag  ocs.markdown_notes.api.addtags  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/markdown_notes/api/v1/note/untag  ocs.markdown_notes.api.untag  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/markdown_notes/api/v1/note/delete  ocs.markdown_notes.api.deletenote  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/markdown_notes/api/v1/notes/delete  ocs.markdown_notes.api.deletenotes  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/markdown_notes/api/v1/notebook/create  ocs.markdown_notes.api.createnotebook  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/markdown_notes/api/v1/notebook/delete  ocs.markdown_notes.api.deletenotebook  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/markdown_notes/api/v1/notebooks/delete  ocs.markdown_notes.api.deletenotebooks  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/markdown_notes/api/v1/notebook/linked  ocs.markdown_notes.api.linkedfolders  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/markdown_notes/api/v1/filelink  ocs.markdown_notes.api.filelink  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/markdown_notes/api/v1/rename  ocs.markdown_notes.api.rename  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/markdown_notes/api/v1/gc  ocs.markdown_notes.api.gc  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/markdown_notes/api/v1/note/timestamps  ocs.markdown_notes.api.timestamps  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/markdown_notes/api/v1/note/timestamp  ocs.markdown_notes.api.timestamp  appinfo/routes.php:5 ocs"
+      ],
+      "lines": [
+        "Nothing in the app calls 24 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/markdown_notes/api/v1/tree  ocs.markdown_notes.api.tree  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/markdown_notes/api/v1/notes  ocs.markdown_notes.api.listnotes  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/markdown_notes/api/v1/note  ocs.markdown_notes.api.getnote  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/markdown_notes/api/v1/templates  ocs.markdown_notes.api.templates  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/markdown_notes/api/v1/template/info  ocs.markdown_notes.api.templateinfo  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/markdown_notes/api/v1/note/save  ocs.markdown_notes.api.savenote  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/markdown_notes/api/v1/note/complete  ocs.markdown_notes.api.setcompleted  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/markdown_notes/api/v1/note/due  ocs.markdown_notes.api.setdue  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/markdown_notes/api/v1/note/todo  ocs.markdown_notes.api.settodo  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/markdown_notes/api/v1/note/meta  ocs.markdown_notes.api.setmeta  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/markdown_notes/api/v1/note/create  ocs.markdown_notes.api.createnote  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/markdown_notes/api/v1/note/tag  ocs.markdown_notes.api.addtags  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/markdown_notes/api/v1/note/untag  ocs.markdown_notes.api.untag  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/markdown_notes/api/v1/note/delete  ocs.markdown_notes.api.deletenote  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/markdown_notes/api/v1/notes/delete  ocs.markdown_notes.api.deletenotes  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/markdown_notes/api/v1/notebook/create  ocs.markdown_notes.api.createnotebook  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/markdown_notes/api/v1/notebook/delete  ocs.markdown_notes.api.deletenotebook  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/markdown_notes/api/v1/notebooks/delete  ocs.markdown_notes.api.deletenotebooks  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/markdown_notes/api/v1/notebook/linked  ocs.markdown_notes.api.linkedfolders  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/markdown_notes/api/v1/filelink  ocs.markdown_notes.api.filelink  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/markdown_notes/api/v1/rename  ocs.markdown_notes.api.rename  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/markdown_notes/api/v1/gc  ocs.markdown_notes.api.gc  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/markdown_notes/api/v1/note/timestamps  ocs.markdown_notes.api.timestamps  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/markdown_notes/api/v1/note/timestamp  ocs.markdown_notes.api.timestamp  appinfo/routes.php:5 ocs"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 21
+        }
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 24 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 35,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/markdown_notes/",
+      "target": "OCA\\MarkdownNotes\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PROPFIND",
+      "path": "/index.php/apps/markdown_notes/joplin",
+      "target": "OCA\\MarkdownNotes\\Controller\\WebDavController::dav",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/markdown_notes/joplin/{path}",
+      "target": "OCA\\MarkdownNotes\\Controller\\WebDavController::dav",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/markdown_notes/joplin/{path}",
+      "target": "OCA\\MarkdownNotes\\Controller\\WebDavController::dav",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "HEAD",
+      "path": "/index.php/apps/markdown_notes/joplin/{path}",
+      "target": "OCA\\MarkdownNotes\\Controller\\WebDavController::dav",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "MKCOL",
+      "path": "/index.php/apps/markdown_notes/joplin/{path}",
+      "target": "OCA\\MarkdownNotes\\Controller\\WebDavController::dav",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "MOVE",
+      "path": "/index.php/apps/markdown_notes/joplin/{path}",
+      "target": "OCA\\MarkdownNotes\\Controller\\WebDavController::dav",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PROPFIND",
+      "path": "/index.php/apps/markdown_notes/joplin/{path}",
+      "target": "OCA\\MarkdownNotes\\Controller\\WebDavController::dav",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/markdown_notes/joplin/{path}",
+      "target": "OCA\\MarkdownNotes\\Controller\\WebDavController::dav",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/markdown_notes/resource",
+      "target": "OCA\\MarkdownNotes\\Controller\\ResourceController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/markdown_notes/resource/{id}",
+      "target": "OCA\\MarkdownNotes\\Controller\\ResourceController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/markdown_notes/api/v1/filelink",
+      "target": "OCA\\MarkdownNotes\\Controller\\ApiController::fileLink",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/markdown_notes/api/v1/gc",
+      "target": "OCA\\MarkdownNotes\\Controller\\ApiController::gc",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/markdown_notes/api/v1/note",
+      "target": "OCA\\MarkdownNotes\\Controller\\ApiController::getNote",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/markdown_notes/api/v1/note/complete",
+      "target": "OCA\\MarkdownNotes\\Controller\\ApiController::setCompleted",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/markdown_notes/api/v1/note/create",
+      "target": "OCA\\MarkdownNotes\\Controller\\ApiController::createNote",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/markdown_notes/api/v1/note/delete",
+      "target": "OCA\\MarkdownNotes\\Controller\\ApiController::deleteNote",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/markdown_notes/api/v1/note/due",
+      "target": "OCA\\MarkdownNotes\\Controller\\ApiController::setDue",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/markdown_notes/api/v1/note/meta",
+      "target": "OCA\\MarkdownNotes\\Controller\\ApiController::setMeta",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/markdown_notes/api/v1/note/save",
+      "target": "OCA\\MarkdownNotes\\Controller\\ApiController::saveNote",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/markdown_notes/api/v1/note/tag",
+      "target": "OCA\\MarkdownNotes\\Controller\\ApiController::addTags",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/markdown_notes/api/v1/note/timestamp",
+      "target": "OCA\\MarkdownNotes\\Controller\\ApiController::timestamp",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/markdown_notes/api/v1/note/timestamps",
+      "target": "OCA\\MarkdownNotes\\Controller\\ApiController::timestamps",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/markdown_notes/api/v1/note/todo",
+      "target": "OCA\\MarkdownNotes\\Controller\\ApiController::setTodo",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/markdown_notes/api/v1/note/untag",
+      "target": "OCA\\MarkdownNotes\\Controller\\ApiController::untag",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/markdown_notes/api/v1/notebook/create",
+      "target": "OCA\\MarkdownNotes\\Controller\\ApiController::createNotebook",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/markdown_notes/api/v1/notebook/delete",
+      "target": "OCA\\MarkdownNotes\\Controller\\ApiController::deleteNotebook",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/markdown_notes/api/v1/notebook/linked",
+      "target": "OCA\\MarkdownNotes\\Controller\\ApiController::linkedFolders",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/markdown_notes/api/v1/notebooks/delete",
+      "target": "OCA\\MarkdownNotes\\Controller\\ApiController::deleteNotebooks",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/markdown_notes/api/v1/notes",
+      "target": "OCA\\MarkdownNotes\\Controller\\ApiController::listNotes",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/markdown_notes/api/v1/notes/delete",
+      "target": "OCA\\MarkdownNotes\\Controller\\ApiController::deleteNotes",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/markdown_notes/api/v1/rename",
+      "target": "OCA\\MarkdownNotes\\Controller\\ApiController::rename",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/markdown_notes/api/v1/template/info",
+      "target": "OCA\\MarkdownNotes\\Controller\\ApiController::templateInfo",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/markdown_notes/api/v1/templates",
+      "target": "OCA\\MarkdownNotes\\Controller\\ApiController::templates",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/markdown_notes/api/v1/tree",
+      "target": "OCA\\MarkdownNotes\\Controller\\ApiController::tree",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

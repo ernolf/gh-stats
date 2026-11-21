@@ -1,0 +1,188 @@
+<?xml version="1.0"?>
+<!--
+  - SPDX-FileCopyrightText: 2026 Kelly Ferrone
+  - SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+  <id>n8n_sync</id>
+  <name>n8n Sync</name>
+  <summary>Your n8n workflows as native, editable, backed-up Nextcloud files</summary>
+  <description><![CDATA[
+n8n Sync turns a Nextcloud folder into a live, two-way mirror of your n8n workflows.
+
+Bind an n8n **tag** to a folder, and every workflow wearing that tag shows up as a real `.n8n` file — with the n8n icon, its own tags, and its own dates. Edit it in Nextcloud and n8n has it seconds later. Change it in n8n and the file updates itself.
+
+Nothing is matched on filename. Every file carries its workflow's id, so renaming, moving, copying, trashing and restoring never break the link — and re-running a sync never duplicates anything.
+
+## ✨ What you can do
+
+- ✨ **Create, read, update and delete** a workflow from either side
+- 🚚 **Move** a workflow — it stays the same workflow — or **copy** it, which is always a new one
+- 🗑️ **Trash, restore and purge**, mirrored into n8n's archive
+- 🏷️ **Re-tag** it from the Files app, from inside the file, or from n8n
+- 🖱️ **Open in n8n** with a click, or open the raw JSON in the text editor
+- ⌨️ **Script all of it** — every admin action has an `occ` command
+
+## 🗑️ The Nextcloud trash *is* n8n's archive
+
+Trash a workflow file and its workflow is **archived** in n8n — hidden, not gone. Restore it and the workflow comes back. Only when you empty the trash is it permanently deleted.
+
+It works from the other side too: archive a workflow in n8n and its file lands in your Nextcloud trash; unarchive it and the file comes back out. Personal trash and Team Folder trash, both.
+
+## 🏷️ One set of tags, three places to change them
+
+A workflow's tags live in n8n, in the file's own `tags` array, and as Nextcloud's searchable system tags — and all three are kept identical. Change them wherever you happen to be looking and the other two follow, with no "sync now" click.
+
+That means your mirror is as searchable as n8n itself: filter for every `prod` workflow the Nextcloud-native way. 🔍
+
+## 🎨 Honest icons, honest dates
+
+Workflows register their own mimetype, so they wear the real n8n icon instead of a generic document glyph. And each file carries **the workflow's** created and modified dates rather than the sync's — so Recent, Popular files, and sorting a folder by date all tell you the truth about your automation.
+
+## 🧭 Sync or Link — the folder decides
+
+| Mode | The file holds | Pushes back to n8n? |
+|---|---|---|
+| **Sync** | The full workflow JSON | Yes — fully bidirectional |
+| **Link** | A pointer (id, name, URL) | No — clicking it opens n8n |
+
+Move a sync file out of its folder and it becomes **unmapped**: Nextcloud keeps the full JSON and the workflow's identity, while n8n archives the workflow. Move it back into any mapping and the same workflow is restored — not a fresh copy.
+
+## 💾 And it doubles as a backup
+
+A sync folder holds every one of its workflows in full, so it is also a complete, restorable backup — versioned by Nextcloud, synced to your desktop, and searchable by tag.
+
+📖 **[Full documentation, screenshots and the `occ` reference on GitHub](https://github.com/kubed-io/nextcloud-n8n#readme)**
+
+---
+
+This is a community integration and is not affiliated with, endorsed by, or sponsored by n8n GmbH. "n8n" and the n8n logo are trademarks of n8n GmbH, used here only to identify the service this app integrates with.
+  ]]></description>
+  <version>1.1.1</version>
+  <!-- SPDX identifier, not the `agpl` shorthand. The store's XSD still accepts the
+       shorthand but marks it deprecated, and its docs scope it to apps targeting
+       Nextcloud 30 or lower. This app requires 32. -->
+  <licence>AGPL-3.0-or-later</licence>
+  <author>Kelly Ferrone</author>
+  <namespace>N8nSync</namespace>
+  <!--
+    DECLARED SO THE APP IS LOADED ON WEBDAV REQUESTS. This is the missing half of
+    the trash-purge bug (saga §5.7), and it is invisible until you look for it.
+
+    `register()` runs for every enabled app during bootstrap, but `boot()` only runs
+    when an app is actually LOADED — and remote.php, the WebDAV entry point, loads a
+    restricted set:
+
+        $appManager->loadApps(['authentication']);
+        $appManager->loadApps(['extended_authentication']);
+        $appManager->loadApps(['filesystem', 'logging']);
+
+    With no <types>, this app was never in that set, so boot() never ran on a DAV
+    request. Everything wired in register() — the copy, move, rename, create and
+    soft-delete listeners — kept working, which is exactly what made the gap so hard
+    to see: only the ONE thing wired in boot(), the legacy trash-purge hook, was
+    silently dead. A perfectly correct hook, connected in a method that never ran.
+
+    `filesystem` is the type for apps that must be present when the filesystem is in
+    play, which is what a file-event-driven mirror is.
+  -->
+  <types>
+    <filesystem/>
+  </types>
+  <documentation>
+    <user>https://github.com/kubed-io/nextcloud-n8n#readme</user>
+    <admin>https://github.com/kubed-io/nextcloud-n8n#-setup-in-three-moves</admin>
+    <developer>https://github.com/kubed-io/nextcloud-n8n/blob/main/CONTRIBUTING.md</developer>
+  </documentation>
+  <!-- Store categories, in display order. `workflow` is the store's name for the
+       flow/automation category and is the most apt of the three; `ai` is available
+       but deliberately unused — n8n hosts AI workloads, this app does not. -->
+  <category>integration</category>
+  <category>workflow</category>
+  <category>files</category>
+  <website>https://github.com/kubed-io/nextcloud-n8n</website>
+  <bugs>https://github.com/kubed-io/nextcloud-n8n/issues</bugs>
+  <repository type="git">https://github.com/kubed-io/nextcloud-n8n.git</repository>
+  <!-- Order is the store's carousel order: the payoff first, the admin surface last.
+       Every file here must exist in screenshots/ on main — the store fetches them by
+       raw URL, so a rename that misses this list shows the listing a broken image. -->
+  <screenshot small-thumbnail="https://raw.githubusercontent.com/kubed-io/nextcloud-n8n/main/screenshots/thumbnails/n8n-files.png">https://raw.githubusercontent.com/kubed-io/nextcloud-n8n/main/screenshots/n8n-files.png</screenshot>
+  <screenshot small-thumbnail="https://raw.githubusercontent.com/kubed-io/nextcloud-n8n/main/screenshots/thumbnails/create-menu.png">https://raw.githubusercontent.com/kubed-io/nextcloud-n8n/main/screenshots/create-menu.png</screenshot>
+  <screenshot small-thumbnail="https://raw.githubusercontent.com/kubed-io/nextcloud-n8n/main/screenshots/thumbnails/edit-workflow.png">https://raw.githubusercontent.com/kubed-io/nextcloud-n8n/main/screenshots/edit-workflow.png</screenshot>
+  <screenshot small-thumbnail="https://raw.githubusercontent.com/kubed-io/nextcloud-n8n/main/screenshots/thumbnails/context-menu.png">https://raw.githubusercontent.com/kubed-io/nextcloud-n8n/main/screenshots/context-menu.png</screenshot>
+  <screenshot small-thumbnail="https://raw.githubusercontent.com/kubed-io/nextcloud-n8n/main/screenshots/thumbnails/popular-files.png">https://raw.githubusercontent.com/kubed-io/nextcloud-n8n/main/screenshots/popular-files.png</screenshot>
+  <screenshot small-thumbnail="https://raw.githubusercontent.com/kubed-io/nextcloud-n8n/main/screenshots/thumbnails/trash-and-restore.png">https://raw.githubusercontent.com/kubed-io/nextcloud-n8n/main/screenshots/trash-and-restore.png</screenshot>
+  <screenshot small-thumbnail="https://raw.githubusercontent.com/kubed-io/nextcloud-n8n/main/screenshots/thumbnails/tag2folder-mapping.png">https://raw.githubusercontent.com/kubed-io/nextcloud-n8n/main/screenshots/tag2folder-mapping.png</screenshot>
+  <screenshot small-thumbnail="https://raw.githubusercontent.com/kubed-io/nextcloud-n8n/main/screenshots/thumbnails/connection.png">https://raw.githubusercontent.com/kubed-io/nextcloud-n8n/main/screenshots/connection.png</screenshot>
+  <screenshot small-thumbnail="https://raw.githubusercontent.com/kubed-io/nextcloud-n8n/main/screenshots/thumbnails/admin-actions.png">https://raw.githubusercontent.com/kubed-io/nextcloud-n8n/main/screenshots/admin-actions.png</screenshot>
+  <dependencies>
+    <!-- Not 30 or 31. AutoSyncSettings implements IDeclarativeSettingsFormWithHandlers
+         (@since 31.0.0), which is the only way an ADMIN declarative form can carry a
+         CHECKBOX at all — core's INTERNAL storage throws a TypeError on both the read
+         and the write of a bool (see that class's docblock). That ruled out 30, which
+         reached end of life in 2025 anyway. The floor is 32 rather than 31 because 31
+         was never once executed by the integration suite: supporting it was a claim,
+         and 32 is the oldest version the suite actually proves. -->
+    <nextcloud min-version="32" max-version="35"/>
+  </dependencies>
+  <repair-steps>
+    <!--
+      Installs the application/n8n+json mimetype + icon mapping on every
+      install/upgrade. Idempotent; see lib/Migration/RegisterMimetype.php.
+    -->
+    <install>
+      <step>OCA\N8nSync\Migration\RegisterMimetype</step>
+    </install>
+    <post-migration>
+      <step>OCA\N8nSync\Migration\RegisterMimetype</step>
+      <!-- Rewrites any legacy-shaped folder mappings once on upgrade. Idempotent;
+           see lib/Migration/MigrateMappings.php + MappingService::migrate(). -->
+      <step>OCA\N8nSync\Migration\MigrateMappings</step>
+      <!-- Deletes the retired n8n:sync/n8n:link/n8n:unmapped/n8n:ignore pills once.
+           Without it a leftover pill would become an ordinary content tag and be
+           pushed to n8n. Idempotent; see lib/Migration/RemoveModePills.php. -->
+      <step>OCA\N8nSync\Migration\RemoveModePills</step>
+      <!-- Renames already-synced `*.n8n.json` files to `*.n8n`. Runs AFTER
+           RegisterMimetype so the renamed files land on a mimetype that exists.
+           Without it an upgraded instance's workflows go unrecognised. Kept for a
+           version or two — this app is published, so its population is not ours to
+           count; see lib/Migration/MigrateFileExtension.php. -->
+      <step>OCA\N8nSync\Migration\MigrateFileExtension</step>
+      <!-- Deletes the retired webhook settings, one of which is an encrypted
+           secret SECURITY.md no longer claims to hold, plus the api_enabled
+           switch. Idempotent; see lib/Migration/RemoveWebhookSettings.php. -->
+      <step>OCA\N8nSync\Migration\RemoveWebhookSettings</step>
+      <!-- Drops the retired `timing` radio's stored value. Inline-vs-queued is now
+           derived per request from whether a job could run at all. Idempotent;
+           see lib/Migration/RemoveTimingSetting.php. -->
+      <step>OCA\N8nSync\Migration\RemoveTimingSetting</step>
+    </post-migration>
+    <uninstall>
+      <!-- Mirror image of RegisterMimetype: reverts the core-tree mimetype/icon
+           registration so removing the app leaves Nextcloud clean (store rule).
+           Touches only the system registration — never user files/metadata/n8n.
+           See lib/Migration/UnregisterMimetype.php + uninstall.feature. -->
+      <step>OCA\N8nSync\Migration\UnregisterMimetype</step>
+    </uninstall>
+  </repair-steps>
+  <commands>
+    <command>OCA\N8nSync\Command\ListWorkflows</command>
+    <command>OCA\N8nSync\Command\GetWorkflow</command>
+    <command>OCA\N8nSync\Command\SetApiKey</command>
+    <command>OCA\N8nSync\Command\TestConnection</command>
+    <command>OCA\N8nSync\Command\AddMapping</command>
+    <command>OCA\N8nSync\Command\ListMappings</command>
+    <command>OCA\N8nSync\Command\RemoveMapping</command>
+    <command>OCA\N8nSync\Command\SetGroups</command>
+    <command>OCA\N8nSync\Command\Reconcile</command>
+  </commands>
+  <settings>
+    <!-- Test Connection buttons are folded into the Sync Actions panel
+         (SyncSettings); AdminTest stays as the auth target for the test
+         endpoints but is no longer rendered as its own panel. -->
+    <admin>OCA\N8nSync\Settings\MappingSettings</admin>
+    <admin>OCA\N8nSync\Settings\SyncSettings</admin>
+    <admin-section>OCA\N8nSync\Settings\AdminSection</admin-section>
+  </settings>
+</info>

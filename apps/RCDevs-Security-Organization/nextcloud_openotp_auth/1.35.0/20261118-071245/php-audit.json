@@ -1,0 +1,315 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\OpenOTPAuth\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "namespace-mismatch",
+      "level": "warn",
+      "places": [
+        "lib/AuthService/OpenotpAuth.php:34 OCA\\OpenOTPAuth\\AuthService\\OpenotpAuthException, by its path OCA\\OpenOTPAuth\\AuthService\\OpenotpAuth",
+        "lib/Provider/TwoFactorRCDevsOpenOTPProvider.php:49 OCA\\OpenOTPAuth\\Provider\\OpenOTPsendRequestException, by its path OCA\\OpenOTPAuth\\Provider\\TwoFactorRCDevsOpenOTPProvider"
+      ],
+      "lines": [
+        "2 classes in lib/ whose name does not follow PSR-4 below OCA\\OpenOTPAuth, the namespace the server derives from <namespace> of info.xml. The loader of the server does not find such a class.",
+        "  lib/AuthService/OpenotpAuth.php:34 OCA\\OpenOTPAuth\\AuthService\\OpenotpAuthException, by its path OCA\\OpenOTPAuth\\AuthService\\OpenotpAuth",
+        "  lib/Provider/TwoFactorRCDevsOpenOTPProvider.php:49 OCA\\OpenOTPAuth\\Provider\\OpenOTPsendRequestException, by its path OCA\\OpenOTPAuth\\Provider\\TwoFactorRCDevsOpenOTPProvider"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/PurgeController.php:27 OC\\App\\AppManager",
+        "lib/Controller/PurgeController.php:28 OC\\Installer",
+        "templates/challenge.php:111 OC\\Security\\CSP\\ContentSecurityPolicyNonceManager"
+      ],
+      "lines": [
+        "3 uses of the private API of the server in 2 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/PurgeController.php:27 OC\\App\\AppManager",
+        "  lib/Controller/PurgeController.php:28 OC\\Installer",
+        "  templates/challenge.php:111 OC\\Security\\CSP\\ContentSecurityPolicyNonceManager"
+      ]
+    },
+    {
+      "id": "route-target-missing",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/openotp_auth/  openotp_auth.page.index  appinfo/routes.php:30 routes: no class OCA\\OpenOTPAuth\\Controller\\PageController"
+      ],
+      "lines": [
+        "1 route names a controller class or a method that does not exist, or a method that is not public. A request to such a route ends in an error.",
+        "  GET /index.php/apps/openotp_auth/  openotp_auth.page.index  appinfo/routes.php:30 routes: no class OCA\\OpenOTPAuth\\Controller\\PageController"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "POST /index.php/apps/openotp_auth/api/{apiVersion}/settings/purge  openotp_auth.purge.purge  appinfo/routes.php:30 routes",
+        "POST /index.php/apps/openotp_auth/api/{apiVersion}/settings/check/server  openotp_auth.settings.checkserverurl  appinfo/routes.php:30 routes",
+        "POST /index.php/apps/openotp_auth/api/{apiVersion}/settings/save  openotp_auth.settings.savesettings  appinfo/routes.php:30 routes",
+        "GET /index.php/apps/openotp_auth/api/{apiVersion}/settings/changelog  openotp_auth.settings.getchangelog  appinfo/routes.php:30 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 4 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 8 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  POST /index.php/apps/openotp_auth/api/{apiVersion}/settings/purge  openotp_auth.purge.purge  appinfo/routes.php:30 routes",
+        "  POST /index.php/apps/openotp_auth/api/{apiVersion}/settings/check/server  openotp_auth.settings.checkserverurl  appinfo/routes.php:30 routes",
+        "  POST /index.php/apps/openotp_auth/api/{apiVersion}/settings/save  openotp_auth.settings.savesettings  appinfo/routes.php:30 routes",
+        "  GET /index.php/apps/openotp_auth/api/{apiVersion}/settings/changelog  openotp_auth.settings.getchangelog  appinfo/routes.php:30 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "psalm/phar, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/PurgeController.php:60 OCP\\IConfig::deleteAppFromAllUsers(): deprecated since Nextcloud 33; use IUserConfig::deleteApp directly",
+        "lib/Controller/PurgeController.php:62 OCP\\IAppConfig::deleteApp(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig  Removes all keys in appconfig belonging to the app."
+      ],
+      "lines": [
+        "2 uses in 1 file of the public API that is deprecated in Nextcloud 35. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/PurgeController.php:60 OCP\\IConfig::deleteAppFromAllUsers(): deprecated since Nextcloud 33; use IUserConfig::deleteApp directly",
+        "  lib/Controller/PurgeController.php:62 OCP\\IAppConfig::deleteApp(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig  Removes all keys in appconfig belonging to the app."
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/challenge.php:42 style= attribute",
+        "templates/challenge.php:45 style= attribute",
+        "templates/challenge.php:68 style= attribute",
+        "templates/challenge.php:81 style= attribute",
+        "templates/challenge.php:92 style= attribute",
+        "templates/challenge.php:293 style= attribute",
+        "templates/challenge.php:293 style= attribute",
+        "templates/challenge.php:312 style= attribute",
+        "templates/challenge.php:313 style= attribute",
+        "templates/challenge.php:314 style= attribute",
+        "templates/challenge.php:315 style= attribute",
+        "templates/challenge.php:357 style= attribute",
+        "templates/challenge.php:456 style= attribute"
+      ],
+      "lines": [
+        "13 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/challenge.php:42 style= attribute",
+        "  templates/challenge.php:45 style= attribute",
+        "  templates/challenge.php:68 style= attribute",
+        "  templates/challenge.php:81 style= attribute",
+        "  templates/challenge.php:92 style= attribute",
+        "  templates/challenge.php:293 style= attribute",
+        "  templates/challenge.php:293 style= attribute",
+        "  templates/challenge.php:312 style= attribute",
+        "  templates/challenge.php:313 style= attribute",
+        "  templates/challenge.php:314 style= attribute",
+        "  templates/challenge.php:315 style= attribute",
+        "  templates/challenge.php:357 style= attribute",
+        "  templates/challenge.php:456 style= attribute"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 10
+        }
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Migration/MigrateLegacyProvider.php:41"
+      ],
+      "lines": [
+        "1 transaction is opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Migration/MigrateLegacyProvider.php:41"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Provider/TwoFactorRCDevsOpenOTPProvider.php:217 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 1 place. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Provider/TwoFactorRCDevsOpenOTPProvider.php:217 time()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Controller/SettingsController.php:68 setValueString()",
+        "lib/Controller/SettingsController.php:69 setValueString()",
+        "lib/Controller/SettingsController.php:70 setValueString()",
+        "lib/Controller/SettingsController.php:71 setValueString()",
+        "lib/Controller/SettingsController.php:72 setValueString()",
+        "lib/Controller/SettingsController.php:73 setValueString()",
+        "lib/Controller/SettingsController.php:74 setValueString()",
+        "lib/Controller/SettingsController.php:75 setValueString()",
+        "lib/Controller/SettingsController.php:76 setValueString()",
+        "lib/Controller/SettingsController.php:77 setValueString()",
+        "lib/Controller/SettingsController.php:78 setValueString()",
+        "lib/Controller/SettingsController.php:132 getValueString()",
+        "lib/Controller/SettingsController.php:133 getValueString()",
+        "lib/Controller/SettingsController.php:134 getValueString()",
+        "lib/Controller/SettingsController.php:135 getValueString()",
+        "lib/Controller/SettingsController.php:136 getValueString()",
+        "lib/Controller/SettingsController.php:137 getValueString()",
+        "lib/Controller/SettingsController.php:138 getValueString()",
+        "lib/Controller/SettingsController.php:139 getValueString()",
+        "lib/Controller/SettingsController.php:140 getValueString()",
+        "lib/Controller/SettingsController.php:141 getValueString()",
+        "lib/Provider/TwoFactorRCDevsOpenOTPProvider.php:124 getValueString()",
+        "lib/Provider/TwoFactorRCDevsOpenOTPProvider.php:125 getValueString()",
+        "lib/Provider/TwoFactorRCDevsOpenOTPProvider.php:126 getValueString()",
+        "lib/Provider/TwoFactorRCDevsOpenOTPProvider.php:127 getValueString()",
+        "lib/Provider/TwoFactorRCDevsOpenOTPProvider.php:128 getValueString()",
+        "lib/Provider/TwoFactorRCDevsOpenOTPProvider.php:129 getValueString()",
+        "lib/Provider/TwoFactorRCDevsOpenOTPProvider.php:130 getValueString()",
+        "lib/Provider/TwoFactorRCDevsOpenOTPProvider.php:131 getValueString()",
+        "lib/Provider/TwoFactorRCDevsOpenOTPProvider.php:132 getValueString()",
+        "lib/Provider/TwoFactorRCDevsOpenOTPProvider.php:133 getValueString()",
+        "lib/Service/AdminPolicy.php:21 getValueString()",
+        "lib/Service/AdminPolicy.php:25 getValueString()",
+        "lib/Service/AdminPolicy.php:29 getValueString()",
+        "lib/Settings/Admin/AdminSettings.php:55 getValueString()",
+        "lib/Settings/Admin/AdminSettings.php:56 getValueString()",
+        "lib/Settings/Admin/AdminSettings.php:57 getValueString()",
+        "lib/Settings/Admin/AdminSettings.php:58 getValueString()",
+        "lib/Settings/Admin/AdminSettings.php:59 getValueString()",
+        "lib/Settings/Admin/AdminSettings.php:60 getValueString()",
+        "lib/Settings/Admin/AdminSettings.php:61 getValueString()",
+        "lib/Settings/Admin/AdminSettings.php:62 getValueString()",
+        "lib/Settings/Admin/AdminSettings.php:63 getValueString()",
+        "lib/Settings/Admin/AdminSettings.php:64 getValueString()",
+        "lib/Settings/Admin/AdminSettings.php:65 getValueString()",
+        "lib/Settings/Admin/AdminSettings.php:66 getValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 46 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Controller/SettingsController.php:68 setValueString()",
+        "  lib/Controller/SettingsController.php:69 setValueString()",
+        "  lib/Controller/SettingsController.php:70 setValueString()",
+        "  lib/Controller/SettingsController.php:71 setValueString()",
+        "  lib/Controller/SettingsController.php:72 setValueString()",
+        "  lib/Controller/SettingsController.php:73 setValueString()",
+        "  lib/Controller/SettingsController.php:74 setValueString()",
+        "  lib/Controller/SettingsController.php:75 setValueString()",
+        "  lib/Controller/SettingsController.php:76 setValueString()",
+        "  lib/Controller/SettingsController.php:77 setValueString()",
+        "  lib/Controller/SettingsController.php:78 setValueString()",
+        "  lib/Controller/SettingsController.php:132 getValueString()",
+        "  lib/Controller/SettingsController.php:133 getValueString()",
+        "  lib/Controller/SettingsController.php:134 getValueString()",
+        "  lib/Controller/SettingsController.php:135 getValueString()",
+        "  lib/Controller/SettingsController.php:136 getValueString()",
+        "  lib/Controller/SettingsController.php:137 getValueString()",
+        "  lib/Controller/SettingsController.php:138 getValueString()",
+        "  lib/Controller/SettingsController.php:139 getValueString()",
+        "  lib/Controller/SettingsController.php:140 getValueString()",
+        "  lib/Controller/SettingsController.php:141 getValueString()",
+        "  lib/Provider/TwoFactorRCDevsOpenOTPProvider.php:124 getValueString()",
+        "  lib/Provider/TwoFactorRCDevsOpenOTPProvider.php:125 getValueString()",
+        "  lib/Provider/TwoFactorRCDevsOpenOTPProvider.php:126 getValueString()",
+        "  lib/Provider/TwoFactorRCDevsOpenOTPProvider.php:127 getValueString()",
+        "  lib/Provider/TwoFactorRCDevsOpenOTPProvider.php:128 getValueString()",
+        "  lib/Provider/TwoFactorRCDevsOpenOTPProvider.php:129 getValueString()",
+        "  lib/Provider/TwoFactorRCDevsOpenOTPProvider.php:130 getValueString()",
+        "  lib/Provider/TwoFactorRCDevsOpenOTPProvider.php:131 getValueString()",
+        "  lib/Provider/TwoFactorRCDevsOpenOTPProvider.php:132 getValueString()",
+        "  lib/Provider/TwoFactorRCDevsOpenOTPProvider.php:133 getValueString()",
+        "  lib/Service/AdminPolicy.php:21 getValueString()",
+        "  lib/Service/AdminPolicy.php:25 getValueString()",
+        "  lib/Service/AdminPolicy.php:29 getValueString()",
+        "  lib/Settings/Admin/AdminSettings.php:55 getValueString()",
+        "  lib/Settings/Admin/AdminSettings.php:56 getValueString()",
+        "  lib/Settings/Admin/AdminSettings.php:57 getValueString()",
+        "  lib/Settings/Admin/AdminSettings.php:58 getValueString()",
+        "  lib/Settings/Admin/AdminSettings.php:59 getValueString()",
+        "  lib/Settings/Admin/AdminSettings.php:60 getValueString()",
+        "  lib/Settings/Admin/AdminSettings.php:61 getValueString()",
+        "  lib/Settings/Admin/AdminSettings.php:62 getValueString()",
+        "  lib/Settings/Admin/AdminSettings.php:63 getValueString()",
+        "  lib/Settings/Admin/AdminSettings.php:64 getValueString()",
+        "  lib/Settings/Admin/AdminSettings.php:65 getValueString()",
+        "  lib/Settings/Admin/AdminSettings.php:66 getValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 43
+        }
+      ]
+    }
+  ],
+  "endpoints": 5,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/openotp_auth/",
+      "target": "OCA\\OpenOTPAuth\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/openotp_auth/api/{apiVersion}/settings/changelog",
+      "target": "OCA\\OpenOTPAuth\\Controller\\SettingsController::getChangelog",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/openotp_auth/api/{apiVersion}/settings/check/server",
+      "target": "OCA\\OpenOTPAuth\\Controller\\SettingsController::checkServerUrl",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/openotp_auth/api/{apiVersion}/settings/purge",
+      "target": "OCA\\OpenOTPAuth\\Controller\\PurgeController::purge",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/openotp_auth/api/{apiVersion}/settings/save",
+      "target": "OCA\\OpenOTPAuth\\Controller\\SettingsController::saveSettings",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

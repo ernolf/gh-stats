@@ -1,0 +1,98 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\PrideFlags\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:21 OC",
+        "lib/AppInfo/Application.php:21 OC::$server"
+      ],
+      "lines": [
+        "2 uses of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/AppInfo/Application.php:21 OC",
+        "  lib/AppInfo/Application.php:21 OC::$server"
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/Controller/SettingsController.php:24 OCP\\AppFramework\\Http\\Attribute\\NoAdminRequired: there since Nextcloud 27, the app declares from 26",
+        "lib/Controller/SettingsController.php:25 OCP\\AppFramework\\Http\\Attribute\\NoCSRFRequired: there since Nextcloud 27, the app declares from 26"
+      ],
+      "lines": [
+        "2 uses in 1 file of the public API that the oldest majors of Nextcloud 26 to 29 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/Controller/SettingsController.php:24 OCP\\AppFramework\\Http\\Attribute\\NoAdminRequired: there since Nextcloud 27, the app declares from 26",
+        "  lib/Controller/SettingsController.php:25 OCP\\AppFramework\\Http\\Attribute\\NoCSRFRequired: there since Nextcloud 27, the app declares from 26"
+      ]
+    },
+    {
+      "id": "openapi-drift",
+      "level": "warn",
+      "places": [
+        "GET /ocs/v2.php/apps/pride_flags/settings: in openapi.json, and no route provides it",
+        "POST /ocs/v2.php/apps/pride_flags/settings: in openapi.json, and no route provides it"
+      ],
+      "lines": [
+        "The OpenAPI specification and the routes differ in 2 operations. A client generated from the specification then calls what is not there, or lacks what is. This holds the routes against the specification and does not generate it again.",
+        "  GET /ocs/v2.php/apps/pride_flags/settings: in openapi.json, and no route provides it",
+        "  POST /ocs/v2.php/apps/pride_flags/settings: in openapi.json, and no route provides it"
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/settings.php:7 style= attribute",
+        "templates/settings.php:8 style= attribute",
+        "templates/settings.php:9 style= attribute",
+        "templates/settings.php:19 style= attribute",
+        "templates/settings.php:20 style= attribute",
+        "templates/settings.php:21 style= attribute",
+        "templates/settings.php:31 style= attribute"
+      ],
+      "lines": [
+        "7 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/settings.php:7 style= attribute",
+        "  templates/settings.php:8 style= attribute",
+        "  templates/settings.php:9 style= attribute",
+        "  templates/settings.php:19 style= attribute",
+        "  templates/settings.php:20 style= attribute",
+        "  templates/settings.php:21 style= attribute",
+        "  templates/settings.php:31 style= attribute"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    }
+  ],
+  "endpoints": 2,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/pride_flags/settings",
+      "target": "OCA\\PrideFlags\\Controller\\SettingsController::get",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/pride_flags/settings",
+      "target": "OCA\\PrideFlags\\Controller\\SettingsController::set",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

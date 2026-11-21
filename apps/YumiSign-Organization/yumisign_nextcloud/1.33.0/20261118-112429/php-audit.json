@@ -1,0 +1,667 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\YumiSignNxtC\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:64 OC",
+        "lib/AppInfo/Application.php:64 OC::$server",
+        "lib/AppInfo/Application.php:138 OC::$server",
+        "lib/AppInfo/Application.php:141 OC::$server",
+        "lib/AppInfo/Application.php:155 OC::$server",
+        "lib/Controller/UserController.php:104 OC\\AppFramework\\Http",
+        "lib/Service/SettingsService.php:72 OC\\URLGenerator",
+        "lib/Service/TransactionsService.php:140 OC",
+        "lib/Service/TransactionsService.php:140 OC::$server",
+        "lib/Service/TransactionsService.php:395 OC::$server"
+      ],
+      "lines": [
+        "10 uses of the private API of the server in 4 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/AppInfo/Application.php:64 OC",
+        "  lib/AppInfo/Application.php:64 OC::$server",
+        "  lib/AppInfo/Application.php:138 OC::$server",
+        "  lib/AppInfo/Application.php:141 OC::$server",
+        "  lib/AppInfo/Application.php:155 OC::$server",
+        "  lib/Controller/UserController.php:104 OC\\AppFramework\\Http",
+        "  lib/Service/SettingsService.php:72 OC\\URLGenerator",
+        "  lib/Service/TransactionsService.php:140 OC",
+        "  lib/Service/TransactionsService.php:140 OC::$server",
+        "  lib/Service/TransactionsService.php:395 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "display-name-lookup",
+      "level": "warn",
+      "places": [
+        "lib/Controller/SignController.php:101"
+      ],
+      "lines": [
+        "1 place loads a user with IUserManager::get() only to ask for the display name. IUserManager::getDisplayName(), there since Nextcloud 25, answers from a cache and loads no user.",
+        "  lib/Controller/SignController.php:101"
+      ]
+    },
+    {
+      "id": "route-target-missing",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/yumisign_nextcloud/oauth/connect  yumisign_nextcloud.oauth.connect  appinfo/routes.php:28 routes: no class OCA\\YumiSignNxtC\\Controller\\OauthController",
+        "GET /index.php/apps/yumisign_nextcloud/oauth/callback  yumisign_nextcloud.oauth.callback  appinfo/routes.php:28 routes: no class OCA\\YumiSignNxtC\\Controller\\OauthController",
+        "GET /index.php/apps/yumisign_nextcloud/oauth/token/check  yumisign_nextcloud.oauth.checkaccesstoken  appinfo/routes.php:28 routes: no class OCA\\YumiSignNxtC\\Controller\\OauthController",
+        "GET /index.php/apps/yumisign_nextcloud/oauth/token/delete  yumisign_nextcloud.oauth.deleteaccesstoken  appinfo/routes.php:28 routes: no class OCA\\YumiSignNxtC\\Controller\\OauthController",
+        "GET /index.php/apps/yumisign_nextcloud/oauth/token/refresh  yumisign_nextcloud.oauth.refreshtoken  appinfo/routes.php:28 routes: no class OCA\\YumiSignNxtC\\Controller\\OauthController"
+      ],
+      "lines": [
+        "5 routes name a controller class or a method that does not exist, or a method that is not public. A request to such a route ends in an error.",
+        "  GET /index.php/apps/yumisign_nextcloud/oauth/connect  yumisign_nextcloud.oauth.connect  appinfo/routes.php:28 routes: no class OCA\\YumiSignNxtC\\Controller\\OauthController",
+        "  GET /index.php/apps/yumisign_nextcloud/oauth/callback  yumisign_nextcloud.oauth.callback  appinfo/routes.php:28 routes: no class OCA\\YumiSignNxtC\\Controller\\OauthController",
+        "  GET /index.php/apps/yumisign_nextcloud/oauth/token/check  yumisign_nextcloud.oauth.checkaccesstoken  appinfo/routes.php:28 routes: no class OCA\\YumiSignNxtC\\Controller\\OauthController",
+        "  GET /index.php/apps/yumisign_nextcloud/oauth/token/delete  yumisign_nextcloud.oauth.deleteaccesstoken  appinfo/routes.php:28 routes: no class OCA\\YumiSignNxtC\\Controller\\OauthController",
+        "  GET /index.php/apps/yumisign_nextcloud/oauth/token/refresh  yumisign_nextcloud.oauth.refreshtoken  appinfo/routes.php:28 routes: no class OCA\\YumiSignNxtC\\Controller\\OauthController"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "POST /index.php/apps/yumisign_nextcloud/webhook  yumisign_nextcloud.webhook.receive  appinfo/routes.php:28 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 route outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 19 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  POST /index.php/apps/yumisign_nextcloud/webhook  yumisign_nextcloud.webhook.receive  appinfo/routes.php:28 routes"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Service/SignService.php:128 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/SignService.php:1067 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/TokenService.php:83 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/TokenService.php:124 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/TokenService.php:127 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/TokenService.php:131 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/TokenService.php:174 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/TokenService.php:234 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/TokenService.php:240 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/TokenService.php:243 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/TokenService.php:247 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/TokenService.php:293 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/TokenService.php:314 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/TokenService.php:340 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/TokenService.php:342 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "lines": [
+        "15 uses in 2 files of the public API that is deprecated in Nextcloud 33. The text of the tag names the replacement where it has one.",
+        "  lib/Service/SignService.php:128 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/SignService.php:1067 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/TokenService.php:83 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/TokenService.php:124 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/TokenService.php:127 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/TokenService.php:131 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/TokenService.php:174 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/TokenService.php:234 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/TokenService.php:240 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/TokenService.php:243 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/TokenService.php:247 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/TokenService.php:293 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/TokenService.php:314 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/TokenService.php:340 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/TokenService.php:342 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 12
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/CheckAsyncSignatureTask.php OCA\\YumiSignNxtC\\BackgroundJob\\CheckAsyncSignatureTask"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/CheckAsyncSignatureTask.php OCA\\YumiSignNxtC\\BackgroundJob\\CheckAsyncSignatureTask"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/PersonalSettingsController.php:81 time()",
+        "lib/Db/TransactionMapper.php:181 time()",
+        "lib/Db/TransactionMapper.php:229 time()",
+        "lib/Db/TransactionMapper.php:230 time()",
+        "lib/Service/SignService.php:670 new DateTime()",
+        "lib/Service/SignService.php:836 time()",
+        "lib/Service/SignService.php:856 new DateTime()",
+        "lib/Service/SignService.php:969 new DateTime()",
+        "lib/Service/SignService.php:976 new DateTime()",
+        "lib/Service/SignService.php:983 new DateTime()",
+        "lib/Service/SignService.php:1248 time()",
+        "lib/Service/SignService.php:1340 time()",
+        "lib/Service/SignService.php:1375 time()",
+        "lib/Service/SignService.php:1389 time()",
+        "lib/Service/TokenService.php:81 time()",
+        "lib/Service/TokenService.php:295 time()",
+        "lib/Service/TransactionsService.php:145 new DateTime()",
+        "lib/Service/TransactionsService.php:401 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 18 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/PersonalSettingsController.php:81 time()",
+        "  lib/Db/TransactionMapper.php:181 time()",
+        "  lib/Db/TransactionMapper.php:229 time()",
+        "  lib/Db/TransactionMapper.php:230 time()",
+        "  lib/Service/SignService.php:670 new DateTime()",
+        "  lib/Service/SignService.php:836 time()",
+        "  lib/Service/SignService.php:856 new DateTime()",
+        "  lib/Service/SignService.php:969 new DateTime()",
+        "  lib/Service/SignService.php:976 new DateTime()",
+        "  lib/Service/SignService.php:983 new DateTime()",
+        "  lib/Service/SignService.php:1248 time()",
+        "  lib/Service/SignService.php:1340 time()",
+        "  lib/Service/SignService.php:1375 time()",
+        "  lib/Service/SignService.php:1389 time()",
+        "  lib/Service/TokenService.php:81 time()",
+        "  lib/Service/TokenService.php:295 time()",
+        "  lib/Service/TransactionsService.php:145 new DateTime()",
+        "  lib/Service/TransactionsService.php:401 new DateTime()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 15
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/CheckAsyncSignatureTask.php:49 getValueInt()",
+        "lib/Controller/AdminSettingsController.php:221 getValueString()",
+        "lib/Controller/AdminSettingsController.php:222 getValueInt()",
+        "lib/Controller/AdminSettingsController.php:223 getValueString()",
+        "lib/Controller/AdminSettingsController.php:224 getValueString()",
+        "lib/Controller/AdminSettingsController.php:225 getValueInt()",
+        "lib/Controller/AdminSettingsController.php:226 getValueString()",
+        "lib/Controller/AdminSettingsController.php:227 getValueInt()",
+        "lib/Controller/AdminSettingsController.php:228 getValueString()",
+        "lib/Controller/AdminSettingsController.php:229 getValueInt()",
+        "lib/Controller/AdminSettingsController.php:230 getValueString()",
+        "lib/Controller/AdminSettingsController.php:231 getValueString()",
+        "lib/Controller/AdminSettingsController.php:232 getValueString()",
+        "lib/Controller/AdminSettingsController.php:233 getValueString()",
+        "lib/Controller/AdminSettingsController.php:234 getValueInt()",
+        "lib/Controller/AdminSettingsController.php:235 getValueInt()",
+        "lib/Controller/AdminSettingsController.php:236 getValueInt()",
+        "lib/Controller/AdminSettingsController.php:237 getValueString()",
+        "lib/Controller/AdminSettingsController.php:238 getValueInt()",
+        "lib/Controller/AdminSettingsController.php:239 getValueString()",
+        "lib/Controller/AdminSettingsController.php:240 getValueString()",
+        "lib/Controller/AdminSettingsController.php:283 setValueString()",
+        "lib/Controller/AdminSettingsController.php:284 setValueString()",
+        "lib/Controller/AdminSettingsController.php:285 setValueString()",
+        "lib/Service/ConfigurationService.php:103 getValueString()",
+        "lib/Service/ConfigurationService.php:112 getValueString()",
+        "lib/Service/ConfigurationService.php:349 getValueString()",
+        "lib/Service/ConfigurationService.php:359 getValueString()",
+        "lib/Service/SignService.php:111 getValueInt()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 29 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/BackgroundJob/CheckAsyncSignatureTask.php:49 getValueInt()",
+        "  lib/Controller/AdminSettingsController.php:221 getValueString()",
+        "  lib/Controller/AdminSettingsController.php:222 getValueInt()",
+        "  lib/Controller/AdminSettingsController.php:223 getValueString()",
+        "  lib/Controller/AdminSettingsController.php:224 getValueString()",
+        "  lib/Controller/AdminSettingsController.php:225 getValueInt()",
+        "  lib/Controller/AdminSettingsController.php:226 getValueString()",
+        "  lib/Controller/AdminSettingsController.php:227 getValueInt()",
+        "  lib/Controller/AdminSettingsController.php:228 getValueString()",
+        "  lib/Controller/AdminSettingsController.php:229 getValueInt()",
+        "  lib/Controller/AdminSettingsController.php:230 getValueString()",
+        "  lib/Controller/AdminSettingsController.php:231 getValueString()",
+        "  lib/Controller/AdminSettingsController.php:232 getValueString()",
+        "  lib/Controller/AdminSettingsController.php:233 getValueString()",
+        "  lib/Controller/AdminSettingsController.php:234 getValueInt()",
+        "  lib/Controller/AdminSettingsController.php:235 getValueInt()",
+        "  lib/Controller/AdminSettingsController.php:236 getValueInt()",
+        "  lib/Controller/AdminSettingsController.php:237 getValueString()",
+        "  lib/Controller/AdminSettingsController.php:238 getValueInt()",
+        "  lib/Controller/AdminSettingsController.php:239 getValueString()",
+        "  lib/Controller/AdminSettingsController.php:240 getValueString()",
+        "  lib/Controller/AdminSettingsController.php:283 setValueString()",
+        "  lib/Controller/AdminSettingsController.php:284 setValueString()",
+        "  lib/Controller/AdminSettingsController.php:285 setValueString()",
+        "  lib/Service/ConfigurationService.php:103 getValueString()",
+        "  lib/Service/ConfigurationService.php:112 getValueString()",
+        "  lib/Service/ConfigurationService.php:349 getValueString()",
+        "  lib/Service/ConfigurationService.php:359 getValueString()",
+        "  lib/Service/SignService.php:111 getValueInt()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 26
+        }
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/OAuthController.php:82 OCA\\YumiSignNxtC\\Controller\\OAuthController::connect()",
+        "lib/Controller/OAuthController.php:124 OCA\\YumiSignNxtC\\Controller\\OAuthController::callback()",
+        "lib/Controller/OAuthController.php:191 OCA\\YumiSignNxtC\\Controller\\OAuthController::checkAccessToken()",
+        "lib/Controller/OAuthController.php:204 OCA\\YumiSignNxtC\\Controller\\OAuthController::deleteAccessToken()",
+        "lib/Controller/OAuthController.php:209 OCA\\YumiSignNxtC\\Controller\\OAuthController::refreshToken()",
+        "lib/Controller/SignController.php:351 OCA\\YumiSignNxtC\\Controller\\SignController::index()"
+      ],
+      "lines": [
+        "6 public methods of controllers are reached by no route.",
+        "  lib/Controller/OAuthController.php:82 OCA\\YumiSignNxtC\\Controller\\OAuthController::connect()",
+        "  lib/Controller/OAuthController.php:124 OCA\\YumiSignNxtC\\Controller\\OAuthController::callback()",
+        "  lib/Controller/OAuthController.php:191 OCA\\YumiSignNxtC\\Controller\\OAuthController::checkAccessToken()",
+        "  lib/Controller/OAuthController.php:204 OCA\\YumiSignNxtC\\Controller\\OAuthController::deleteAccessToken()",
+        "  lib/Controller/OAuthController.php:209 OCA\\YumiSignNxtC\\Controller\\OAuthController::refreshToken()",
+        "  lib/Controller/SignController.php:351 OCA\\YumiSignNxtC\\Controller\\SignController::index()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 16 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version000099_2024_09_24_10_expiry_date_00.php:41 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version000099_2024_09_24_10_expiry_date_00.php:43 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version000099_2024_09_24_10_expiry_date_00.php:44 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000099_2024_09_24_10_expiry_date_00.php:49 modifyColumn() on a table whose name is no constant",
+        "lib/Migration/Version000099_2024_09_24_10_expiry_date_01.php:43 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version000099_2024_09_24_10_expiry_date_01.php:48 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version000099_2024_09_24_10_expiry_date_01.php:55 dropColumn() on a table whose name is no constant",
+        "lib/Migration/Version000099_2024_09_24_10_expiry_date_01.php:61 dropColumn() on a table whose name is no constant",
+        "lib/Migration/Version000099_2024_09_24_10_expiry_date_01.php:66 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version000099_2024_09_24_10_expiry_date_01.php:67 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000099_2024_09_24_10_expiry_date_01.php:72 modifyColumn() on a table whose name is no constant",
+        "lib/Migration/Version000099_2024_09_24_10_expiry_date_02.php:37 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version000099_2024_09_24_10_expiry_date_02.php:38 dropColumn() on a table whose name is no constant",
+        "lib/Migration/Version000099_2024_09_24_10_overwrite_00.php:41 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version000099_2024_09_24_10_overwrite_00.php:42 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000099_2024_09_24_10_overwrite_00.php:47 modifyColumn() on a table whose name is no constant",
+        "lib/Migration/Version000099_2024_09_24_10_recipient_id_00.php:41 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version000099_2024_09_24_10_recipient_id_00.php:42 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000099_2024_09_24_10_recipient_id_00.php:47 modifyColumn() on a table whose name is no constant",
+        "lib/Migration/Version000099_2024_10_21_08_advanced_01.php:37 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version000099_2024_10_21_08_advanced_01.php:38 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000099_2024_10_21_08_advanced_01.php:43 modifyColumn() on a table whose name is no constant",
+        "lib/Migration/Version000099_2024_10_21_08_qualified_01.php:37 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version000099_2024_10_21_08_qualified_01.php:38 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000099_2024_10_21_08_qualified_01.php:43 modifyColumn() on a table whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version000099_2024_09_24_10_expiry_date_00.php:41 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000099_2024_09_24_10_expiry_date_00.php:43 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000099_2024_09_24_10_expiry_date_00.php:44 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000099_2024_09_24_10_expiry_date_00.php:49 modifyColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000099_2024_09_24_10_expiry_date_01.php:43 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000099_2024_09_24_10_expiry_date_01.php:48 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000099_2024_09_24_10_expiry_date_01.php:55 dropColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000099_2024_09_24_10_expiry_date_01.php:61 dropColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000099_2024_09_24_10_expiry_date_01.php:66 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000099_2024_09_24_10_expiry_date_01.php:67 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000099_2024_09_24_10_expiry_date_01.php:72 modifyColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000099_2024_09_24_10_expiry_date_02.php:37 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000099_2024_09_24_10_expiry_date_02.php:38 dropColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000099_2024_09_24_10_overwrite_00.php:41 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000099_2024_09_24_10_overwrite_00.php:42 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000099_2024_09_24_10_overwrite_00.php:47 modifyColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000099_2024_09_24_10_recipient_id_00.php:41 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000099_2024_09_24_10_recipient_id_00.php:42 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000099_2024_09_24_10_recipient_id_00.php:47 modifyColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000099_2024_10_21_08_advanced_01.php:37 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000099_2024_10_21_08_advanced_01.php:38 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000099_2024_10_21_08_advanced_01.php:43 modifyColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000099_2024_10_21_08_qualified_01.php:37 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000099_2024_10_21_08_qualified_01.php:38 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000099_2024_10_21_08_qualified_01.php:43 modifyColumn() on a table whose name is no constant"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 22
+        }
+      ]
+    }
+  ],
+  "endpoints": 34,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/yumisign_nextcloud/",
+      "target": "OCA\\YumiSignNxtC\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/yumisign_nextcloud/oauth/callback",
+      "target": "OCA\\YumiSignNxtC\\Controller\\OauthController::callback",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/yumisign_nextcloud/oauth/connect",
+      "target": "OCA\\YumiSignNxtC\\Controller\\OauthController::connect",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/yumisign_nextcloud/oauth/token/check",
+      "target": "OCA\\YumiSignNxtC\\Controller\\OauthController::checkAccessToken",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/yumisign_nextcloud/oauth/token/delete",
+      "target": "OCA\\YumiSignNxtC\\Controller\\OauthController::deleteAccessToken",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/yumisign_nextcloud/oauth/token/refresh",
+      "target": "OCA\\YumiSignNxtC\\Controller\\OauthController::refreshToken",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/yumisign_nextcloud/settings/signed-folders",
+      "target": "OCA\\YumiSignNxtC\\Controller\\SignedFolderController::read",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/yumisign_nextcloud/settings/signed-folders",
+      "target": "OCA\\YumiSignNxtC\\Controller\\SignedFolderController::save",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/yumisign_nextcloud/sign/mobile/async/external/submit",
+      "target": "OCA\\YumiSignNxtC\\Controller\\SignController::signLocalAsyncSubmit",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/yumisign_nextcloud/transaction/cancel",
+      "target": "OCA\\YumiSignNxtC\\Controller\\TransactionsController::cancelTransaction",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/yumisign_nextcloud/transaction/deletion",
+      "target": "OCA\\YumiSignNxtC\\Controller\\TransactionsController::deleteTransaction",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/yumisign_nextcloud/transactions/completed",
+      "target": "OCA\\YumiSignNxtC\\Controller\\TransactionsController::getTransactionsCompleted",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/yumisign_nextcloud/transactions/declined",
+      "target": "OCA\\YumiSignNxtC\\Controller\\TransactionsController::getTransactionsDeclined",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/yumisign_nextcloud/transactions/expired",
+      "target": "OCA\\YumiSignNxtC\\Controller\\TransactionsController::getTransactionsExpired",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/yumisign_nextcloud/transactions/failed",
+      "target": "OCA\\YumiSignNxtC\\Controller\\TransactionsController::getTransactionsFailed",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/yumisign_nextcloud/transactions/pending",
+      "target": "OCA\\YumiSignNxtC\\Controller\\TransactionsController::getTransactionsPending",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/yumisign_nextcloud/ui/items/page",
+      "target": "OCA\\YumiSignNxtC\\Controller\\UiController::getItemsPerPage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/yumisign_nextcloud/webhook",
+      "target": "OCA\\YumiSignNxtC\\Controller\\WebhookController::receive",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/yumisign_nextcloud/api/{apiVersion}/settings/check",
+      "target": "OCA\\YumiSignNxtC\\Controller\\AdminSettingsController::checkServerUrl",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/yumisign_nextcloud/api/{apiVersion}/settings/check/app",
+      "target": "OCA\\YumiSignNxtC\\Controller\\AdminSettingsController::checkEnabledSign",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/yumisign_nextcloud/api/{apiVersion}/settings/check/cron",
+      "target": "OCA\\YumiSignNxtC\\Controller\\AdminSettingsController::checkCronStatus",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/yumisign_nextcloud/api/{apiVersion}/settings/check/modal/bootstrap",
+      "target": "OCA\\YumiSignNxtC\\Controller\\AdminSettingsController::checkModalBootstrap",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/yumisign_nextcloud/api/{apiVersion}/settings/check/types",
+      "target": "OCA\\YumiSignNxtC\\Controller\\AdminSettingsController::checkSignTypes",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/yumisign_nextcloud/api/{apiVersion}/settings/check/workspace/id",
+      "target": "OCA\\YumiSignNxtC\\Controller\\AdminSettingsController::checkWorkspaceId",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/yumisign_nextcloud/api/{apiVersion}/settings/check/workspace/name",
+      "target": "OCA\\YumiSignNxtC\\Controller\\AdminSettingsController::checkWorkspaceName",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/yumisign_nextcloud/api/{apiVersion}/settings/job/reset",
+      "target": "OCA\\YumiSignNxtC\\Controller\\AdminSettingsController::resetJob",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/yumisign_nextcloud/api/{apiVersion}/settings/save",
+      "target": "OCA\\YumiSignNxtC\\Controller\\AdminSettingsController::saveSettings",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/yumisign_nextcloud/api/{apiVersion}/sign/local/async/advanced",
+      "target": "OCA\\YumiSignNxtC\\Controller\\SignController::signLocalAsyncAdvanced",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/yumisign_nextcloud/api/{apiVersion}/sign/local/async/qualified",
+      "target": "OCA\\YumiSignNxtC\\Controller\\SignController::signLocalAsyncQualified",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/yumisign_nextcloud/api/{apiVersion}/sign/local/async/standard",
+      "target": "OCA\\YumiSignNxtC\\Controller\\SignController::signLocalAsyncStandard",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/yumisign_nextcloud/api/{apiVersion}/ui/refresh",
+      "target": "OCA\\YumiSignNxtC\\Controller\\UiController::pollRefreshSignal",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/yumisign_nextcloud/api/{apiVersion}/user/email",
+      "target": "OCA\\YumiSignNxtC\\Controller\\UserController::getCurrentUserEmail",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/yumisign_nextcloud/api/{apiVersion}/user/id",
+      "target": "OCA\\YumiSignNxtC\\Controller\\UserController::getCurrentUserId",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/yumisign_nextcloud/api/{apiVersion}/users/all",
+      "target": "OCA\\YumiSignNxtC\\Controller\\UserController::getLocalUsers",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

@@ -1,0 +1,115 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\EmployeeDashboard\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/Service/ProjectTimelinesService.php:65 OCP\\App\\IAppManager::isEnabledForAnyone(): there since Nextcloud 32, the app declares from 28"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that the oldest majors of Nextcloud 28 to 34 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/Service/ProjectTimelinesService.php:65 OCP\\App\\IAppManager::isEnabledForAnyone(): there since Nextcloud 32, the app declares from 28"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:41 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:41 injectFn()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/employee_dashboard/  employee_dashboard.page.index  appinfo/routes.php:3 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 route outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 34 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/employee_dashboard/  employee_dashboard.page.index  appinfo/routes.php:3 routes"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Service/EmployeeService.php:888 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated in Nextcloud 28 to 34. The text of the tag names the replacement where it has one.",
+        "  lib/Service/EmployeeService.php:888 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Service/ProjectTimelinesService.php:84"
+      ],
+      "lines": [
+        "1 transaction is opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Service/ProjectTimelinesService.php:84"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/EmployeeService.php:448 new DateTime()",
+        "lib/Service/EmployeeService.php:523 new DateTime()",
+        "lib/Service/EmployeeService.php:895 new DateTime()",
+        "lib/Service/EmployeeService.php:1181 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 4 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/EmployeeService.php:448 new DateTime()",
+        "  lib/Service/EmployeeService.php:523 new DateTime()",
+        "  lib/Service/EmployeeService.php:895 new DateTime()",
+        "  lib/Service/EmployeeService.php:1181 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "endpoints": 3,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/employee_dashboard/",
+      "target": "OCA\\EmployeeDashboard\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/employee_dashboard/api/data",
+      "target": "OCA\\EmployeeDashboard\\Controller\\DashboardController::getData",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/employee_dashboard/api/project-timelines",
+      "target": "OCA\\EmployeeDashboard\\Controller\\DashboardController::getProjectTimelines",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

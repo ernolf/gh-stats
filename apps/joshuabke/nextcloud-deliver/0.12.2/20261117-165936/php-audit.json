@@ -1,0 +1,1056 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Deliver\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "vimeo/psalm, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/PageController.php:42 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Controller/PublicController.php:78 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Listener/LoadSidebarListener.php:18 OCP\\Security\\IContentSecurityPolicyManager: deprecated since Nextcloud 17; listen to the AddContentSecurityPolicyEvent to add a policy",
+        "lib/Listener/LoadSidebarListener.php:26 OCP\\Security\\IContentSecurityPolicyManager::addDefaultPolicy(): deprecated since Nextcloud 17; listen to the AddContentSecurityPolicyEvent to add a policy",
+        "lib/Service/Access.php:91 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "lib/Service/Access.php:95 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "lib/Service/Access.php:115 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Service/BrowserPassMail.php:37 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/BrowserPassMail.php:41 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/Contacts.php:112 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/Service/FileLock.php:126 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Service/ProjectMembers.php:276 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "lib/Service/ProjectMembers.php:277 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead"
+      ],
+      "lines": [
+        "13 uses in 8 files of the public API that is deprecated in Nextcloud 33 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/PageController.php:42 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Controller/PublicController.php:78 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Listener/LoadSidebarListener.php:18 OCP\\Security\\IContentSecurityPolicyManager: deprecated since Nextcloud 17; listen to the AddContentSecurityPolicyEvent to add a policy",
+        "  lib/Listener/LoadSidebarListener.php:26 OCP\\Security\\IContentSecurityPolicyManager::addDefaultPolicy(): deprecated since Nextcloud 17; listen to the AddContentSecurityPolicyEvent to add a policy",
+        "  lib/Service/Access.php:91 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "  lib/Service/Access.php:95 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "  lib/Service/Access.php:115 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Service/BrowserPassMail.php:37 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/BrowserPassMail.php:41 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/Contacts.php:112 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/Service/FileLock.php:126 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Service/ProjectMembers.php:276 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "  lib/Service/ProjectMembers.php:277 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 10
+        }
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Service/StackService.php:169"
+      ],
+      "lines": [
+        "1 transaction is opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Service/StackService.php:169"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/ProcessDerivedMedia.php OCA\\Deliver\\BackgroundJob\\ProcessDerivedMedia",
+        "lib/BackgroundJob/RemindDueDates.php OCA\\Deliver\\BackgroundJob\\RemindDueDates"
+      ],
+      "lines": [
+        "2 timed jobs do not say whether they are time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/ProcessDerivedMedia.php OCA\\Deliver\\BackgroundJob\\ProcessDerivedMedia",
+        "  lib/BackgroundJob/RemindDueDates.php OCA\\Deliver\\BackgroundJob\\RemindDueDates"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version1011Date20261026000001.php:46 time()",
+        "lib/Service/Ffmpeg.php:97 time()",
+        "lib/Service/Ffmpeg.php:110 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 3 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Migration/Version1011Date20261026000001.php:46 time()",
+        "  lib/Service/Ffmpeg.php:97 time()",
+        "  lib/Service/Ffmpeg.php:110 time()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/CommentService.php:279 getValueInt()",
+        "lib/Service/DerivedMedia.php:328 getValueString()",
+        "lib/Service/Encoder.php:33 getValueString()",
+        "lib/Service/Encoder.php:34 getValueBool()",
+        "lib/Service/Encoder.php:40 getValueString()",
+        "lib/Service/Ffmpeg.php:42 getValueString()",
+        "lib/Service/Ffmpeg.php:47 getValueString()",
+        "lib/Service/Ffmpeg.php:55 hasKey()",
+        "lib/Service/Ffmpeg.php:58 getValueString()",
+        "lib/Service/Ffmpeg.php:68 setValueString()",
+        "lib/Service/FileLock.php:72 getValueBool()",
+        "lib/Service/FileLock.php:78 setValueBool()",
+        "lib/Service/JobRunner.php:35 getValueInt()",
+        "lib/Service/PipelineSettings.php:63 getValueInt()",
+        "lib/Service/PipelineSettings.php:64 getValueString()",
+        "lib/Service/PipelineSettings.php:67 getValueBool()",
+        "lib/Service/PipelineSettings.php:68 getValueString()",
+        "lib/Service/PipelineSettings.php:95 setValueInt()",
+        "lib/Service/PipelineSettings.php:96 setValueString()",
+        "lib/Service/PipelineSettings.php:103 getValueString()",
+        "lib/Service/PipelineSettings.php:105 setValueBool()",
+        "lib/Service/PipelineSettings.php:106 setValueString()",
+        "lib/Service/SupportReport.php:42 getValueInt()",
+        "lib/Service/SupportReport.php:71 getValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 24 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/CommentService.php:279 getValueInt()",
+        "  lib/Service/DerivedMedia.php:328 getValueString()",
+        "  lib/Service/Encoder.php:33 getValueString()",
+        "  lib/Service/Encoder.php:34 getValueBool()",
+        "  lib/Service/Encoder.php:40 getValueString()",
+        "  lib/Service/Ffmpeg.php:42 getValueString()",
+        "  lib/Service/Ffmpeg.php:47 getValueString()",
+        "  lib/Service/Ffmpeg.php:55 hasKey()",
+        "  lib/Service/Ffmpeg.php:58 getValueString()",
+        "  lib/Service/Ffmpeg.php:68 setValueString()",
+        "  lib/Service/FileLock.php:72 getValueBool()",
+        "  lib/Service/FileLock.php:78 setValueBool()",
+        "  lib/Service/JobRunner.php:35 getValueInt()",
+        "  lib/Service/PipelineSettings.php:63 getValueInt()",
+        "  lib/Service/PipelineSettings.php:64 getValueString()",
+        "  lib/Service/PipelineSettings.php:67 getValueBool()",
+        "  lib/Service/PipelineSettings.php:68 getValueString()",
+        "  lib/Service/PipelineSettings.php:95 setValueInt()",
+        "  lib/Service/PipelineSettings.php:96 setValueString()",
+        "  lib/Service/PipelineSettings.php:103 getValueString()",
+        "  lib/Service/PipelineSettings.php:105 setValueBool()",
+        "  lib/Service/PipelineSettings.php:106 setValueString()",
+        "  lib/Service/SupportReport.php:42 getValueInt()",
+        "  lib/Service/SupportReport.php:71 getValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 21
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/deliver/api/v1/projects  ocs.deliver.project_api.index  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/deliver/api/v1/projects  ocs.deliver.project_api.create  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/deliver/api/v1/deleted-projects  ocs.deliver.project_api.deleted  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/deliver/api/v1/contacts  ocs.deliver.contacts_api.index  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/deliver/api/v1/settings  ocs.deliver.settings_api.show  appinfo/routes.php:5 ocs",
+        "PUT /ocs/v2.php/apps/deliver/api/v1/settings  ocs.deliver.settings_api.update  appinfo/routes.php:5 ocs",
+        "PUT /ocs/v2.php/apps/deliver/api/v1/settings/browser-pass-mail  ocs.deliver.settings_api.browserpassmail  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/deliver/api/v1/assets  ocs.deliver.project_api.enablefile  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/deliver/api/v1/admin/settings  ocs.deliver.admin_settings.show  appinfo/routes.php:5 ocs",
+        "PUT /ocs/v2.php/apps/deliver/api/v1/admin/settings  ocs.deliver.admin_settings.update  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/deliver/api/v1/admin/report  ocs.deliver.admin_settings.report  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/deliver/api/v1/admin/jobs/retry  ocs.deliver.admin_settings.retry  appinfo/routes.php:5 ocs"
+      ],
+      "lines": [
+        "Nothing in the app calls 12 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/deliver/api/v1/projects  ocs.deliver.project_api.index  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/deliver/api/v1/projects  ocs.deliver.project_api.create  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/deliver/api/v1/deleted-projects  ocs.deliver.project_api.deleted  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/deliver/api/v1/contacts  ocs.deliver.contacts_api.index  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/deliver/api/v1/settings  ocs.deliver.settings_api.show  appinfo/routes.php:5 ocs",
+        "  PUT /ocs/v2.php/apps/deliver/api/v1/settings  ocs.deliver.settings_api.update  appinfo/routes.php:5 ocs",
+        "  PUT /ocs/v2.php/apps/deliver/api/v1/settings/browser-pass-mail  ocs.deliver.settings_api.browserpassmail  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/deliver/api/v1/assets  ocs.deliver.project_api.enablefile  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/deliver/api/v1/admin/settings  ocs.deliver.admin_settings.show  appinfo/routes.php:5 ocs",
+        "  PUT /ocs/v2.php/apps/deliver/api/v1/admin/settings  ocs.deliver.admin_settings.update  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/deliver/api/v1/admin/report  ocs.deliver.admin_settings.report  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/deliver/api/v1/admin/jobs/retry  ocs.deliver.admin_settings.retry  appinfo/routes.php:5 ocs"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 9
+        }
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 69 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version1006Date20261024000000.php:37 a column of deliver_reviewer_links whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version1006Date20261024000000.php:37 a column of deliver_reviewer_links whose name is no constant"
+      ]
+    }
+  ],
+  "endpoints": 99,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deliver/",
+      "target": "OCA\\Deliver\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deliver/attachments/{id}",
+      "target": "OCA\\Deliver\\Controller\\MediaController::attachment",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deliver/compare/{a}/{b}",
+      "target": "OCA\\Deliver\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deliver/projects/{id}",
+      "target": "OCA\\Deliver\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deliver/s/{token}",
+      "target": "OCA\\Deliver\\Controller\\PublicController::showShare",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deliver/s/{token}/api/assets",
+      "target": "OCA\\Deliver\\Controller\\PublicApiController::assets",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/deliver/s/{token}/api/comments/{id}",
+      "target": "OCA\\Deliver\\Controller\\PublicApiController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deliver/s/{token}/api/comments/{id}",
+      "target": "OCA\\Deliver\\Controller\\PublicApiController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deliver/s/{token}/api/comments/{id}/attachments",
+      "target": "OCA\\Deliver\\Controller\\PublicApiController::attach",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deliver/s/{token}/api/comments/{id}/reactions",
+      "target": "OCA\\Deliver\\Controller\\PublicApiController::react",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deliver/s/{token}/api/context",
+      "target": "OCA\\Deliver\\Controller\\PublicApiController::context",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/deliver/s/{token}/api/reviewer",
+      "target": "OCA\\Deliver\\Controller\\PublicApiController::forget",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deliver/s/{token}/api/reviewer",
+      "target": "OCA\\Deliver\\Controller\\PublicApiController::claim",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deliver/s/{token}/api/reviewer",
+      "target": "OCA\\Deliver\\Controller\\PublicApiController::settings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deliver/s/{token}/api/versions/{versionId}/approval",
+      "target": "OCA\\Deliver\\Controller\\PublicApiController::approve",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deliver/s/{token}/api/versions/{versionId}/changes",
+      "target": "OCA\\Deliver\\Controller\\PublicApiController::changes",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deliver/s/{token}/api/versions/{versionId}/comments",
+      "target": "OCA\\Deliver\\Controller\\PublicApiController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deliver/s/{token}/api/versions/{versionId}/comments",
+      "target": "OCA\\Deliver\\Controller\\PublicApiController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deliver/s/{token}/api/versions/{versionId}/seen",
+      "target": "OCA\\Deliver\\Controller\\PublicApiController::seen",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deliver/s/{token}/attachments/{id}",
+      "target": "OCA\\Deliver\\Controller\\PublicApiController::attachment",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deliver/s/{token}/authenticate/{redirect}",
+      "target": "OCA\\Deliver\\Controller\\PublicController::showAuthenticate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deliver/s/{token}/authenticate/{redirect}",
+      "target": "OCA\\Deliver\\Controller\\PublicController::authenticate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deliver/s/{token}/download",
+      "target": "OCA\\Deliver\\Controller\\PublicApiController::download",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deliver/s/{token}/media/{versionId}/{kind}",
+      "target": "OCA\\Deliver\\Controller\\PublicApiController::media",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deliver/s/{token}/preview",
+      "target": "OCA\\Deliver\\Controller\\PublicApiController::preview",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deliver/s/{token}/versions/{versionId}",
+      "target": "OCA\\Deliver\\Controller\\PublicController::showVersion",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deliver/versions/{id}",
+      "target": "OCA\\Deliver\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deliver/versions/{id}/export/{format}",
+      "target": "OCA\\Deliver\\Controller\\ExportController::download",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deliver/versions/{id}/export/ableton",
+      "target": "OCA\\Deliver\\Controller\\ExportController::liveSet",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deliver/versions/{id}/media/{kind}",
+      "target": "OCA\\Deliver\\Controller\\MediaController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/admin/jobs/retry",
+      "target": "OCA\\Deliver\\Controller\\AdminSettingsController::retry",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/admin/report",
+      "target": "OCA\\Deliver\\Controller\\AdminSettingsController::report",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/admin/settings",
+      "target": "OCA\\Deliver\\Controller\\AdminSettingsController::show",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/admin/settings",
+      "target": "OCA\\Deliver\\Controller\\AdminSettingsController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/assets",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::enableFile",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/assets/{id}",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::disableAsset",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/assets/{id}",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::updateAsset",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/assets/{id}/files",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::deleteAsset",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/assets/{id}/project",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::assignAsset",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/comments/{id}",
+      "target": "OCA\\Deliver\\Controller\\CommentApiController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/comments/{id}",
+      "target": "OCA\\Deliver\\Controller\\CommentApiController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/comments/{id}/attachments",
+      "target": "OCA\\Deliver\\Controller\\CommentApiController::attach",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/comments/{id}/reactions",
+      "target": "OCA\\Deliver\\Controller\\CommentApiController::react",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/comments/{id}/resolved",
+      "target": "OCA\\Deliver\\Controller\\CommentApiController::resolve",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/contacts",
+      "target": "OCA\\Deliver\\Controller\\ContactsApiController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/deleted-projects",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::deleted",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/deleted-projects/{id}",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::deleteForGood",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/deleted-projects/{id}/restore",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::restore",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/files/{fileId}/asset",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::assetForFile",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/files/{fileId}/rename",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::renameFile",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/folders/{folderId}/intake",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::intake",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/folders/{folderId}/project",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::byFolder",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/links/{id}",
+      "target": "OCA\\Deliver\\Controller\\ReviewLinkApiController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/links/{id}",
+      "target": "OCA\\Deliver\\Controller\\ReviewLinkApiController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/links/{id}/activity",
+      "target": "OCA\\Deliver\\Controller\\ReviewLinkApiController::activity",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/links/{id}/reviewers",
+      "target": "OCA\\Deliver\\Controller\\ReviewLinkApiController::reviewers",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/links/{id}/reviewers",
+      "target": "OCA\\Deliver\\Controller\\ReviewLinkApiController::invite",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/projects",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/projects",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/projects/{id}",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/projects/{id}",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::show",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/projects/{id}",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/projects/{id}/invitations",
+      "target": "OCA\\Deliver\\Controller\\ReviewLinkApiController::invitation",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/projects/{id}/links",
+      "target": "OCA\\Deliver\\Controller\\ReviewLinkApiController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/projects/{id}/links",
+      "target": "OCA\\Deliver\\Controller\\ReviewLinkApiController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/projects/{id}/members",
+      "target": "OCA\\Deliver\\Controller\\ProjectMemberApiController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/projects/{id}/members",
+      "target": "OCA\\Deliver\\Controller\\ProjectMemberApiController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/projects/{id}/members",
+      "target": "OCA\\Deliver\\Controller\\ProjectMemberApiController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/projects/{id}/mute",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::mute",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/reviewers/{id}",
+      "target": "OCA\\Deliver\\Controller\\ReviewerApiController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/reviewers/{id}",
+      "target": "OCA\\Deliver\\Controller\\ReviewerApiController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/reviewers/{id}/contact",
+      "target": "OCA\\Deliver\\Controller\\ReviewerApiController::saveContact",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/reviewers/{id}/key",
+      "target": "OCA\\Deliver\\Controller\\ReviewerApiController::renewKey",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/reviewers/{id}/links",
+      "target": "OCA\\Deliver\\Controller\\ReviewerApiController::putOn",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/reviewers/{id}/links/{token}",
+      "target": "OCA\\Deliver\\Controller\\ReviewerApiController::takeOff",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/reviewers/{id}/rights",
+      "target": "OCA\\Deliver\\Controller\\ReviewerApiController::rights",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/settings",
+      "target": "OCA\\Deliver\\Controller\\SettingsApiController::show",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/settings",
+      "target": "OCA\\Deliver\\Controller\\SettingsApiController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/settings/browser-pass-mail",
+      "target": "OCA\\Deliver\\Controller\\SettingsApiController::browserPassMail",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/versions/{id}",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::version",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/versions/{id}",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::updateVersion",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/versions/{id}/captions",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::captions",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/versions/{id}/captions/{language}",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::removeCaptions",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/versions/{id}/members",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::members",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/versions/{id}/proxy",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::removeProxy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/versions/{id}/proxy",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::proxy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/versions/{id}/proxy/progress",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::proxyProgress",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/versions/{id}/regenerate",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::regenerate",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/versions/{id}/replace",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::replace",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/versions/{id}/scrub",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::scrub",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/versions/{id}/stack",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::stackVersion",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/versions/{id}/thumbs",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::thumbs",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/versions/{id}/unstack",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::unstackVersion",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/versions/{id}/waveform",
+      "target": "OCA\\Deliver\\Controller\\ProjectApiController::waveform",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/versions/{versionId}/approval",
+      "target": "OCA\\Deliver\\Controller\\CommentApiController::approve",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/versions/{versionId}/changes",
+      "target": "OCA\\Deliver\\Controller\\CommentApiController::changes",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/versions/{versionId}/comments",
+      "target": "OCA\\Deliver\\Controller\\CommentApiController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/versions/{versionId}/comments",
+      "target": "OCA\\Deliver\\Controller\\CommentApiController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deliver/api/v1/versions/{versionId}/seen",
+      "target": "OCA\\Deliver\\Controller\\CommentApiController::seen",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

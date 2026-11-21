@@ -1,0 +1,350 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\BesteSchule\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/beste_schule/grades  beste_schule.grades.show  appinfo/routes.php:4 routes",
+        "GET /index.php/apps/beste_schule/admin  beste_schule.admin.index  appinfo/routes.php:4 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 3 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/beste_schule/grades  beste_schule.grades.show  appinfo/routes.php:4 routes",
+        "  GET /index.php/apps/beste_schule/admin  beste_schule.admin.index  appinfo/routes.php:4 routes"
+      ]
+    },
+    {
+      "id": "migration-name-length",
+      "level": "warn",
+      "places": [
+        "lib/Migration/Version20260608000000.php:141 the primary key of besteschule_finalgrades, named after the table: 23 characters and the prefix oc_, in Nextcloud 27 to 32"
+      ],
+      "lines": [
+        "1 name in the migrations is longer than the server allows, so it stops the install or the update of the app with an exception. The table names are counted with the default prefix oc_.",
+        "  Up to Nextcloud 32 the server checks this only where info.xml lists no database, or lists oci among them.",
+        "  lib/Migration/Version20260608000000.php:141 the primary key of besteschule_finalgrades, named after the table: 23 characters and the prefix oc_, in Nextcloud 27 to 32"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/admin.php:33 style= attribute",
+        "templates/admin.php:51 style= attribute",
+        "templates/admin.php:59 style= attribute",
+        "templates/admin.php:73 style= attribute",
+        "templates/grades.php:43 style= attribute",
+        "templates/grades.php:58 style= attribute",
+        "templates/grades.php:64 style= attribute",
+        "templates/grades.php:66 style= attribute",
+        "templates/grades.php:68 style= attribute",
+        "templates/grades.php:73 style= attribute",
+        "templates/personal.php:31 style= attribute",
+        "templates/personal.php:54 style= attribute"
+      ],
+      "lines": [
+        "12 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/admin.php:33 style= attribute",
+        "  templates/admin.php:51 style= attribute",
+        "  templates/admin.php:59 style= attribute",
+        "  templates/admin.php:73 style= attribute",
+        "  templates/grades.php:43 style= attribute",
+        "  templates/grades.php:58 style= attribute",
+        "  templates/grades.php:64 style= attribute",
+        "  templates/grades.php:66 style= attribute",
+        "  templates/grades.php:68 style= attribute",
+        "  templates/grades.php:73 style= attribute",
+        "  templates/personal.php:31 style= attribute",
+        "  templates/personal.php:54 style= attribute"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 9
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/SyncJob.php OCA\\BesteSchule\\BackgroundJob\\SyncJob"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/SyncJob.php OCA\\BesteSchule\\BackgroundJob\\SyncJob"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/SyncJob.php:73 new DateTimeImmutable()",
+        "lib/Db/AccountMapper.php:63 new DateTime()",
+        "lib/Service/AccountService.php:151 new DateTime()",
+        "lib/Service/AccountService.php:158 new DateTime()",
+        "lib/Service/BesteSchuleService.php:204 new DateTimeImmutable()",
+        "lib/Service/SyncService.php:68 new DateTime()",
+        "lib/Service/SyncService.php:171 new DateTime()",
+        "lib/Service/SyncService.php:172 new DateTime()",
+        "lib/Service/SyncService.php:203 new DateTime()",
+        "lib/Service/SyncService.php:243 new DateTime()",
+        "lib/Service/SyncService.php:319 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 11 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/BackgroundJob/SyncJob.php:73 new DateTimeImmutable()",
+        "  lib/Db/AccountMapper.php:63 new DateTime()",
+        "  lib/Service/AccountService.php:151 new DateTime()",
+        "  lib/Service/AccountService.php:158 new DateTime()",
+        "  lib/Service/BesteSchuleService.php:204 new DateTimeImmutable()",
+        "  lib/Service/SyncService.php:68 new DateTime()",
+        "  lib/Service/SyncService.php:171 new DateTime()",
+        "  lib/Service/SyncService.php:172 new DateTime()",
+        "  lib/Service/SyncService.php:203 new DateTime()",
+        "  lib/Service/SyncService.php:243 new DateTime()",
+        "  lib/Service/SyncService.php:319 new DateTime()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 8
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/beste_schule/api/v1/accounts  ocs.beste_schule.api.getaccounts  appinfo/routes.php:4 ocs",
+        "POST /ocs/v2.php/apps/beste_schule/api/v1/accounts  ocs.beste_schule.api.createaccount  appinfo/routes.php:4 ocs",
+        "DELETE /ocs/v2.php/apps/beste_schule/api/v1/accounts/{id}  ocs.beste_schule.api.deleteaccount  appinfo/routes.php:4 ocs",
+        "PUT /ocs/v2.php/apps/beste_schule/api/v1/accounts/{id}  ocs.beste_schule.api.updateaccount  appinfo/routes.php:4 ocs",
+        "GET /ocs/v2.php/apps/beste_schule/api/v1/admin/accounts  ocs.beste_schule.api.admingetaccounts  appinfo/routes.php:4 ocs",
+        "POST /ocs/v2.php/apps/beste_schule/api/v1/admin/accounts  ocs.beste_schule.api.admincreateaccount  appinfo/routes.php:4 ocs",
+        "DELETE /ocs/v2.php/apps/beste_schule/api/v1/admin/accounts/{id}  ocs.beste_schule.api.admindeleteaccount  appinfo/routes.php:4 ocs",
+        "POST /ocs/v2.php/apps/beste_schule/api/v1/admin/accounts/{id}/sync  ocs.beste_schule.api.adminsyncaccount  appinfo/routes.php:4 ocs",
+        "GET /ocs/v2.php/apps/beste_schule/api/v1/grades  ocs.beste_schule.api.getgrades  appinfo/routes.php:4 ocs",
+        "GET /ocs/v2.php/apps/beste_schule/api/v1/finalgrades  ocs.beste_schule.api.getfinalgrades  appinfo/routes.php:4 ocs",
+        "POST /ocs/v2.php/apps/beste_schule/api/v1/validate  ocs.beste_schule.api.validatetoken  appinfo/routes.php:4 ocs",
+        "POST /ocs/v2.php/apps/beste_schule/api/v1/accounts/{id}/sync  ocs.beste_schule.api.syncaccount  appinfo/routes.php:4 ocs",
+        "GET /ocs/v2.php/apps/beste_schule/api/v1/calendars  ocs.beste_schule.api.getcalendars  appinfo/routes.php:4 ocs",
+        "GET /ocs/v2.php/apps/beste_schule/api/v1/accounts/{id}/logs  ocs.beste_schule.api.getlogs  appinfo/routes.php:4 ocs"
+      ],
+      "lines": [
+        "Nothing in the app calls 14 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/beste_schule/api/v1/accounts  ocs.beste_schule.api.getaccounts  appinfo/routes.php:4 ocs",
+        "  POST /ocs/v2.php/apps/beste_schule/api/v1/accounts  ocs.beste_schule.api.createaccount  appinfo/routes.php:4 ocs",
+        "  DELETE /ocs/v2.php/apps/beste_schule/api/v1/accounts/{id}  ocs.beste_schule.api.deleteaccount  appinfo/routes.php:4 ocs",
+        "  PUT /ocs/v2.php/apps/beste_schule/api/v1/accounts/{id}  ocs.beste_schule.api.updateaccount  appinfo/routes.php:4 ocs",
+        "  GET /ocs/v2.php/apps/beste_schule/api/v1/admin/accounts  ocs.beste_schule.api.admingetaccounts  appinfo/routes.php:4 ocs",
+        "  POST /ocs/v2.php/apps/beste_schule/api/v1/admin/accounts  ocs.beste_schule.api.admincreateaccount  appinfo/routes.php:4 ocs",
+        "  DELETE /ocs/v2.php/apps/beste_schule/api/v1/admin/accounts/{id}  ocs.beste_schule.api.admindeleteaccount  appinfo/routes.php:4 ocs",
+        "  POST /ocs/v2.php/apps/beste_schule/api/v1/admin/accounts/{id}/sync  ocs.beste_schule.api.adminsyncaccount  appinfo/routes.php:4 ocs",
+        "  GET /ocs/v2.php/apps/beste_schule/api/v1/grades  ocs.beste_schule.api.getgrades  appinfo/routes.php:4 ocs",
+        "  GET /ocs/v2.php/apps/beste_schule/api/v1/finalgrades  ocs.beste_schule.api.getfinalgrades  appinfo/routes.php:4 ocs",
+        "  POST /ocs/v2.php/apps/beste_schule/api/v1/validate  ocs.beste_schule.api.validatetoken  appinfo/routes.php:4 ocs",
+        "  POST /ocs/v2.php/apps/beste_schule/api/v1/accounts/{id}/sync  ocs.beste_schule.api.syncaccount  appinfo/routes.php:4 ocs",
+        "  GET /ocs/v2.php/apps/beste_schule/api/v1/calendars  ocs.beste_schule.api.getcalendars  appinfo/routes.php:4 ocs",
+        "  GET /ocs/v2.php/apps/beste_schule/api/v1/accounts/{id}/logs  ocs.beste_schule.api.getlogs  appinfo/routes.php:4 ocs"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 11
+        }
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version20260608155700.php:30 getColumn() on a table whose name is no constant",
+        "lib/Migration/Version20260608155700.php:31 setDefault() on a table whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version20260608155700.php:30 getColumn() on a table whose name is no constant",
+        "  lib/Migration/Version20260608155700.php:31 setDefault() on a table whose name is no constant"
+      ]
+    }
+  ],
+  "endpoints": 17,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/beste_schule/",
+      "target": "OCA\\BesteSchule\\Controller\\GradesController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/beste_schule/admin",
+      "target": "OCA\\BesteSchule\\Controller\\AdminController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/beste_schule/grades",
+      "target": "OCA\\BesteSchule\\Controller\\GradesController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/beste_schule/api/v1/accounts",
+      "target": "OCA\\BesteSchule\\Controller\\ApiController::getAccounts",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/beste_schule/api/v1/accounts",
+      "target": "OCA\\BesteSchule\\Controller\\ApiController::createAccount",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/beste_schule/api/v1/accounts/{id}",
+      "target": "OCA\\BesteSchule\\Controller\\ApiController::deleteAccount",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/beste_schule/api/v1/accounts/{id}",
+      "target": "OCA\\BesteSchule\\Controller\\ApiController::updateAccount",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/beste_schule/api/v1/accounts/{id}/logs",
+      "target": "OCA\\BesteSchule\\Controller\\ApiController::getLogs",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/beste_schule/api/v1/accounts/{id}/sync",
+      "target": "OCA\\BesteSchule\\Controller\\ApiController::syncAccount",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/beste_schule/api/v1/admin/accounts",
+      "target": "OCA\\BesteSchule\\Controller\\ApiController::adminGetAccounts",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/beste_schule/api/v1/admin/accounts",
+      "target": "OCA\\BesteSchule\\Controller\\ApiController::adminCreateAccount",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/beste_schule/api/v1/admin/accounts/{id}",
+      "target": "OCA\\BesteSchule\\Controller\\ApiController::adminDeleteAccount",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/beste_schule/api/v1/admin/accounts/{id}/sync",
+      "target": "OCA\\BesteSchule\\Controller\\ApiController::adminSyncAccount",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/beste_schule/api/v1/calendars",
+      "target": "OCA\\BesteSchule\\Controller\\ApiController::getCalendars",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/beste_schule/api/v1/finalgrades",
+      "target": "OCA\\BesteSchule\\Controller\\ApiController::getFinalGrades",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/beste_schule/api/v1/grades",
+      "target": "OCA\\BesteSchule\\Controller\\ApiController::getGrades",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/beste_schule/api/v1/validate",
+      "target": "OCA\\BesteSchule\\Controller\\ApiController::validateToken",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

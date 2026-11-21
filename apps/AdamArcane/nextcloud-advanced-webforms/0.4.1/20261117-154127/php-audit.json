@@ -1,0 +1,521 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Webforms\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/webforms/api/v1/admin/captcha  webforms.admin.getcaptcha  lib/Controller/AdminController.php:51",
+        "PUT /index.php/apps/webforms/api/v1/admin/captcha  webforms.admin.setcaptcha  lib/Controller/AdminController.php:59",
+        "GET /index.php/apps/webforms/api/v1/admin/policy  webforms.admin.getpolicy  lib/Controller/AdminController.php:83",
+        "PUT /index.php/apps/webforms/api/v1/admin/policy  webforms.admin.setpolicy  lib/Controller/AdminController.php:96",
+        "GET /index.php/apps/webforms/api/v1/admin/mail  webforms.admin.getmail  lib/Controller/AdminController.php:136",
+        "PUT /index.php/apps/webforms/api/v1/admin/mail  webforms.admin.setmail  lib/Controller/AdminController.php:144",
+        "GET /index.php/apps/webforms/api/v1/admin/policy/retention-preview  webforms.admin.retentionpreview  lib/Controller/AdminController.php:176",
+        "GET /index.php/apps/webforms/api/v1/admin/groups  webforms.admin.searchgroups  lib/Controller/AdminController.php:187",
+        "GET /index.php/apps/webforms/api/v1/admin/statuses  webforms.admin.getstatuses  lib/Controller/AdminController.php:196",
+        "PUT /index.php/apps/webforms/api/v1/admin/statuses  webforms.admin.setstatuses  lib/Controller/AdminController.php:208",
+        "GET /index.php/apps/webforms/api/v1/image  webforms.form.image  lib/Controller/FormController.php:58",
+        "GET /index.php/apps/webforms/api/v1/forms  webforms.form.index  lib/Controller/FormController.php:76",
+        "POST /index.php/apps/webforms/api/v1/forms  webforms.form.create  lib/Controller/FormController.php:82",
+        "POST /index.php/apps/webforms/api/v1/forms/import  webforms.form.importform  lib/Controller/FormController.php:146",
+        "GET /index.php/apps/webforms/api/v1/public/captcha/challenge  webforms.public.challenge  lib/Controller/PublicController.php:156",
+        "GET /index.php/apps/webforms/api/v1/settings  webforms.settings.index  lib/Controller/SettingsController.php:39",
+        "GET /index.php/apps/webforms/api/v1/preferences  webforms.settings.preferences  lib/Controller/SettingsController.php:46",
+        "PUT /index.php/apps/webforms/api/v1/preferences  webforms.settings.savepreferences  lib/Controller/SettingsController.php:52",
+        "GET /index.php/apps/webforms/api/v1/tables  webforms.tables.index  lib/Controller/TablesController.php:43",
+        "POST /index.php/apps/webforms/api/v1/tables/from-form  webforms.tables.createfromform  lib/Controller/TablesController.php:83"
+      ],
+      "lines": [
+        "Nothing in the app calls 20 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 163 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/webforms/api/v1/admin/captcha  webforms.admin.getcaptcha  lib/Controller/AdminController.php:51",
+        "  PUT /index.php/apps/webforms/api/v1/admin/captcha  webforms.admin.setcaptcha  lib/Controller/AdminController.php:59",
+        "  GET /index.php/apps/webforms/api/v1/admin/policy  webforms.admin.getpolicy  lib/Controller/AdminController.php:83",
+        "  PUT /index.php/apps/webforms/api/v1/admin/policy  webforms.admin.setpolicy  lib/Controller/AdminController.php:96",
+        "  GET /index.php/apps/webforms/api/v1/admin/mail  webforms.admin.getmail  lib/Controller/AdminController.php:136",
+        "  PUT /index.php/apps/webforms/api/v1/admin/mail  webforms.admin.setmail  lib/Controller/AdminController.php:144",
+        "  GET /index.php/apps/webforms/api/v1/admin/policy/retention-preview  webforms.admin.retentionpreview  lib/Controller/AdminController.php:176",
+        "  GET /index.php/apps/webforms/api/v1/admin/groups  webforms.admin.searchgroups  lib/Controller/AdminController.php:187",
+        "  GET /index.php/apps/webforms/api/v1/admin/statuses  webforms.admin.getstatuses  lib/Controller/AdminController.php:196",
+        "  PUT /index.php/apps/webforms/api/v1/admin/statuses  webforms.admin.setstatuses  lib/Controller/AdminController.php:208",
+        "  GET /index.php/apps/webforms/api/v1/image  webforms.form.image  lib/Controller/FormController.php:58",
+        "  GET /index.php/apps/webforms/api/v1/forms  webforms.form.index  lib/Controller/FormController.php:76",
+        "  POST /index.php/apps/webforms/api/v1/forms  webforms.form.create  lib/Controller/FormController.php:82",
+        "  POST /index.php/apps/webforms/api/v1/forms/import  webforms.form.importform  lib/Controller/FormController.php:146",
+        "  GET /index.php/apps/webforms/api/v1/public/captcha/challenge  webforms.public.challenge  lib/Controller/PublicController.php:156",
+        "  GET /index.php/apps/webforms/api/v1/settings  webforms.settings.index  lib/Controller/SettingsController.php:39",
+        "  GET /index.php/apps/webforms/api/v1/preferences  webforms.settings.preferences  lib/Controller/SettingsController.php:46",
+        "  PUT /index.php/apps/webforms/api/v1/preferences  webforms.settings.savepreferences  lib/Controller/SettingsController.php:52",
+        "  GET /index.php/apps/webforms/api/v1/tables  webforms.tables.index  lib/Controller/TablesController.php:43",
+        "  POST /index.php/apps/webforms/api/v1/tables/from-form  webforms.tables.createfromform  lib/Controller/TablesController.php:83"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 17
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Actions/Adapter/NextcloudSecrets.php:61 OCP\\IAppConfig::getKeys(): deprecated since Nextcloud 13; use method getAppKeys of \\OCP\\IConfig  This function gets all keys of an app. Please note that the values are not returned.",
+        "lib/Actions/Adapter/NextcloudSecrets.php:63 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Actions/Adapter/NextcloudTables.php:35 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Controller/PageController.php:39 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Controller/PublicPageController.php:56 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ],
+      "lines": [
+        "5 uses in 4 files of the public API that is deprecated in Nextcloud 35. The text of the tag names the replacement where it has one.",
+        "  lib/Actions/Adapter/NextcloudSecrets.php:61 OCP\\IAppConfig::getKeys(): deprecated since Nextcloud 13; use method getAppKeys of \\OCP\\IConfig  This function gets all keys of an app. Please note that the values are not returned.",
+        "  lib/Actions/Adapter/NextcloudSecrets.php:63 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Actions/Adapter/NextcloudTables.php:35 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Controller/PageController.php:39 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Controller/PublicPageController.php:56 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Actions/Adapter/NextcloudSecrets.php:36 getValueString()",
+        "lib/Actions/Adapter/NextcloudSecrets.php:55 setValueString()",
+        "lib/Actions/Adapter/NextcloudSecrets.php:61 getKeys()",
+        "lib/Security/Captcha/AppConfigStore.php:22 getValueString()",
+        "lib/Security/Captcha/AppConfigStore.php:27 setValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 5 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Actions/Adapter/NextcloudSecrets.php:36 getValueString()",
+        "  lib/Actions/Adapter/NextcloudSecrets.php:55 setValueString()",
+        "  lib/Actions/Adapter/NextcloudSecrets.php:61 getKeys()",
+        "  lib/Security/Captcha/AppConfigStore.php:22 getValueString()",
+        "  lib/Security/Captcha/AppConfigStore.php:27 setValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    }
+  ],
+  "endpoints": 56,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/",
+      "target": "OCA\\Webforms\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/admin/captcha",
+      "target": "OCA\\Webforms\\Controller\\AdminController::getCaptcha",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/webforms/api/v1/admin/captcha",
+      "target": "OCA\\Webforms\\Controller\\AdminController::setCaptcha",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/admin/groups",
+      "target": "OCA\\Webforms\\Controller\\AdminController::searchGroups",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/admin/mail",
+      "target": "OCA\\Webforms\\Controller\\AdminController::getMail",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/webforms/api/v1/admin/mail",
+      "target": "OCA\\Webforms\\Controller\\AdminController::setMail",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/admin/policy",
+      "target": "OCA\\Webforms\\Controller\\AdminController::getPolicy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/webforms/api/v1/admin/policy",
+      "target": "OCA\\Webforms\\Controller\\AdminController::setPolicy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/admin/policy/retention-preview",
+      "target": "OCA\\Webforms\\Controller\\AdminController::retentionPreview",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/admin/statuses",
+      "target": "OCA\\Webforms\\Controller\\AdminController::getStatuses",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/webforms/api/v1/admin/statuses",
+      "target": "OCA\\Webforms\\Controller\\AdminController::setStatuses",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/backup",
+      "target": "OCA\\Webforms\\Controller\\FormController::backup",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/forms",
+      "target": "OCA\\Webforms\\Controller\\FormController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/webforms/api/v1/forms",
+      "target": "OCA\\Webforms\\Controller\\FormController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/webforms/api/v1/forms/{id}",
+      "target": "OCA\\Webforms\\Controller\\FormController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/forms/{id}",
+      "target": "OCA\\Webforms\\Controller\\FormController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/webforms/api/v1/forms/{id}/archived",
+      "target": "OCA\\Webforms\\Controller\\FormController::setArchived",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/forms/{id}/deliveries",
+      "target": "OCA\\Webforms\\Controller\\FormController::deliveries",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/webforms/api/v1/forms/{id}/deliveries/{logId}/retry",
+      "target": "OCA\\Webforms\\Controller\\FormController::retryDelivery",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/webforms/api/v1/forms/{id}/draft",
+      "target": "OCA\\Webforms\\Controller\\FormController::saveDraft",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/forms/{id}/entries",
+      "target": "OCA\\Webforms\\Controller\\FormController::entries",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/webforms/api/v1/forms/{id}/entries/{entryId}",
+      "target": "OCA\\Webforms\\Controller\\FormController::destroyEntry",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/forms/{id}/entries/{entryId}",
+      "target": "OCA\\Webforms\\Controller\\FormController::showEntry",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/forms/{id}/entries/{entryId}/files/{fieldId}/{index}",
+      "target": "OCA\\Webforms\\Controller\\FormController::downloadFile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/webforms/api/v1/forms/{id}/entries/{entryId}/note",
+      "target": "OCA\\Webforms\\Controller\\FormController::setEntryNote",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/webforms/api/v1/forms/{id}/entries/{entryId}/status",
+      "target": "OCA\\Webforms\\Controller\\FormController::setEntryStatus",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/webforms/api/v1/forms/{id}/entries/bulk-delete",
+      "target": "OCA\\Webforms\\Controller\\FormController::bulkDeleteEntries",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/webforms/api/v1/forms/{id}/entries/bulk-status",
+      "target": "OCA\\Webforms\\Controller\\FormController::bulkSetEntryStatus",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/forms/{id}/entries/export",
+      "target": "OCA\\Webforms\\Controller\\FormController::exportEntries",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/webforms/api/v1/forms/{id}/entries/seen",
+      "target": "OCA\\Webforms\\Controller\\FormController::markEntriesSeen",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/forms/{id}/entries/summary",
+      "target": "OCA\\Webforms\\Controller\\FormController::entriesSummary",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/forms/{id}/export",
+      "target": "OCA\\Webforms\\Controller\\FormController::exportForm",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/webforms/api/v1/forms/{id}/publish",
+      "target": "OCA\\Webforms\\Controller\\FormController::publish",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/webforms/api/v1/forms/{id}/share",
+      "target": "OCA\\Webforms\\Controller\\FormController::setShare",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/webforms/api/v1/forms/{id}/status",
+      "target": "OCA\\Webforms\\Controller\\FormController::setStatus",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/webforms/api/v1/forms/{id}/webhook-secret",
+      "target": "OCA\\Webforms\\Controller\\FormController::createWebhookSecret",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/forms/{id}/webhook-secret/{ref}",
+      "target": "OCA\\Webforms\\Controller\\FormController::webhookSecretExists",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/webforms/api/v1/forms/import",
+      "target": "OCA\\Webforms\\Controller\\FormController::importForm",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/image",
+      "target": "OCA\\Webforms\\Controller\\FormController::image",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/preferences",
+      "target": "OCA\\Webforms\\Controller\\SettingsController::preferences",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/webforms/api/v1/preferences",
+      "target": "OCA\\Webforms\\Controller\\SettingsController::savePreferences",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/public/{token}",
+      "target": "OCA\\Webforms\\Controller\\PublicController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/public/{token}/embed",
+      "target": "OCA\\Webforms\\Controller\\PublicController::showEmbedded",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/public/{token}/embed/image/{fieldId}",
+      "target": "OCA\\Webforms\\Controller\\PublicController::imageEmbedded",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/webforms/api/v1/public/{token}/embed/submit",
+      "target": "OCA\\Webforms\\Controller\\PublicController::submitEmbedded",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/webforms/api/v1/public/{token}/embed/upload",
+      "target": "OCA\\Webforms\\Controller\\PublicController::uploadEmbedded",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/public/{token}/image/{fieldId}",
+      "target": "OCA\\Webforms\\Controller\\PublicController::image",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/webforms/api/v1/public/{token}/submit",
+      "target": "OCA\\Webforms\\Controller\\PublicController::submit",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/webforms/api/v1/public/{token}/upload",
+      "target": "OCA\\Webforms\\Controller\\PublicController::upload",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/public/captcha/challenge",
+      "target": "OCA\\Webforms\\Controller\\PublicController::challenge",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/settings",
+      "target": "OCA\\Webforms\\Controller\\SettingsController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/tables",
+      "target": "OCA\\Webforms\\Controller\\TablesController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/api/v1/tables/{id}/columns",
+      "target": "OCA\\Webforms\\Controller\\TablesController::columns",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/webforms/api/v1/tables/from-form",
+      "target": "OCA\\Webforms\\Controller\\TablesController::createFromForm",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/f/{token}",
+      "target": "OCA\\Webforms\\Controller\\PublicPageController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/webforms/f/{token}/embed",
+      "target": "OCA\\Webforms\\Controller\\PublicPageController::embed",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

@@ -1,0 +1,350 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\VereinsfliegerLogin\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/LoginController.php:63 OC\\Security\\CSRF\\CsrfTokenManager",
+        "lib/Listener/IpLoginGuard.php:47 OC\\Authentication\\Exceptions\\PasswordLoginForbiddenException",
+        "lib/Listener/IpLoginGuard.php:49 OC\\User\\LoginException",
+        "lib/Listener/NativeLoginGuard.php:37 OC\\Authentication\\Exceptions\\PasswordLoginForbiddenException",
+        "lib/Listener/NativeLoginGuard.php:39 OC\\User\\LoginException",
+        "lib/Service/LoginSession.php:27 OC\\User\\Session",
+        "lib/Service/LoginSession.php:27 OC\\Authentication\\TwoFactorAuth\\Manager",
+        "lib/Service/LoginSession.php:27 OC\\Authentication\\TwoFactorAuth\\MandatoryTwoFactor",
+        "lib/Service/PasswordlessSession.php:17 OC\\Authentication\\Token\\IProvider"
+      ],
+      "lines": [
+        "9 uses of the private API of the server in 5 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/LoginController.php:63 OC\\Security\\CSRF\\CsrfTokenManager",
+        "  lib/Listener/IpLoginGuard.php:47 OC\\Authentication\\Exceptions\\PasswordLoginForbiddenException",
+        "  lib/Listener/IpLoginGuard.php:49 OC\\User\\LoginException",
+        "  lib/Listener/NativeLoginGuard.php:37 OC\\Authentication\\Exceptions\\PasswordLoginForbiddenException",
+        "  lib/Listener/NativeLoginGuard.php:39 OC\\User\\LoginException",
+        "  lib/Service/LoginSession.php:27 OC\\User\\Session",
+        "  lib/Service/LoginSession.php:27 OC\\Authentication\\TwoFactorAuth\\Manager",
+        "  lib/Service/LoginSession.php:27 OC\\Authentication\\TwoFactorAuth\\MandatoryTwoFactor",
+        "  lib/Service/PasswordlessSession.php:17 OC\\Authentication\\Token\\IProvider"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 6
+        }
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:39 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:39 injectFn()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "POST /index.php/apps/vereinsflieger_login/admin/journal/save  vereinsflieger_login.journal.save  appinfo/routes.php:8 routes",
+        "POST /index.php/apps/vereinsflieger_login/admin/blocklists/save  vereinsflieger_login.blocklist.save  appinfo/routes.php:8 routes",
+        "POST /index.php/apps/vereinsflieger_login/admin/blocklists/refresh  vereinsflieger_login.blocklist.refresh  appinfo/routes.php:8 routes",
+        "POST /index.php/apps/vereinsflieger_login/admin/blocklists/test  vereinsflieger_login.blocklist.test  appinfo/routes.php:8 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 4 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 4 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  POST /index.php/apps/vereinsflieger_login/admin/journal/save  vereinsflieger_login.journal.save  appinfo/routes.php:8 routes",
+        "  POST /index.php/apps/vereinsflieger_login/admin/blocklists/save  vereinsflieger_login.blocklist.save  appinfo/routes.php:8 routes",
+        "  POST /index.php/apps/vereinsflieger_login/admin/blocklists/refresh  vereinsflieger_login.blocklist.refresh  appinfo/routes.php:8 routes",
+        "  POST /index.php/apps/vereinsflieger_login/admin/blocklists/test  vereinsflieger_login.blocklist.test  appinfo/routes.php:8 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:34 OCP\\AppFramework\\Bootstrap\\IRegistrationContext::registerAlternativeLogin(): deprecated since Nextcloud 34; Use registerAlternativeLoginProvider instead.",
+        "lib/Service/Configuration.php:24 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/Configuration.php:39 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/Configuration.php:40 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/Configuration.php:53 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/Configuration.php:57 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/Configuration.php:75 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/Configuration.php:79 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/Configuration.php:193 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/Configuration.php:195 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/Configuration.php:263 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/ProfileSynchronizer.php:30 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ProfileSynchronizer.php:31 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/RoleNameMigration.php:22 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/RoleNameMigration.php:38 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/RoleNameMigration.php:82 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/RoleNameMigration.php:85 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/RoleNameMigration.php:88 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/RoleSynchronizer.php:31 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/RoleSynchronizer.php:56 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/RoleSynchronizer.php:59 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/RoleSynchronizer.php:85 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/RoleSynchronizer.php:89 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/UserProvisioner.php:35 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/UserProvisioner.php:36 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/UserProvisioner.php:50 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/UserProvisioner.php:53 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/UserProvisioner.php:54 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/UserProvisioner.php:55 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/UserProvisioner.php:56 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Settings/Admin.php:42 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead"
+      ],
+      "lines": [
+        "31 uses in 7 files of the public API that is deprecated in Nextcloud 33 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/AppInfo/Application.php:34 OCP\\AppFramework\\Bootstrap\\IRegistrationContext::registerAlternativeLogin(): deprecated since Nextcloud 34; Use registerAlternativeLoginProvider instead.",
+        "  lib/Service/Configuration.php:24 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/Configuration.php:39 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/Configuration.php:40 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/Configuration.php:53 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/Configuration.php:57 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/Configuration.php:75 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/Configuration.php:79 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/Configuration.php:193 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/Configuration.php:195 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/Configuration.php:263 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/ProfileSynchronizer.php:30 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ProfileSynchronizer.php:31 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/RoleNameMigration.php:22 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/RoleNameMigration.php:38 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/RoleNameMigration.php:82 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/RoleNameMigration.php:85 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/RoleNameMigration.php:88 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/RoleSynchronizer.php:31 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/RoleSynchronizer.php:56 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/RoleSynchronizer.php:59 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/RoleSynchronizer.php:85 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/RoleSynchronizer.php:89 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/UserProvisioner.php:35 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/UserProvisioner.php:36 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/UserProvisioner.php:50 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/UserProvisioner.php:53 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/UserProvisioner.php:54 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/UserProvisioner.php:55 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/UserProvisioner.php:56 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Settings/Admin.php:42 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 28
+        }
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Service/RoleNameMigration.php:71"
+      ],
+      "lines": [
+        "1 transaction is opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Service/RoleNameMigration.php:71"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/RefreshIpBlocklists.php OCA\\VereinsfliegerLogin\\BackgroundJob\\RefreshIpBlocklists"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/RefreshIpBlocklists.php OCA\\VereinsfliegerLogin\\BackgroundJob\\RefreshIpBlocklists"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/LoginController.php:127 time()",
+        "lib/Controller/LoginController.php:179 time()",
+        "lib/Service/AccountLinks.php:58 time()",
+        "lib/Service/IpBlocklists.php:133 time()",
+        "lib/Service/IpBlocklists.php:181 time()",
+        "lib/Service/LoginAudit.php:77 time()",
+        "lib/Service/LoginAudit.php:105 time()",
+        "lib/Service/LoginAudit.php:117 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 8 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/LoginController.php:127 time()",
+        "  lib/Controller/LoginController.php:179 time()",
+        "  lib/Service/AccountLinks.php:58 time()",
+        "  lib/Service/IpBlocklists.php:133 time()",
+        "  lib/Service/IpBlocklists.php:181 time()",
+        "  lib/Service/LoginAudit.php:77 time()",
+        "  lib/Service/LoginAudit.php:105 time()",
+        "  lib/Service/LoginAudit.php:117 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/Configuration.php:24 getAppValue()",
+        "lib/Service/Configuration.php:53 getAppValue()",
+        "lib/Service/Configuration.php:57 getAppValue()",
+        "lib/Service/Configuration.php:193 setAppValue()",
+        "lib/Service/Configuration.php:195 setAppValue()",
+        "lib/Service/Configuration.php:263 setAppValue()",
+        "lib/Service/RoleNameMigration.php:22 getAppValue()",
+        "lib/Service/RoleNameMigration.php:38 getAppValue()",
+        "lib/Service/RoleNameMigration.php:82 setAppValue()",
+        "lib/Service/RoleNameMigration.php:88 setAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 10 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/Configuration.php:24 getAppValue()",
+        "  lib/Service/Configuration.php:53 getAppValue()",
+        "  lib/Service/Configuration.php:57 getAppValue()",
+        "  lib/Service/Configuration.php:193 setAppValue()",
+        "  lib/Service/Configuration.php:195 setAppValue()",
+        "  lib/Service/Configuration.php:263 setAppValue()",
+        "  lib/Service/RoleNameMigration.php:22 getAppValue()",
+        "  lib/Service/RoleNameMigration.php:38 getAppValue()",
+        "  lib/Service/RoleNameMigration.php:82 setAppValue()",
+        "  lib/Service/RoleNameMigration.php:88 setAppValue()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version000600Date20261027000000.php:26 a column of vf_login_events whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version000600Date20261027000000.php:26 a column of vf_login_events whose name is no constant"
+      ]
+    }
+  ],
+  "endpoints": 13,
+  "endpointList": [
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/vereinsflieger_login/admin/blocklists",
+      "target": "OCA\\VereinsfliegerLogin\\Controller\\BlocklistController::status",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/vereinsflieger_login/admin/blocklists/refresh",
+      "target": "OCA\\VereinsfliegerLogin\\Controller\\BlocklistController::refresh",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/vereinsflieger_login/admin/blocklists/save",
+      "target": "OCA\\VereinsfliegerLogin\\Controller\\BlocklistController::save",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/vereinsflieger_login/admin/blocklists/test",
+      "target": "OCA\\VereinsfliegerLogin\\Controller\\BlocklistController::test",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/vereinsflieger_login/admin/check",
+      "target": "OCA\\VereinsfliegerLogin\\Controller\\AdminController::check",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/vereinsflieger_login/admin/journal",
+      "target": "OCA\\VereinsfliegerLogin\\Controller\\JournalController::page",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/vereinsflieger_login/admin/journal/save",
+      "target": "OCA\\VereinsfliegerLogin\\Controller\\JournalController::save",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/vereinsflieger_login/admin/list",
+      "target": "OCA\\VereinsfliegerLogin\\Controller\\AdminController::listPage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/vereinsflieger_login/admin/settings",
+      "target": "OCA\\VereinsfliegerLogin\\Controller\\AdminController::save",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/vereinsflieger_login/admin/unpause",
+      "target": "OCA\\VereinsfliegerLogin\\Controller\\AdminController::unpause",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/vereinsflieger_login/finish",
+      "target": "OCA\\VereinsfliegerLogin\\Controller\\LoginController::finish",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/vereinsflieger_login/login",
+      "target": "OCA\\VereinsfliegerLogin\\Controller\\LoginController::form",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/vereinsflieger_login/login",
+      "target": "OCA\\VereinsfliegerLogin\\Controller\\LoginController::submit",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

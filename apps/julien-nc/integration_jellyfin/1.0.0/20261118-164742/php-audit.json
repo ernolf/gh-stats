@@ -1,0 +1,83 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Jellyfin\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Reference/JellyfinReferenceProvider.php:45 OC\\Collaboration\\Reference\\ReferenceManager",
+        "lib/Reference/JellyfinReferenceProvider.php:48 OC\\Collaboration\\Reference\\LinkReferenceProvider",
+        "lib/Service/JellyfinAPIService.php:94 OC_Helper"
+      ],
+      "lines": [
+        "3 uses of the private API of the server in 2 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Reference/JellyfinReferenceProvider.php:45 OC\\Collaboration\\Reference\\ReferenceManager",
+        "  lib/Reference/JellyfinReferenceProvider.php:48 OC\\Collaboration\\Reference\\LinkReferenceProvider",
+        "  lib/Service/JellyfinAPIService.php:94 OC_Helper"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:50 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:50 injectFn()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/integration_jellyfin/items/{itemId}/images/primary  integration_jellyfin.jellyfinapi.getmediaimage  appinfo/routes.php:12 routes",
+        "GET /index.php/apps/integration_jellyfin/i/{itemId}  integration_jellyfin.jellyfinapi.internalmedialink  appinfo/routes.php:12 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 7 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/integration_jellyfin/items/{itemId}/images/primary  integration_jellyfin.jellyfinapi.getmediaimage  appinfo/routes.php:12 routes",
+        "  GET /index.php/apps/integration_jellyfin/i/{itemId}  integration_jellyfin.jellyfinapi.internalmedialink  appinfo/routes.php:12 routes"
+      ]
+    }
+  ],
+  "endpoints": 4,
+  "endpointList": [
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/integration_jellyfin/admin-config",
+      "target": "OCA\\Jellyfin\\Controller\\ConfigController::setAdminConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/integration_jellyfin/config",
+      "target": "OCA\\Jellyfin\\Controller\\ConfigController::setConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_jellyfin/i/{itemId}",
+      "target": "OCA\\Jellyfin\\Controller\\JellyfinAPIController::internalMediaLink",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_jellyfin/items/{itemId}/images/primary",
+      "target": "OCA\\Jellyfin\\Controller\\JellyfinAPIController::getMediaImage",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

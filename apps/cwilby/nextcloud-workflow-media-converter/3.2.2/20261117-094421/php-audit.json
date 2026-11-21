@@ -1,0 +1,185 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\WorkflowMediaConverter\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/BackgroundJobs/ConvertMediaJob.php:271 OC\\Files\\View",
+        "lib/Check/PathName.php:41 OC\\Files\\Storage\\Local",
+        "lib/Factory/ViewFactory.php:9 OC\\Files\\View",
+        "lib/Operation/ConvertMediaOperation.php:77 OC\\Files\\Node\\File"
+      ],
+      "lines": [
+        "4 uses of the private API of the server in 4 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/BackgroundJobs/ConvertMediaJob.php:271 OC\\Files\\View",
+        "  lib/Check/PathName.php:41 OC\\Files\\Storage\\Local",
+        "  lib/Factory/ViewFactory.php:9 OC\\Files\\View",
+        "  lib/Operation/ConvertMediaOperation.php:77 OC\\Files\\Node\\File"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/workflow_media_converter/conversion-batches  workflow_media_converter.conversionbatches.index  appinfo/routes.php:3 routes",
+        "GET /index.php/apps/workflow_media_converter/conversion-batches/{id}  workflow_media_converter.conversionbatches.show  appinfo/routes.php:3 routes",
+        "POST /index.php/apps/workflow_media_converter/conversion-batches  workflow_media_converter.conversionbatches.create  appinfo/routes.php:3 routes",
+        "DELETE /index.php/apps/workflow_media_converter/conversion-batches/{id}  workflow_media_converter.conversionbatches.delete  appinfo/routes.php:3 routes",
+        "GET /index.php/apps/workflow_media_converter/admin-settings  workflow_media_converter.adminsettings.getsettings  appinfo/routes.php:3 routes",
+        "PUT /index.php/apps/workflow_media_converter/admin-settings  workflow_media_converter.adminsettings.updatesettings  appinfo/routes.php:3 routes",
+        "GET /index.php/apps/workflow_media_converter/personal-settings  workflow_media_converter.personalsettings.getsettings  appinfo/routes.php:3 routes",
+        "PUT /index.php/apps/workflow_media_converter/personal-settings  workflow_media_converter.personalsettings.updatesettings  appinfo/routes.php:3 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 8 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 17 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/workflow_media_converter/conversion-batches  workflow_media_converter.conversionbatches.index  appinfo/routes.php:3 routes",
+        "  GET /index.php/apps/workflow_media_converter/conversion-batches/{id}  workflow_media_converter.conversionbatches.show  appinfo/routes.php:3 routes",
+        "  POST /index.php/apps/workflow_media_converter/conversion-batches  workflow_media_converter.conversionbatches.create  appinfo/routes.php:3 routes",
+        "  DELETE /index.php/apps/workflow_media_converter/conversion-batches/{id}  workflow_media_converter.conversionbatches.delete  appinfo/routes.php:3 routes",
+        "  GET /index.php/apps/workflow_media_converter/admin-settings  workflow_media_converter.adminsettings.getsettings  appinfo/routes.php:3 routes",
+        "  PUT /index.php/apps/workflow_media_converter/admin-settings  workflow_media_converter.adminsettings.updatesettings  appinfo/routes.php:3 routes",
+        "  GET /index.php/apps/workflow_media_converter/personal-settings  workflow_media_converter.personalsettings.getsettings  appinfo/routes.php:3 routes",
+        "  PUT /index.php/apps/workflow_media_converter/personal-settings  workflow_media_converter.personalsettings.updatesettings  appinfo/routes.php:3 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Operation/ConvertMediaOperation.php:76 OCP\\EventDispatcher\\GenericEvent: deprecated since Nextcloud 22; use \\OCP\\EventDispatcher\\Event",
+        "lib/Service/ConfigService.php:44 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ConfigService.php:56 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ConfigService.php:64 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/ConfigService.php:72 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "lines": [
+        "5 uses in 2 files of the public API that is deprecated in Nextcloud 32 to 34. The text of the tag names the replacement where it has one.",
+        "  lib/Operation/ConvertMediaOperation.php:76 OCP\\EventDispatcher\\GenericEvent: deprecated since Nextcloud 22; use \\OCP\\EventDispatcher\\Event",
+        "  lib/Service/ConfigService.php:44 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ConfigService.php:56 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ConfigService.php:64 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/ConfigService.php:72 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJobs/ConvertMediaJob.php:341 time()",
+        "lib/BackgroundJobs/ConvertMediaJob.php:351 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 2 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/BackgroundJobs/ConvertMediaJob.php:341 time()",
+        "  lib/BackgroundJobs/ConvertMediaJob.php:351 time()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/ConfigService.php:64 getAppValue()",
+        "lib/Service/ConfigService.php:72 setAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 2 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/ConfigService.php:64 getAppValue()",
+        "  lib/Service/ConfigService.php:72 setAppValue()"
+      ]
+    }
+  ],
+  "endpoints": 8,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/workflow_media_converter/admin-settings",
+      "target": "OCA\\WorkflowMediaConverter\\Controller\\AdminSettingsController::getSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/workflow_media_converter/admin-settings",
+      "target": "OCA\\WorkflowMediaConverter\\Controller\\AdminSettingsController::updateSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/workflow_media_converter/conversion-batches",
+      "target": "OCA\\WorkflowMediaConverter\\Controller\\ConversionBatchesController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/workflow_media_converter/conversion-batches",
+      "target": "OCA\\WorkflowMediaConverter\\Controller\\ConversionBatchesController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/workflow_media_converter/conversion-batches/{id}",
+      "target": "OCA\\WorkflowMediaConverter\\Controller\\ConversionBatchesController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/workflow_media_converter/conversion-batches/{id}",
+      "target": "OCA\\WorkflowMediaConverter\\Controller\\ConversionBatchesController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/workflow_media_converter/personal-settings",
+      "target": "OCA\\WorkflowMediaConverter\\Controller\\PersonalSettingsController::getSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/workflow_media_converter/personal-settings",
+      "target": "OCA\\WorkflowMediaConverter\\Controller\\PersonalSettingsController::updateSettings",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

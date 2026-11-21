@@ -1,0 +1,118 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\FileAge\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Command/AgeCheck.php:45 OC\\Core\\Command\\Base",
+        "lib/Service/FileAgeService.php:108 OC\\Files\\Utils\\Scanner",
+        "lib/Service/FileAgeService.php:110 OC\\DB\\ConnectionAdapter",
+        "lib/Service/FileAgeService.php:111 OC",
+        "lib/Service/FileAgeService.php:111 OC::$server",
+        "lib/Service/FileAgeService.php:112 OC::$server",
+        "lib/Service/FileAgeService.php:120 OC\\DB\\Connection",
+        "lib/Service/FileAgeService.php:120 OC::$server"
+      ],
+      "lines": [
+        "8 uses of the private API of the server in 2 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Command/AgeCheck.php:45 OC\\Core\\Command\\Base",
+        "  lib/Service/FileAgeService.php:108 OC\\Files\\Utils\\Scanner",
+        "  lib/Service/FileAgeService.php:110 OC\\DB\\ConnectionAdapter",
+        "  lib/Service/FileAgeService.php:111 OC",
+        "  lib/Service/FileAgeService.php:111 OC::$server",
+        "  lib/Service/FileAgeService.php:112 OC::$server",
+        "  lib/Service/FileAgeService.php:120 OC\\DB\\Connection",
+        "  lib/Service/FileAgeService.php:120 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:33 OCP\\AppFramework\\Bootstrap\\IBootstrap: there since Nextcloud 20, the app declares from 15",
+        "lib/AppInfo/Application.php:41 OCP\\AppFramework\\Bootstrap\\IRegistrationContext: there since Nextcloud 20, the app declares from 15",
+        "lib/AppInfo/Application.php:43 OCP\\AppFramework\\Bootstrap\\IRegistrationContext::registerEventListener(): there since Nextcloud 20, the app declares from 15",
+        "lib/AppInfo/Application.php:49 OCP\\AppFramework\\Bootstrap\\IBootContext: there since Nextcloud 20, the app declares from 15",
+        "lib/Listener/LoadSidebarListener.php:32 OCP\\EventDispatcher\\IEventListener: there since Nextcloud 17, the app declares from 15",
+        "lib/Listener/LoadSidebarListener.php:34 OCP\\EventDispatcher\\Event: there since Nextcloud 17, the app declares from 15",
+        "lib/Migration/Version0Date20220414163504.php:39 OCP\\DB\\Types: there since Nextcloud 21, the app declares from 15",
+        "lib/Migration/Version0Date20220414163504.php:39 OCP\\DB\\Types::BIGINT: there since Nextcloud 21, the app declares from 15",
+        "lib/Migration/Version0Date20220414163504.php:42 OCP\\DB\\Types::BIGINT: there since Nextcloud 21, the app declares from 15",
+        "lib/Service/FileAgeService.php:111 OCP\\EventDispatcher\\IEventDispatcher: there since Nextcloud 17, the app declares from 15"
+      ],
+      "lines": [
+        "10 uses in 4 files of the public API that the oldest majors of Nextcloud 15 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/AppInfo/Application.php:33 OCP\\AppFramework\\Bootstrap\\IBootstrap: there since Nextcloud 20, the app declares from 15",
+        "  lib/AppInfo/Application.php:41 OCP\\AppFramework\\Bootstrap\\IRegistrationContext: there since Nextcloud 20, the app declares from 15",
+        "  lib/AppInfo/Application.php:43 OCP\\AppFramework\\Bootstrap\\IRegistrationContext::registerEventListener(): there since Nextcloud 20, the app declares from 15",
+        "  lib/AppInfo/Application.php:49 OCP\\AppFramework\\Bootstrap\\IBootContext: there since Nextcloud 20, the app declares from 15",
+        "  lib/Listener/LoadSidebarListener.php:32 OCP\\EventDispatcher\\IEventListener: there since Nextcloud 17, the app declares from 15",
+        "  lib/Listener/LoadSidebarListener.php:34 OCP\\EventDispatcher\\Event: there since Nextcloud 17, the app declares from 15",
+        "  lib/Migration/Version0Date20220414163504.php:39 OCP\\DB\\Types: there since Nextcloud 21, the app declares from 15",
+        "  lib/Migration/Version0Date20220414163504.php:39 OCP\\DB\\Types::BIGINT: there since Nextcloud 21, the app declares from 15",
+        "  lib/Migration/Version0Date20220414163504.php:42 OCP\\DB\\Types::BIGINT: there since Nextcloud 21, the app declares from 15",
+        "  lib/Service/FileAgeService.php:111 OCP\\EventDispatcher\\IEventDispatcher: there since Nextcloud 17, the app declares from 15"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/FileAgeService.php:29 time()",
+        "lib/Service/FileAgeService.php:73 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 2 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/FileAgeService.php:29 time()",
+        "  lib/Service/FileAgeService.php:73 time()"
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "ncmake has no checks of MigrationService for Nextcloud 15; the migrations are not held against it."
+      ]
+    }
+  ],
+  "endpoints": 1,
+  "endpointList": [
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/fileage/",
+      "target": "OCA\\FileAge\\Controller\\FileAgeController::submit",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

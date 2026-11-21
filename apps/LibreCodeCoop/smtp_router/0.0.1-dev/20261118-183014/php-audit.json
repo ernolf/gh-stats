@@ -1,0 +1,131 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\SmtpRouter\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:25 OC",
+        "lib/AppInfo/Application.php:25 OC\\AppConfig",
+        "lib/AppInfo/Application.php:25 OC::$server",
+        "lib/AppInfo/Application.php:27 OC\\SystemConfig",
+        "lib/Command/Route/GetCommand.php:13 OC\\Core\\Command\\Base",
+        "lib/Command/Route/GetCommand.php:15 OC\\AppConfig",
+        "lib/Command/Route/SetCommand.php:13 OC\\Core\\Command\\Base",
+        "lib/Command/Route/SetCommand.php:15 OC\\AppConfig",
+        "lib/Config/RouteConfig.php:9 OC\\AllConfig",
+        "lib/Config/RouteConfig.php:11 OC\\SystemConfig",
+        "lib/Controller/AdminController.php:114 OC",
+        "lib/Controller/AdminController.php:114 OC::$server",
+        "lib/Controller/AdminController.php:115 OC::$server",
+        "lib/Controller/AdminController.php:116 OC::$server",
+        "lib/Controller/AdminController.php:132 OC::$server",
+        "lib/Service/RouteService.php:32 OC\\AppConfig",
+        "lib/Service/RouteService.php:34 OC\\SystemConfig",
+        "lib/Settings/Admin.php:44 OC",
+        "lib/Settings/Admin.php:44 OC::$server",
+        "lib/Settings/Admin.php:45 OC::$server",
+        "lib/Settings/Admin.php:46 OC::$server",
+        "templates/admin.php:96 OC",
+        "templates/admin.php:96 OC::$server",
+        "templates/admin.php:115 OC::$server"
+      ],
+      "lines": [
+        "24 uses of the private API of the server in 8 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/AppInfo/Application.php:25 OC",
+        "  lib/AppInfo/Application.php:25 OC\\AppConfig",
+        "  lib/AppInfo/Application.php:25 OC::$server",
+        "  lib/AppInfo/Application.php:27 OC\\SystemConfig",
+        "  lib/Command/Route/GetCommand.php:13 OC\\Core\\Command\\Base",
+        "  lib/Command/Route/GetCommand.php:15 OC\\AppConfig",
+        "  lib/Command/Route/SetCommand.php:13 OC\\Core\\Command\\Base",
+        "  lib/Command/Route/SetCommand.php:15 OC\\AppConfig",
+        "  lib/Config/RouteConfig.php:9 OC\\AllConfig",
+        "  lib/Config/RouteConfig.php:11 OC\\SystemConfig",
+        "  lib/Controller/AdminController.php:114 OC",
+        "  lib/Controller/AdminController.php:114 OC::$server",
+        "  lib/Controller/AdminController.php:115 OC::$server",
+        "  lib/Controller/AdminController.php:116 OC::$server",
+        "  lib/Controller/AdminController.php:132 OC::$server",
+        "  lib/Service/RouteService.php:32 OC\\AppConfig",
+        "  lib/Service/RouteService.php:34 OC\\SystemConfig",
+        "  lib/Settings/Admin.php:44 OC",
+        "  lib/Settings/Admin.php:44 OC::$server",
+        "  lib/Settings/Admin.php:45 OC::$server",
+        "  lib/Settings/Admin.php:46 OC::$server",
+        "  templates/admin.php:96 OC",
+        "  templates/admin.php:96 OC::$server",
+        "  templates/admin.php:115 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 21
+        }
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/smtp_router/admin  smtp_router.admin.index  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/smtp_router/admin/groups/search  smtp_router.admin.searchgroups  appinfo/routes.php:5 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 1 file of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/smtp_router/admin  smtp_router.admin.index  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/smtp_router/admin/groups/search  smtp_router.admin.searchgroups  appinfo/routes.php:5 routes"
+      ]
+    }
+  ],
+  "endpoints": 4,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/smtp_router/admin",
+      "target": "OCA\\SmtpRouter\\Controller\\AdminController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/smtp_router/admin/groups/search",
+      "target": "OCA\\SmtpRouter\\Controller\\AdminController::searchGroups",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/smtp_router/admin/route",
+      "target": "OCA\\SmtpRouter\\Controller\\AdminController::saveRoute",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/smtp_router/admin/route/delete",
+      "target": "OCA\\SmtpRouter\\Controller\\AdminController::deleteRoute",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

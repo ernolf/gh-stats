@@ -1,0 +1,134 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Planix\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/Service/SettingsService.php:91 OCP\\IAppConfig::getValueString(): there since Nextcloud 29, the app declares from 28",
+        "lib/Service/SettingsService.php:117 OCP\\IAppConfig::setValueString(): there since Nextcloud 29, the app declares from 28"
+      ],
+      "lines": [
+        "2 uses in 1 file of the public API that the oldest majors of Nextcloud 28 to 33 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/Service/SettingsService.php:91 OCP\\IAppConfig::getValueString(): there since Nextcloud 29, the app declares from 28",
+        "  lib/Service/SettingsService.php:117 OCP\\IAppConfig::setValueString(): there since Nextcloud 29, the app declares from 28"
+      ]
+    },
+    {
+      "id": "route-target-missing",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/planix/api/metrics  planix.metrics.index  appinfo/routes.php:5 routes: no class OCA\\Planix\\Controller\\MetricsController",
+        "GET /index.php/apps/planix/api/health  planix.health.index  appinfo/routes.php:5 routes: no class OCA\\Planix\\Controller\\HealthController"
+      ],
+      "lines": [
+        "2 routes name a controller class or a method that does not exist, or a method that is not public. A request to such a route ends in an error.",
+        "  GET /index.php/apps/planix/api/metrics  planix.metrics.index  appinfo/routes.php:5 routes: no class OCA\\Planix\\Controller\\MetricsController",
+        "  GET /index.php/apps/planix/api/health  planix.health.index  appinfo/routes.php:5 routes: no class OCA\\Planix\\Controller\\HealthController"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "POST /index.php/apps/planix/api/settings/load  planix.settings.load  appinfo/routes.php:5 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 route outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 13 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  POST /index.php/apps/planix/api/settings/load  planix.settings.load  appinfo/routes.php:5 routes"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "vimeo/psalm, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Service/SettingsService.php:76 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated in Nextcloud 28 to 33. The text of the tag names the replacement where it has one.",
+        "  lib/Service/SettingsService.php:76 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/SettingsService.php:91 getValueString()",
+        "lib/Service/SettingsService.php:117 setValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 2 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/SettingsService.php:91 getValueString()",
+        "  lib/Service/SettingsService.php:117 setValueString()"
+      ]
+    }
+  ],
+  "endpoints": 7,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/planix/",
+      "target": "OCA\\Planix\\Controller\\DashboardController::page",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/planix/{path}",
+      "target": "OCA\\Planix\\Controller\\DashboardController::catchAll",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/planix/api/health",
+      "target": "OCA\\Planix\\Controller\\HealthController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/planix/api/metrics",
+      "target": "OCA\\Planix\\Controller\\MetricsController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/planix/api/settings",
+      "target": "OCA\\Planix\\Controller\\SettingsController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/planix/api/settings",
+      "target": "OCA\\Planix\\Controller\\SettingsController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/planix/api/settings/load",
+      "target": "OCA\\Planix\\Controller\\SettingsController::load",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

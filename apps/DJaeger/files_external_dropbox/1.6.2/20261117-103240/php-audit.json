@@ -1,0 +1,115 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Files_external_dropbox\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "guzzlehttp/guzzle 7.10.0, in 3rdparty/ of Nextcloud 26 to 30",
+        "guzzlehttp/promises 2.3.0, in 3rdparty/ of Nextcloud 26 to 30",
+        "guzzlehttp/psr7 2.8.0, in 3rdparty/ of Nextcloud 26 to 30",
+        "psr/container 2.0.2, in 3rdparty/ of Nextcloud 26 to 30",
+        "psr/http-client 1.0.3, in 3rdparty/ of Nextcloud 26 to 30",
+        "psr/http-factory 1.1.0, in 3rdparty/ of Nextcloud 26 to 30",
+        "psr/http-message 2.0, in 3rdparty/ of Nextcloud 26 to 30",
+        "ralouphie/getallheaders 3.0.3, in 3rdparty/ of Nextcloud 26 to 30",
+        "symfony/deprecation-contracts v3.0.2, in 3rdparty/ of Nextcloud 26 to 30"
+      ],
+      "lines": [
+        "vendor/ ships 9 packages that the server ships itself in a major of Nextcloud 26 to 30. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  guzzlehttp/guzzle 7.10.0, in 3rdparty/ of Nextcloud 26 to 30",
+        "  guzzlehttp/promises 2.3.0, in 3rdparty/ of Nextcloud 26 to 30",
+        "  guzzlehttp/psr7 2.8.0, in 3rdparty/ of Nextcloud 26 to 30",
+        "  psr/container 2.0.2, in 3rdparty/ of Nextcloud 26 to 30",
+        "  psr/http-client 1.0.3, in 3rdparty/ of Nextcloud 26 to 30",
+        "  psr/http-factory 1.1.0, in 3rdparty/ of Nextcloud 26 to 30",
+        "  psr/http-message 2.0, in 3rdparty/ of Nextcloud 26 to 30",
+        "  ralouphie/getallheaders 3.0.3, in 3rdparty/ of Nextcloud 26 to 30",
+        "  symfony/deprecation-contracts v3.0.2, in 3rdparty/ of Nextcloud 26 to 30"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 6
+        }
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Backend/Dropbox.php:37 OC_App",
+        "lib/BackgroundJob/MetaData.php:77 OC",
+        "lib/BackgroundJob/MetaData.php:77 OC::$server",
+        "lib/BackgroundJob/MetaData.php:120 OC::$server",
+        "lib/Storage/Dropbox.php:281 OC",
+        "lib/Storage/Dropbox.php:281 OC::$server",
+        "lib/Storage/Flysystem.php:41 OC\\Files\\Storage\\Common",
+        "lib/Storage/Flysystem.php:63 OC\\Files\\Filesystem",
+        "lib/Storage/Flysystem.php:218 OC",
+        "lib/Storage/Flysystem.php:218 OC::$server"
+      ],
+      "lines": [
+        "10 uses of the private API of the server in 4 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Backend/Dropbox.php:37 OC_App",
+        "  lib/BackgroundJob/MetaData.php:77 OC",
+        "  lib/BackgroundJob/MetaData.php:77 OC::$server",
+        "  lib/BackgroundJob/MetaData.php:120 OC::$server",
+        "  lib/Storage/Dropbox.php:281 OC",
+        "  lib/Storage/Dropbox.php:281 OC::$server",
+        "  lib/Storage/Flysystem.php:41 OC\\Files\\Storage\\Common",
+        "  lib/Storage/Flysystem.php:63 OC\\Files\\Filesystem",
+        "  lib/Storage/Flysystem.php:218 OC",
+        "  lib/Storage/Flysystem.php:218 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/MetaData.php OCA\\Files_external_dropbox\\BackgroundJob\\MetaData"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/MetaData.php OCA\\Files_external_dropbox\\BackgroundJob\\MetaData"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Storage/Dropbox.php:118 time()",
+        "lib/Storage/Dropbox.php:269 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 2 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Storage/Dropbox.php:118 time()",
+        "  lib/Storage/Dropbox.php:269 time()"
+      ]
+    }
+  ],
+  "endpoints": 1,
+  "endpointList": [
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/files_external_dropbox/oauth",
+      "target": "OCA\\Files_external_dropbox\\Controller\\OauthController::receiveToken",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

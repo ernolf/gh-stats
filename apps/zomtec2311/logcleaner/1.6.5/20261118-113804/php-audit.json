@@ -1,0 +1,717 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\LogCleaner\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:87 OC",
+        "lib/Controller/Helper.php:83 OC_User"
+      ],
+      "lines": [
+        "2 uses of the private API of the server in 2 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/AppInfo/Application.php:87 OC",
+        "  lib/Controller/Helper.php:83 OC_User"
+      ]
+    },
+    {
+      "id": "ocp-missing",
+      "level": "warn",
+      "places": [
+        "lib/Controller/SettingsController.php:122 OCP\\IAppConfig::getValue(): Nextcloud 13 is the last major to have it, the app declares up to 35; use method getAppValue of \\OCP\\IConfig  This function gets a value from the appconfig table. If the key does not exist the default value will be returned"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that a major of Nextcloud 32 to 35 no longer has. The app fails there where it comes to that line, or the server no longer calls the method it overrides.",
+        "  lib/Controller/SettingsController.php:122 OCP\\IAppConfig::getValue(): Nextcloud 13 is the last major to have it, the app declares up to 35; use method getAppValue of \\OCP\\IConfig  This function gets a value from the appconfig table. If the key does not exist the default value will be returned"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:110 get()",
+        "lib/AppInfo/Application.php:111 get()",
+        "lib/AppInfo/Application.php:113 get()",
+        "lib/AppInfo/Application.php:114 get()",
+        "lib/AppInfo/Application.php:115 get()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 5 places. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:110 get()",
+        "  lib/AppInfo/Application.php:111 get()",
+        "  lib/AppInfo/Application.php:113 get()",
+        "  lib/AppInfo/Application.php:114 get()",
+        "  lib/AppInfo/Application.php:115 get()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "route-target-missing",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/logcleaner/getdata  logcleaner.settings.getlog  appinfo/routes.php:26 routes: OCA\\LogCleaner\\Controller\\SettingsController has no method getlog()",
+        "GET /index.php/apps/logcleaner/getll  logcleaner.settings.getll  appinfo/routes.php:26 routes: OCA\\LogCleaner\\Controller\\SettingsController has no method getLL()"
+      ],
+      "lines": [
+        "2 routes name a controller class or a method that does not exist, or a method that is not public. A request to such a route ends in an error.",
+        "  GET /index.php/apps/logcleaner/getdata  logcleaner.settings.getlog  appinfo/routes.php:26 routes: OCA\\LogCleaner\\Controller\\SettingsController has no method getlog()",
+        "  GET /index.php/apps/logcleaner/getll  logcleaner.settings.getll  appinfo/routes.php:26 routes: OCA\\LogCleaner\\Controller\\SettingsController has no method getLL()"
+      ]
+    },
+    {
+      "id": "frontend-url-without-route",
+      "level": "warn",
+      "places": [
+        "js/logcleaner-main.js:2 /apps/logcleaner/logs/dellines/.../...",
+        "js/logcleaner-main.js:2 /apps/logcleaner/logs/dellinesapp/.../..."
+      ],
+      "lines": [
+        "The frontend or a template builds 2 URLs below /apps/logcleaner/ that no route of the app matches. The request fails at run time.",
+        "  js/logcleaner-main.js:2 /apps/logcleaner/logs/dellines/.../...",
+        "  js/logcleaner-main.js:2 /apps/logcleaner/logs/dellinesapp/.../..."
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/Cron/Cleanup.php OCA\\LogCleaner\\Cron\\Cleanup",
+        "lib/Cron/LogReportJob.php OCA\\LogCleaner\\Cron\\LogReportJob"
+      ],
+      "lines": [
+        "2 timed jobs do not say whether they are time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/Cron/Cleanup.php OCA\\LogCleaner\\Cron\\Cleanup",
+        "  lib/Cron/LogReportJob.php OCA\\LogCleaner\\Cron\\LogReportJob"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/Helper.php:72 new DateTime()",
+        "lib/Controller/Helper.php:230 new DateTime()",
+        "lib/Controller/LogsController.php:67 time()",
+        "lib/Cron/LogReportJob.php:72 time()",
+        "lib/Cron/LogReportJob.php:89 time()",
+        "lib/Service/LogNotificationService.php:272 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 6 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/Helper.php:72 new DateTime()",
+        "  lib/Controller/Helper.php:230 new DateTime()",
+        "  lib/Controller/LogsController.php:67 time()",
+        "  lib/Cron/LogReportJob.php:72 time()",
+        "  lib/Cron/LogReportJob.php:89 time()",
+        "  lib/Service/LogNotificationService.php:272 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:88 getValueString()",
+        "lib/AppInfo/Application.php:95 getValueString()",
+        "lib/AppInfo/Application.php:125 getValueString()",
+        "lib/AppInfo/Application.php:149 setValueString()",
+        "lib/Controller/LogsController.php:59 getValueString()",
+        "lib/Controller/LogsController.php:74 setValueString()",
+        "lib/Controller/LogsController.php:75 setValueString()",
+        "lib/Controller/LogsController.php:76 setValueString()",
+        "lib/Controller/LogsController.php:77 setValueString()",
+        "lib/Controller/LogsController.php:78 setValueString()",
+        "lib/Controller/LogsController.php:79 setValueString()",
+        "lib/Controller/LogsController.php:90 getValueString()",
+        "lib/Controller/LogsController.php:92 setValueString()",
+        "lib/Controller/LogsController.php:98 getValueString()",
+        "lib/Controller/LogsController.php:99 setValueString()",
+        "lib/Controller/LogsController.php:101 setValueString()",
+        "lib/Controller/LogsController.php:107 getValueString()",
+        "lib/Controller/LogsController.php:108 setValueString()",
+        "lib/Controller/LogsController.php:109 setValueString()",
+        "lib/Controller/LogsController.php:111 setValueString()",
+        "lib/Controller/LogsController.php:117 getValueString()",
+        "lib/Controller/LogsController.php:118 setValueString()",
+        "lib/Controller/LogsController.php:119 setValueString()",
+        "lib/Controller/LogsController.php:120 setValueString()",
+        "lib/Controller/LogsController.php:122 setValueString()",
+        "lib/Controller/LogsController.php:128 getValueString()",
+        "lib/Controller/LogsController.php:129 setValueString()",
+        "lib/Controller/LogsController.php:130 setValueString()",
+        "lib/Controller/LogsController.php:131 setValueString()",
+        "lib/Controller/LogsController.php:132 setValueString()",
+        "lib/Controller/LogsController.php:134 setValueString()",
+        "lib/Controller/LogsController.php:139 getValueString()",
+        "lib/Controller/LogsController.php:140 setValueString()",
+        "lib/Controller/LogsController.php:141 setValueString()",
+        "lib/Controller/LogsController.php:142 setValueString()",
+        "lib/Controller/LogsController.php:143 setValueString()",
+        "lib/Controller/LogsController.php:144 setValueString()",
+        "lib/Controller/LogsController.php:146 setValueString()",
+        "lib/Controller/LogsController.php:219 getValueString()",
+        "lib/Controller/LogsController.php:250 getValueString()",
+        "lib/Controller/LogsController.php:450 getValueString()",
+        "lib/Controller/LogsController.php:466 getValueString()",
+        "lib/Controller/SettingsController.php:66 setValueInt()",
+        "lib/Controller/SettingsController.php:67 getValueString()",
+        "lib/Controller/SettingsController.php:70 setValueString()",
+        "lib/Controller/SettingsController.php:71 getValueString()",
+        "lib/Controller/SettingsController.php:74 setValueBool()",
+        "lib/Controller/SettingsController.php:75 getValueString()",
+        "lib/Controller/SettingsController.php:84 setValueString()",
+        "lib/Controller/SettingsController.php:94 getValueString()",
+        "lib/Controller/SettingsController.php:95 getValueString()",
+        "lib/Controller/SettingsController.php:96 getValueString()",
+        "lib/Controller/SettingsController.php:97 getValueString()",
+        "lib/Controller/SettingsController.php:98 getValueString()",
+        "lib/Controller/SettingsController.php:99 getValueString()",
+        "lib/Controller/SettingsController.php:100 getValueString()",
+        "lib/Controller/SettingsController.php:101 getValueString()",
+        "lib/Controller/SettingsController.php:103 getValueString()",
+        "lib/Controller/SettingsController.php:104 getValueString()",
+        "lib/Controller/SettingsController.php:105 getValueString()",
+        "lib/Controller/SettingsController.php:106 getValueString()",
+        "lib/Controller/SettingsController.php:107 getValueString()",
+        "lib/Controller/SettingsController.php:112 getValueString()",
+        "lib/Controller/SettingsController.php:113 getValueInt()",
+        "lib/Controller/SettingsController.php:114 getValueInt()",
+        "lib/Controller/SettingsController.php:115 getValueString()",
+        "lib/Controller/SettingsController.php:116 getValueString()",
+        "lib/Controller/SettingsController.php:117 getValueString()",
+        "lib/Controller/SettingsController.php:118 getValueString()",
+        "lib/Controller/SettingsController.php:119 getValueString()",
+        "lib/Controller/SettingsController.php:120 getValueString()",
+        "lib/Controller/SettingsController.php:121 getValueInt()",
+        "lib/Controller/SettingsController.php:122 getValue()",
+        "lib/Controller/SettingsController.php:127 getValueString()",
+        "lib/Controller/SettingsController.php:152 getValueString()",
+        "lib/Controller/SettingsController.php:183 getValueString()",
+        "lib/Controller/SettingsController.php:184 getValueString()",
+        "lib/Controller/SettingsController.php:185 getValueString()",
+        "lib/Controller/SettingsController.php:186 getValueString()",
+        "lib/Controller/SettingsController.php:187 getValueString()",
+        "lib/Controller/SettingsController.php:188 getValueString()",
+        "lib/Controller/SettingsController.php:189 getValueString()",
+        "lib/Controller/SettingsController.php:190 getValueString()",
+        "lib/Controller/SettingsController.php:191 getValueString()",
+        "lib/Controller/SettingsController.php:192 getValueString()",
+        "lib/Controller/SettingsController.php:291 getValueString()",
+        "lib/Controller/SettingsController.php:292 getValueString()",
+        "lib/Controller/SettingsController.php:293 getValueString()",
+        "lib/Controller/SettingsController.php:294 getValueString()",
+        "lib/Controller/SettingsController.php:295 getValueString()",
+        "lib/Controller/SettingsController.php:296 getValueString()",
+        "lib/Controller/SettingsController.php:297 getValueString()",
+        "lib/Controller/SettingsController.php:298 getValueString()",
+        "lib/Controller/SettingsController.php:299 getValueString()",
+        "lib/Controller/SettingsController.php:300 getValueString()",
+        "lib/Controller/SettingsController.php:406 getValueString()",
+        "lib/Controller/SettingsController.php:407 getValueString()",
+        "lib/Controller/SettingsController.php:408 getValueString()",
+        "lib/Controller/SettingsController.php:409 getValueString()",
+        "lib/Controller/SettingsController.php:410 getValueString()",
+        "lib/Controller/SettingsController.php:411 getValueString()",
+        "lib/Controller/SettingsController.php:412 getValueString()",
+        "lib/Controller/SettingsController.php:413 getValueString()",
+        "lib/Controller/SettingsController.php:414 getValueString()",
+        "lib/Controller/SettingsController.php:415 getValueString()",
+        "lib/Controller/SettingsController.php:660 getValueString()",
+        "lib/Controller/SettingsController.php:709 getValueString()",
+        "lib/Controller/SettingsController.php:822 getValueString()",
+        "lib/Controller/SettingsController.php:839 getValueString()",
+        "lib/Cron/Cleanup.php:60 getValueString()",
+        "lib/Cron/Cleanup.php:63 getValueString()",
+        "lib/Cron/LogReportJob.php:60 getValueString()",
+        "lib/Cron/LogReportJob.php:64 getValueString()",
+        "lib/Cron/LogReportJob.php:70 getValueString()",
+        "lib/Cron/LogReportJob.php:71 getValueInt()",
+        "lib/Cron/LogReportJob.php:81 setValueInt()",
+        "lib/Cron/LogReportJob.php:82 getValueString()",
+        "lib/Cron/LogReportJob.php:87 getValueString()",
+        "lib/Cron/LogReportJob.php:88 getValueInt()",
+        "lib/Cron/LogReportJob.php:99 setValueInt()",
+        "lib/Cron/LogReportJob.php:100 getValueString()",
+        "lib/Log/LogService.php:107 getValueString()",
+        "lib/Service/LogNotificationService.php:71 getValueInt()",
+        "lib/Service/LogNotificationService.php:73 getValueString()",
+        "lib/Service/LogNotificationService.php:79 getValueString()",
+        "lib/Service/LogNotificationService.php:80 getValueString()",
+        "lib/Service/LogNotificationService.php:98 getValueString()",
+        "lib/Service/LogNotificationService.php:145 getValueInt()",
+        "lib/Service/LogNotificationService.php:147 getValueString()",
+        "lib/Service/LogNotificationService.php:150 getValueString()",
+        "lib/Service/LogNotificationService.php:151 getValueString()",
+        "lib/Service/LogNotificationService.php:206 getValueInt()",
+        "lib/Service/LogNotificationService.php:208 getValueString()",
+        "lib/Service/LogNotificationService.php:211 getValueString()",
+        "lib/Service/LogNotificationService.php:214 getValueString()",
+        "lib/Service/LogNotificationService.php:221 getValueString()",
+        "lib/Service/LogNotificationService.php:274 getValueInt()",
+        "lib/Service/LogNotificationService.php:276 getValueString()",
+        "lib/Service/LogNotificationService.php:278 getValueString()",
+        "lib/Service/LogNotificationService.php:325 setValueInt()",
+        "lib/Service/LogNotificationService.php:331 getValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 141 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/AppInfo/Application.php:88 getValueString()",
+        "  lib/AppInfo/Application.php:95 getValueString()",
+        "  lib/AppInfo/Application.php:125 getValueString()",
+        "  lib/AppInfo/Application.php:149 setValueString()",
+        "  lib/Controller/LogsController.php:59 getValueString()",
+        "  lib/Controller/LogsController.php:74 setValueString()",
+        "  lib/Controller/LogsController.php:75 setValueString()",
+        "  lib/Controller/LogsController.php:76 setValueString()",
+        "  lib/Controller/LogsController.php:77 setValueString()",
+        "  lib/Controller/LogsController.php:78 setValueString()",
+        "  lib/Controller/LogsController.php:79 setValueString()",
+        "  lib/Controller/LogsController.php:90 getValueString()",
+        "  lib/Controller/LogsController.php:92 setValueString()",
+        "  lib/Controller/LogsController.php:98 getValueString()",
+        "  lib/Controller/LogsController.php:99 setValueString()",
+        "  lib/Controller/LogsController.php:101 setValueString()",
+        "  lib/Controller/LogsController.php:107 getValueString()",
+        "  lib/Controller/LogsController.php:108 setValueString()",
+        "  lib/Controller/LogsController.php:109 setValueString()",
+        "  lib/Controller/LogsController.php:111 setValueString()",
+        "  lib/Controller/LogsController.php:117 getValueString()",
+        "  lib/Controller/LogsController.php:118 setValueString()",
+        "  lib/Controller/LogsController.php:119 setValueString()",
+        "  lib/Controller/LogsController.php:120 setValueString()",
+        "  lib/Controller/LogsController.php:122 setValueString()",
+        "  lib/Controller/LogsController.php:128 getValueString()",
+        "  lib/Controller/LogsController.php:129 setValueString()",
+        "  lib/Controller/LogsController.php:130 setValueString()",
+        "  lib/Controller/LogsController.php:131 setValueString()",
+        "  lib/Controller/LogsController.php:132 setValueString()",
+        "  lib/Controller/LogsController.php:134 setValueString()",
+        "  lib/Controller/LogsController.php:139 getValueString()",
+        "  lib/Controller/LogsController.php:140 setValueString()",
+        "  lib/Controller/LogsController.php:141 setValueString()",
+        "  lib/Controller/LogsController.php:142 setValueString()",
+        "  lib/Controller/LogsController.php:143 setValueString()",
+        "  lib/Controller/LogsController.php:144 setValueString()",
+        "  lib/Controller/LogsController.php:146 setValueString()",
+        "  lib/Controller/LogsController.php:219 getValueString()",
+        "  lib/Controller/LogsController.php:250 getValueString()",
+        "  lib/Controller/LogsController.php:450 getValueString()",
+        "  lib/Controller/LogsController.php:466 getValueString()",
+        "  lib/Controller/SettingsController.php:66 setValueInt()",
+        "  lib/Controller/SettingsController.php:67 getValueString()",
+        "  lib/Controller/SettingsController.php:70 setValueString()",
+        "  lib/Controller/SettingsController.php:71 getValueString()",
+        "  lib/Controller/SettingsController.php:74 setValueBool()",
+        "  lib/Controller/SettingsController.php:75 getValueString()",
+        "  lib/Controller/SettingsController.php:84 setValueString()",
+        "  lib/Controller/SettingsController.php:94 getValueString()",
+        "  lib/Controller/SettingsController.php:95 getValueString()",
+        "  lib/Controller/SettingsController.php:96 getValueString()",
+        "  lib/Controller/SettingsController.php:97 getValueString()",
+        "  lib/Controller/SettingsController.php:98 getValueString()",
+        "  lib/Controller/SettingsController.php:99 getValueString()",
+        "  lib/Controller/SettingsController.php:100 getValueString()",
+        "  lib/Controller/SettingsController.php:101 getValueString()",
+        "  lib/Controller/SettingsController.php:103 getValueString()",
+        "  lib/Controller/SettingsController.php:104 getValueString()",
+        "  lib/Controller/SettingsController.php:105 getValueString()",
+        "  lib/Controller/SettingsController.php:106 getValueString()",
+        "  lib/Controller/SettingsController.php:107 getValueString()",
+        "  lib/Controller/SettingsController.php:112 getValueString()",
+        "  lib/Controller/SettingsController.php:113 getValueInt()",
+        "  lib/Controller/SettingsController.php:114 getValueInt()",
+        "  lib/Controller/SettingsController.php:115 getValueString()",
+        "  lib/Controller/SettingsController.php:116 getValueString()",
+        "  lib/Controller/SettingsController.php:117 getValueString()",
+        "  lib/Controller/SettingsController.php:118 getValueString()",
+        "  lib/Controller/SettingsController.php:119 getValueString()",
+        "  lib/Controller/SettingsController.php:120 getValueString()",
+        "  lib/Controller/SettingsController.php:121 getValueInt()",
+        "  lib/Controller/SettingsController.php:122 getValue()",
+        "  lib/Controller/SettingsController.php:127 getValueString()",
+        "  lib/Controller/SettingsController.php:152 getValueString()",
+        "  lib/Controller/SettingsController.php:183 getValueString()",
+        "  lib/Controller/SettingsController.php:184 getValueString()",
+        "  lib/Controller/SettingsController.php:185 getValueString()",
+        "  lib/Controller/SettingsController.php:186 getValueString()",
+        "  lib/Controller/SettingsController.php:187 getValueString()",
+        "  lib/Controller/SettingsController.php:188 getValueString()",
+        "  lib/Controller/SettingsController.php:189 getValueString()",
+        "  lib/Controller/SettingsController.php:190 getValueString()",
+        "  lib/Controller/SettingsController.php:191 getValueString()",
+        "  lib/Controller/SettingsController.php:192 getValueString()",
+        "  lib/Controller/SettingsController.php:291 getValueString()",
+        "  lib/Controller/SettingsController.php:292 getValueString()",
+        "  lib/Controller/SettingsController.php:293 getValueString()",
+        "  lib/Controller/SettingsController.php:294 getValueString()",
+        "  lib/Controller/SettingsController.php:295 getValueString()",
+        "  lib/Controller/SettingsController.php:296 getValueString()",
+        "  lib/Controller/SettingsController.php:297 getValueString()",
+        "  lib/Controller/SettingsController.php:298 getValueString()",
+        "  lib/Controller/SettingsController.php:299 getValueString()",
+        "  lib/Controller/SettingsController.php:300 getValueString()",
+        "  lib/Controller/SettingsController.php:406 getValueString()",
+        "  lib/Controller/SettingsController.php:407 getValueString()",
+        "  lib/Controller/SettingsController.php:408 getValueString()",
+        "  lib/Controller/SettingsController.php:409 getValueString()",
+        "  lib/Controller/SettingsController.php:410 getValueString()",
+        "  lib/Controller/SettingsController.php:411 getValueString()",
+        "  lib/Controller/SettingsController.php:412 getValueString()",
+        "  lib/Controller/SettingsController.php:413 getValueString()",
+        "  lib/Controller/SettingsController.php:414 getValueString()",
+        "  lib/Controller/SettingsController.php:415 getValueString()",
+        "  lib/Controller/SettingsController.php:660 getValueString()",
+        "  lib/Controller/SettingsController.php:709 getValueString()",
+        "  lib/Controller/SettingsController.php:822 getValueString()",
+        "  lib/Controller/SettingsController.php:839 getValueString()",
+        "  lib/Cron/Cleanup.php:60 getValueString()",
+        "  lib/Cron/Cleanup.php:63 getValueString()",
+        "  lib/Cron/LogReportJob.php:60 getValueString()",
+        "  lib/Cron/LogReportJob.php:64 getValueString()",
+        "  lib/Cron/LogReportJob.php:70 getValueString()",
+        "  lib/Cron/LogReportJob.php:71 getValueInt()",
+        "  lib/Cron/LogReportJob.php:81 setValueInt()",
+        "  lib/Cron/LogReportJob.php:82 getValueString()",
+        "  lib/Cron/LogReportJob.php:87 getValueString()",
+        "  lib/Cron/LogReportJob.php:88 getValueInt()",
+        "  lib/Cron/LogReportJob.php:99 setValueInt()",
+        "  lib/Cron/LogReportJob.php:100 getValueString()",
+        "  lib/Log/LogService.php:107 getValueString()",
+        "  lib/Service/LogNotificationService.php:71 getValueInt()",
+        "  lib/Service/LogNotificationService.php:73 getValueString()",
+        "  lib/Service/LogNotificationService.php:79 getValueString()",
+        "  lib/Service/LogNotificationService.php:80 getValueString()",
+        "  lib/Service/LogNotificationService.php:98 getValueString()",
+        "  lib/Service/LogNotificationService.php:145 getValueInt()",
+        "  lib/Service/LogNotificationService.php:147 getValueString()",
+        "  lib/Service/LogNotificationService.php:150 getValueString()",
+        "  lib/Service/LogNotificationService.php:151 getValueString()",
+        "  lib/Service/LogNotificationService.php:206 getValueInt()",
+        "  lib/Service/LogNotificationService.php:208 getValueString()",
+        "  lib/Service/LogNotificationService.php:211 getValueString()",
+        "  lib/Service/LogNotificationService.php:214 getValueString()",
+        "  lib/Service/LogNotificationService.php:221 getValueString()",
+        "  lib/Service/LogNotificationService.php:274 getValueInt()",
+        "  lib/Service/LogNotificationService.php:276 getValueString()",
+        "  lib/Service/LogNotificationService.php:278 getValueString()",
+        "  lib/Service/LogNotificationService.php:325 setValueInt()",
+        "  lib/Service/LogNotificationService.php:331 getValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 138
+        }
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/LogsController.php:583 OCA\\LogCleaner\\Controller\\LogsController::show_filesize()",
+        "lib/Controller/LogsController.php:592 OCA\\LogCleaner\\Controller\\LogsController::wtfilesize()",
+        "lib/Controller/SettingsController.php:540 OCA\\LogCleaner\\Controller\\SettingsController::show_filesize()",
+        "lib/Controller/SettingsController.php:549 OCA\\LogCleaner\\Controller\\SettingsController::wtfilesize()",
+        "lib/Controller/SettingsController.php:585 OCA\\LogCleaner\\Controller\\SettingsController::showdetail()",
+        "lib/Controller/SettingsController.php:611 OCA\\LogCleaner\\Controller\\SettingsController::getAll()"
+      ],
+      "lines": [
+        "6 public methods of controllers are reached by no route.",
+        "  lib/Controller/LogsController.php:583 OCA\\LogCleaner\\Controller\\LogsController::show_filesize()",
+        "  lib/Controller/LogsController.php:592 OCA\\LogCleaner\\Controller\\LogsController::wtfilesize()",
+        "  lib/Controller/SettingsController.php:540 OCA\\LogCleaner\\Controller\\SettingsController::show_filesize()",
+        "  lib/Controller/SettingsController.php:549 OCA\\LogCleaner\\Controller\\SettingsController::wtfilesize()",
+        "  lib/Controller/SettingsController.php:585 OCA\\LogCleaner\\Controller\\SettingsController::showdetail()",
+        "  lib/Controller/SettingsController.php:611 OCA\\LogCleaner\\Controller\\SettingsController::getAll()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 1 OCS route and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 36,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/",
+      "target": "OCA\\LogCleaner\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/countdub",
+      "target": "OCA\\LogCleaner\\Controller\\SettingsController::countDub",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/delapp/{app}",
+      "target": "OCA\\LogCleaner\\Controller\\SettingsController::delapp",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/deldub",
+      "target": "OCA\\LogCleaner\\Controller\\SettingsController::delDub",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/delLevel/{level}",
+      "target": "OCA\\LogCleaner\\Controller\\SettingsController::delLevel",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/dellog/{logid}",
+      "target": "OCA\\LogCleaner\\Controller\\SettingsController::dellog",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/emptylog",
+      "target": "OCA\\LogCleaner\\Controller\\SettingsController::emptylog",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/getadmins",
+      "target": "OCA\\LogCleaner\\Controller\\LogsController::getAdmins",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/getall",
+      "target": "OCA\\LogCleaner\\Controller\\LogsController::getAll",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/getalldata",
+      "target": "OCA\\LogCleaner\\Controller\\SettingsController::getalllog",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/getallfilteredappdata/{key}",
+      "target": "OCA\\LogCleaner\\Controller\\SettingsController::getallfilteredapplog",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/getallfiltereddata/{level}",
+      "target": "OCA\\LogCleaner\\Controller\\SettingsController::getallfilteredlog",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/getcntll",
+      "target": "OCA\\LogCleaner\\Controller\\SettingsController::getcntll",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/getdata",
+      "target": "OCA\\LogCleaner\\Controller\\SettingsController::getlog",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/getll",
+      "target": "OCA\\LogCleaner\\Controller\\SettingsController::getLL",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/getnotiadmins",
+      "target": "OCA\\LogCleaner\\Controller\\LogsController::getNotiAdmins",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/getparam",
+      "target": "OCA\\LogCleaner\\Controller\\SettingsController::getAppValueZ",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/isnoti",
+      "target": "OCA\\LogCleaner\\Controller\\SettingsController::isnoti",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/logapps",
+      "target": "OCA\\LogCleaner\\Controller\\SettingsController::logapps",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/logfileandsize",
+      "target": "OCA\\LogCleaner\\Controller\\SettingsController::logfileandsize",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/logs/analyse",
+      "target": "OCA\\LogCleaner\\Controller\\LogsController::analyse",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/logcleaner/logs/dellines",
+      "target": "OCA\\LogCleaner\\Controller\\LogsController::dellines",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/logcleaner/logs/dellinesapp",
+      "target": "OCA\\LogCleaner\\Controller\\LogsController::dellinesapp",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/logs/list/{limit}/{offset}",
+      "target": "OCA\\LogCleaner\\Controller\\LogsController::list",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/logs/list/app/{limit}/{offset}/{app}",
+      "target": "OCA\\LogCleaner\\Controller\\LogsController::listapp",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/logs/list/level/{limit}/{offset}/{level}",
+      "target": "OCA\\LogCleaner\\Controller\\LogsController::listlevel",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/removeDub/{anzahl}",
+      "target": "OCA\\LogCleaner\\Controller\\LogsController::removeDub",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/removelog/{logid}",
+      "target": "OCA\\LogCleaner\\Controller\\LogsController::removelog",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/setlines/{who}/{zeilen}",
+      "target": "OCA\\LogCleaner\\Controller\\SettingsController::setSettingZeilen",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/setll/{who}",
+      "target": "OCA\\LogCleaner\\Controller\\SettingsController::setLL",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/setviewed/{zeilen}",
+      "target": "OCA\\LogCleaner\\Controller\\SettingsController::setViewed",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/show/{level}",
+      "target": "OCA\\LogCleaner\\Controller\\PageController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/showdetail/{detail}",
+      "target": "OCA\\LogCleaner\\Controller\\LogsController::showdetail",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/testlogemail",
+      "target": "OCA\\LogCleaner\\Controller\\LogsController::testLogEmail",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcleaner/testlognoti",
+      "target": "OCA\\LogCleaner\\Controller\\LogsController::testLogNotification",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/logcleaner/api",
+      "target": "OCA\\LogCleaner\\Controller\\ApiController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

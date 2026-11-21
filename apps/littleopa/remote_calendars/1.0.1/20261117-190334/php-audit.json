@@ -1,0 +1,173 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\RemoteCalendars\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/remote_calendars/api/accounts  remote_calendars.api.accounts  appinfo/routes.php:2 routes",
+        "POST /index.php/apps/remote_calendars/api/connect  remote_calendars.api.connect  appinfo/routes.php:2 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 2 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/remote_calendars/api/accounts  remote_calendars.api.accounts  appinfo/routes.php:2 routes",
+        "  POST /index.php/apps/remote_calendars/api/connect  remote_calendars.api.connect  appinfo/routes.php:2 routes"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/SyncJob.php:26 time()",
+        "lib/BackgroundJob/SyncJob.php:31 time()",
+        "lib/BackgroundJob/SyncJob.php:35 time()",
+        "lib/BackgroundJob/SyncJob.php:35 time()",
+        "lib/Listener/CalendarListener.php:52 time()",
+        "lib/Service/Store.php:47 time()",
+        "lib/Service/SyncService.php:69 time()",
+        "lib/Service/SyncService.php:98 time()",
+        "lib/Service/SyncService.php:99 time()",
+        "lib/Service/SyncService.php:101 time()",
+        "lib/Service/SyncService.php:113 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 11 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/BackgroundJob/SyncJob.php:26 time()",
+        "  lib/BackgroundJob/SyncJob.php:31 time()",
+        "  lib/BackgroundJob/SyncJob.php:35 time()",
+        "  lib/BackgroundJob/SyncJob.php:35 time()",
+        "  lib/Listener/CalendarListener.php:52 time()",
+        "  lib/Service/Store.php:47 time()",
+        "  lib/Service/SyncService.php:69 time()",
+        "  lib/Service/SyncService.php:98 time()",
+        "  lib/Service/SyncService.php:99 time()",
+        "  lib/Service/SyncService.php:101 time()",
+        "  lib/Service/SyncService.php:113 new DateTime()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 8
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/SyncJob.php:21 getValueInt()",
+        "lib/Controller/ApiController.php:126 setValueArray()",
+        "lib/Controller/ApiController.php:127 setValueBool()",
+        "lib/Controller/ApiController.php:128 setValueInt()",
+        "lib/Service/DavClient.php:24 getValueBool()",
+        "lib/Service/DavClient.php:74 getValueInt()",
+        "lib/Settings/Admin.php:16 getValueArray()",
+        "lib/Settings/Admin.php:22 getValueBool()",
+        "lib/Settings/Admin.php:23 getValueInt()",
+        "lib/Settings/Personal.php:17 getValueArray()",
+        "lib/Settings/Personal.php:18 getValueInt()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 11 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/BackgroundJob/SyncJob.php:21 getValueInt()",
+        "  lib/Controller/ApiController.php:126 setValueArray()",
+        "  lib/Controller/ApiController.php:127 setValueBool()",
+        "  lib/Controller/ApiController.php:128 setValueInt()",
+        "  lib/Service/DavClient.php:24 getValueBool()",
+        "  lib/Service/DavClient.php:74 getValueInt()",
+        "  lib/Settings/Admin.php:16 getValueArray()",
+        "  lib/Settings/Admin.php:22 getValueBool()",
+        "  lib/Settings/Admin.php:23 getValueInt()",
+        "  lib/Settings/Personal.php:17 getValueArray()",
+        "  lib/Settings/Personal.php:18 getValueInt()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 8
+        }
+      ]
+    }
+  ],
+  "endpoints": 10,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/remote_calendars/api/accounts",
+      "target": "OCA\\RemoteCalendars\\Controller\\ApiController::accounts",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/remote_calendars/api/accounts/{id}",
+      "target": "OCA\\RemoteCalendars\\Controller\\ApiController::accountDelete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/remote_calendars/api/accounts/{id}/calendars",
+      "target": "OCA\\RemoteCalendars\\Controller\\ApiController::accountAdd",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/remote_calendars/api/accounts/{id}/discover",
+      "target": "OCA\\RemoteCalendars\\Controller\\ApiController::accountDiscover",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/remote_calendars/api/accounts/{id}/password",
+      "target": "OCA\\RemoteCalendars\\Controller\\ApiController::accountPassword",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/remote_calendars/api/admin",
+      "target": "OCA\\RemoteCalendars\\Controller\\ApiController::adminSave",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/remote_calendars/api/bindings/{id}",
+      "target": "OCA\\RemoteCalendars\\Controller\\ApiController::bindingDelete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/remote_calendars/api/bindings/{id}/sync",
+      "target": "OCA\\RemoteCalendars\\Controller\\ApiController::bindingSync",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/remote_calendars/api/connect",
+      "target": "OCA\\RemoteCalendars\\Controller\\ApiController::connect",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/remote_calendars/api/discover",
+      "target": "OCA\\RemoteCalendars\\Controller\\ApiController::discover",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

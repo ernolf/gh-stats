@@ -1,0 +1,651 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Eurooffice\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "firebase/php-jwt v7.2.1, in 3rdparty/ of Nextcloud 35 to 36"
+      ],
+      "lines": [
+        "vendor/ ships 1 package that the server ships itself in a major of Nextcloud 33 to 36. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  firebase/php-jwt v7.2.1, in 3rdparty/ of Nextcloud 35 to 36"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/CallbackController.php:112 OC\\Files\\SetupManager",
+        "lib/Controller/CallbackController.php:178 OC_User",
+        "lib/Controller/CallbackController.php:240 OC\\Files\\Node\\File",
+        "lib/FileVersions.php:89 OC\\Files\\View",
+        "lib/FileVersions.php:223 OC\\Files\\Node\\File",
+        "lib/FileVersions.php:366 OC\\User\\Database",
+        "lib/Hooks.php:59 OC\\Files\\Filesystem",
+        "lib/Listeners/FileListener.php:64 OC\\Files\\Node\\Node",
+        "lib/Preview.php:238 OC\\Files\\View"
+      ],
+      "lines": [
+        "9 uses of the private API of the server in 5 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/CallbackController.php:112 OC\\Files\\SetupManager",
+        "  lib/Controller/CallbackController.php:178 OC_User",
+        "  lib/Controller/CallbackController.php:240 OC\\Files\\Node\\File",
+        "  lib/FileVersions.php:89 OC\\Files\\View",
+        "  lib/FileVersions.php:223 OC\\Files\\Node\\File",
+        "  lib/FileVersions.php:366 OC\\User\\Database",
+        "  lib/Hooks.php:59 OC\\Files\\Filesystem",
+        "  lib/Listeners/FileListener.php:64 OC\\Files\\Node\\Node",
+        "  lib/Preview.php:238 OC\\Files\\View"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 6
+        }
+      ]
+    },
+    {
+      "id": "legacy-hook",
+      "level": "warn",
+      "places": [
+        "lib/Hooks.php:40 OCP\\Versions::preDelete: the manual names no replacement event"
+      ],
+      "lines": [
+        "1 connection to a legacy hook of the server. A hook the server removed is never emitted, and the listener never runs; the typed events of OCP\\EventDispatcher replace the hooks.",
+        "OCP\\Util::connectHook() is deprecated since Nextcloud 21: use \\OCP\\EventDispatcher\\IEventDispatcher::addListener. ocp-deprecated leaves these calls to this finding.",
+        "  lib/Hooks.php:40 OCP\\Versions::preDelete: the manual names no replacement event"
+      ]
+    },
+    {
+      "id": "template-inline-script",
+      "level": "warn",
+      "places": [
+        "templates/editor.php:51 <script> with content"
+      ],
+      "lines": [
+        "1 inline script in templates/. The Content Security Policy of the server runs neither a <script> without a source or the nonce of the response nor an event handler attribute, so the browser does not run them. A script added with OCP\\Util::addScript() or addInitScript() runs.",
+        "  templates/editor.php:51 <script> with content"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/AppConfig.php:919 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/EditorApiController.php:285 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Controller/EditorApiController.php:333 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Controller/EditorController.php:150 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/Controller/EditorController.php:291 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "lib/Controller/EditorController.php:510 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "lib/Controller/EditorController.php:545 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Controller/EditorController.php:680 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/Controller/EditorController.php:1362 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/DirectEditor.php:180 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/ExtraPermissions.php:337 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "lib/ExtraPermissions.php:348 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/FileUtility.php:109 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Listeners/ContentSecurityPolicyListener.php:51 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Listeners/DocumentUnsavedListener.php:63 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "lines": [
+        "15 uses in 8 files of the public API that is deprecated in Nextcloud 33 to 36. The text of the tag names the replacement where it has one.",
+        "  lib/AppConfig.php:919 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/EditorApiController.php:285 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Controller/EditorApiController.php:333 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Controller/EditorController.php:150 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/Controller/EditorController.php:291 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "  lib/Controller/EditorController.php:510 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "  lib/Controller/EditorController.php:545 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Controller/EditorController.php:680 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/Controller/EditorController.php:1362 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/DirectEditor.php:180 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/ExtraPermissions.php:337 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "  lib/ExtraPermissions.php:348 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/FileUtility.php:109 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Listeners/ContentSecurityPolicyListener.php:51 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Listeners/DocumentUnsavedListener.php:63 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 12
+        }
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/directeditorerror.php:33 style= attribute",
+        "templates/settings.php:124 style= attribute"
+      ],
+      "lines": [
+        "2 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/directeditorerror.php:33 style= attribute",
+        "  templates/settings.php:124 style= attribute"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/AppConfig.php:345 new DateTime()",
+        "lib/AppConfig.php:370 new DateTime()",
+        "lib/Controller/EditorApiController.php:496 time()",
+        "lib/Controller/EditorApiController.php:740 new DateTime()",
+        "lib/Controller/EditorController.php:500 new DateTime()",
+        "lib/Controller/EditorController.php:638 time()",
+        "lib/Controller/EditorController.php:1041 time()",
+        "lib/Controller/EditorController.php:1158 time()",
+        "lib/Controller/FontController.php:105 time()",
+        "lib/Cron/EditorsCheck.php:162 new DateTime()",
+        "lib/DirectEditor.php:160 time()",
+        "lib/DirectEditor.php:161 time()",
+        "lib/DocumentService.php:193 time()",
+        "lib/DocumentService.php:219 time()",
+        "lib/DocumentService.php:227 time()",
+        "lib/DocumentService.php:231 time()",
+        "lib/DocumentService.php:238 time()",
+        "lib/DocumentService.php:436 time()",
+        "lib/Listeners/DocumentUnsavedListener.php:72 new DateTime()",
+        "lib/RemoteInstance.php:93 time()",
+        "lib/RemoteInstance.php:109 time()",
+        "lib/RemoteInstance.php:129 time()",
+        "lib/Vendor/Firebase/JWT/JWT.php:106 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 23 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/AppConfig.php:345 new DateTime()",
+        "  lib/AppConfig.php:370 new DateTime()",
+        "  lib/Controller/EditorApiController.php:496 time()",
+        "  lib/Controller/EditorApiController.php:740 new DateTime()",
+        "  lib/Controller/EditorController.php:500 new DateTime()",
+        "  lib/Controller/EditorController.php:638 time()",
+        "  lib/Controller/EditorController.php:1041 time()",
+        "  lib/Controller/EditorController.php:1158 time()",
+        "  lib/Controller/FontController.php:105 time()",
+        "  lib/Cron/EditorsCheck.php:162 new DateTime()",
+        "  lib/DirectEditor.php:160 time()",
+        "  lib/DirectEditor.php:161 time()",
+        "  lib/DocumentService.php:193 time()",
+        "  lib/DocumentService.php:219 time()",
+        "  lib/DocumentService.php:227 time()",
+        "  lib/DocumentService.php:231 time()",
+        "  lib/DocumentService.php:238 time()",
+        "  lib/DocumentService.php:436 time()",
+        "  lib/Listeners/DocumentUnsavedListener.php:72 new DateTime()",
+        "  lib/RemoteInstance.php:93 time()",
+        "  lib/RemoteInstance.php:109 time()",
+        "  lib/RemoteInstance.php:129 time()",
+        "  lib/Vendor/Firebase/JWT/JWT.php:106 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 20
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/AppConfig.php:348 setValueString()",
+        "lib/AppConfig.php:358 getValueString()",
+        "lib/AppConfig.php:404 setValueString()",
+        "lib/AppConfig.php:419 getValueString()",
+        "lib/AppConfig.php:448 setValueString()",
+        "lib/AppConfig.php:463 getValueString()",
+        "lib/AppConfig.php:515 setValueString()",
+        "lib/AppConfig.php:524 getValueString()",
+        "lib/AppConfig.php:546 setValueString()",
+        "lib/AppConfig.php:561 getValueString()",
+        "lib/AppConfig.php:593 setValueString()",
+        "lib/AppConfig.php:600 getValueString()",
+        "lib/AppConfig.php:616 setValueString()",
+        "lib/AppConfig.php:623 getValueString()",
+        "lib/AppConfig.php:640 setValueString()",
+        "lib/AppConfig.php:647 getValueString()",
+        "lib/AppConfig.php:656 setValueString()",
+        "lib/AppConfig.php:663 getValueString()",
+        "lib/AppConfig.php:672 setValueString()",
+        "lib/AppConfig.php:679 getValueString()",
+        "lib/AppConfig.php:688 setValueString()",
+        "lib/AppConfig.php:695 getValueString()",
+        "lib/AppConfig.php:704 setValueString()",
+        "lib/AppConfig.php:711 getValueString()",
+        "lib/AppConfig.php:720 setValueString()",
+        "lib/AppConfig.php:727 getValueString()",
+        "lib/AppConfig.php:736 setValueString()",
+        "lib/AppConfig.php:743 getValueString()",
+        "lib/AppConfig.php:752 setValueString()",
+        "lib/AppConfig.php:759 getValueString()",
+        "lib/AppConfig.php:772 setValueString()",
+        "lib/AppConfig.php:779 getValueString()",
+        "lib/AppConfig.php:788 setValueString()",
+        "lib/AppConfig.php:795 getValueString()",
+        "lib/AppConfig.php:804 setValueString()",
+        "lib/AppConfig.php:811 getValueString()",
+        "lib/AppConfig.php:820 setValueString()",
+        "lib/AppConfig.php:827 getValueString()",
+        "lib/AppConfig.php:836 setValueString()",
+        "lib/AppConfig.php:843 getValueString()",
+        "lib/AppConfig.php:852 setValueString()",
+        "lib/AppConfig.php:859 getValueString()",
+        "lib/AppConfig.php:868 setValueString()",
+        "lib/AppConfig.php:875 getValueString()",
+        "lib/AppConfig.php:891 setValueString()",
+        "lib/AppConfig.php:900 getValueString()",
+        "lib/AppConfig.php:946 setValueString()",
+        "lib/AppConfig.php:955 getValueString()",
+        "lib/AppConfig.php:981 setValueString()",
+        "lib/AppConfig.php:985 setValueString()",
+        "lib/AppConfig.php:1000 setValueString()",
+        "lib/AppConfig.php:1013 setValueString()",
+        "lib/AppConfig.php:1022 getValueString()",
+        "lib/AppConfig.php:1039 getValueString()",
+        "lib/AppConfig.php:1050 getValueString()",
+        "lib/AppConfig.php:1064 setValueString()",
+        "lib/AppConfig.php:1071 getValueString()",
+        "lib/AppConfig.php:1129 setValueString()",
+        "lib/AppConfig.php:1136 getValueString()",
+        "lib/AppConfig.php:1168 getValueString()",
+        "lib/AppConfig.php:1189 setValueString()",
+        "lib/AppConfig.php:1203 setValueString()",
+        "lib/AppConfig.php:1210 getValueString()",
+        "lib/AppConfig.php:1252 setValueString()",
+        "lib/AppConfig.php:1259 getValueString()",
+        "lib/AppConfig.php:1270 setValueString()",
+        "lib/AppConfig.php:1277 getValueString()",
+        "lib/Controller/EditorController.php:1508 getValueString()",
+        "lib/Controller/EditorController.php:1509 getValueString()",
+        "lib/Migration/Version110004Date20260915111111.php:44 getValueString()",
+        "lib/Migration/Version110004Date20260915111111.php:55 setValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 71 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/AppConfig.php:348 setValueString()",
+        "  lib/AppConfig.php:358 getValueString()",
+        "  lib/AppConfig.php:404 setValueString()",
+        "  lib/AppConfig.php:419 getValueString()",
+        "  lib/AppConfig.php:448 setValueString()",
+        "  lib/AppConfig.php:463 getValueString()",
+        "  lib/AppConfig.php:515 setValueString()",
+        "  lib/AppConfig.php:524 getValueString()",
+        "  lib/AppConfig.php:546 setValueString()",
+        "  lib/AppConfig.php:561 getValueString()",
+        "  lib/AppConfig.php:593 setValueString()",
+        "  lib/AppConfig.php:600 getValueString()",
+        "  lib/AppConfig.php:616 setValueString()",
+        "  lib/AppConfig.php:623 getValueString()",
+        "  lib/AppConfig.php:640 setValueString()",
+        "  lib/AppConfig.php:647 getValueString()",
+        "  lib/AppConfig.php:656 setValueString()",
+        "  lib/AppConfig.php:663 getValueString()",
+        "  lib/AppConfig.php:672 setValueString()",
+        "  lib/AppConfig.php:679 getValueString()",
+        "  lib/AppConfig.php:688 setValueString()",
+        "  lib/AppConfig.php:695 getValueString()",
+        "  lib/AppConfig.php:704 setValueString()",
+        "  lib/AppConfig.php:711 getValueString()",
+        "  lib/AppConfig.php:720 setValueString()",
+        "  lib/AppConfig.php:727 getValueString()",
+        "  lib/AppConfig.php:736 setValueString()",
+        "  lib/AppConfig.php:743 getValueString()",
+        "  lib/AppConfig.php:752 setValueString()",
+        "  lib/AppConfig.php:759 getValueString()",
+        "  lib/AppConfig.php:772 setValueString()",
+        "  lib/AppConfig.php:779 getValueString()",
+        "  lib/AppConfig.php:788 setValueString()",
+        "  lib/AppConfig.php:795 getValueString()",
+        "  lib/AppConfig.php:804 setValueString()",
+        "  lib/AppConfig.php:811 getValueString()",
+        "  lib/AppConfig.php:820 setValueString()",
+        "  lib/AppConfig.php:827 getValueString()",
+        "  lib/AppConfig.php:836 setValueString()",
+        "  lib/AppConfig.php:843 getValueString()",
+        "  lib/AppConfig.php:852 setValueString()",
+        "  lib/AppConfig.php:859 getValueString()",
+        "  lib/AppConfig.php:868 setValueString()",
+        "  lib/AppConfig.php:875 getValueString()",
+        "  lib/AppConfig.php:891 setValueString()",
+        "  lib/AppConfig.php:900 getValueString()",
+        "  lib/AppConfig.php:946 setValueString()",
+        "  lib/AppConfig.php:955 getValueString()",
+        "  lib/AppConfig.php:981 setValueString()",
+        "  lib/AppConfig.php:985 setValueString()",
+        "  lib/AppConfig.php:1000 setValueString()",
+        "  lib/AppConfig.php:1013 setValueString()",
+        "  lib/AppConfig.php:1022 getValueString()",
+        "  lib/AppConfig.php:1039 getValueString()",
+        "  lib/AppConfig.php:1050 getValueString()",
+        "  lib/AppConfig.php:1064 setValueString()",
+        "  lib/AppConfig.php:1071 getValueString()",
+        "  lib/AppConfig.php:1129 setValueString()",
+        "  lib/AppConfig.php:1136 getValueString()",
+        "  lib/AppConfig.php:1168 getValueString()",
+        "  lib/AppConfig.php:1189 setValueString()",
+        "  lib/AppConfig.php:1203 setValueString()",
+        "  lib/AppConfig.php:1210 getValueString()",
+        "  lib/AppConfig.php:1252 setValueString()",
+        "  lib/AppConfig.php:1259 getValueString()",
+        "  lib/AppConfig.php:1270 setValueString()",
+        "  lib/AppConfig.php:1277 getValueString()",
+        "  lib/Controller/EditorController.php:1508 getValueString()",
+        "  lib/Controller/EditorController.php:1509 getValueString()",
+        "  lib/Migration/Version110004Date20260915111111.php:44 getValueString()",
+        "  lib/Migration/Version110004Date20260915111111.php:55 setValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 68
+        }
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/JobListController.php:95 OCA\\Eurooffice\\Controller\\JobListController::checkAllJobs()",
+        "lib/Controller/SettingsController.php:60 OCA\\Eurooffice\\Controller\\SettingsController::index()"
+      ],
+      "lines": [
+        "2 public methods of controllers are reached by no route.",
+        "  lib/Controller/JobListController.php:95 OCA\\Eurooffice\\Controller\\JobListController::checkAllJobs()",
+        "  lib/Controller/SettingsController.php:60 OCA\\Eurooffice\\Controller\\SettingsController::index()"
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 6 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 37,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/eurooffice/{fileId}",
+      "target": "OCA\\Eurooffice\\Controller\\EditorController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/eurooffice/ajax/convert",
+      "target": "OCA\\Eurooffice\\Controller\\EditorController::convert",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/eurooffice/ajax/fonts",
+      "target": "OCA\\Eurooffice\\Controller\\FontController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/eurooffice/ajax/fonts",
+      "target": "OCA\\Eurooffice\\Controller\\FontController::upload",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/eurooffice/ajax/fonts/{name}",
+      "target": "OCA\\Eurooffice\\Controller\\FontController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/eurooffice/ajax/fonts/regenerate",
+      "target": "OCA\\Eurooffice\\Controller\\FontController::regenerate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/eurooffice/ajax/fonts/status",
+      "target": "OCA\\Eurooffice\\Controller\\FontController::getStatus",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/eurooffice/ajax/history",
+      "target": "OCA\\Eurooffice\\Controller\\EditorController::history",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/eurooffice/ajax/mention",
+      "target": "OCA\\Eurooffice\\Controller\\EditorController::mention",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/eurooffice/ajax/new",
+      "target": "OCA\\Eurooffice\\Controller\\EditorController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/eurooffice/ajax/reference",
+      "target": "OCA\\Eurooffice\\Controller\\EditorController::reference",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/eurooffice/ajax/restore",
+      "target": "OCA\\Eurooffice\\Controller\\EditorController::restore",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/eurooffice/ajax/save",
+      "target": "OCA\\Eurooffice\\Controller\\EditorController::save",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/eurooffice/ajax/settings/address",
+      "target": "OCA\\Eurooffice\\Controller\\SettingsController::saveAddress",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/eurooffice/ajax/settings/common",
+      "target": "OCA\\Eurooffice\\Controller\\SettingsController::saveCommon",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/eurooffice/ajax/settings/history",
+      "target": "OCA\\Eurooffice\\Controller\\SettingsController::clearHistory",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/eurooffice/ajax/settings/security",
+      "target": "OCA\\Eurooffice\\Controller\\SettingsController::saveSecurity",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/eurooffice/ajax/template",
+      "target": "OCA\\Eurooffice\\Controller\\TemplateController::deleteTemplate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/eurooffice/ajax/template",
+      "target": "OCA\\Eurooffice\\Controller\\TemplateController::getTemplates",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/eurooffice/ajax/template",
+      "target": "OCA\\Eurooffice\\Controller\\TemplateController::addTemplate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/eurooffice/ajax/url",
+      "target": "OCA\\Eurooffice\\Controller\\EditorController::url",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/eurooffice/ajax/userInfo",
+      "target": "OCA\\Eurooffice\\Controller\\EditorController::userInfo",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/eurooffice/ajax/users",
+      "target": "OCA\\Eurooffice\\Controller\\EditorController::users",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/eurooffice/ajax/version",
+      "target": "OCA\\Eurooffice\\Controller\\EditorController::version",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/eurooffice/download",
+      "target": "OCA\\Eurooffice\\Controller\\CallbackController::download",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/eurooffice/downloadas",
+      "target": "OCA\\Eurooffice\\Controller\\EditorController::download",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/eurooffice/empty",
+      "target": "OCA\\Eurooffice\\Controller\\CallbackController::emptyfile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/eurooffice/new",
+      "target": "OCA\\Eurooffice\\Controller\\EditorController::createNew",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/eurooffice/preview",
+      "target": "OCA\\Eurooffice\\Controller\\TemplateController::preview",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/eurooffice/s/{shareToken}",
+      "target": "OCA\\Eurooffice\\Controller\\EditorController::publicPage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/eurooffice/track",
+      "target": "OCA\\Eurooffice\\Controller\\CallbackController::track",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/eurooffice/api/v1/config/{fileId}",
+      "target": "OCA\\Eurooffice\\Controller\\EditorApiController::config",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/eurooffice/api/v1/healthcheck",
+      "target": "OCA\\Eurooffice\\Controller\\FederationController::healthcheck",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/eurooffice/api/v1/key",
+      "target": "OCA\\Eurooffice\\Controller\\FederationController::key",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/eurooffice/api/v1/keylock",
+      "target": "OCA\\Eurooffice\\Controller\\FederationController::keylock",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/eurooffice/api/v1/shares",
+      "target": "OCA\\Eurooffice\\Controller\\SharingApiController::setShares",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/eurooffice/api/v1/shares/{fileId}",
+      "target": "OCA\\Eurooffice\\Controller\\SharingApiController::getShares",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

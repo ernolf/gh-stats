@@ -1,0 +1,389 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\BigBlueButton\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "templates/404.php:10 OC",
+        "templates/404.php:10 OC::$server"
+      ],
+      "lines": [
+        "2 uses of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  templates/404.php:10 OC",
+        "  templates/404.php:10 OC::$server"
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/NoPermissionResponse.php:19 OCP\\Template\\ITemplate::fetchPage(): there since Nextcloud 32, the app declares from 25",
+        "lib/NotFoundResponse.php:19 OCP\\Template\\ITemplate::fetchPage(): there since Nextcloud 32, the app declares from 25"
+      ],
+      "lines": [
+        "2 uses in 2 files of the public API that the oldest majors of Nextcloud 25 to 28 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/NoPermissionResponse.php:19 OCP\\Template\\ITemplate::fetchPage(): there since Nextcloud 32, the app declares from 25",
+        "  lib/NotFoundResponse.php:19 OCP\\Template\\ITemplate::fetchPage(): there since Nextcloud 32, the app declares from 25"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:62 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:62 injectFn()"
+      ]
+    },
+    {
+      "id": "route-target-missing",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/bbb/rooms/{id}  bbb.room.show  appinfo/routes.php:3 resources: OCA\\BigBlueButton\\Controller\\RoomController has no method show()",
+        "GET /index.php/apps/bbb/roomShares/{id}  bbb.roomshare.show  appinfo/routes.php:3 resources: OCA\\BigBlueButton\\Controller\\RoomShareController has no method show()",
+        "GET /index.php/apps/bbb/restrictions/{id}  bbb.restriction.show  appinfo/routes.php:3 resources: OCA\\BigBlueButton\\Controller\\RestrictionController has no method show()"
+      ],
+      "lines": [
+        "3 routes name a controller class or a method that does not exist, or a method that is not public. A request to such a route ends in an error.",
+        "  GET /index.php/apps/bbb/rooms/{id}  bbb.room.show  appinfo/routes.php:3 resources: OCA\\BigBlueButton\\Controller\\RoomController has no method show()",
+        "  GET /index.php/apps/bbb/roomShares/{id}  bbb.roomshare.show  appinfo/routes.php:3 resources: OCA\\BigBlueButton\\Controller\\RoomShareController has no method show()",
+        "  GET /index.php/apps/bbb/restrictions/{id}  bbb.restriction.show  appinfo/routes.php:3 resources: OCA\\BigBlueButton\\Controller\\RestrictionController has no method show()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/bbb/server/{roomUid}/isRunning  bbb.server.isrunning  appinfo/routes.php:3 routes",
+        "POST /index.php/apps/bbb/server/{roomUid}/insertDocument  bbb.server.insertdocument  appinfo/routes.php:3 routes",
+        "GET /index.php/apps/bbb/server/{roomUid}/records  bbb.server.records  appinfo/routes.php:3 routes",
+        "POST /index.php/apps/bbb/server/check  bbb.server.check  appinfo/routes.php:3 routes",
+        "GET /index.php/apps/bbb/server/version  bbb.server.version  appinfo/routes.php:3 routes",
+        "DELETE /index.php/apps/bbb/server/record/{recordId}  bbb.server.delete_record  appinfo/routes.php:3 routes",
+        "GET /index.php/apps/bbb/restrictions/user  bbb.restriction.user  appinfo/routes.php:3 routes",
+        "GET /index.php/apps/bbb/rooms  bbb.room.index  appinfo/routes.php:3 resources",
+        "POST /index.php/apps/bbb/rooms  bbb.room.create  appinfo/routes.php:3 resources",
+        "PUT /index.php/apps/bbb/rooms/{id}  bbb.room.update  appinfo/routes.php:3 resources",
+        "DELETE /index.php/apps/bbb/rooms/{id}  bbb.room.destroy  appinfo/routes.php:3 resources",
+        "GET /index.php/apps/bbb/roomShares  bbb.roomshare.index  appinfo/routes.php:3 resources",
+        "POST /index.php/apps/bbb/roomShares  bbb.roomshare.create  appinfo/routes.php:3 resources",
+        "PUT /index.php/apps/bbb/roomShares/{id}  bbb.roomshare.update  appinfo/routes.php:3 resources",
+        "DELETE /index.php/apps/bbb/roomShares/{id}  bbb.roomshare.destroy  appinfo/routes.php:3 resources",
+        "GET /index.php/apps/bbb/restrictions  bbb.restriction.index  appinfo/routes.php:3 resources",
+        "POST /index.php/apps/bbb/restrictions  bbb.restriction.create  appinfo/routes.php:3 resources",
+        "PUT /index.php/apps/bbb/restrictions/{id}  bbb.restriction.update  appinfo/routes.php:3 resources",
+        "DELETE /index.php/apps/bbb/restrictions/{id}  bbb.restriction.destroy  appinfo/routes.php:3 resources"
+      ],
+      "lines": [
+        "Nothing in the app calls 19 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/bbb/server/{roomUid}/isRunning  bbb.server.isrunning  appinfo/routes.php:3 routes",
+        "  POST /index.php/apps/bbb/server/{roomUid}/insertDocument  bbb.server.insertdocument  appinfo/routes.php:3 routes",
+        "  GET /index.php/apps/bbb/server/{roomUid}/records  bbb.server.records  appinfo/routes.php:3 routes",
+        "  POST /index.php/apps/bbb/server/check  bbb.server.check  appinfo/routes.php:3 routes",
+        "  GET /index.php/apps/bbb/server/version  bbb.server.version  appinfo/routes.php:3 routes",
+        "  DELETE /index.php/apps/bbb/server/record/{recordId}  bbb.server.delete_record  appinfo/routes.php:3 routes",
+        "  GET /index.php/apps/bbb/restrictions/user  bbb.restriction.user  appinfo/routes.php:3 routes",
+        "  GET /index.php/apps/bbb/rooms  bbb.room.index  appinfo/routes.php:3 resources",
+        "  POST /index.php/apps/bbb/rooms  bbb.room.create  appinfo/routes.php:3 resources",
+        "  PUT /index.php/apps/bbb/rooms/{id}  bbb.room.update  appinfo/routes.php:3 resources",
+        "  DELETE /index.php/apps/bbb/rooms/{id}  bbb.room.destroy  appinfo/routes.php:3 resources",
+        "  GET /index.php/apps/bbb/roomShares  bbb.roomshare.index  appinfo/routes.php:3 resources",
+        "  POST /index.php/apps/bbb/roomShares  bbb.roomshare.create  appinfo/routes.php:3 resources",
+        "  PUT /index.php/apps/bbb/roomShares/{id}  bbb.roomshare.update  appinfo/routes.php:3 resources",
+        "  DELETE /index.php/apps/bbb/roomShares/{id}  bbb.roomshare.destroy  appinfo/routes.php:3 resources",
+        "  GET /index.php/apps/bbb/restrictions  bbb.restriction.index  appinfo/routes.php:3 resources",
+        "  POST /index.php/apps/bbb/restrictions  bbb.restriction.create  appinfo/routes.php:3 resources",
+        "  PUT /index.php/apps/bbb/restrictions/{id}  bbb.restriction.update  appinfo/routes.php:3 resources",
+        "  DELETE /index.php/apps/bbb/restrictions/{id}  bbb.restriction.destroy  appinfo/routes.php:3 resources"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 16
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "vimeo/psalm, friendsofphp/php-cs-fixer, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/BigBlueButton/API.php:162 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "lib/Controller/HookController.php:70 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "lib/Controller/HookController.php:81 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "lib/NoPermissionResponse.php:13 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/NotFoundResponse.php:13 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Service/RoomService.php:121 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "lib/Service/RoomService.php:198 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "lib/Service/RoomShareService.php:70 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "lib/Service/RoomShareService.php:96 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped"
+      ],
+      "lines": [
+        "9 uses in 6 files of the public API that is deprecated in Nextcloud 25 to 28. The text of the tag names the replacement where it has one.",
+        "  lib/BigBlueButton/API.php:162 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "  lib/Controller/HookController.php:70 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "  lib/Controller/HookController.php:81 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "  lib/NoPermissionResponse.php:13 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/NotFoundResponse.php:13 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Service/RoomService.php:121 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "  lib/Service/RoomService.php:198 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "  lib/Service/RoomShareService.php:70 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "  lib/Service/RoomShareService.php:96 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 6
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/IsRunningJob.php OCA\\BigBlueButton\\BackgroundJob\\IsRunningJob"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/IsRunningJob.php OCA\\BigBlueButton\\BackgroundJob\\IsRunningJob"
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/HookController.php:44 OCA\\BigBlueButton\\Controller\\HookController::setToken()",
+        "lib/Controller/HookController.php:49 OCA\\BigBlueButton\\Controller\\HookController::isValidToken()",
+        "lib/Controller/JoinController.php:66 OCA\\BigBlueButton\\Controller\\JoinController::setToken()",
+        "lib/Controller/JoinController.php:71 OCA\\BigBlueButton\\Controller\\JoinController::isValidToken()"
+      ],
+      "lines": [
+        "4 public methods of controllers are reached by no route.",
+        "  lib/Controller/HookController.php:44 OCA\\BigBlueButton\\Controller\\HookController::setToken()",
+        "  lib/Controller/HookController.php:49 OCA\\BigBlueButton\\Controller\\HookController::isValidToken()",
+        "  lib/Controller/JoinController.php:66 OCA\\BigBlueButton\\Controller\\JoinController::setToken()",
+        "  lib/Controller/JoinController.php:71 OCA\\BigBlueButton\\Controller\\JoinController::isValidToken()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "endpoints": 26,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bbb/",
+      "target": "OCA\\BigBlueButton\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bbb/b/{token}/{moderatorToken}",
+      "target": "OCA\\BigBlueButton\\Controller\\JoinController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bbb/hook/ended/{token}/{mac}",
+      "target": "OCA\\BigBlueButton\\Controller\\HookController::meetingEnded",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bbb/hook/recording/{token}/{mac}",
+      "target": "OCA\\BigBlueButton\\Controller\\HookController::recordingReady",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bbb/restrictions",
+      "target": "OCA\\BigBlueButton\\Controller\\RestrictionController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bbb/restrictions",
+      "target": "OCA\\BigBlueButton\\Controller\\RestrictionController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/bbb/restrictions/{id}",
+      "target": "OCA\\BigBlueButton\\Controller\\RestrictionController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bbb/restrictions/{id}",
+      "target": "OCA\\BigBlueButton\\Controller\\RestrictionController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/bbb/restrictions/{id}",
+      "target": "OCA\\BigBlueButton\\Controller\\RestrictionController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bbb/restrictions/user",
+      "target": "OCA\\BigBlueButton\\Controller\\RestrictionController::user",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bbb/rooms",
+      "target": "OCA\\BigBlueButton\\Controller\\RoomController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bbb/rooms",
+      "target": "OCA\\BigBlueButton\\Controller\\RoomController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/bbb/rooms/{id}",
+      "target": "OCA\\BigBlueButton\\Controller\\RoomController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bbb/rooms/{id}",
+      "target": "OCA\\BigBlueButton\\Controller\\RoomController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/bbb/rooms/{id}",
+      "target": "OCA\\BigBlueButton\\Controller\\RoomController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bbb/roomShares",
+      "target": "OCA\\BigBlueButton\\Controller\\RoomShareController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bbb/roomShares",
+      "target": "OCA\\BigBlueButton\\Controller\\RoomShareController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/bbb/roomShares/{id}",
+      "target": "OCA\\BigBlueButton\\Controller\\RoomShareController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bbb/roomShares/{id}",
+      "target": "OCA\\BigBlueButton\\Controller\\RoomShareController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/bbb/roomShares/{id}",
+      "target": "OCA\\BigBlueButton\\Controller\\RoomShareController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bbb/server/{roomUid}/insertDocument",
+      "target": "OCA\\BigBlueButton\\Controller\\ServerController::insertDocument",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bbb/server/{roomUid}/isRunning",
+      "target": "OCA\\BigBlueButton\\Controller\\ServerController::isRunning",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bbb/server/{roomUid}/records",
+      "target": "OCA\\BigBlueButton\\Controller\\ServerController::records",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/bbb/server/check",
+      "target": "OCA\\BigBlueButton\\Controller\\ServerController::check",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/bbb/server/record/{recordId}",
+      "target": "OCA\\BigBlueButton\\Controller\\ServerController::deleteRecord",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/bbb/server/version",
+      "target": "OCA\\BigBlueButton\\Controller\\ServerController::version",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

@@ -1,0 +1,177 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\DeckChecklist\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/deckchecklist/cards/{cardId}  deckchecklist.checklist.getcard  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/deckchecklist/cards/{cardId}/lists  deckchecklist.checklist.createlist  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/deckchecklist/lists/{listId}  deckchecklist.checklist.updatelist  appinfo/routes.php:5 routes",
+        "DELETE /index.php/apps/deckchecklist/lists/{listId}  deckchecklist.checklist.deletelist  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/deckchecklist/lists/{listId}/items  deckchecklist.checklist.createitem  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/deckchecklist/items/{itemId}  deckchecklist.checklist.updateitem  appinfo/routes.php:5 routes",
+        "DELETE /index.php/apps/deckchecklist/items/{itemId}  deckchecklist.checklist.deleteitem  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/deckchecklist/items/{itemId}/assignees  deckchecklist.checklist.setassignees  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/deckchecklist/items/{itemId}/convert  deckchecklist.checklist.convertitem  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/deckchecklist/lists/{listId}/reorder  deckchecklist.checklist.reorderitems  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/deckchecklist/cards/{cardId}/reorder  deckchecklist.checklist.reorderlists  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/deckchecklist/boards/{boardId}/summary  deckchecklist.checklist.boardsummary  appinfo/routes.php:5 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 12 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 1 file of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/deckchecklist/cards/{cardId}  deckchecklist.checklist.getcard  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/deckchecklist/cards/{cardId}/lists  deckchecklist.checklist.createlist  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/deckchecklist/lists/{listId}  deckchecklist.checklist.updatelist  appinfo/routes.php:5 routes",
+        "  DELETE /index.php/apps/deckchecklist/lists/{listId}  deckchecklist.checklist.deletelist  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/deckchecklist/lists/{listId}/items  deckchecklist.checklist.createitem  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/deckchecklist/items/{itemId}  deckchecklist.checklist.updateitem  appinfo/routes.php:5 routes",
+        "  DELETE /index.php/apps/deckchecklist/items/{itemId}  deckchecklist.checklist.deleteitem  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/deckchecklist/items/{itemId}/assignees  deckchecklist.checklist.setassignees  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/deckchecklist/items/{itemId}/convert  deckchecklist.checklist.convertitem  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/deckchecklist/lists/{listId}/reorder  deckchecklist.checklist.reorderitems  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/deckchecklist/cards/{cardId}/reorder  deckchecklist.checklist.reorderlists  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/deckchecklist/boards/{boardId}/summary  deckchecklist.checklist.boardsummary  appinfo/routes.php:5 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 9
+        }
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Service/ChecklistService.php:92",
+        "lib/Service/ChecklistService.php:167",
+        "lib/Service/ChecklistService.php:222",
+        "lib/Service/ChecklistService.php:254",
+        "lib/Service/ChecklistService.php:342",
+        "lib/Service/ChecklistService.php:499"
+      ],
+      "lines": [
+        "6 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Service/ChecklistService.php:92",
+        "  lib/Service/ChecklistService.php:167",
+        "  lib/Service/ChecklistService.php:222",
+        "  lib/Service/ChecklistService.php:254",
+        "  lib/Service/ChecklistService.php:342",
+        "  lib/Service/ChecklistService.php:499"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Notification/NotificationHelper.php:52 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 1 place. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Notification/NotificationHelper.php:52 new DateTime()"
+      ]
+    }
+  ],
+  "endpoints": 12,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deckchecklist/boards/{boardId}/summary",
+      "target": "OCA\\DeckChecklist\\Controller\\ChecklistController::boardSummary",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deckchecklist/cards/{cardId}",
+      "target": "OCA\\DeckChecklist\\Controller\\ChecklistController::getCard",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deckchecklist/cards/{cardId}/lists",
+      "target": "OCA\\DeckChecklist\\Controller\\ChecklistController::createList",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deckchecklist/cards/{cardId}/reorder",
+      "target": "OCA\\DeckChecklist\\Controller\\ChecklistController::reorderLists",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/deckchecklist/items/{itemId}",
+      "target": "OCA\\DeckChecklist\\Controller\\ChecklistController::deleteItem",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deckchecklist/items/{itemId}",
+      "target": "OCA\\DeckChecklist\\Controller\\ChecklistController::updateItem",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deckchecklist/items/{itemId}/assignees",
+      "target": "OCA\\DeckChecklist\\Controller\\ChecklistController::setAssignees",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deckchecklist/items/{itemId}/convert",
+      "target": "OCA\\DeckChecklist\\Controller\\ChecklistController::convertItem",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/deckchecklist/lists/{listId}",
+      "target": "OCA\\DeckChecklist\\Controller\\ChecklistController::deleteList",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deckchecklist/lists/{listId}",
+      "target": "OCA\\DeckChecklist\\Controller\\ChecklistController::updateList",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deckchecklist/lists/{listId}/items",
+      "target": "OCA\\DeckChecklist\\Controller\\ChecklistController::createItem",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deckchecklist/lists/{listId}/reorder",
+      "target": "OCA\\DeckChecklist\\Controller\\ChecklistController::reorderItems",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

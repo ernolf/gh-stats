@@ -1,0 +1,302 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Templario\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "namespace-mismatch",
+      "level": "warn",
+      "places": [
+        "lib/Service/DataSourceService.php:26 OCA\\Templario\\Service\\DataSourceNotFoundException, by its path OCA\\Templario\\Service\\DataSourceService",
+        "lib/Service/GenerationService.php:23 OCA\\Templario\\Service\\GenerationException, by its path OCA\\Templario\\Service\\GenerationService",
+        "lib/Service/PermissionService.php:14 OCA\\Templario\\Service\\NotAuthorizedException, by its path OCA\\Templario\\Service\\PermissionService",
+        "lib/Service/TemplateService.php:17 OCA\\Templario\\Service\\TemplateNotFoundException, by its path OCA\\Templario\\Service\\TemplateService"
+      ],
+      "lines": [
+        "4 classes in lib/ whose name does not follow PSR-4 below OCA\\Templario, the namespace the server derives from <namespace> of info.xml. The loader of the server does not find such a class.",
+        "  lib/Service/DataSourceService.php:26 OCA\\Templario\\Service\\DataSourceNotFoundException, by its path OCA\\Templario\\Service\\DataSourceService",
+        "  lib/Service/GenerationService.php:23 OCA\\Templario\\Service\\GenerationException, by its path OCA\\Templario\\Service\\GenerationService",
+        "  lib/Service/PermissionService.php:14 OCA\\Templario\\Service\\NotAuthorizedException, by its path OCA\\Templario\\Service\\PermissionService",
+        "  lib/Service/TemplateService.php:17 OCA\\Templario\\Service\\TemplateNotFoundException, by its path OCA\\Templario\\Service\\TemplateService"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "template-inline-script",
+      "level": "warn",
+      "places": [
+        "templates/settings/admin.php:42 <script> with content"
+      ],
+      "lines": [
+        "1 inline script in templates/. The Content Security Policy of the server runs neither a <script> without a source or the nonce of the response nor an event handler attribute, so the browser does not run them. A script added with OCP\\Util::addScript() or addInitScript() runs.",
+        "  templates/settings/admin.php:42 <script> with content"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "POST /index.php/apps/templario/api/v1/templates/{id}/file  templario.templates_api.upload  appinfo/routes.php:10 routes",
+        "GET /index.php/apps/templario/api/v1/templates/{id}/placeholders  templario.templates_api.placeholders  appinfo/routes.php:10 routes",
+        "POST /index.php/apps/templario/api/v1/templates/{id}/batch  templario.templates_api.batch  appinfo/routes.php:10 routes",
+        "GET /index.php/apps/templario/api/v1/datasources  templario.data_sources_api.index  appinfo/routes.php:10 routes",
+        "POST /index.php/apps/templario/api/v1/datasources  templario.data_sources_api.create  appinfo/routes.php:10 routes",
+        "GET /index.php/apps/templario/api/v1/datasources/{id}/fetch  templario.data_sources_api.fetch  appinfo/routes.php:10 routes",
+        "POST /index.php/apps/templario/api/v1/documents/{fileId}/deliver  templario.output_api.deliver  appinfo/routes.php:10 routes",
+        "POST /index.php/apps/templario/admin/settings  templario.admin_settings.store  appinfo/routes.php:10 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 8 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 1 file of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  POST /index.php/apps/templario/api/v1/templates/{id}/file  templario.templates_api.upload  appinfo/routes.php:10 routes",
+        "  GET /index.php/apps/templario/api/v1/templates/{id}/placeholders  templario.templates_api.placeholders  appinfo/routes.php:10 routes",
+        "  POST /index.php/apps/templario/api/v1/templates/{id}/batch  templario.templates_api.batch  appinfo/routes.php:10 routes",
+        "  GET /index.php/apps/templario/api/v1/datasources  templario.data_sources_api.index  appinfo/routes.php:10 routes",
+        "  POST /index.php/apps/templario/api/v1/datasources  templario.data_sources_api.create  appinfo/routes.php:10 routes",
+        "  GET /index.php/apps/templario/api/v1/datasources/{id}/fetch  templario.data_sources_api.fetch  appinfo/routes.php:10 routes",
+        "  POST /index.php/apps/templario/api/v1/documents/{fileId}/deliver  templario.output_api.deliver  appinfo/routes.php:10 routes",
+        "  POST /index.php/apps/templario/admin/settings  templario.admin_settings.store  appinfo/routes.php:10 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "id": "migration-name-length",
+      "level": "warn",
+      "places": [
+        "lib/Migration/Version000000Date20260914000000.php:50 the primary key of templario_template_versions, named after the table: 27 characters and the prefix oc_, in Nextcloud 31 to 32",
+        "lib/Migration/Version000000Date20260914000000.php:66 table templario_document_instances: 28 characters and the prefix oc_, in Nextcloud 31 to 32",
+        "lib/Migration/Version000000Date20260914000000.php:77 the primary key of templario_document_instances, named after the table: 28 characters and the prefix oc_, in Nextcloud 31 to 32"
+      ],
+      "lines": [
+        "3 names in the migrations are longer than the server allows, so it stops the install or the update of the app with an exception. The table names are counted with the default prefix oc_.",
+        "  Up to Nextcloud 32 the server checks this only where info.xml lists no database, or lists oci among them.",
+        "  lib/Migration/Version000000Date20260914000000.php:50 the primary key of templario_template_versions, named after the table: 27 characters and the prefix oc_, in Nextcloud 31 to 32",
+        "  lib/Migration/Version000000Date20260914000000.php:66 table templario_document_instances: 28 characters and the prefix oc_, in Nextcloud 31 to 32",
+        "  lib/Migration/Version000000Date20260914000000.php:77 the primary key of templario_document_instances, named after the table: 28 characters and the prefix oc_, in Nextcloud 31 to 32"
+      ]
+    },
+    {
+      "id": "migration-bool-notnull",
+      "level": "warn",
+      "places": [
+        "lib/Migration/Version000000Date20260914000000.php:27 templario_templates.active, in Nextcloud 31 to 32",
+        "lib/Migration/Version000000Date20260914000000.php:37 templario_templates.show_in_context, in Nextcloud 31 to 32"
+      ],
+      "lines": [
+        "2 boolean columns are NotNull. Oracle cannot store false in such a column, so the server stops the migration with an exception. A boolean column needs notnull false.",
+        "  Up to Nextcloud 32 the server checks this only where info.xml lists no database, or lists oci among them. From Nextcloud 33 on the server makes the column nullable on Oracle itself.",
+        "  lib/Migration/Version000000Date20260914000000.php:27 templario_templates.active, in Nextcloud 31 to 32",
+        "  lib/Migration/Version000000Date20260914000000.php:37 templario_templates.show_in_context, in Nextcloud 31 to 32"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/index.php:59 style= attribute",
+        "templates/index.php:83 style= attribute",
+        "templates/index.php:112 style= attribute",
+        "templates/index.php:130 <style> with content"
+      ],
+      "lines": [
+        "4 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/index.php:59 style= attribute",
+        "  templates/index.php:83 style= attribute",
+        "  templates/index.php:112 style= attribute",
+        "  templates/index.php:130 <style> with content"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Db/AuditLogMapper.php:30 new DateTimeImmutable()",
+        "lib/Service/DataSourceService.php:311 new DateTimeImmutable()",
+        "lib/Service/GenerationService.php:156 new DateTimeImmutable()",
+        "lib/Service/GenerationService.php:213 new DateTimeImmutable()",
+        "lib/Service/TemplateService.php:179 new DateTimeImmutable()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 5 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Db/AuditLogMapper.php:30 new DateTimeImmutable()",
+        "  lib/Service/DataSourceService.php:311 new DateTimeImmutable()",
+        "  lib/Service/GenerationService.php:156 new DateTimeImmutable()",
+        "  lib/Service/GenerationService.php:213 new DateTimeImmutable()",
+        "  lib/Service/TemplateService.php:179 new DateTimeImmutable()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/SettingsService.php:32 getValueString()",
+        "lib/Service/SettingsService.php:37 setValueString()",
+        "lib/Service/SettingsService.php:62 getValueString()",
+        "lib/Service/SettingsService.php:72 setValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 4 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/SettingsService.php:32 getValueString()",
+        "  lib/Service/SettingsService.php:37 setValueString()",
+        "  lib/Service/SettingsService.php:62 getValueString()",
+        "  lib/Service/SettingsService.php:72 setValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "endpoints": 16,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/templario/",
+      "target": "OCA\\Templario\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/templario/admin/settings",
+      "target": "OCA\\Templario\\Controller\\AdminSettingsController::store",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/templario/api/v1/datasources",
+      "target": "OCA\\Templario\\Controller\\DataSourcesApiController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/templario/api/v1/datasources",
+      "target": "OCA\\Templario\\Controller\\DataSourcesApiController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/templario/api/v1/datasources/{id}",
+      "target": "OCA\\Templario\\Controller\\DataSourcesApiController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/templario/api/v1/datasources/{id}/fetch",
+      "target": "OCA\\Templario\\Controller\\DataSourcesApiController::fetch",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/templario/api/v1/documents/{fileId}/deliver",
+      "target": "OCA\\Templario\\Controller\\OutputApiController::deliver",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/templario/api/v1/templates",
+      "target": "OCA\\Templario\\Controller\\TemplatesApiController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/templario/api/v1/templates",
+      "target": "OCA\\Templario\\Controller\\TemplatesApiController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/templario/api/v1/templates/{id}",
+      "target": "OCA\\Templario\\Controller\\TemplatesApiController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/templario/api/v1/templates/{id}",
+      "target": "OCA\\Templario\\Controller\\TemplatesApiController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/templario/api/v1/templates/{id}",
+      "target": "OCA\\Templario\\Controller\\TemplatesApiController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/templario/api/v1/templates/{id}/batch",
+      "target": "OCA\\Templario\\Controller\\TemplatesApiController::batch",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/templario/api/v1/templates/{id}/file",
+      "target": "OCA\\Templario\\Controller\\TemplatesApiController::upload",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/templario/api/v1/templates/{id}/generate",
+      "target": "OCA\\Templario\\Controller\\TemplatesApiController::generate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/templario/api/v1/templates/{id}/placeholders",
+      "target": "OCA\\Templario\\Controller\\TemplatesApiController::placeholders",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

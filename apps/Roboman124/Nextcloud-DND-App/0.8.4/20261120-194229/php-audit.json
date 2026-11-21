@@ -1,0 +1,248 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Grimoire\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/grimoire/api/campaigns/{id}  grimoire.campaign.show  appinfo/routes.php:8 routes",
+        "PUT /index.php/apps/grimoire/api/campaigns/{id}  grimoire.campaign.update  appinfo/routes.php:8 routes",
+        "DELETE /index.php/apps/grimoire/api/campaigns/{id}  grimoire.campaign.destroy  appinfo/routes.php:8 routes",
+        "GET /index.php/apps/grimoire/api/assets  grimoire.asset.index  appinfo/routes.php:8 routes",
+        "GET /index.php/apps/grimoire/api/assets/file  grimoire.asset.file  appinfo/routes.php:8 routes",
+        "GET /index.php/apps/grimoire/api/assets/thumbnail  grimoire.asset.thumbnail  appinfo/routes.php:8 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 6 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 18 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/grimoire/api/campaigns/{id}  grimoire.campaign.show  appinfo/routes.php:8 routes",
+        "  PUT /index.php/apps/grimoire/api/campaigns/{id}  grimoire.campaign.update  appinfo/routes.php:8 routes",
+        "  DELETE /index.php/apps/grimoire/api/campaigns/{id}  grimoire.campaign.destroy  appinfo/routes.php:8 routes",
+        "  GET /index.php/apps/grimoire/api/assets  grimoire.asset.index  appinfo/routes.php:8 routes",
+        "  GET /index.php/apps/grimoire/api/assets/file  grimoire.asset.file  appinfo/routes.php:8 routes",
+        "  GET /index.php/apps/grimoire/api/assets/thumbnail  grimoire.asset.thumbnail  appinfo/routes.php:8 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/AssetController.php:160 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Controller/PageController.php:45 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Controller/UserController.php:50 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead"
+      ],
+      "lines": [
+        "3 uses in 3 files of the public API that is deprecated in Nextcloud 28 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/AssetController.php:160 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Controller/PageController.php:45 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Controller/UserController.php:50 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead"
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/main.php:11 <style> with content"
+      ],
+      "lines": [
+        "1 inline style in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/main.php:11 <style> with content"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/CampaignController.php:67 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 1 place. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/CampaignController.php:67 new DateTime()"
+      ]
+    }
+  ],
+  "endpoints": 24,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/grimoire/",
+      "target": "OCA\\Grimoire\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/grimoire/api/assets",
+      "target": "OCA\\Grimoire\\Controller\\AssetController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/grimoire/api/assets/file",
+      "target": "OCA\\Grimoire\\Controller\\AssetController::file",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/grimoire/api/assets/thumbnail",
+      "target": "OCA\\Grimoire\\Controller\\AssetController::thumbnail",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/grimoire/api/campaigns",
+      "target": "OCA\\Grimoire\\Controller\\CampaignController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/grimoire/api/campaigns",
+      "target": "OCA\\Grimoire\\Controller\\CampaignController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/grimoire/api/campaigns/{campaignId}/scenes",
+      "target": "OCA\\Grimoire\\Controller\\SceneController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/grimoire/api/campaigns/{campaignId}/scenes",
+      "target": "OCA\\Grimoire\\Controller\\SceneController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/grimoire/api/campaigns/{id}",
+      "target": "OCA\\Grimoire\\Controller\\CampaignController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/grimoire/api/campaigns/{id}",
+      "target": "OCA\\Grimoire\\Controller\\CampaignController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/grimoire/api/campaigns/{id}",
+      "target": "OCA\\Grimoire\\Controller\\CampaignController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/grimoire/api/campaigns/{id}/discord",
+      "target": "OCA\\Grimoire\\Controller\\CampaignController::discord",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/grimoire/api/campaigns/{id}/permissions",
+      "target": "OCA\\Grimoire\\Controller\\CampaignController::permissions",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/grimoire/api/campaigns/{id}/players",
+      "target": "OCA\\Grimoire\\Controller\\SessionController::players",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/grimoire/api/campaigns/{id}/players",
+      "target": "OCA\\Grimoire\\Controller\\CampaignController::players",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/grimoire/api/campaigns/{id}/remind",
+      "target": "OCA\\Grimoire\\Controller\\SessionController::remind",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/grimoire/api/room/poll",
+      "target": "OCA\\Grimoire\\Controller\\RoomController::poll",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/grimoire/api/room/push",
+      "target": "OCA\\Grimoire\\Controller\\RoomController::push",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/grimoire/api/scenes/{id}",
+      "target": "OCA\\Grimoire\\Controller\\SceneController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/grimoire/api/scenes/{id}",
+      "target": "OCA\\Grimoire\\Controller\\SceneController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/grimoire/api/scenes/{id}",
+      "target": "OCA\\Grimoire\\Controller\\SceneController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/grimoire/api/scenes/{id}/room-token",
+      "target": "OCA\\Grimoire\\Controller\\RoomController::handshake",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/grimoire/api/users/search",
+      "target": "OCA\\Grimoire\\Controller\\UserController::search",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/grimoire/c/{campaignId}/s/{sceneId}",
+      "target": "OCA\\Grimoire\\Controller\\PageController::room",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

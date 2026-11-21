@@ -1,0 +1,3592 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Agora\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "namespace-mismatch",
+      "level": "warn",
+      "places": [
+        "lib/Service/Ai/Document/DocumentParser.php:41 OCA\\Agora\\Service\\Ai\\Document\\ParserInterface, by its path OCA\\Agora\\Service\\Ai\\Document\\DocumentParser",
+        "lib/Service/Ai/Document/DocumentParser.php:45 OCA\\Agora\\Service\\Ai\\Document\\DocumentContent, by its path OCA\\Agora\\Service\\Ai\\Document\\DocumentParser"
+      ],
+      "lines": [
+        "2 classes in lib/ whose name does not follow PSR-4 below OCA\\Agora, the namespace the server derives from the app id. The loader of the server does not find such a class.",
+        "  lib/Service/Ai/Document/DocumentParser.php:41 OCA\\Agora\\Service\\Ai\\Document\\ParserInterface, by its path OCA\\Agora\\Service\\Ai\\Document\\DocumentParser",
+        "  lib/Service/Ai/Document/DocumentParser.php:45 OCA\\Agora\\Service\\Ai\\Document\\DocumentContent, by its path OCA\\Agora\\Service\\Ai\\Document\\DocumentParser"
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "psr/event-dispatcher 1.0.0, in 3rdparty/ of Nextcloud 31 to 35",
+        "symfony/deprecation-contracts v3.7.1, in 3rdparty/ of Nextcloud 31 to 35",
+        "symfony/polyfill-php80 v1.37.0, in 3rdparty/ of Nextcloud 31"
+      ],
+      "lines": [
+        "vendor/ ships 3 packages that the server ships itself in a major of Nextcloud 31 to 35. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  psr/event-dispatcher 1.0.0, in 3rdparty/ of Nextcloud 31 to 35",
+        "  symfony/deprecation-contracts v3.7.1, in 3rdparty/ of Nextcloud 31 to 35",
+        "  symfony/polyfill-php80 v1.37.0, in 3rdparty/ of Nextcloud 31"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Command/Share/Add.php:29 OC\\Core\\Command\\Base",
+        "lib/Command/Share/Remove.php:30 OC\\Core\\Command\\Base",
+        "lib/Model/Settings/SystemSettings.php:33 OC",
+        "lib/Model/Settings/SystemSettings.php:33 OC::$server",
+        "lib/Model/UserBase.php:161 OC",
+        "lib/Model/UserBase.php:161 OC::$server",
+        "lib/Model/UserBase.php:162 OC::$server"
+      ],
+      "lines": [
+        "7 uses of the private API of the server in 4 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Command/Share/Add.php:29 OC\\Core\\Command\\Base",
+        "  lib/Command/Share/Remove.php:30 OC\\Core\\Command\\Base",
+        "  lib/Model/Settings/SystemSettings.php:33 OC",
+        "  lib/Model/Settings/SystemSettings.php:33 OC::$server",
+        "  lib/Model/UserBase.php:161 OC",
+        "  lib/Model/UserBase.php:161 OC::$server",
+        "  lib/Model/UserBase.php:162 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "ocp-missing",
+      "level": "warn",
+      "places": [
+        "lib/Controller/ImportController.php:73 OCP\\ILogger::error(): Nextcloud 30 is the last major to have it, the app declares up to 35; use \\Psr\\Log\\LoggerInterface::error",
+        "lib/Service/TrendingService.php:52 OCP\\ICacheFactory::create(): Nextcloud 21 is the last major to have it, the app declares up to 35; Use either createLocking, createDistributed or createLocal"
+      ],
+      "lines": [
+        "2 uses in 2 files of the public API that a major of Nextcloud 31 to 35 no longer has. The app fails there where it comes to that line, or the server no longer calls the method it overrides.",
+        "  lib/Controller/ImportController.php:73 OCP\\ILogger::error(): Nextcloud 30 is the last major to have it, the app declares up to 35; use \\Psr\\Log\\LoggerInterface::error",
+        "  lib/Service/TrendingService.php:52 OCP\\ICacheFactory::create(): Nextcloud 21 is the last major to have it, the app declares up to 35; Use either createLocking, createDistributed or createLocal"
+      ]
+    },
+    {
+      "id": "route-target-missing",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/agora/list/{category}  agora.page.list  appinfo/routes.php:8 routes: OCA\\Agora\\Controller\\PageController has no method list()",
+        "GET /index.php/apps/agora/group/{slug}  agora.page.group  appinfo/routes.php:8 routes: OCA\\Agora\\Controller\\PageController has no method group()",
+        "OPTIONS /index.php/apps/agora/api/v1.0/{path}  agora.baseapiv1.preflighted_cors  appinfo/routes.php:8 routes: no class OCA\\Agora\\Controller\\BaseApiV1Controller"
+      ],
+      "lines": [
+        "3 routes name a controller class or a method that does not exist, or a method that is not public. A request to such a route ends in an error.",
+        "  GET /index.php/apps/agora/list/{category}  agora.page.list  appinfo/routes.php:8 routes: OCA\\Agora\\Controller\\PageController has no method list()",
+        "  GET /index.php/apps/agora/group/{slug}  agora.page.group  appinfo/routes.php:8 routes: OCA\\Agora\\Controller\\PageController has no method group()",
+        "  OPTIONS /index.php/apps/agora/api/v1.0/{path}  agora.baseapiv1.preflighted_cors  appinfo/routes.php:8 routes: no class OCA\\Agora\\Controller\\BaseApiV1Controller"
+      ]
+    },
+    {
+      "id": "route-duplicate",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/agora/: agora.page.index at appinfo/routes.php:8 routes, agora.page.index at lib/Controller/PageController.php:48",
+        "agora.page.index: agora.page.index at appinfo/routes.php:8 routes, agora.page.index at lib/Controller/PageController.php:48",
+        "GET /index.php/apps/agora/list/{category}: agora.page.list at appinfo/routes.php:8 routes, agora.page.indexlist at lib/Controller/PageController.php:49",
+        "GET /index.php/apps/agora/group/{slug}: agora.page.group at appinfo/routes.php:8 routes, agora.page.indexgroup at lib/Controller/PageController.php:50",
+        "GET /index.php/apps/agora/page/inquiry/{id}: agora.page.inquiry at appinfo/routes.php:8 routes, agora.page.inquiry at lib/Controller/PageController.php:90",
+        "agora.page.inquiry: agora.page.inquiry at appinfo/routes.php:8 routes, agora.page.inquiry at lib/Controller/PageController.php:90",
+        "GET /ocs/v2.php/apps/agora/api/v1.0/inquiry-family/{id}: ocs.agora.inquiryfamilyapi.get at lib/Controller/InquiryFamilyApiController.php:55, ocs.agora.inquiryfamilyapi.getbytype at lib/Controller/InquiryFamilyApiController.php:71",
+        "POST /ocs/v2.php/apps/agora/api/v1.0/inquiry-amily: ocs.agora.inquiryfamilyapi.create at lib/Controller/InquiryFamilyApiController.php:91, ocs.agora.optionfamilyapi.create at lib/Controller/OptionFamilyApiController.php:91",
+        "GET /ocs/v2.php/apps/agora/api/v1.0/option-family/{id}: ocs.agora.optionfamilyapi.get at lib/Controller/OptionFamilyApiController.php:55, ocs.agora.optionfamilyapi.getbytype at lib/Controller/OptionFamilyApiController.php:71"
+      ],
+      "lines": [
+        "9 verbs and paths or route names are declared more than once. The server keeps one route per name and takes the first that matches a request, so the other one is never reached.",
+        "  GET /index.php/apps/agora/: agora.page.index at appinfo/routes.php:8 routes, agora.page.index at lib/Controller/PageController.php:48",
+        "  agora.page.index: agora.page.index at appinfo/routes.php:8 routes, agora.page.index at lib/Controller/PageController.php:48",
+        "  GET /index.php/apps/agora/list/{category}: agora.page.list at appinfo/routes.php:8 routes, agora.page.indexlist at lib/Controller/PageController.php:49",
+        "  GET /index.php/apps/agora/group/{slug}: agora.page.group at appinfo/routes.php:8 routes, agora.page.indexgroup at lib/Controller/PageController.php:50",
+        "  GET /index.php/apps/agora/page/inquiry/{id}: agora.page.inquiry at appinfo/routes.php:8 routes, agora.page.inquiry at lib/Controller/PageController.php:90",
+        "  agora.page.inquiry: agora.page.inquiry at appinfo/routes.php:8 routes, agora.page.inquiry at lib/Controller/PageController.php:90",
+        "  GET /ocs/v2.php/apps/agora/api/v1.0/inquiry-family/{id}: ocs.agora.inquiryfamilyapi.get at lib/Controller/InquiryFamilyApiController.php:55, ocs.agora.inquiryfamilyapi.getbytype at lib/Controller/InquiryFamilyApiController.php:71",
+        "  POST /ocs/v2.php/apps/agora/api/v1.0/inquiry-amily: ocs.agora.inquiryfamilyapi.create at lib/Controller/InquiryFamilyApiController.php:91, ocs.agora.optionfamilyapi.create at lib/Controller/OptionFamilyApiController.php:91",
+        "  GET /ocs/v2.php/apps/agora/api/v1.0/option-family/{id}: ocs.agora.optionfamilyapi.get at lib/Controller/OptionFamilyApiController.php:55, ocs.agora.optionfamilyapi.getbytype at lib/Controller/OptionFamilyApiController.php:71"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 6
+        }
+      ]
+    },
+    {
+      "id": "frontend-url-without-route",
+      "level": "warn",
+      "places": [
+        "src/helpers/modules/ImportService.ts:75 /apps/agora/import"
+      ],
+      "lines": [
+        "The frontend or a template builds 1 URL below /apps/agora/ that no route of the app matches. The request fails at run time.",
+        "  src/helpers/modules/ImportService.ts:75 /apps/agora/import"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Command/Db/InitDbDefault.php:3505 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/Command/Db/InitDbDefault.php:3536 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/Command/Db/InitDbDefault.php:3649 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/Command/Db/InitDbDefault.php:3727 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/Command/Db/InitDbDefault.php:3793 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/Command/Db/InitDbDefault.php:3876 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/Command/Db/InitDbDefault.php:3941 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/Command/Share/TShareCommand.php:42 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "lib/Controller/ImportController.php:22 OCP\\ILogger: deprecated since Nextcloud 20; use the PSR-3 logger \\Psr\\Log\\LoggerInterface",
+        "lib/Controller/PageController.php:56 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Db/SupportEngineSqlRepository.php:77 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/Db/SupportResultSqlRepository.php:72 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/Db/SupportSqlRepository.php:88 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/Db/TableManager.php:32 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "lib/Db/TableManager.php:47 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "lib/Db/TableManager.php:124 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "lib/Db/TableManager.php:272 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "lib/Db/TableManager.php:594 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "lib/Db/TableManager.php:646 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "lib/Db/TableManager.php:702 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "lib/Db/TableManager.php:818 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "lib/Migration/RepairSteps/AddForeignKeys.php:124 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "lib/Migration/Version01050020251027120000.php:286 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01050020251027120000.php:287 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01050020251027120000.php:288 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01050020251027120000.php:289 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01050020251027120000.php:311 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01050020251027120000.php:312 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01050020251027120000.php:313 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01050020251027120000.php:314 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01060020251115120000.php:106 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01060020251115120000.php:107 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01060020251115120000.php:108 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01060020251115120000.php:109 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01070120260104120000.php:241 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01070120260104120000.php:242 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01070120260104120000.php:243 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01070120260104120000.php:244 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01070120260104120000.php:259 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01070120260104120000.php:260 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01070120260104120000.php:261 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01070120260104120000.php:262 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01070120260104120000.php:299 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01070120260104120000.php:300 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01070120260104120000.php:301 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01070120260104120000.php:302 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01070520260104120000.php:199 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01070520260104120000.php:202 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01070520260104120000.php:203 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01070520260104120000.php:234 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01070520260104120000.php:250 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01070520260104120000.php:292 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version01070520260104120000.php:997 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Model/User/User.php:61 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Model/User/User.php:62 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Model/User/User.php:63 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/AIService.php:45 OCP\\TaskProcessing\\TaskTypes\\TextToTextReformulation: deprecated since Nextcloud 35",
+        "lib/Service/AttachmentService.php:286 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Service/AttachmentService.php:287 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Service/AttachmentService.php:288 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "lib/Service/AttachmentService.php:293 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Service/AttachmentService.php:294 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Service/AttachmentService.php:295 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "lib/Service/AttachmentService.php:303 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Service/AttachmentService.php:313 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Service/AttachmentService.php:322 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Service/AttachmentService.php:328 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Service/AttachmentService.php:329 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Service/AttachmentService.php:330 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "lib/Service/AttachmentService.php:340 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Service/AttachmentService.php:341 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Service/AttachmentService.php:342 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "lib/Service/SettingsService.php:395 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/SystemService.php:177 OCP\\Collaboration\\Collaborators\\ISearch::search(): deprecated since Nextcloud 35; Use filteredSearch instead."
+      ],
+      "lines": [
+        "74 uses in 18 files of the public API that is deprecated in Nextcloud 31 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Command/Db/InitDbDefault.php:3505 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/Command/Db/InitDbDefault.php:3536 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/Command/Db/InitDbDefault.php:3649 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/Command/Db/InitDbDefault.php:3727 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/Command/Db/InitDbDefault.php:3793 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/Command/Db/InitDbDefault.php:3876 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/Command/Db/InitDbDefault.php:3941 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/Command/Share/TShareCommand.php:42 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "  lib/Controller/ImportController.php:22 OCP\\ILogger: deprecated since Nextcloud 20; use the PSR-3 logger \\Psr\\Log\\LoggerInterface",
+        "  lib/Controller/PageController.php:56 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Db/SupportEngineSqlRepository.php:77 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/Db/SupportResultSqlRepository.php:72 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/Db/SupportSqlRepository.php:88 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/Db/TableManager.php:32 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "  lib/Db/TableManager.php:47 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "  lib/Db/TableManager.php:124 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "  lib/Db/TableManager.php:272 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "  lib/Db/TableManager.php:594 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "  lib/Db/TableManager.php:646 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "  lib/Db/TableManager.php:702 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "  lib/Db/TableManager.php:818 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "  lib/Migration/RepairSteps/AddForeignKeys.php:124 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "  lib/Migration/Version01050020251027120000.php:286 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01050020251027120000.php:287 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01050020251027120000.php:288 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01050020251027120000.php:289 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01050020251027120000.php:311 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01050020251027120000.php:312 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01050020251027120000.php:313 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01050020251027120000.php:314 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01060020251115120000.php:106 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01060020251115120000.php:107 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01060020251115120000.php:108 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01060020251115120000.php:109 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01070120260104120000.php:241 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01070120260104120000.php:242 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01070120260104120000.php:243 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01070120260104120000.php:244 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01070120260104120000.php:259 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01070120260104120000.php:260 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01070120260104120000.php:261 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01070120260104120000.php:262 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01070120260104120000.php:299 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01070120260104120000.php:300 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01070120260104120000.php:301 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01070120260104120000.php:302 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01070520260104120000.php:199 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01070520260104120000.php:202 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01070520260104120000.php:203 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01070520260104120000.php:234 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01070520260104120000.php:250 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01070520260104120000.php:292 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version01070520260104120000.php:997 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Model/User/User.php:61 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Model/User/User.php:62 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Model/User/User.php:63 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/AIService.php:45 OCP\\TaskProcessing\\TaskTypes\\TextToTextReformulation: deprecated since Nextcloud 35",
+        "  lib/Service/AttachmentService.php:286 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Service/AttachmentService.php:287 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Service/AttachmentService.php:288 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "  lib/Service/AttachmentService.php:293 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Service/AttachmentService.php:294 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Service/AttachmentService.php:295 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "  lib/Service/AttachmentService.php:303 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Service/AttachmentService.php:313 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Service/AttachmentService.php:322 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Service/AttachmentService.php:328 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Service/AttachmentService.php:329 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Service/AttachmentService.php:330 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "  lib/Service/AttachmentService.php:340 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Service/AttachmentService.php:341 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Service/AttachmentService.php:342 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "  lib/Service/SettingsService.php:395 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/SystemService.php:177 OCP\\Collaboration\\Collaborators\\ISearch::search(): deprecated since Nextcloud 35; Use filteredSearch instead."
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 71
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/Cron/AutoReminderCron.php OCA\\Agora\\Cron\\AutoReminderCron",
+        "lib/Cron/JanitorCron.php OCA\\Agora\\Cron\\JanitorCron",
+        "lib/Cron/NotificationCron.php OCA\\Agora\\Cron\\NotificationCron"
+      ],
+      "lines": [
+        "3 timed jobs do not say whether they are time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/Cron/AutoReminderCron.php OCA\\Agora\\Cron\\AutoReminderCron",
+        "  lib/Cron/JanitorCron.php OCA\\Agora\\Cron\\JanitorCron",
+        "  lib/Cron/NotificationCron.php OCA\\Agora\\Cron\\NotificationCron"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Command/Db/InitDbDefault.php:3620 time()",
+        "lib/Command/Db/InitDbDefault.php:3699 time()",
+        "lib/Command/Db/InitDbDefault.php:3770 time()",
+        "lib/Command/Db/InitDbDefault.php:3855 time()",
+        "lib/Command/Db/InitDbDefault.php:3918 time()",
+        "lib/Cron/JanitorCron.php:65 time()",
+        "lib/Cron/JanitorCron.php:68 time()",
+        "lib/Cron/JanitorCron.php:71 time()",
+        "lib/Cron/JanitorCron.php:72 time()",
+        "lib/Cron/JanitorCron.php:73 time()",
+        "lib/Cron/JanitorCron.php:79 time()",
+        "lib/Cron/JanitorCron.php:109 time()",
+        "lib/Db/EntityWithUser.php:90 time()",
+        "lib/Db/Inquiry.php:506 time()",
+        "lib/Db/InquiryGroupMapper.php:138 time()",
+        "lib/Db/InquiryGroupMapper.php:182 time()",
+        "lib/Db/InquiryMapper.php:605 time()",
+        "lib/Db/InquiryMapper.php:655 time()",
+        "lib/Db/InquiryStatus.php:63 time()",
+        "lib/Db/InquiryStatus.php:64 time()",
+        "lib/Db/ModerationStatus.php:63 time()",
+        "lib/Db/ModerationStatus.php:64 time()",
+        "lib/Db/OptionMapper.php:332 time()",
+        "lib/Db/OptionMapper.php:347 time()",
+        "lib/Db/OptionMapper.php:366 time()",
+        "lib/Db/OptionMapper.php:374 time()",
+        "lib/Db/OptionMapper.php:398 time()",
+        "lib/Db/OptionMapper.php:399 time()",
+        "lib/Db/QuorumMapper.php:141 time()",
+        "lib/Db/SupportMapper.php:208 time()",
+        "lib/Db/SupportMapper.php:245 time()",
+        "lib/Db/SupportResultSqlRepository.php:35 time()",
+        "lib/Db/SupportResultSqlRepository.php:85 time()",
+        "lib/Db/TableManager.php:569 time()",
+        "lib/Migration/Version01070520260104120000.php:746 time()",
+        "lib/Model/Mail/ReminderMail.php:48 time()",
+        "lib/Model/Mail/ReminderMail.php:58 time()",
+        "lib/Model/Mail/ReminderMail.php:107 new DateTime()",
+        "lib/Model/Sequence.php:89 new DateTime()",
+        "lib/Service/ActivityService.php:88 time()",
+        "lib/Service/AttachmentService.php:173 time()",
+        "lib/Service/CalendarService.php:82 new DateTime()",
+        "lib/Service/CalendarService.php:86 new DateTime()",
+        "lib/Service/CommentService.php:91 time()",
+        "lib/Service/CommentService.php:129 time()",
+        "lib/Service/InquiryFamilyService.php:92 time()",
+        "lib/Service/InquiryGroupService.php:98 time()",
+        "lib/Service/InquiryGroupService.php:299 time()",
+        "lib/Service/InquiryGroupService.php:386 time()",
+        "lib/Service/InquiryGroupService.php:445 time()",
+        "lib/Service/InquiryGroupTypeService.php:132 time()",
+        "lib/Service/InquiryOptionTypeService.php:127 time()",
+        "lib/Service/InquiryService.php:290 time()",
+        "lib/Service/InquiryService.php:397 time()",
+        "lib/Service/InquiryService.php:400 time()",
+        "lib/Service/InquiryService.php:561 time()",
+        "lib/Service/InquiryService.php:568 time()",
+        "lib/Service/InquiryService.php:656 time()",
+        "lib/Service/InquiryService.php:657 time()",
+        "lib/Service/InquiryService.php:658 time()",
+        "lib/Service/InquiryService.php:676 time()",
+        "lib/Service/InquiryService.php:677 time()",
+        "lib/Service/InquiryService.php:706 time()",
+        "lib/Service/InquiryService.php:727 time()",
+        "lib/Service/InquiryService.php:815 time()",
+        "lib/Service/InquiryService.php:928 time()",
+        "lib/Service/InquiryStatusService.php:63 time()",
+        "lib/Service/InquiryStatusService.php:64 time()",
+        "lib/Service/InquiryStatusService.php:83 time()",
+        "lib/Service/InquiryTypeService.php:88 time()",
+        "lib/Service/LogService.php:35 time()",
+        "lib/Service/MailService.php:227 time()",
+        "lib/Service/MailService.php:293 time()",
+        "lib/Service/ModerationStatusService.php:63 time()",
+        "lib/Service/ModerationStatusService.php:64 time()",
+        "lib/Service/ModerationStatusService.php:83 time()",
+        "lib/Service/NotificationService.php:62 new DateTime()",
+        "lib/Service/NotificationService.php:73 new DateTime()",
+        "lib/Service/OfficialResponseService.php:53 time()",
+        "lib/Service/OptionFamilyService.php:118 time()",
+        "lib/Service/OptionService.php:452 time()",
+        "lib/Service/OptionService.php:528 time()",
+        "lib/Service/OptionService.php:616 time()",
+        "lib/Service/OptionService.php:650 time()",
+        "lib/Service/OptionService.php:654 time()",
+        "lib/Service/OptionService.php:688 time()",
+        "lib/Service/OptionService.php:689 time()",
+        "lib/Service/OptionService.php:719 time()",
+        "lib/Service/OptionService.php:720 time()",
+        "lib/Service/OptionService.php:765 time()",
+        "lib/Service/OptionService.php:766 time()",
+        "lib/Service/OptionService.php:833 time()",
+        "lib/Service/OptionService.php:917 time()",
+        "lib/Service/OptionService.php:998 time()",
+        "lib/Service/PreferencesService.php:60 time()",
+        "lib/Service/QuorumService.php:99 time()",
+        "lib/Service/QuorumService.php:129 time()",
+        "lib/Service/ShareService.php:453 time()",
+        "lib/Service/ShareService.php:483 time()",
+        "lib/Service/ShareService.php:745 time()",
+        "lib/Service/SupportEngineService.php:186 time()",
+        "lib/Service/SupportEngineService.php:196 time()",
+        "lib/Service/SupportEngineService.php:244 time()",
+        "lib/Service/SupportEngineService.php:250 time()",
+        "lib/Service/SupportEngineService.php:378 time()",
+        "lib/Service/SupportResultService.php:582 time()",
+        "lib/Service/SupportService.php:149 time()",
+        "lib/Service/TemplateLoader.php:170 time()",
+        "lib/Service/TemplateLoader.php:214 time()",
+        "lib/Service/TemplateLoader.php:244 time()",
+        "lib/Service/TemplateLoader.php:317 time()",
+        "lib/Service/TemplateLoader.php:372 time()",
+        "lib/Service/TrendingService.php:106 time()",
+        "lib/Service/WatchService.php:45 time()",
+        "lib/Service/WatchService.php:50 time()",
+        "lib/Service/WatchService.php:93 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 116 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Command/Db/InitDbDefault.php:3620 time()",
+        "  lib/Command/Db/InitDbDefault.php:3699 time()",
+        "  lib/Command/Db/InitDbDefault.php:3770 time()",
+        "  lib/Command/Db/InitDbDefault.php:3855 time()",
+        "  lib/Command/Db/InitDbDefault.php:3918 time()",
+        "  lib/Cron/JanitorCron.php:65 time()",
+        "  lib/Cron/JanitorCron.php:68 time()",
+        "  lib/Cron/JanitorCron.php:71 time()",
+        "  lib/Cron/JanitorCron.php:72 time()",
+        "  lib/Cron/JanitorCron.php:73 time()",
+        "  lib/Cron/JanitorCron.php:79 time()",
+        "  lib/Cron/JanitorCron.php:109 time()",
+        "  lib/Db/EntityWithUser.php:90 time()",
+        "  lib/Db/Inquiry.php:506 time()",
+        "  lib/Db/InquiryGroupMapper.php:138 time()",
+        "  lib/Db/InquiryGroupMapper.php:182 time()",
+        "  lib/Db/InquiryMapper.php:605 time()",
+        "  lib/Db/InquiryMapper.php:655 time()",
+        "  lib/Db/InquiryStatus.php:63 time()",
+        "  lib/Db/InquiryStatus.php:64 time()",
+        "  lib/Db/ModerationStatus.php:63 time()",
+        "  lib/Db/ModerationStatus.php:64 time()",
+        "  lib/Db/OptionMapper.php:332 time()",
+        "  lib/Db/OptionMapper.php:347 time()",
+        "  lib/Db/OptionMapper.php:366 time()",
+        "  lib/Db/OptionMapper.php:374 time()",
+        "  lib/Db/OptionMapper.php:398 time()",
+        "  lib/Db/OptionMapper.php:399 time()",
+        "  lib/Db/QuorumMapper.php:141 time()",
+        "  lib/Db/SupportMapper.php:208 time()",
+        "  lib/Db/SupportMapper.php:245 time()",
+        "  lib/Db/SupportResultSqlRepository.php:35 time()",
+        "  lib/Db/SupportResultSqlRepository.php:85 time()",
+        "  lib/Db/TableManager.php:569 time()",
+        "  lib/Migration/Version01070520260104120000.php:746 time()",
+        "  lib/Model/Mail/ReminderMail.php:48 time()",
+        "  lib/Model/Mail/ReminderMail.php:58 time()",
+        "  lib/Model/Mail/ReminderMail.php:107 new DateTime()",
+        "  lib/Model/Sequence.php:89 new DateTime()",
+        "  lib/Service/ActivityService.php:88 time()",
+        "  lib/Service/AttachmentService.php:173 time()",
+        "  lib/Service/CalendarService.php:82 new DateTime()",
+        "  lib/Service/CalendarService.php:86 new DateTime()",
+        "  lib/Service/CommentService.php:91 time()",
+        "  lib/Service/CommentService.php:129 time()",
+        "  lib/Service/InquiryFamilyService.php:92 time()",
+        "  lib/Service/InquiryGroupService.php:98 time()",
+        "  lib/Service/InquiryGroupService.php:299 time()",
+        "  lib/Service/InquiryGroupService.php:386 time()",
+        "  lib/Service/InquiryGroupService.php:445 time()",
+        "  lib/Service/InquiryGroupTypeService.php:132 time()",
+        "  lib/Service/InquiryOptionTypeService.php:127 time()",
+        "  lib/Service/InquiryService.php:290 time()",
+        "  lib/Service/InquiryService.php:397 time()",
+        "  lib/Service/InquiryService.php:400 time()",
+        "  lib/Service/InquiryService.php:561 time()",
+        "  lib/Service/InquiryService.php:568 time()",
+        "  lib/Service/InquiryService.php:656 time()",
+        "  lib/Service/InquiryService.php:657 time()",
+        "  lib/Service/InquiryService.php:658 time()",
+        "  lib/Service/InquiryService.php:676 time()",
+        "  lib/Service/InquiryService.php:677 time()",
+        "  lib/Service/InquiryService.php:706 time()",
+        "  lib/Service/InquiryService.php:727 time()",
+        "  lib/Service/InquiryService.php:815 time()",
+        "  lib/Service/InquiryService.php:928 time()",
+        "  lib/Service/InquiryStatusService.php:63 time()",
+        "  lib/Service/InquiryStatusService.php:64 time()",
+        "  lib/Service/InquiryStatusService.php:83 time()",
+        "  lib/Service/InquiryTypeService.php:88 time()",
+        "  lib/Service/LogService.php:35 time()",
+        "  lib/Service/MailService.php:227 time()",
+        "  lib/Service/MailService.php:293 time()",
+        "  lib/Service/ModerationStatusService.php:63 time()",
+        "  lib/Service/ModerationStatusService.php:64 time()",
+        "  lib/Service/ModerationStatusService.php:83 time()",
+        "  lib/Service/NotificationService.php:62 new DateTime()",
+        "  lib/Service/NotificationService.php:73 new DateTime()",
+        "  lib/Service/OfficialResponseService.php:53 time()",
+        "  lib/Service/OptionFamilyService.php:118 time()",
+        "  lib/Service/OptionService.php:452 time()",
+        "  lib/Service/OptionService.php:528 time()",
+        "  lib/Service/OptionService.php:616 time()",
+        "  lib/Service/OptionService.php:650 time()",
+        "  lib/Service/OptionService.php:654 time()",
+        "  lib/Service/OptionService.php:688 time()",
+        "  lib/Service/OptionService.php:689 time()",
+        "  lib/Service/OptionService.php:719 time()",
+        "  lib/Service/OptionService.php:720 time()",
+        "  lib/Service/OptionService.php:765 time()",
+        "  lib/Service/OptionService.php:766 time()",
+        "  lib/Service/OptionService.php:833 time()",
+        "  lib/Service/OptionService.php:917 time()",
+        "  lib/Service/OptionService.php:998 time()",
+        "  lib/Service/PreferencesService.php:60 time()",
+        "  lib/Service/QuorumService.php:99 time()",
+        "  lib/Service/QuorumService.php:129 time()",
+        "  lib/Service/ShareService.php:453 time()",
+        "  lib/Service/ShareService.php:483 time()",
+        "  lib/Service/ShareService.php:745 time()",
+        "  lib/Service/SupportEngineService.php:186 time()",
+        "  lib/Service/SupportEngineService.php:196 time()",
+        "  lib/Service/SupportEngineService.php:244 time()",
+        "  lib/Service/SupportEngineService.php:250 time()",
+        "  lib/Service/SupportEngineService.php:378 time()",
+        "  lib/Service/SupportResultService.php:582 time()",
+        "  lib/Service/SupportService.php:149 time()",
+        "  lib/Service/TemplateLoader.php:170 time()",
+        "  lib/Service/TemplateLoader.php:214 time()",
+        "  lib/Service/TemplateLoader.php:244 time()",
+        "  lib/Service/TemplateLoader.php:317 time()",
+        "  lib/Service/TemplateLoader.php:372 time()",
+        "  lib/Service/TrendingService.php:106 time()",
+        "  lib/Service/WatchService.php:45 time()",
+        "  lib/Service/WatchService.php:50 time()",
+        "  lib/Service/WatchService.php:93 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 113
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Controller/PublicController.php:87 getValueBool()",
+        "lib/Model/Settings/AppSettings.php:330 getValueType()",
+        "lib/Model/Settings/AppSettings.php:365 getValueBool()",
+        "lib/Model/Settings/AppSettings.php:369 getValueBool()",
+        "lib/Model/Settings/AppSettings.php:377 setValueBool()",
+        "lib/Model/Settings/AppSettings.php:388 getValueArray()",
+        "lib/Model/Settings/AppSettings.php:396 setValueArray()",
+        "lib/Model/Settings/AppSettings.php:407 getValueInt()",
+        "lib/Model/Settings/AppSettings.php:415 setValueInt()",
+        "lib/Model/Settings/AppSettings.php:426 getValueString()",
+        "lib/Model/Settings/AppSettings.php:434 setValueString()",
+        "lib/Model/Settings/AppSettings.php:446 getValueArray()",
+        "lib/Model/Settings/AppSettings.php:459 setValueArray()",
+        "lib/Model/Settings/AppSettings.php:597 getValueString()",
+        "lib/Model/Settings/AppSettings.php:658 getValueString()",
+        "lib/Model/Settings/AppSettings.php:742 getValueString()",
+        "lib/Model/Settings/AppSettings.php:743 getValueString()",
+        "lib/Model/Settings/AppSettings.php:744 getValueString()",
+        "lib/Model/Settings/SystemSettings.php:102 getValueString()",
+        "lib/Model/Settings/SystemSettings.php:118 getValueArray()",
+        "lib/Model/Settings/SystemSettings.php:157 getValueString()",
+        "lib/Model/Settings/SystemSettings.php:173 getValueArray()",
+        "lib/Service/SettingsService.php:395 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 23 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Controller/PublicController.php:87 getValueBool()",
+        "  lib/Model/Settings/AppSettings.php:330 getValueType()",
+        "  lib/Model/Settings/AppSettings.php:365 getValueBool()",
+        "  lib/Model/Settings/AppSettings.php:369 getValueBool()",
+        "  lib/Model/Settings/AppSettings.php:377 setValueBool()",
+        "  lib/Model/Settings/AppSettings.php:388 getValueArray()",
+        "  lib/Model/Settings/AppSettings.php:396 setValueArray()",
+        "  lib/Model/Settings/AppSettings.php:407 getValueInt()",
+        "  lib/Model/Settings/AppSettings.php:415 setValueInt()",
+        "  lib/Model/Settings/AppSettings.php:426 getValueString()",
+        "  lib/Model/Settings/AppSettings.php:434 setValueString()",
+        "  lib/Model/Settings/AppSettings.php:446 getValueArray()",
+        "  lib/Model/Settings/AppSettings.php:459 setValueArray()",
+        "  lib/Model/Settings/AppSettings.php:597 getValueString()",
+        "  lib/Model/Settings/AppSettings.php:658 getValueString()",
+        "  lib/Model/Settings/AppSettings.php:742 getValueString()",
+        "  lib/Model/Settings/AppSettings.php:743 getValueString()",
+        "  lib/Model/Settings/AppSettings.php:744 getValueString()",
+        "  lib/Model/Settings/SystemSettings.php:102 getValueString()",
+        "  lib/Model/Settings/SystemSettings.php:118 getValueArray()",
+        "  lib/Model/Settings/SystemSettings.php:157 getValueString()",
+        "  lib/Model/Settings/SystemSettings.php:173 getValueArray()",
+        "  lib/Service/SettingsService.php:395 getAppValue()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 20
+        }
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/CategoryController.php:41 OCA\\Agora\\Controller\\CategoryController::getAll()",
+        "lib/Controller/ImportController.php:31 OCA\\Agora\\Controller\\ImportController::importFile()",
+        "lib/Controller/InquiryTypeController.php:38 OCA\\Agora\\Controller\\InquiryTypeController::index()",
+        "lib/Controller/InquiryTypeController.php:56 OCA\\Agora\\Controller\\InquiryTypeController::byFamily()",
+        "lib/Controller/InquiryTypeController.php:75 OCA\\Agora\\Controller\\InquiryTypeController::show()",
+        "lib/Controller/InquiryTypeController.php:95 OCA\\Agora\\Controller\\InquiryTypeController::createForm()",
+        "lib/Controller/InquiryTypeController.php:112 OCA\\Agora\\Controller\\InquiryTypeController::create()",
+        "lib/Controller/InquiryTypeController.php:178 OCA\\Agora\\Controller\\InquiryTypeController::editForm()",
+        "lib/Controller/InquiryTypeController.php:198 OCA\\Agora\\Controller\\InquiryTypeController::update()",
+        "lib/Controller/InquiryTypeController.php:257 OCA\\Agora\\Controller\\InquiryTypeController::deleteConfirm()",
+        "lib/Controller/InquiryTypeController.php:276 OCA\\Agora\\Controller\\InquiryTypeController::delete()",
+        "lib/Controller/InquiryTypeController.php:327 OCA\\Agora\\Controller\\InquiryTypeController::jsonAll()",
+        "lib/Controller/InquiryTypeController.php:346 OCA\\Agora\\Controller\\InquiryTypeController::fieldsConfig()",
+        "lib/Controller/LocationController.php:41 OCA\\Agora\\Controller\\LocationController::getAll()",
+        "lib/Controller/OfficialResponseController.php:33 OCA\\Agora\\Controller\\OfficialResponseController::index()",
+        "lib/Controller/OfficialResponseController.php:42 OCA\\Agora\\Controller\\OfficialResponseController::show()",
+        "lib/Controller/OfficialResponseController.php:55 OCA\\Agora\\Controller\\OfficialResponseController::create()",
+        "lib/Controller/OfficialResponseController.php:64 OCA\\Agora\\Controller\\OfficialResponseController::update()",
+        "lib/Controller/OfficialResponseController.php:77 OCA\\Agora\\Controller\\OfficialResponseController::delete()",
+        "lib/Controller/OfficialResponseController.php:91 OCA\\Agora\\Controller\\OfficialResponseController::count()"
+      ],
+      "lines": [
+        "20 public methods of controllers are reached by no route.",
+        "  lib/Controller/CategoryController.php:41 OCA\\Agora\\Controller\\CategoryController::getAll()",
+        "  lib/Controller/ImportController.php:31 OCA\\Agora\\Controller\\ImportController::importFile()",
+        "  lib/Controller/InquiryTypeController.php:38 OCA\\Agora\\Controller\\InquiryTypeController::index()",
+        "  lib/Controller/InquiryTypeController.php:56 OCA\\Agora\\Controller\\InquiryTypeController::byFamily()",
+        "  lib/Controller/InquiryTypeController.php:75 OCA\\Agora\\Controller\\InquiryTypeController::show()",
+        "  lib/Controller/InquiryTypeController.php:95 OCA\\Agora\\Controller\\InquiryTypeController::createForm()",
+        "  lib/Controller/InquiryTypeController.php:112 OCA\\Agora\\Controller\\InquiryTypeController::create()",
+        "  lib/Controller/InquiryTypeController.php:178 OCA\\Agora\\Controller\\InquiryTypeController::editForm()",
+        "  lib/Controller/InquiryTypeController.php:198 OCA\\Agora\\Controller\\InquiryTypeController::update()",
+        "  lib/Controller/InquiryTypeController.php:257 OCA\\Agora\\Controller\\InquiryTypeController::deleteConfirm()",
+        "  lib/Controller/InquiryTypeController.php:276 OCA\\Agora\\Controller\\InquiryTypeController::delete()",
+        "  lib/Controller/InquiryTypeController.php:327 OCA\\Agora\\Controller\\InquiryTypeController::jsonAll()",
+        "  lib/Controller/InquiryTypeController.php:346 OCA\\Agora\\Controller\\InquiryTypeController::fieldsConfig()",
+        "  lib/Controller/LocationController.php:41 OCA\\Agora\\Controller\\LocationController::getAll()",
+        "  lib/Controller/OfficialResponseController.php:33 OCA\\Agora\\Controller\\OfficialResponseController::index()",
+        "  lib/Controller/OfficialResponseController.php:42 OCA\\Agora\\Controller\\OfficialResponseController::show()",
+        "  lib/Controller/OfficialResponseController.php:55 OCA\\Agora\\Controller\\OfficialResponseController::create()",
+        "  lib/Controller/OfficialResponseController.php:64 OCA\\Agora\\Controller\\OfficialResponseController::update()",
+        "  lib/Controller/OfficialResponseController.php:77 OCA\\Agora\\Controller\\OfficialResponseController::delete()",
+        "  lib/Controller/OfficialResponseController.php:91 OCA\\Agora\\Controller\\OfficialResponseController::count()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 17
+        }
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 107 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version01070220260104120000.php:42 getIndexes() on a table whose name is no constant",
+        "lib/Migration/Version01070220260104120000.php:45 dropIndex() on a table whose name is no constant",
+        "lib/Migration/Version01070220260104120000.php:51 hasIndex() on a table whose name is no constant",
+        "lib/Migration/Version01070220260104120000.php:52 addUniqueIndex() on a table whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version01070220260104120000.php:42 getIndexes() on a table whose name is no constant",
+        "  lib/Migration/Version01070220260104120000.php:45 dropIndex() on a table whose name is no constant",
+        "  lib/Migration/Version01070220260104120000.php:51 hasIndex() on a table whose name is no constant",
+        "  lib/Migration/Version01070220260104120000.php:52 addUniqueIndex() on a table whose name is no constant"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "endpoints": 353,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/",
+      "target": "OCA\\Agora\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/",
+      "target": "OCA\\Agora\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/admin/options",
+      "target": "OCA\\Agora\\Controller\\OptionController::listForAdmin",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/administration",
+      "target": "OCA\\Agora\\Controller\\AdminController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/administration/autoreminder/run",
+      "target": "OCA\\Agora\\Controller\\AdminController::runAutoReminderJob",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/administration/cleaninstance/run",
+      "target": "OCA\\Agora\\Controller\\AdminController::runCleanInstance",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/administration/inquiries",
+      "target": "OCA\\Agora\\Controller\\AdminController::list",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/administration/inquiry/{inquiryId}/takeover",
+      "target": "OCA\\Agora\\Controller\\AdminController::takeover",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/administration/janitor/run",
+      "target": "OCA\\Agora\\Controller\\AdminController::runJanitorJob",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/administration/notification/run",
+      "target": "OCA\\Agora\\Controller\\AdminController::runNotificationJob",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/ai/inquiry/{inquiryId}/creative-ideas",
+      "target": "OCA\\Agora\\Controller\\AiController::generateCreativeIdeas",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/ai/inquiry/{inquiryId}/decision-options",
+      "target": "OCA\\Agora\\Controller\\AiController::generateDecisionOptions",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/ai/inquiry/{inquiryId}/document-options",
+      "target": "OCA\\Agora\\Controller\\AiController::generateDocumentOptions",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/ai/inquiry/{inquiryId}/enhance",
+      "target": "OCA\\Agora\\Controller\\AiController::enhanceContent",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/ai/inquiry/{inquiryId}/generate-options",
+      "target": "OCA\\Agora\\Controller\\AiController::generateOptionsFromInquiry",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/ai/inquiry/{inquiryId}/sentiment",
+      "target": "OCA\\Agora\\Controller\\AiController::analyzeSentiment",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/ai/inquiry/{inquiryId}/summarize",
+      "target": "OCA\\Agora\\Controller\\AiController::summarizeInquiry",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/agora/api/v1.0/{path}",
+      "target": "OCA\\Agora\\Controller\\BaseApiV1Controller::preflightedCors",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/api/v1/attachment/{attachmentId}",
+      "target": "OCA\\Agora\\Controller\\AttachmentApiController::remove",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/api/v1/inquiry/{inquiryId}/attachment",
+      "target": "OCA\\Agora\\Controller\\AttachmentApiController::add",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/api/v1/inquiry/{inquiryId}/attachments",
+      "target": "OCA\\Agora\\Controller\\AttachmentApiController::getAll",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/attachment/{attachmentId}",
+      "target": "OCA\\Agora\\Controller\\AttachmentController::remove",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/calendars",
+      "target": "OCA\\Agora\\Controller\\UserController::getCalendars",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/check/emailaddress/{emailAddress}",
+      "target": "OCA\\Agora\\Controller\\PublicController::validateEmailAddress",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/check/username",
+      "target": "OCA\\Agora\\Controller\\PublicController::validatePublicDisplayName",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/comment/{commentId}",
+      "target": "OCA\\Agora\\Controller\\CommentController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/comment/{commentId}/restore",
+      "target": "OCA\\Agora\\Controller\\CommentController::restore",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/group/{groupId}/attachment",
+      "target": "OCA\\Agora\\Controller\\AttachmentController::addGroup",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/group/{slug}",
+      "target": "OCA\\Agora\\Controller\\PageController::group",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/group/{slug}",
+      "target": "OCA\\Agora\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/groups",
+      "target": "OCA\\Agora\\Controller\\SystemController::groupAll",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/groups/{query}",
+      "target": "OCA\\Agora\\Controller\\SystemController::groupSearch",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquiries",
+      "target": "OCA\\Agora\\Controller\\InquiryController::listInquiries",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquiry-families",
+      "target": "OCA\\Agora\\Controller\\InquiryFamilyController::list",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquiry-families/search/{searchTerm}",
+      "target": "OCA\\Agora\\Controller\\InquiryFamilyController::search",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquiry-families/sort-orders",
+      "target": "OCA\\Agora\\Controller\\InquiryFamilyController::updateSortOrders",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/inquiry-family",
+      "target": "OCA\\Agora\\Controller\\InquiryFamilyController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/inquiry-family/{id}",
+      "target": "OCA\\Agora\\Controller\\InquiryFamilyController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquiry-family/{id}",
+      "target": "OCA\\Agora\\Controller\\InquiryFamilyController::get",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquiry-family/{id}",
+      "target": "OCA\\Agora\\Controller\\InquiryFamilyController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquiry-family/check/{inquiryType}",
+      "target": "OCA\\Agora\\Controller\\InquiryFamilyController::checkExists",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquiry-family/type/{inquiryType}",
+      "target": "OCA\\Agora\\Controller\\InquiryFamilyController::getByType",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}",
+      "target": "OCA\\Agora\\Controller\\InquiryController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}",
+      "target": "OCA\\Agora\\Controller\\InquiryController::getFull",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}",
+      "target": "OCA\\Agora\\Controller\\InquiryController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/addresses",
+      "target": "OCA\\Agora\\Controller\\InquiryController::getParticipantsEmailAddresses",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/attachment",
+      "target": "OCA\\Agora\\Controller\\AttachmentController::add",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/attachments",
+      "target": "OCA\\Agora\\Controller\\AttachmentController::getAll",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/changeowner/{targetUserId}",
+      "target": "OCA\\Agora\\Controller\\InquiryController::changeOwner",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/childs",
+      "target": "OCA\\Agora\\Controller\\InquiryController::getChildInquiryIds",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/clone",
+      "target": "OCA\\Agora\\Controller\\InquiryController::clone",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/close",
+      "target": "OCA\\Agora\\Controller\\InquiryController::close",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/comment",
+      "target": "OCA\\Agora\\Controller\\CommentController::add",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/comments",
+      "target": "OCA\\Agora\\Controller\\CommentController::list",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/confirmation",
+      "target": "OCA\\Agora\\Controller\\InquiryController::sendConfirmation",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/inquiry",
+      "target": "OCA\\Agora\\Controller\\InquiryController::get",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/inviteAll",
+      "target": "OCA\\Agora\\Controller\\ShareController::sendAllInvitations",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/links",
+      "target": "OCA\\Agora\\Controller\\InquiryLinkController::deleteByInquiry",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/links",
+      "target": "OCA\\Agora\\Controller\\InquiryLinkController::listByInquiry",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/links",
+      "target": "OCA\\Agora\\Controller\\InquiryLinkController::createMultiple",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/lockAnonymous",
+      "target": "OCA\\Agora\\Controller\\InquiryController::lockAnonymous",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/options",
+      "target": "OCA\\Agora\\Controller\\OptionController::listByInquiry",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/options/hierarchical",
+      "target": "OCA\\Agora\\Controller\\OptionController::listHierarchical",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/publicshare",
+      "target": "OCA\\Agora\\Controller\\ShareController::addPublicShare",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/quorum/phase/{phase}/type/{type}",
+      "target": "OCA\\Agora\\Controller\\QuorumController::getByInquiryPhaseType",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/quorums",
+      "target": "OCA\\Agora\\Controller\\QuorumController::deleteByInquiry",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/quorums",
+      "target": "OCA\\Agora\\Controller\\QuorumController::listByInquiry",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/quorums/phase/{phase}",
+      "target": "OCA\\Agora\\Controller\\QuorumController::listByInquiryAndPhase",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/reopen",
+      "target": "OCA\\Agora\\Controller\\InquiryController::reopen",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/share",
+      "target": "OCA\\Agora\\Controller\\ShareController::add",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/shares",
+      "target": "OCA\\Agora\\Controller\\ShareController::list",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/subscribe",
+      "target": "OCA\\Agora\\Controller\\SubscriptionController::subscribe",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/subscription",
+      "target": "OCA\\Agora\\Controller\\SubscriptionController::get",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/toggleArchive",
+      "target": "OCA\\Agora\\Controller\\InquiryController::toggleArchive",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/unsubscribe",
+      "target": "OCA\\Agora\\Controller\\SubscriptionController::unsubscribe",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/updatemiscfield",
+      "target": "OCA\\Agora\\Controller\\InquiryController::updateMiscField",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquiry/{inquiryId}/watch",
+      "target": "OCA\\Agora\\Controller\\WatchController::watchInquiry",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/inquiry/add",
+      "target": "OCA\\Agora\\Controller\\InquiryController::add",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/inquiry/families",
+      "target": "OCA\\Agora\\Controller\\SettingsController::addInquiryFamily",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/inquiry/families/{familyId}",
+      "target": "OCA\\Agora\\Controller\\SettingsController::deleteInquiryFamily",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquiry/families/{familyId}",
+      "target": "OCA\\Agora\\Controller\\SettingsController::updateInquiryFamily",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/inquiry/get-text-ai",
+      "target": "OCA\\Agora\\Controller\\InquiryController::getTextAi",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/inquiry/group-types",
+      "target": "OCA\\Agora\\Controller\\SettingsController::addInquiryGroupType",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/inquiry/group-types/{id}",
+      "target": "OCA\\Agora\\Controller\\SettingsController::deleteInquiryGroupType",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquiry/group-types/{id}",
+      "target": "OCA\\Agora\\Controller\\SettingsController::updateInquiryGroupType",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquiry/submitinquiry/{inquiryId}",
+      "target": "OCA\\Agora\\Controller\\InquiryController::submitInquiry",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/inquiry/support/{inquiryId}/{userId}/{optionId}",
+      "target": "OCA\\Agora\\Controller\\SupportController::remove",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/inquiry/support/{inquiryId}/{userId}/{optionId}",
+      "target": "OCA\\Agora\\Controller\\SupportController::add",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquiry/support/{inquiryId}/{userId}/{optionId}",
+      "target": "OCA\\Agora\\Controller\\SupportController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/inquiry/support/{inquiryId}/{userId}/{optionId}/{engineId}",
+      "target": "OCA\\Agora\\Controller\\SupportController::removeWithEngine",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquiry/support/inquiry/{inquiryId}",
+      "target": "OCA\\Agora\\Controller\\SupportController::getByInquiryId",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/inquiry/support/inquiry/{inquiryId}/all",
+      "target": "OCA\\Agora\\Controller\\SupportController::removeAll",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquiry/support/stats/grouped",
+      "target": "OCA\\Agora\\Controller\\SupportController::getGroupedStats",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquiry/support/user/{userId}",
+      "target": "OCA\\Agora\\Controller\\SupportController::getByUser",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquiry/transfer/{sourceUserId}/{targetUserId}",
+      "target": "OCA\\Agora\\Controller\\InquiryController::transferInquiries",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/inquiry/types",
+      "target": "OCA\\Agora\\Controller\\SettingsController::addInquiryType",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/inquiry/types/{typeId}",
+      "target": "OCA\\Agora\\Controller\\SettingsController::deleteInquiryType",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquiry/types/{typeId}",
+      "target": "OCA\\Agora\\Controller\\SettingsController::updateInquiryType",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquiry/updateaccess/{inquiryId}/{access}",
+      "target": "OCA\\Agora\\Controller\\InquiryController::updateAccess",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquiry/updateconfig/{inquiryId}",
+      "target": "OCA\\Agora\\Controller\\InquiryController::updateConfiguration",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquiry/updatestatus/{inquiryId}/{status}",
+      "target": "OCA\\Agora\\Controller\\InquiryController::updateInquiryStatus",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquirygroup/{inquiryGroupId}",
+      "target": "OCA\\Agora\\Controller\\InquiryGroupController::get",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquirygroup/{inquiryGroupId}/change-owner",
+      "target": "OCA\\Agora\\Controller\\InquiryGroupController::changeOwner",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/inquirygroup/{inquiryGroupId}/clone",
+      "target": "OCA\\Agora\\Controller\\InquiryGroupController::cloneGroup",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/inquirygroup/{inquiryGroupId}/inquiry/{inquiryId}",
+      "target": "OCA\\Agora\\Controller\\InquiryGroupController::removeInquiry",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquirygroup/{inquiryGroupId}/inquiry/{inquiryId}",
+      "target": "OCA\\Agora\\Controller\\InquiryGroupController::addInquiry",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquirygroup/{inquiryGroupId}/reorder",
+      "target": "OCA\\Agora\\Controller\\InquiryGroupController::reorderInquiries",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/inquirygroup/{inquiryGroupId}/share",
+      "target": "OCA\\Agora\\Controller\\ShareController::addForInquiryGroup",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquirygroup/{inquiryGroupId}/shares",
+      "target": "OCA\\Agora\\Controller\\ShareController::listForInquiryGroup",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquirygroup/{inquiryGroupId}/update",
+      "target": "OCA\\Agora\\Controller\\InquiryGroupController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquirygroup/{inquiryId}/updatemiscfield",
+      "target": "OCA\\Agora\\Controller\\InquiryGroupController::updateMiscField",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/inquirygroup/delete/{inquiryGroupId}",
+      "target": "OCA\\Agora\\Controller\\InquiryGroupController::deleteGroup",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/inquirygroup/new",
+      "target": "OCA\\Agora\\Controller\\InquiryGroupController::addGroup",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/inquirygroup/new/inquiry/{inquiryId}",
+      "target": "OCA\\Agora\\Controller\\InquiryGroupController::add",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/inquirygroup/update/{inquiryGroupId}",
+      "target": "OCA\\Agora\\Controller\\InquiryGroupController::updateGroup",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/inquirygroups",
+      "target": "OCA\\Agora\\Controller\\InquiryGroupController::list",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/link",
+      "target": "OCA\\Agora\\Controller\\InquiryLinkController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/link/{id}",
+      "target": "OCA\\Agora\\Controller\\InquiryLinkController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/link/{id}",
+      "target": "OCA\\Agora\\Controller\\InquiryLinkController::get",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/link/{id}",
+      "target": "OCA\\Agora\\Controller\\InquiryLinkController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/links/target-app/{targetApp}",
+      "target": "OCA\\Agora\\Controller\\InquiryLinkController::listByTargetApp",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/links/target/{targetApp}/{targetType}/{targetId}",
+      "target": "OCA\\Agora\\Controller\\InquiryLinkController::listByTarget",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/list/{category}",
+      "target": "OCA\\Agora\\Controller\\PageController::list",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/list/{category}",
+      "target": "OCA\\Agora\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/option",
+      "target": "OCA\\Agora\\Controller\\OptionController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/option-families",
+      "target": "OCA\\Agora\\Controller\\OptionFamilyController::list",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/option-families/search/{searchTerm}",
+      "target": "OCA\\Agora\\Controller\\OptionFamilyController::search",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/option-families/sort-orders",
+      "target": "OCA\\Agora\\Controller\\OptionFamilyController::updateSortOrders",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/option-family",
+      "target": "OCA\\Agora\\Controller\\OptionFamilyController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/option-family/{id}",
+      "target": "OCA\\Agora\\Controller\\OptionFamilyController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/option-family/{id}",
+      "target": "OCA\\Agora\\Controller\\OptionFamilyController::get",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/option-family/{id}",
+      "target": "OCA\\Agora\\Controller\\OptionFamilyController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/option-family/check/{optionType}",
+      "target": "OCA\\Agora\\Controller\\OptionFamilyController::checkExists",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/option-family/type/{optionType}",
+      "target": "OCA\\Agora\\Controller\\OptionFamilyController::getByType",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/option/{optionId}",
+      "target": "OCA\\Agora\\Controller\\OptionController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/option/{optionId}",
+      "target": "OCA\\Agora\\Controller\\OptionController::get",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/option/{optionId}",
+      "target": "OCA\\Agora\\Controller\\OptionController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/option/{optionId}/access",
+      "target": "OCA\\Agora\\Controller\\OptionController::setAccess",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/option/{optionId}/action",
+      "target": "OCA\\Agora\\Controller\\OptionController::applyAction",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/option/{optionId}/archive",
+      "target": "OCA\\Agora\\Controller\\OptionController::archive",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/option/{optionId}/archive/recursive",
+      "target": "OCA\\Agora\\Controller\\OptionController::archiveRecursive",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/option/{optionId}/clone",
+      "target": "OCA\\Agora\\Controller\\OptionController::clone",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/option/{optionId}/config",
+      "target": "OCA\\Agora\\Controller\\OptionController::updateConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/option/{optionId}/events",
+      "target": "OCA\\Agora\\Controller\\OptionController::findCalendarEvents",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/option/{optionId}/full",
+      "target": "OCA\\Agora\\Controller\\OptionController::getFull",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/option/{optionId}/participants/emails",
+      "target": "OCA\\Agora\\Controller\\OptionController::getParticipantEmails",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/option/{optionId}/quorums",
+      "target": "OCA\\Agora\\Controller\\QuorumController::deleteByOption",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/option/{optionId}/quorums",
+      "target": "OCA\\Agora\\Controller\\QuorumController::listByOption",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/option/{optionId}/quorums/phase/{phase}",
+      "target": "OCA\\Agora\\Controller\\QuorumController::listByOptionAndPhase",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/option/{optionId}/restore",
+      "target": "OCA\\Agora\\Controller\\OptionController::restore",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/option/{optionId}/restore/recursive",
+      "target": "OCA\\Agora\\Controller\\OptionController::restoreRecursive",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/option/{optionId}/sort",
+      "target": "OCA\\Agora\\Controller\\OptionController::updateSortOrder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/option/{optionId}/status",
+      "target": "OCA\\Agora\\Controller\\OptionController::setStatus",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/option/{optionId}/takeover",
+      "target": "OCA\\Agora\\Controller\\OptionController::takeover",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/option/{optionId}/transfer",
+      "target": "OCA\\Agora\\Controller\\OptionController::transfer",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/option/{parentId}/children",
+      "target": "OCA\\Agora\\Controller\\OptionController::getChildren",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/option/families",
+      "target": "OCA\\Agora\\Controller\\SettingsController::addOptionFamily",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/option/families/{id}",
+      "target": "OCA\\Agora\\Controller\\SettingsController::deleteOptionFamily",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/option/families/{id}",
+      "target": "OCA\\Agora\\Controller\\SettingsController::updateOptionFamily",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/option/types",
+      "target": "OCA\\Agora\\Controller\\SettingsController::addOptionType",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/option/types/{id}",
+      "target": "OCA\\Agora\\Controller\\SettingsController::deleteOptionType",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/option/types/{id}",
+      "target": "OCA\\Agora\\Controller\\SettingsController::updateOptionType",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/options",
+      "target": "OCA\\Agora\\Controller\\OptionController::list",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/options/enums",
+      "target": "OCA\\Agora\\Controller\\OptionController::getEnums",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/options/fields/{type}",
+      "target": "OCA\\Agora\\Controller\\OptionController::getFields",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/options/reorder",
+      "target": "OCA\\Agora\\Controller\\OptionController::reorder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/options/responses/{type}",
+      "target": "OCA\\Agora\\Controller\\OptionController::getAllowedResponses",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/options/search",
+      "target": "OCA\\Agora\\Controller\\OptionController::search",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/page/inquiry/{id}",
+      "target": "OCA\\Agora\\Controller\\PageController::inquiry",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/page/inquiry/{id}",
+      "target": "OCA\\Agora\\Controller\\PageController::inquiry",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/preferences",
+      "target": "OCA\\Agora\\Controller\\UserController::getPreferences",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/preferences",
+      "target": "OCA\\Agora\\Controller\\UserController::writePreferences",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/quorum",
+      "target": "OCA\\Agora\\Controller\\QuorumController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/quorum/{id}",
+      "target": "OCA\\Agora\\Controller\\QuorumController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/quorum/{id}",
+      "target": "OCA\\Agora\\Controller\\QuorumController::get",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/quorum/{id}",
+      "target": "OCA\\Agora\\Controller\\QuorumController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/quorum/{id}/check",
+      "target": "OCA\\Agora\\Controller\\QuorumController::checkQuorum",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/quorums/sort-orders",
+      "target": "OCA\\Agora\\Controller\\QuorumController::updateSortOrders",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/s/{token}",
+      "target": "OCA\\Agora\\Controller\\PublicController::supportPage",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/s/{token}/comment",
+      "target": "OCA\\Agora\\Controller\\PublicController::addComment",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/s/{token}/comment/{commentId}",
+      "target": "OCA\\Agora\\Controller\\PublicController::deleteComment",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/s/{token}/comment/{commentId}/restore",
+      "target": "OCA\\Agora\\Controller\\PublicController::restoreComment",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/s/{token}/comments",
+      "target": "OCA\\Agora\\Controller\\PublicController::getComments",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/s/{token}/email",
+      "target": "OCA\\Agora\\Controller\\PublicController::deleteEmailAddress",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/s/{token}/email/{emailAddress}",
+      "target": "OCA\\Agora\\Controller\\PublicController::setEmailAddress",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/s/{token}/inquiry",
+      "target": "OCA\\Agora\\Controller\\PublicController::getInquiry",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/s/{token}/name/{displayName}",
+      "target": "OCA\\Agora\\Controller\\PublicController::setDisplayName",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/s/{token}/option",
+      "target": "OCA\\Agora\\Controller\\PublicController::addOption",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/s/{token}/option/{optionId}",
+      "target": "OCA\\Agora\\Controller\\PublicController::deleteOption",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/s/{token}/option/{optionId}/restore",
+      "target": "OCA\\Agora\\Controller\\PublicController::restoreOption",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/s/{token}/options",
+      "target": "OCA\\Agora\\Controller\\PublicController::getOptions",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/s/{token}/register",
+      "target": "OCA\\Agora\\Controller\\PublicController::register",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/s/{token}/resend",
+      "target": "OCA\\Agora\\Controller\\PublicController::resendInvitation",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/s/{token}/session",
+      "target": "OCA\\Agora\\Controller\\PublicController::getSession",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/s/{token}/share",
+      "target": "OCA\\Agora\\Controller\\PublicController::getShare",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/s/{token}/subscribe",
+      "target": "OCA\\Agora\\Controller\\PublicController::subscribe",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/s/{token}/subscription",
+      "target": "OCA\\Agora\\Controller\\PublicController::getSubscription",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/s/{token}/support",
+      "target": "OCA\\Agora\\Controller\\PublicController::setSupport",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/s/{token}/support/{commentId}",
+      "target": "OCA\\Agora\\Controller\\PublicController::deleteSupport",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/s/{token}/supports",
+      "target": "OCA\\Agora\\Controller\\PublicController::getSupports",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/s/{token}/supports/orphaned",
+      "target": "OCA\\Agora\\Controller\\PublicController::deleteOrphanedSupports",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/s/{token}/unsubscribe",
+      "target": "OCA\\Agora\\Controller\\PublicController::unsubscribe",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/s/{token}/user",
+      "target": "OCA\\Agora\\Controller\\PublicController::deleteUser",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/s/{token}/watch",
+      "target": "OCA\\Agora\\Controller\\PublicController::watchInquiry",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/search/users/{query}",
+      "target": "OCA\\Agora\\Controller\\SystemController::userSearch",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/session",
+      "target": "OCA\\Agora\\Controller\\UserController::getSession",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/settings/app",
+      "target": "OCA\\Agora\\Controller\\SettingsController::getAppSettings",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/settings/app",
+      "target": "OCA\\Agora\\Controller\\SettingsController::writeAppSettings",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/settings/categories",
+      "target": "OCA\\Agora\\Controller\\SettingsController::addCategory",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/settings/categories/{categoryId}",
+      "target": "OCA\\Agora\\Controller\\SettingsController::deleteCategory",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/settings/categories/{categoryId}",
+      "target": "OCA\\Agora\\Controller\\SettingsController::updateCategory",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/settings/inquiry-statuses",
+      "target": "OCA\\Agora\\Controller\\SettingsController::addInquiryStatus",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/settings/inquiry-statuses/{inquiryStatusId}",
+      "target": "OCA\\Agora\\Controller\\SettingsController::deleteInquiryStatus",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/settings/inquiry-statuses/{inquiryStatusId}",
+      "target": "OCA\\Agora\\Controller\\SettingsController::updatInquiryStatus",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/settings/locations",
+      "target": "OCA\\Agora\\Controller\\SettingsController::addLocation",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/settings/locations/{locationId}",
+      "target": "OCA\\Agora\\Controller\\SettingsController::deleteLocation",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/settings/locations/{locationId}",
+      "target": "OCA\\Agora\\Controller\\SettingsController::updateLocation",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/settings/moderation-statuses",
+      "target": "OCA\\Agora\\Controller\\SettingsController::addModerationStatus",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/settings/moderation-statuses/{moderationStatusId}",
+      "target": "OCA\\Agora\\Controller\\SettingsController::deleteModerationStatus",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/settings/moderation-statuses/{moderationStatusId}",
+      "target": "OCA\\Agora\\Controller\\SettingsController::updateModerationStatus",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/settings/types",
+      "target": "OCA\\Agora\\Controller\\SettingsController::addType",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/settings/types/{typeId}",
+      "target": "OCA\\Agora\\Controller\\SettingsController::deleteType",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/settings/types/{typeId}",
+      "target": "OCA\\Agora\\Controller\\SettingsController::updateType",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/share/{token}",
+      "target": "OCA\\Agora\\Controller\\ShareController::delete",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/share/{token}/admin",
+      "target": "OCA\\Agora\\Controller\\ShareController::userToAdmin",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/share/{token}/email",
+      "target": "OCA\\Agora\\Controller\\ShareController::setEmailAddress",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/share/{token}/invite",
+      "target": "OCA\\Agora\\Controller\\ShareController::sendInvitation",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/share/{token}/lock",
+      "target": "OCA\\Agora\\Controller\\ShareController::lock",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/share/{token}/publicinquiryemail/{value}",
+      "target": "OCA\\Agora\\Controller\\ShareController::setPublicInquiryEmail",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/share/{token}/resolve",
+      "target": "OCA\\Agora\\Controller\\ShareController::resolveGroup",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/share/{token}/restore",
+      "target": "OCA\\Agora\\Controller\\ShareController::restore",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/share/{token}/setlabel",
+      "target": "OCA\\Agora\\Controller\\ShareController::setLabel",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/share/{token}/unlock",
+      "target": "OCA\\Agora\\Controller\\ShareController::unlock",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/share/{token}/user",
+      "target": "OCA\\Agora\\Controller\\ShareController::adminToUser",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/support/engine",
+      "target": "OCA\\Agora\\Controller\\SupportEngineController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/support/engine/{engineId}/calculate",
+      "target": "OCA\\Agora\\Controller\\SupportResultController::calculate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/support/engine/{engineId}/results",
+      "target": "OCA\\Agora\\Controller\\SupportResultController::getResults",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/support/engine/{engineId}/results/export",
+      "target": "OCA\\Agora\\Controller\\SupportResultController::export",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/agora/support/engine/{id}",
+      "target": "OCA\\Agora\\Controller\\SupportEngineController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/support/engine/{id}",
+      "target": "OCA\\Agora\\Controller\\SupportEngineController::getEngine",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/agora/support/engine/{id}",
+      "target": "OCA\\Agora\\Controller\\SupportEngineController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/agora/support/engine/active",
+      "target": "OCA\\Agora\\Controller\\SupportEngineController::setActive",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/support/engine/active/{targetType}/{targetId}",
+      "target": "OCA\\Agora\\Controller\\SupportEngineController::getActive",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/support/engine/inquiry-group/{inquiryGroupId}",
+      "target": "OCA\\Agora\\Controller\\SupportEngineController::getByInquiryGroup",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/support/engine/inquiry/{inquiryId}",
+      "target": "OCA\\Agora\\Controller\\SupportEngineController::getByInquiry",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/agora/support/results/{targetType}/{targetId}",
+      "target": "OCA\\Agora\\Controller\\SupportResultController::getByTarget",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/comment/{commentId}",
+      "target": "OCA\\Agora\\Controller\\CommentApiController::delete",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/comment/{commentId}/restore",
+      "target": "OCA\\Agora\\Controller\\CommentApiController::restore",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/enum",
+      "target": "OCA\\Agora\\Controller\\InquiryApiController::enum",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiries",
+      "target": "OCA\\Agora\\Controller\\InquiryApiController::listInquiries",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry",
+      "target": "OCA\\Agora\\Controller\\InquiryApiController::add",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry-amily",
+      "target": "OCA\\Agora\\Controller\\InquiryFamilyApiController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry-amily",
+      "target": "OCA\\Agora\\Controller\\OptionFamilyApiController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry-families",
+      "target": "OCA\\Agora\\Controller\\InquiryFamilyApiController::list",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry-family/{id}",
+      "target": "OCA\\Agora\\Controller\\InquiryFamilyApiController::delete",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry-family/{id}",
+      "target": "OCA\\Agora\\Controller\\InquiryFamilyApiController::get",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry-family/{inquiryType}",
+      "target": "OCA\\Agora\\Controller\\InquiryFamilyApiController::getByType",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry-setting",
+      "target": "OCA\\Agora\\Controller\\InquiryTypeApiController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry-setting/{id}",
+      "target": "OCA\\Agora\\Controller\\InquiryTypeApiController::delete",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry-setting/{id}",
+      "target": "OCA\\Agora\\Controller\\InquiryTypeApiController::get",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry-setting/type/{type}",
+      "target": "OCA\\Agora\\Controller\\InquiryTypeApiController::getByType",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry-type",
+      "target": "OCA\\Agora\\Controller\\InquiryTypeApiController::list",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry-type/family/{family}",
+      "target": "OCA\\Agora\\Controller\\InquiryTypeApiController::listByFamily",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry-type/type/{inquiryType}",
+      "target": "OCA\\Agora\\Controller\\InquiryTypeApiController::listByInquiryType",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}",
+      "target": "OCA\\Agora\\Controller\\InquiryApiController::delete",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}",
+      "target": "OCA\\Agora\\Controller\\InquiryApiController::getFull",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}",
+      "target": "OCA\\Agora\\Controller\\InquiryApiController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/addresses",
+      "target": "OCA\\Agora\\Controller\\InquiryApiController::getParticipantsEmailAddresses",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/archive/toggle",
+      "target": "OCA\\Agora\\Controller\\InquiryApiController::toggleArchive",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/basic",
+      "target": "OCA\\Agora\\Controller\\InquiryApiController::get",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/childs",
+      "target": "OCA\\Agora\\Controller\\InquiryApiController::getChildInquiryIds",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/clone",
+      "target": "OCA\\Agora\\Controller\\InquiryApiController::clone",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/close",
+      "target": "OCA\\Agora\\Controller\\InquiryApiController::close",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/comment",
+      "target": "OCA\\Agora\\Controller\\CommentApiController::add",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/comments",
+      "target": "OCA\\Agora\\Controller\\CommentApiController::list",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/config",
+      "target": "OCA\\Agora\\Controller\\InquiryApiController::updateConfiguration",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/confirmation",
+      "target": "OCA\\Agora\\Controller\\InquiryApiController::sendConfirmation",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/links",
+      "target": "OCA\\Agora\\Controller\\InquiryLinkApiController::deleteByInquiry",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/links",
+      "target": "OCA\\Agora\\Controller\\InquiryLinkApiController::listByInquiry",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/links",
+      "target": "OCA\\Agora\\Controller\\InquiryLinkApiController::createMultiple",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/lockAnonymous",
+      "target": "OCA\\Agora\\Controller\\InquiryApiController::lockAnonymous",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/miscfield",
+      "target": "OCA\\Agora\\Controller\\InquiryApiController::updateMiscField",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/option",
+      "target": "OCA\\Agora\\Controller\\OptionApiController::add",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/options",
+      "target": "OCA\\Agora\\Controller\\OptionApiController::list",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/options",
+      "target": "OCA\\Agora\\Controller\\OptionApiController::addBulk",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/quorums",
+      "target": "OCA\\Agora\\Controller\\QuorumApiController::listByInquiry",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/reopen",
+      "target": "OCA\\Agora\\Controller\\InquiryApiController::reopen",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/share/{type}",
+      "target": "OCA\\Agora\\Controller\\ShareApiController::add",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/shares",
+      "target": "OCA\\Agora\\Controller\\ShareApiController::list",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/status/{status}",
+      "target": "OCA\\Agora\\Controller\\InquiryApiController::updateInquiryStatus",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/submit",
+      "target": "OCA\\Agora\\Controller\\InquiryApiController::submitInquiry",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/subscription",
+      "target": "OCA\\Agora\\Controller\\SubscriptionApiController::unsubscribe",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/subscription",
+      "target": "OCA\\Agora\\Controller\\SubscriptionApiController::get",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/subscription",
+      "target": "OCA\\Agora\\Controller\\SubscriptionApiController::subscribe",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/supports",
+      "target": "OCA\\Agora\\Controller\\SupportApiController::getByInquiryId",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/transfer/{targetUserId}",
+      "target": "OCA\\Agora\\Controller\\InquiryApiController::transferInquiry",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/{inquiryId}/watch",
+      "target": "OCA\\Agora\\Controller\\WatchApiController::watchInquiry",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/support/{inquiryId}",
+      "target": "OCA\\Agora\\Controller\\SupportApiController::removeAll",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/support/{inquiryId}/{userId}",
+      "target": "OCA\\Agora\\Controller\\SupportApiController::remove",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/support/{inquiryId}/{userId}",
+      "target": "OCA\\Agora\\Controller\\SupportApiController::add",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/inquiry/transfer/{sourceUserId}/{targetUserId}",
+      "target": "OCA\\Agora\\Controller\\InquiryApiController::transferInquiries",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/link",
+      "target": "OCA\\Agora\\Controller\\InquiryLinkApiController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/link/{id}",
+      "target": "OCA\\Agora\\Controller\\InquiryLinkApiController::delete",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/link/{id}",
+      "target": "OCA\\Agora\\Controller\\InquiryLinkApiController::get",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/links/target/{targetApp}/{targetType}/{targetId}",
+      "target": "OCA\\Agora\\Controller\\InquiryLinkApiController::listByTarget",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/option-families",
+      "target": "OCA\\Agora\\Controller\\OptionFamilyApiController::list",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/option-family/{id}",
+      "target": "OCA\\Agora\\Controller\\OptionFamilyApiController::delete",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/option-family/{id}",
+      "target": "OCA\\Agora\\Controller\\OptionFamilyApiController::get",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/option-family/{optionType}",
+      "target": "OCA\\Agora\\Controller\\OptionFamilyApiController::getByType",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/option/{optionId}",
+      "target": "OCA\\Agora\\Controller\\OptionApiController::delete",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/option/{optionId}",
+      "target": "OCA\\Agora\\Controller\\OptionApiController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/option/{optionId}/confirm",
+      "target": "OCA\\Agora\\Controller\\OptionApiController::confirm",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/option/{optionId}/order/{order}",
+      "target": "OCA\\Agora\\Controller\\OptionApiController::setOrder",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/option/{optionId}/quorums",
+      "target": "OCA\\Agora\\Controller\\QuorumApiController::listByOption",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/option/{optionId}/restore",
+      "target": "OCA\\Agora\\Controller\\OptionApiController::restore",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/preferences",
+      "target": "OCA\\Agora\\Controller\\UserApiController::writePreferences",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/quorum",
+      "target": "OCA\\Agora\\Controller\\QuorumApiController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/quorum/{id}",
+      "target": "OCA\\Agora\\Controller\\QuorumApiController::delete",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/quorum/{id}",
+      "target": "OCA\\Agora\\Controller\\QuorumApiController::get",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/quorum/{id}/check",
+      "target": "OCA\\Agora\\Controller\\QuorumApiController::checkQuorum",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/session",
+      "target": "OCA\\Agora\\Controller\\UserApiController::getSession",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/share/{token}",
+      "target": "OCA\\Agora\\Controller\\ShareApiController::delete",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/share/{token}",
+      "target": "OCA\\Agora\\Controller\\ShareApiController::get",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/share/{token}/invite",
+      "target": "OCA\\Agora\\Controller\\ShareApiController::sendInvitation",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/share/{token}/lock",
+      "target": "OCA\\Agora\\Controller\\ShareApiController::lock",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/share/{token}/restore",
+      "target": "OCA\\Agora\\Controller\\ShareApiController::restore",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/share/{token}/unlock",
+      "target": "OCA\\Agora\\Controller\\ShareApiController::unlock",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/support/engine",
+      "target": "OCA\\Agora\\Controller\\SupportEngineApiController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/support/engine/{engineId}/calculate",
+      "target": "OCA\\Agora\\Controller\\SupportResultApiController::calculateResults",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/support/engine/{engineId}/calculate/{targetType}/{targetId}",
+      "target": "OCA\\Agora\\Controller\\SupportResultApiController::calculateTargetResults",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/support/engine/{engineId}/results",
+      "target": "OCA\\Agora\\Controller\\SupportResultApiController::getResultsByEngine",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/support/engine/{engineId}/results/export",
+      "target": "OCA\\Agora\\Controller\\SupportResultApiController::exportResults",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/support/engine/{engineId}/results/live",
+      "target": "OCA\\Agora\\Controller\\SupportResultApiController::getLiveResults",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/support/engine/{id}",
+      "target": "OCA\\Agora\\Controller\\SupportEngineApiController::delete",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/support/engine/{id}",
+      "target": "OCA\\Agora\\Controller\\SupportEngineApiController::getEngine",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/support/engine/{id}",
+      "target": "OCA\\Agora\\Controller\\SupportEngineApiController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/support/engine/active/{targetType}/{targetId}",
+      "target": "OCA\\Agora\\Controller\\SupportEngineApiController::getActiveEnginesByTarget",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/support/engine/group/{groupId}",
+      "target": "OCA\\Agora\\Controller\\SupportEngineApiController::getEngines",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/support/engine/target/{targetType}/{targetId}",
+      "target": "OCA\\Agora\\Controller\\SupportEngineApiController::getEnginesByTarget",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/support/result/{resultId}",
+      "target": "OCA\\Agora\\Controller\\SupportResultApiController::getResult",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/support/result/{resultId}/history",
+      "target": "OCA\\Agora\\Controller\\SupportResultApiController::getResultHistory",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/support/results/{targetType}/{targetId}",
+      "target": "OCA\\Agora\\Controller\\SupportResultApiController::getResultsByTarget",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/supports/stats/grouped",
+      "target": "OCA\\Agora\\Controller\\SupportApiController::getGroupedStats",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/templates",
+      "target": "OCA\\Agora\\Controller\\TemplateController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/templates/{identifier}",
+      "target": "OCA\\Agora\\Controller\\TemplateController::show",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/templates/analyze",
+      "target": "OCA\\Agora\\Controller\\TemplateController::analyze",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/templates/check-empty",
+      "target": "OCA\\Agora\\Controller\\TemplateController::checkEmpty",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/templates/import",
+      "target": "OCA\\Agora\\Controller\\TemplateController::import",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/templates/import-data",
+      "target": "OCA\\Agora\\Controller\\TemplateController::importData",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/templates/instructions",
+      "target": "OCA\\Agora\\Controller\\TemplateController::getInstructions",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/templates/schema",
+      "target": "OCA\\Agora\\Controller\\TemplateController::getSchema",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/templates/validate",
+      "target": "OCA\\Agora\\Controller\\TemplateController::validate",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/agora/api/v1.0/user/{userId}/supports",
+      "target": "OCA\\Agora\\Controller\\SupportApiController::getByUser",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

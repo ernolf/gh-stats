@@ -1,0 +1,297 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Jeslinks\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "namespace-mismatch",
+      "level": "warn",
+      "places": [
+        "lib/Notification/Notifier.php:18 OCA\\Werkstaat\\Notification\\Notifier, by its path OCA\\Jeslinks\\Notification\\Notifier"
+      ],
+      "lines": [
+        "1 class in lib/ whose name does not follow PSR-4 below OCA\\Jeslinks, the namespace the server derives from <namespace> of info.xml. The loader of the server does not find such a class.",
+        "  lib/Notification/Notifier.php:18 OCA\\Werkstaat\\Notification\\Notifier, by its path OCA\\Jeslinks\\Notification\\Notifier"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/LinkController.php:151 OC",
+        "lib/Controller/LinkController.php:151 OC::$server"
+      ],
+      "lines": [
+        "2 uses of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/LinkController.php:151 OC",
+        "  lib/Controller/LinkController.php:151 OC::$server"
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:13 OCP\\AppFramework\\Bootstrap\\IBootstrap: there since Nextcloud 20, the app declares from 19",
+        "lib/AppInfo/Application.php:22 OCP\\AppFramework\\Bootstrap\\IRegistrationContext: there since Nextcloud 20, the app declares from 19",
+        "lib/AppInfo/Application.php:28 OCP\\AppFramework\\Bootstrap\\IRegistrationContext::registerEventListener(): there since Nextcloud 20, the app declares from 19",
+        "lib/AppInfo/Application.php:36 OCP\\AppFramework\\Bootstrap\\IBootContext: there since Nextcloud 20, the app declares from 19",
+        "lib/AppInfo/Application.php:38 OCP\\AppFramework\\Bootstrap\\IBootContext::injectFn(): there since Nextcloud 20, the app declares from 19",
+        "lib/Service/UitconfigService.php:23 OCP\\HintException: there since Nextcloud 23, the app declares from 19"
+      ],
+      "lines": [
+        "6 uses in 2 files of the public API that the oldest majors of Nextcloud 19 to 35 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/AppInfo/Application.php:13 OCP\\AppFramework\\Bootstrap\\IBootstrap: there since Nextcloud 20, the app declares from 19",
+        "  lib/AppInfo/Application.php:22 OCP\\AppFramework\\Bootstrap\\IRegistrationContext: there since Nextcloud 20, the app declares from 19",
+        "  lib/AppInfo/Application.php:28 OCP\\AppFramework\\Bootstrap\\IRegistrationContext::registerEventListener(): there since Nextcloud 20, the app declares from 19",
+        "  lib/AppInfo/Application.php:36 OCP\\AppFramework\\Bootstrap\\IBootContext: there since Nextcloud 20, the app declares from 19",
+        "  lib/AppInfo/Application.php:38 OCP\\AppFramework\\Bootstrap\\IBootContext::injectFn(): there since Nextcloud 20, the app declares from 19",
+        "  lib/Service/UitconfigService.php:23 OCP\\HintException: there since Nextcloud 23, the app declares from 19"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:38 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:38 injectFn()"
+      ]
+    },
+    {
+      "id": "route-target-missing",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/jeslinks/werkstaten/zoeken/{cat}/{wie}/{dagenAr}  jeslinks.werkdag.zoeken  appinfo/routes.php:3 routes: no class OCA\\Jeslinks\\Controller\\WerkdagController",
+        "OPTIONS /index.php/apps/jeslinks/api/0.1/{path}  jeslinks.werkstaat_api.preflighted_cors  appinfo/routes.php:3 routes: no class OCA\\Jeslinks\\Controller\\WerkstaatApiController",
+        "GET /index.php/apps/jeslinks/uitconf/{id}  jeslinks.uitconfig.show  appinfo/routes.php:3 resources: OCA\\Jeslinks\\Controller\\UitconfigController has no method show()",
+        "POST /index.php/apps/jeslinks/uitconf  jeslinks.uitconfig.create  appinfo/routes.php:3 resources: OCA\\Jeslinks\\Controller\\UitconfigController has no method create()",
+        "PUT /index.php/apps/jeslinks/uitconf/{id}  jeslinks.uitconfig.update  appinfo/routes.php:3 resources: OCA\\Jeslinks\\Controller\\UitconfigController has no method update()",
+        "DELETE /index.php/apps/jeslinks/uitconf/{id}  jeslinks.uitconfig.destroy  appinfo/routes.php:3 resources: OCA\\Jeslinks\\Controller\\UitconfigController has no method destroy()"
+      ],
+      "lines": [
+        "6 routes name a controller class or a method that does not exist, or a method that is not public. A request to such a route ends in an error.",
+        "  GET /index.php/apps/jeslinks/werkstaten/zoeken/{cat}/{wie}/{dagenAr}  jeslinks.werkdag.zoeken  appinfo/routes.php:3 routes: no class OCA\\Jeslinks\\Controller\\WerkdagController",
+        "  OPTIONS /index.php/apps/jeslinks/api/0.1/{path}  jeslinks.werkstaat_api.preflighted_cors  appinfo/routes.php:3 routes: no class OCA\\Jeslinks\\Controller\\WerkstaatApiController",
+        "  GET /index.php/apps/jeslinks/uitconf/{id}  jeslinks.uitconfig.show  appinfo/routes.php:3 resources: OCA\\Jeslinks\\Controller\\UitconfigController has no method show()",
+        "  POST /index.php/apps/jeslinks/uitconf  jeslinks.uitconfig.create  appinfo/routes.php:3 resources: OCA\\Jeslinks\\Controller\\UitconfigController has no method create()",
+        "  PUT /index.php/apps/jeslinks/uitconf/{id}  jeslinks.uitconfig.update  appinfo/routes.php:3 resources: OCA\\Jeslinks\\Controller\\UitconfigController has no method update()",
+        "  DELETE /index.php/apps/jeslinks/uitconf/{id}  jeslinks.uitconfig.destroy  appinfo/routes.php:3 resources: OCA\\Jeslinks\\Controller\\UitconfigController has no method destroy()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:44 OCP\\Notification\\IManager::registerNotifierService(): deprecated since Nextcloud 26; use the IBootStrap registration context",
+        "lib/Controller/PageController.php:29 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ],
+      "lines": [
+        "2 uses in 2 files of the public API that is deprecated in Nextcloud 19 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/AppInfo/Application.php:44 OCP\\Notification\\IManager::registerNotifierService(): deprecated since Nextcloud 26; use the IBootStrap registration context",
+        "  lib/Controller/PageController.php:29 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/LinkController.php:156 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 1 place. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/LinkController.php:156 new DateTime()"
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/LinkController.php:86 OCA\\Jeslinks\\Controller\\LinkController::zoeken()",
+        "lib/Controller/LinkController.php:94 OCA\\Jeslinks\\Controller\\LinkController::vanwie()",
+        "lib/Controller/LinkController.php:102 OCA\\Jeslinks\\Controller\\LinkController::alles()",
+        "lib/Controller/LinkController.php:150 OCA\\Jeslinks\\Controller\\LinkController::stuurN()"
+      ],
+      "lines": [
+        "4 public methods of controllers are reached by no route.",
+        "  lib/Controller/LinkController.php:86 OCA\\Jeslinks\\Controller\\LinkController::zoeken()",
+        "  lib/Controller/LinkController.php:94 OCA\\Jeslinks\\Controller\\LinkController::vanwie()",
+        "  lib/Controller/LinkController.php:102 OCA\\Jeslinks\\Controller\\LinkController::alles()",
+        "  lib/Controller/LinkController.php:150 OCA\\Jeslinks\\Controller\\LinkController::stuurN()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "endpoints": 18,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/jeslinks/",
+      "target": "OCA\\Jeslinks\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/jeslinks/api/0.1/{path}",
+      "target": "OCA\\Jeslinks\\Controller\\WerkstaatApiController::preflightedCors",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/jeslinks/links",
+      "target": "OCA\\Jeslinks\\Controller\\LinkController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/jeslinks/links",
+      "target": "OCA\\Jeslinks\\Controller\\LinkController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/jeslinks/links/{id}",
+      "target": "OCA\\Jeslinks\\Controller\\LinkController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/jeslinks/links/{id}",
+      "target": "OCA\\Jeslinks\\Controller\\LinkController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/jeslinks/links/{id}",
+      "target": "OCA\\Jeslinks\\Controller\\LinkController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/jeslinks/links/afgeschermd/{wie}",
+      "target": "OCA\\Jeslinks\\Controller\\LinkController::afgeschermde",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/jeslinks/links/categorie/{categorie}/{wie}/{groep}",
+      "target": "OCA\\Jeslinks\\Controller\\LinkController::percategorie",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/jeslinks/links/eigenlinks",
+      "target": "OCA\\Jeslinks\\Controller\\LinkController::jouwlinks",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/jeslinks/links/werklink/{wie}",
+      "target": "OCA\\Jeslinks\\Controller\\LinkController::werklinks",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/jeslinks/links/werklinkbij/{note}",
+      "target": "OCA\\Jeslinks\\Controller\\LinkController::linkbij",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/jeslinks/uitconf",
+      "target": "OCA\\Jeslinks\\Controller\\UitconfigController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/jeslinks/uitconf",
+      "target": "OCA\\Jeslinks\\Controller\\UitconfigController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/jeslinks/uitconf/{id}",
+      "target": "OCA\\Jeslinks\\Controller\\UitconfigController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/jeslinks/uitconf/{id}",
+      "target": "OCA\\Jeslinks\\Controller\\UitconfigController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/jeslinks/uitconf/{id}",
+      "target": "OCA\\Jeslinks\\Controller\\UitconfigController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/jeslinks/werkstaten/zoeken/{cat}/{wie}/{dagenAr}",
+      "target": "OCA\\Jeslinks\\Controller\\WerkdagController::zoeken",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

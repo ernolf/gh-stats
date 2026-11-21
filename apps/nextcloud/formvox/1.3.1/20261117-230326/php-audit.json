@@ -1,0 +1,1156 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\FormVox\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Migration/RegisterMimeType.php:64 OC"
+      ],
+      "lines": [
+        "1 use of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Migration/RegisterMimeType.php:64 OC"
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/Preview/FormPreview.php:123 OCP\\IImage::loadFromData(): there since Nextcloud 31, the app declares from 30"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that the oldest majors of Nextcloud 30 to 34 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/Preview/FormPreview.php:123 OCP\\IImage::loadFromData(): there since Nextcloud 31, the app declares from 30"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:78 get()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:78 get()"
+      ]
+    },
+    {
+      "id": "route-target-missing",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/formvox/api/form/{fileId}/export/xlsx  formvox.api.exportexcel  appinfo/routes.php:5 routes: OCA\\FormVox\\Controller\\ApiController has no method exportExcel()"
+      ],
+      "lines": [
+        "1 route names a controller class or a method that does not exist, or a method that is not public. A request to such a route ends in an error.",
+        "  GET /index.php/apps/formvox/api/form/{fileId}/export/xlsx  formvox.api.exportexcel  appinfo/routes.php:5 routes: OCA\\FormVox\\Controller\\ApiController has no method exportExcel()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "POST /index.php/apps/formvox/api/form/{fileId}/favorite  formvox.api.setfavorite  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/formvox/api/form/{fileId}/rebuild-index  formvox.api.rebuildindex  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/formvox/api/permissions/{fileId}  formvox.file_permission.getpermissions  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/formvox/api/branding  formvox.branding.get  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/formvox/api/integration/permissions  formvox.integration.getapipermissions  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/formvox/api/integration/webhook-events  formvox.integration.getwebhookevents  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/formvox/api/v1/external/forms/{fileId}  formvox.external_api.getform  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/formvox/api/v1/external/forms/{fileId}/schema  formvox.external_api.getschema  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/formvox/api/v1/external/forms/{fileId}/responses  formvox.external_api.getresponses  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/formvox/api/v1/external/forms/{fileId}/responses/{responseId}  formvox.external_api.getresponse  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/formvox/api/v1/external/forms/{fileId}/responses  formvox.external_api.createresponse  appinfo/routes.php:5 routes",
+        "PUT /index.php/apps/formvox/api/v1/external/forms/{fileId}/responses/{responseId}  formvox.external_api.updateresponse  appinfo/routes.php:5 routes",
+        "DELETE /index.php/apps/formvox/api/v1/external/forms/{fileId}/responses/{responseId}  formvox.external_api.deleteresponse  appinfo/routes.php:5 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 13 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 90 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  POST /index.php/apps/formvox/api/form/{fileId}/favorite  formvox.api.setfavorite  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/formvox/api/form/{fileId}/rebuild-index  formvox.api.rebuildindex  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/formvox/api/permissions/{fileId}  formvox.file_permission.getpermissions  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/formvox/api/branding  formvox.branding.get  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/formvox/api/integration/permissions  formvox.integration.getapipermissions  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/formvox/api/integration/webhook-events  formvox.integration.getwebhookevents  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/formvox/api/v1/external/forms/{fileId}  formvox.external_api.getform  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/formvox/api/v1/external/forms/{fileId}/schema  formvox.external_api.getschema  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/formvox/api/v1/external/forms/{fileId}/responses  formvox.external_api.getresponses  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/formvox/api/v1/external/forms/{fileId}/responses/{responseId}  formvox.external_api.getresponse  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/formvox/api/v1/external/forms/{fileId}/responses  formvox.external_api.createresponse  appinfo/routes.php:5 routes",
+        "  PUT /index.php/apps/formvox/api/v1/external/forms/{fileId}/responses/{responseId}  formvox.external_api.updateresponse  appinfo/routes.php:5 routes",
+        "  DELETE /index.php/apps/formvox/api/v1/external/forms/{fileId}/responses/{responseId}  formvox.external_api.deleteresponse  appinfo/routes.php:5 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 10
+        }
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:78 OCP\\Security\\IContentSecurityPolicyManager: deprecated since Nextcloud 17; listen to the AddContentSecurityPolicyEvent to add a policy",
+        "lib/AppInfo/Application.php:79 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/AppInfo/Application.php:81 OCP\\Security\\IContentSecurityPolicyManager::addDefaultPolicy(): deprecated since Nextcloud 17; listen to the AddContentSecurityPolicyEvent to add a policy",
+        "lib/BackgroundJob/LicenseUsageJob.php:55 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ApiController.php:661 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "lib/Controller/FilePermissionController.php:61 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Controller/FilePermissionController.php:62 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Controller/FilePermissionController.php:63 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead",
+        "lib/Controller/FilePermissionController.php:64 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "lib/Controller/PresenceController.php:51 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/PresenceController.php:68 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/PresenceController.php:110 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/PublicController.php:372 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Controller/PublicController.php:612 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:83 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:123 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:124 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:125 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:126 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:127 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:140 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:144 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:150 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:157 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:164 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:165 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:166 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:167 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/AiFormGeneratorService.php:101 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/AiFormGeneratorService.php:110 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/AiFormGeneratorService.php:115 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/AiFormGeneratorService.php:120 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/AiFormGeneratorService.php:125 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/BrandingService.php:65 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/BrandingService.php:69 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/BrandingService.php:86 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/BrandingService.php:95 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/ChallengeService.php:222 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/ChallengeService.php:225 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:28 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:32 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:34 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:35 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:36 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:40 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:76 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:77 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:78 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:82 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:90 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:93 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:133 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:163 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:166 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:198 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/MicrosoftFormsAuthService.php:40 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/MicrosoftFormsAuthService.php:45 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/MicrosoftFormsAuthService.php:59 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/MicrosoftFormsAuthService.php:69 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/MicrosoftFormsAuthService.php:75 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/MicrosoftFormsAuthService.php:80 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/MicrosoftFormsAuthService.php:198 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/MicrosoftFormsAuthService.php:237 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/MicrosoftFormsAuthService.php:243 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/MicrosoftFormsAuthService.php:249 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/MicrosoftFormsAuthService.php:262 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/MicrosoftFormsAuthService.php:278 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/MicrosoftFormsAuthService.php:302 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/MicrosoftFormsAuthService.php:303 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/MicrosoftFormsAuthService.php:304 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/MicrosoftFormsAuthService.php:305 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/MicrosoftFormsAuthService.php:306 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/MicrosoftFormsAuthService.php:315 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/MicrosoftFormsAuthService.php:316 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/MicrosoftFormsAuthService.php:325 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/MicrosoftFormsAuthService.php:326 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/MicrosoftFormsAuthService.php:329 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/MicrosoftFormsAuthService.php:330 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/PermissionService.php:38 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Service/PermissionService.php:39 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Service/PermissionService.php:65 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "lib/Service/ResponseService.php:193 OCP\\Mail\\IMailer::validateMailAddress(): deprecated since Nextcloud 32; use IEmailValidator::isValid() instead",
+        "lib/Service/TelemetryService.php:50 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/TelemetryService.php:58 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/TelemetryService.php:67 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/TelemetryService.php:115 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/TelemetryService.php:214 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/TelemetryService.php:295 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/TemplateService.php:32 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/TemplateService.php:60 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/TemplateService.php:82 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/TemplateService.php:103 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/TemplateService.php:118 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/TemplateService.php:131 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/AdminSettings.php:53 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "lines": [
+        "95 uses in 17 files of the public API that is deprecated in Nextcloud 30 to 34. The text of the tag names the replacement where it has one.",
+        "  lib/AppInfo/Application.php:78 OCP\\Security\\IContentSecurityPolicyManager: deprecated since Nextcloud 17; listen to the AddContentSecurityPolicyEvent to add a policy",
+        "  lib/AppInfo/Application.php:79 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/AppInfo/Application.php:81 OCP\\Security\\IContentSecurityPolicyManager::addDefaultPolicy(): deprecated since Nextcloud 17; listen to the AddContentSecurityPolicyEvent to add a policy",
+        "  lib/BackgroundJob/LicenseUsageJob.php:55 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ApiController.php:661 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "  lib/Controller/FilePermissionController.php:61 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Controller/FilePermissionController.php:62 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Controller/FilePermissionController.php:63 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead",
+        "  lib/Controller/FilePermissionController.php:64 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "  lib/Controller/PresenceController.php:51 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/PresenceController.php:68 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/PresenceController.php:110 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/PublicController.php:372 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Controller/PublicController.php:612 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:83 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:123 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:124 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:125 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:126 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:127 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:140 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:144 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:150 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:157 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:164 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:165 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:166 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:167 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/AiFormGeneratorService.php:101 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/AiFormGeneratorService.php:110 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/AiFormGeneratorService.php:115 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/AiFormGeneratorService.php:120 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/AiFormGeneratorService.php:125 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/BrandingService.php:65 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/BrandingService.php:69 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/BrandingService.php:86 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/BrandingService.php:95 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/ChallengeService.php:222 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/ChallengeService.php:225 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:28 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:32 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:34 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:35 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:36 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:40 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:76 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:77 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:78 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:82 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:90 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:93 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:133 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:163 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:166 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:198 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/MicrosoftFormsAuthService.php:40 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/MicrosoftFormsAuthService.php:45 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/MicrosoftFormsAuthService.php:59 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/MicrosoftFormsAuthService.php:69 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/MicrosoftFormsAuthService.php:75 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/MicrosoftFormsAuthService.php:80 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/MicrosoftFormsAuthService.php:198 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/MicrosoftFormsAuthService.php:237 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/MicrosoftFormsAuthService.php:243 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/MicrosoftFormsAuthService.php:249 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/MicrosoftFormsAuthService.php:262 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/MicrosoftFormsAuthService.php:278 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/MicrosoftFormsAuthService.php:302 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/MicrosoftFormsAuthService.php:303 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/MicrosoftFormsAuthService.php:304 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/MicrosoftFormsAuthService.php:305 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/MicrosoftFormsAuthService.php:306 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/MicrosoftFormsAuthService.php:315 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/MicrosoftFormsAuthService.php:316 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/MicrosoftFormsAuthService.php:325 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/MicrosoftFormsAuthService.php:326 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/MicrosoftFormsAuthService.php:329 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/MicrosoftFormsAuthService.php:330 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/PermissionService.php:38 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Service/PermissionService.php:39 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Service/PermissionService.php:65 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "  lib/Service/ResponseService.php:193 OCP\\Mail\\IMailer::validateMailAddress(): deprecated since Nextcloud 32; use IEmailValidator::isValid() instead",
+        "  lib/Service/TelemetryService.php:50 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/TelemetryService.php:58 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/TelemetryService.php:67 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/TelemetryService.php:115 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/TelemetryService.php:214 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/TelemetryService.php:295 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/TemplateService.php:32 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/TemplateService.php:60 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/TemplateService.php:82 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/TemplateService.php:103 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/TemplateService.php:118 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/TemplateService.php:131 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/AdminSettings.php:53 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 92
+        }
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/error.php:17 <style> with content",
+        "templates/public/notyetopen.php:14 <style> with content",
+        "templates/public/password.php:17 <style> with content",
+        "templates/public/respond.php:10 <style> with content",
+        "templates/public/unauthorized.php:13 <style> with content"
+      ],
+      "lines": [
+        "5 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/error.php:17 <style> with content",
+        "  templates/public/notyetopen.php:14 <style> with content",
+        "  templates/public/password.php:17 <style> with content",
+        "  templates/public/respond.php:10 <style> with content",
+        "  templates/public/unauthorized.php:13 <style> with content"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/LicenseUsageJob.php OCA\\FormVox\\BackgroundJob\\LicenseUsageJob",
+        "lib/BackgroundJob/TelemetryJob.php OCA\\FormVox\\BackgroundJob\\TelemetryJob"
+      ],
+      "lines": [
+        "2 timed jobs do not say whether they are time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/LicenseUsageJob.php OCA\\FormVox\\BackgroundJob\\LicenseUsageJob",
+        "  lib/BackgroundJob/TelemetryJob.php OCA\\FormVox\\BackgroundJob\\TelemetryJob"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/LicenseUsageJob.php:55 time()",
+        "lib/Controller/ApiController.php:150 new DateTime()",
+        "lib/Controller/ExternalApiController.php:267 new DateTime()",
+        "lib/Controller/ExternalApiController.php:326 new DateTime()",
+        "lib/Controller/IntegrationController.php:76 new DateTime()",
+        "lib/Controller/IntegrationController.php:212 new DateTime()",
+        "lib/Controller/IntegrationController.php:296 new DateTime()",
+        "lib/Controller/PresenceController.php:57 time()",
+        "lib/Controller/PresenceController.php:62 time()",
+        "lib/Controller/PresenceController.php:75 time()",
+        "lib/Controller/PresenceController.php:104 time()",
+        "lib/Controller/PublicController.php:169 new DateTime()",
+        "lib/Controller/PublicController.php:183 new DateTime()",
+        "lib/Controller/PublicController.php:237 new DateTime()",
+        "lib/Controller/PublicController.php:248 new DateTime()",
+        "lib/Controller/PublicController.php:677 new DateTime()",
+        "lib/Controller/PublicController.php:688 new DateTime()",
+        "lib/Controller/PublicController.php:768 time()",
+        "lib/Db/AiPendingMapper.php:72 new DateTime()",
+        "lib/Listener/AiTaskFailedListener.php:52 new DateTime()",
+        "lib/Listener/AiTaskSuccessfulListener.php:115 new DateTime()",
+        "lib/Service/ChallengeService.php:191 time()",
+        "lib/Service/ChallengeService.php:206 time()",
+        "lib/Service/ChallengeService.php:215 time()",
+        "lib/Service/FormService.php:408 time()",
+        "lib/Service/LicenseService.php:78 time()",
+        "lib/Service/MicrosoftFormsAuthService.php:201 time()",
+        "lib/Service/MicrosoftFormsAuthService.php:235 time()",
+        "lib/Service/MicrosoftFormsAuthService.php:316 time()",
+        "lib/Service/MicrosoftFormsAuthService.php:333 time()",
+        "lib/Service/ResponseService.php:273 new DateTime()",
+        "lib/Service/ResponseService.php:540 new DateTime()",
+        "lib/Service/StatisticsService.php:178 time()",
+        "lib/Service/TelemetryService.php:118 time()",
+        "lib/Service/TelemetryService.php:314 time()",
+        "lib/Service/WebhookService.php:94 new DateTime()",
+        "lib/Service/WebhookService.php:112 time()",
+        "lib/Service/WebhookService.php:146 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 38 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/BackgroundJob/LicenseUsageJob.php:55 time()",
+        "  lib/Controller/ApiController.php:150 new DateTime()",
+        "  lib/Controller/ExternalApiController.php:267 new DateTime()",
+        "  lib/Controller/ExternalApiController.php:326 new DateTime()",
+        "  lib/Controller/IntegrationController.php:76 new DateTime()",
+        "  lib/Controller/IntegrationController.php:212 new DateTime()",
+        "  lib/Controller/IntegrationController.php:296 new DateTime()",
+        "  lib/Controller/PresenceController.php:57 time()",
+        "  lib/Controller/PresenceController.php:62 time()",
+        "  lib/Controller/PresenceController.php:75 time()",
+        "  lib/Controller/PresenceController.php:104 time()",
+        "  lib/Controller/PublicController.php:169 new DateTime()",
+        "  lib/Controller/PublicController.php:183 new DateTime()",
+        "  lib/Controller/PublicController.php:237 new DateTime()",
+        "  lib/Controller/PublicController.php:248 new DateTime()",
+        "  lib/Controller/PublicController.php:677 new DateTime()",
+        "  lib/Controller/PublicController.php:688 new DateTime()",
+        "  lib/Controller/PublicController.php:768 time()",
+        "  lib/Db/AiPendingMapper.php:72 new DateTime()",
+        "  lib/Listener/AiTaskFailedListener.php:52 new DateTime()",
+        "  lib/Listener/AiTaskSuccessfulListener.php:115 new DateTime()",
+        "  lib/Service/ChallengeService.php:191 time()",
+        "  lib/Service/ChallengeService.php:206 time()",
+        "  lib/Service/ChallengeService.php:215 time()",
+        "  lib/Service/FormService.php:408 time()",
+        "  lib/Service/LicenseService.php:78 time()",
+        "  lib/Service/MicrosoftFormsAuthService.php:201 time()",
+        "  lib/Service/MicrosoftFormsAuthService.php:235 time()",
+        "  lib/Service/MicrosoftFormsAuthService.php:316 time()",
+        "  lib/Service/MicrosoftFormsAuthService.php:333 time()",
+        "  lib/Service/ResponseService.php:273 new DateTime()",
+        "  lib/Service/ResponseService.php:540 new DateTime()",
+        "  lib/Service/StatisticsService.php:178 time()",
+        "  lib/Service/TelemetryService.php:118 time()",
+        "  lib/Service/TelemetryService.php:314 time()",
+        "  lib/Service/WebhookService.php:94 new DateTime()",
+        "  lib/Service/WebhookService.php:112 time()",
+        "  lib/Service/WebhookService.php:146 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 35
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/LicenseUsageJob.php:55 setAppValue()",
+        "lib/Controller/PublicController.php:612 getAppValue()",
+        "lib/Controller/SettingsController.php:83 setAppValue()",
+        "lib/Controller/SettingsController.php:123 setAppValue()",
+        "lib/Controller/SettingsController.php:124 setAppValue()",
+        "lib/Controller/SettingsController.php:125 setAppValue()",
+        "lib/Controller/SettingsController.php:126 setAppValue()",
+        "lib/Controller/SettingsController.php:127 setAppValue()",
+        "lib/Controller/SettingsController.php:140 getAppValue()",
+        "lib/Controller/SettingsController.php:144 getAppValue()",
+        "lib/Controller/SettingsController.php:150 getAppValue()",
+        "lib/Controller/SettingsController.php:157 getAppValue()",
+        "lib/Controller/SettingsController.php:164 getAppValue()",
+        "lib/Controller/SettingsController.php:165 getAppValue()",
+        "lib/Controller/SettingsController.php:166 getAppValue()",
+        "lib/Controller/SettingsController.php:167 getAppValue()",
+        "lib/Service/AiFormGeneratorService.php:101 getAppValue()",
+        "lib/Service/AiFormGeneratorService.php:110 getAppValue()",
+        "lib/Service/AiFormGeneratorService.php:115 getAppValue()",
+        "lib/Service/AiFormGeneratorService.php:120 getAppValue()",
+        "lib/Service/AiFormGeneratorService.php:125 getAppValue()",
+        "lib/Service/BrandingService.php:65 getAppValue()",
+        "lib/Service/BrandingService.php:69 getAppValue()",
+        "lib/Service/BrandingService.php:86 setAppValue()",
+        "lib/Service/BrandingService.php:95 setAppValue()",
+        "lib/Service/ChallengeService.php:222 getAppValue()",
+        "lib/Service/ChallengeService.php:225 setAppValue()",
+        "lib/Service/LicenseService.php:28 getAppValue()",
+        "lib/Service/LicenseService.php:32 setAppValue()",
+        "lib/Service/LicenseService.php:40 getAppValue()",
+        "lib/Service/LicenseService.php:76 setAppValue()",
+        "lib/Service/LicenseService.php:77 setAppValue()",
+        "lib/Service/LicenseService.php:78 setAppValue()",
+        "lib/Service/LicenseService.php:82 setAppValue()",
+        "lib/Service/LicenseService.php:90 getAppValue()",
+        "lib/Service/LicenseService.php:93 getAppValue()",
+        "lib/Service/LicenseService.php:133 setAppValue()",
+        "lib/Service/LicenseService.php:163 getAppValue()",
+        "lib/Service/LicenseService.php:166 getAppValue()",
+        "lib/Service/LicenseService.php:198 getAppValue()",
+        "lib/Service/MicrosoftFormsAuthService.php:40 getAppValue()",
+        "lib/Service/MicrosoftFormsAuthService.php:45 getAppValue()",
+        "lib/Service/MicrosoftFormsAuthService.php:59 getAppValue()",
+        "lib/Service/MicrosoftFormsAuthService.php:69 setAppValue()",
+        "lib/Service/MicrosoftFormsAuthService.php:75 setAppValue()",
+        "lib/Service/MicrosoftFormsAuthService.php:80 setAppValue()",
+        "lib/Service/TelemetryService.php:50 getAppValue()",
+        "lib/Service/TelemetryService.php:58 setAppValue()",
+        "lib/Service/TelemetryService.php:67 getAppValue()",
+        "lib/Service/TelemetryService.php:115 setAppValue()",
+        "lib/Service/TelemetryService.php:214 getAppValue()",
+        "lib/Service/TelemetryService.php:295 getAppValue()",
+        "lib/Service/TemplateService.php:32 getAppValue()",
+        "lib/Service/TemplateService.php:60 getAppValue()",
+        "lib/Service/TemplateService.php:82 getAppValue()",
+        "lib/Service/TemplateService.php:103 setAppValue()",
+        "lib/Service/TemplateService.php:118 getAppValue()",
+        "lib/Service/TemplateService.php:131 setAppValue()",
+        "lib/Settings/AdminSettings.php:53 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 59 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/BackgroundJob/LicenseUsageJob.php:55 setAppValue()",
+        "  lib/Controller/PublicController.php:612 getAppValue()",
+        "  lib/Controller/SettingsController.php:83 setAppValue()",
+        "  lib/Controller/SettingsController.php:123 setAppValue()",
+        "  lib/Controller/SettingsController.php:124 setAppValue()",
+        "  lib/Controller/SettingsController.php:125 setAppValue()",
+        "  lib/Controller/SettingsController.php:126 setAppValue()",
+        "  lib/Controller/SettingsController.php:127 setAppValue()",
+        "  lib/Controller/SettingsController.php:140 getAppValue()",
+        "  lib/Controller/SettingsController.php:144 getAppValue()",
+        "  lib/Controller/SettingsController.php:150 getAppValue()",
+        "  lib/Controller/SettingsController.php:157 getAppValue()",
+        "  lib/Controller/SettingsController.php:164 getAppValue()",
+        "  lib/Controller/SettingsController.php:165 getAppValue()",
+        "  lib/Controller/SettingsController.php:166 getAppValue()",
+        "  lib/Controller/SettingsController.php:167 getAppValue()",
+        "  lib/Service/AiFormGeneratorService.php:101 getAppValue()",
+        "  lib/Service/AiFormGeneratorService.php:110 getAppValue()",
+        "  lib/Service/AiFormGeneratorService.php:115 getAppValue()",
+        "  lib/Service/AiFormGeneratorService.php:120 getAppValue()",
+        "  lib/Service/AiFormGeneratorService.php:125 getAppValue()",
+        "  lib/Service/BrandingService.php:65 getAppValue()",
+        "  lib/Service/BrandingService.php:69 getAppValue()",
+        "  lib/Service/BrandingService.php:86 setAppValue()",
+        "  lib/Service/BrandingService.php:95 setAppValue()",
+        "  lib/Service/ChallengeService.php:222 getAppValue()",
+        "  lib/Service/ChallengeService.php:225 setAppValue()",
+        "  lib/Service/LicenseService.php:28 getAppValue()",
+        "  lib/Service/LicenseService.php:32 setAppValue()",
+        "  lib/Service/LicenseService.php:40 getAppValue()",
+        "  lib/Service/LicenseService.php:76 setAppValue()",
+        "  lib/Service/LicenseService.php:77 setAppValue()",
+        "  lib/Service/LicenseService.php:78 setAppValue()",
+        "  lib/Service/LicenseService.php:82 setAppValue()",
+        "  lib/Service/LicenseService.php:90 getAppValue()",
+        "  lib/Service/LicenseService.php:93 getAppValue()",
+        "  lib/Service/LicenseService.php:133 setAppValue()",
+        "  lib/Service/LicenseService.php:163 getAppValue()",
+        "  lib/Service/LicenseService.php:166 getAppValue()",
+        "  lib/Service/LicenseService.php:198 getAppValue()",
+        "  lib/Service/MicrosoftFormsAuthService.php:40 getAppValue()",
+        "  lib/Service/MicrosoftFormsAuthService.php:45 getAppValue()",
+        "  lib/Service/MicrosoftFormsAuthService.php:59 getAppValue()",
+        "  lib/Service/MicrosoftFormsAuthService.php:69 setAppValue()",
+        "  lib/Service/MicrosoftFormsAuthService.php:75 setAppValue()",
+        "  lib/Service/MicrosoftFormsAuthService.php:80 setAppValue()",
+        "  lib/Service/TelemetryService.php:50 getAppValue()",
+        "  lib/Service/TelemetryService.php:58 setAppValue()",
+        "  lib/Service/TelemetryService.php:67 getAppValue()",
+        "  lib/Service/TelemetryService.php:115 setAppValue()",
+        "  lib/Service/TelemetryService.php:214 getAppValue()",
+        "  lib/Service/TelemetryService.php:295 getAppValue()",
+        "  lib/Service/TemplateService.php:32 getAppValue()",
+        "  lib/Service/TemplateService.php:60 getAppValue()",
+        "  lib/Service/TemplateService.php:82 getAppValue()",
+        "  lib/Service/TemplateService.php:103 setAppValue()",
+        "  lib/Service/TemplateService.php:118 getAppValue()",
+        "  lib/Service/TemplateService.php:131 setAppValue()",
+        "  lib/Settings/AdminSettings.php:53 getAppValue()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 56
+        }
+      ]
+    }
+  ],
+  "endpoints": 84,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/",
+      "target": "OCA\\FormVox\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/admin/templates",
+      "target": "OCA\\FormVox\\Controller\\SettingsController::listAdminTemplates",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/api/admin/templates",
+      "target": "OCA\\FormVox\\Controller\\SettingsController::addAdminTemplate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/formvox/api/admin/templates/{id}",
+      "target": "OCA\\FormVox\\Controller\\SettingsController::deleteAdminTemplate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/api/ai/generate-form",
+      "target": "OCA\\FormVox\\Controller\\AiController::generateForm",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/ai/resolve-file",
+      "target": "OCA\\FormVox\\Controller\\AiController::resolveFile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/ai/status",
+      "target": "OCA\\FormVox\\Controller\\SettingsController::getAiStatus",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/ai/task/{taskId}",
+      "target": "OCA\\FormVox\\Controller\\AiController::getTask",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/branding",
+      "target": "OCA\\FormVox\\Controller\\BrandingController::get",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/formvox/api/branding/image/{blockId}",
+      "target": "OCA\\FormVox\\Controller\\BrandingController::deleteBlockImage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/api/branding/image/{blockId}",
+      "target": "OCA\\FormVox\\Controller\\BrandingController::uploadBlockImage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/formvox/api/branding/layout",
+      "target": "OCA\\FormVox\\Controller\\BrandingController::saveLayout",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/formvox/api/branding/styles",
+      "target": "OCA\\FormVox\\Controller\\BrandingController::saveStyles",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/formvox/api/form/{fileId}",
+      "target": "OCA\\FormVox\\Controller\\ApiController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/form/{fileId}",
+      "target": "OCA\\FormVox\\Controller\\ApiController::get",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/formvox/api/form/{fileId}",
+      "target": "OCA\\FormVox\\Controller\\ApiController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/api/form/{fileId}/api-keys",
+      "target": "OCA\\FormVox\\Controller\\IntegrationController::createApiKey",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/formvox/api/form/{fileId}/api-keys/{keyId}",
+      "target": "OCA\\FormVox\\Controller\\IntegrationController::deleteApiKey",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/formvox/api/form/{fileId}/branding/image/{blockId}",
+      "target": "OCA\\FormVox\\Controller\\BrandingController::deleteFormBlockImage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/api/form/{fileId}/branding/image/{blockId}",
+      "target": "OCA\\FormVox\\Controller\\BrandingController::uploadFormBlockImage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/form/{fileId}/export/csv",
+      "target": "OCA\\FormVox\\Controller\\ApiController::exportCsv",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/form/{fileId}/export/json",
+      "target": "OCA\\FormVox\\Controller\\ApiController::exportJson",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/form/{fileId}/export/xlsx",
+      "target": "OCA\\FormVox\\Controller\\ApiController::exportExcel",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/api/form/{fileId}/favorite",
+      "target": "OCA\\FormVox\\Controller\\ApiController::setFavorite",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/formvox/api/form/{fileId}/odt-template",
+      "target": "OCA\\FormVox\\Controller\\ApiController::deleteOdtTemplate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/form/{fileId}/odt-template",
+      "target": "OCA\\FormVox\\Controller\\ApiController::downloadOdtTemplate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/api/form/{fileId}/odt-template",
+      "target": "OCA\\FormVox\\Controller\\ApiController::uploadOdtTemplate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/form/{fileId}/odt-template/status",
+      "target": "OCA\\FormVox\\Controller\\ApiController::hasOdtTemplate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/form/{fileId}/presence",
+      "target": "OCA\\FormVox\\Controller\\PresenceController::getPresence",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/api/form/{fileId}/presence",
+      "target": "OCA\\FormVox\\Controller\\PresenceController::sendPresence",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/api/form/{fileId}/rebuild-index",
+      "target": "OCA\\FormVox\\Controller\\ApiController::rebuildIndex",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/formvox/api/form/{fileId}/responses",
+      "target": "OCA\\FormVox\\Controller\\ApiController::deleteAllResponses",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/form/{fileId}/responses",
+      "target": "OCA\\FormVox\\Controller\\ApiController::getResponses",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/formvox/api/form/{fileId}/responses/{responseId}",
+      "target": "OCA\\FormVox\\Controller\\ApiController::deleteResponse",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/api/form/{fileId}/save-as-template",
+      "target": "OCA\\FormVox\\Controller\\ApiController::saveAsTemplate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/form/{fileId}/uploads",
+      "target": "OCA\\FormVox\\Controller\\ApiController::downloadAllUploads",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/form/{fileId}/uploads/{responseId}/{filename}",
+      "target": "OCA\\FormVox\\Controller\\ApiController::downloadUpload",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/api/form/{fileId}/webhooks",
+      "target": "OCA\\FormVox\\Controller\\IntegrationController::createWebhook",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/formvox/api/form/{fileId}/webhooks/{webhookId}",
+      "target": "OCA\\FormVox\\Controller\\IntegrationController::deleteWebhook",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/formvox/api/form/{fileId}/webhooks/{webhookId}",
+      "target": "OCA\\FormVox\\Controller\\IntegrationController::updateWebhook",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/forms",
+      "target": "OCA\\FormVox\\Controller\\ApiController::list",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/api/forms",
+      "target": "OCA\\FormVox\\Controller\\ApiController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/api/import/ms-forms/{msFormId}",
+      "target": "OCA\\FormVox\\Controller\\ImportController::importMsForm",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/import/ms-forms/{msFormId}/preview",
+      "target": "OCA\\FormVox\\Controller\\ImportController::previewMsForm",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/import/ms-forms/auth",
+      "target": "OCA\\FormVox\\Controller\\ImportController::getMsAuthUrl",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/import/ms-forms/callback",
+      "target": "OCA\\FormVox\\Controller\\ImportController::msAuthCallback",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/api/import/ms-forms/disconnect",
+      "target": "OCA\\FormVox\\Controller\\ImportController::disconnectMs",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/import/ms-forms/list",
+      "target": "OCA\\FormVox\\Controller\\ImportController::listMsForms",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/import/ms-forms/status",
+      "target": "OCA\\FormVox\\Controller\\ImportController::checkMsConnection",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/integration/permissions",
+      "target": "OCA\\FormVox\\Controller\\IntegrationController::getApiPermissions",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/integration/webhook-events",
+      "target": "OCA\\FormVox\\Controller\\IntegrationController::getWebhookEvents",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/license/stats",
+      "target": "OCA\\FormVox\\Controller\\LicenseController::getStats",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/api/license/update-usage",
+      "target": "OCA\\FormVox\\Controller\\LicenseController::updateUsage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/api/license/validate",
+      "target": "OCA\\FormVox\\Controller\\LicenseController::validate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/permissions/{fileId}",
+      "target": "OCA\\FormVox\\Controller\\FilePermissionController::getPermissions",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/settings/ai",
+      "target": "OCA\\FormVox\\Controller\\SettingsController::getAi",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/api/settings/ai",
+      "target": "OCA\\FormVox\\Controller\\SettingsController::saveAi",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/api/settings/embed",
+      "target": "OCA\\FormVox\\Controller\\SettingsController::saveEmbed",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/api/settings/license",
+      "target": "OCA\\FormVox\\Controller\\LicenseController::saveSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/api/settings/ms-forms",
+      "target": "OCA\\FormVox\\Controller\\SettingsController::saveMsForms",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/sharees",
+      "target": "OCA\\FormVox\\Controller\\ApiController::searchSharees",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/statistics",
+      "target": "OCA\\FormVox\\Controller\\StatisticsController::getStatistics",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/statistics/telemetry",
+      "target": "OCA\\FormVox\\Controller\\StatisticsController::getTelemetry",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/api/statistics/telemetry",
+      "target": "OCA\\FormVox\\Controller\\StatisticsController::setTelemetry",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/api/statistics/telemetry/send",
+      "target": "OCA\\FormVox\\Controller\\StatisticsController::sendTelemetry",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/templates",
+      "target": "OCA\\FormVox\\Controller\\SettingsController::listAvailableTemplates",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/v1/external/forms/{fileId}",
+      "target": "OCA\\FormVox\\Controller\\ExternalApiController::getForm",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/v1/external/forms/{fileId}/responses",
+      "target": "OCA\\FormVox\\Controller\\ExternalApiController::getResponses",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/api/v1/external/forms/{fileId}/responses",
+      "target": "OCA\\FormVox\\Controller\\ExternalApiController::createResponse",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/formvox/api/v1/external/forms/{fileId}/responses/{responseId}",
+      "target": "OCA\\FormVox\\Controller\\ExternalApiController::deleteResponse",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/v1/external/forms/{fileId}/responses/{responseId}",
+      "target": "OCA\\FormVox\\Controller\\ExternalApiController::getResponse",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/formvox/api/v1/external/forms/{fileId}/responses/{responseId}",
+      "target": "OCA\\FormVox\\Controller\\ExternalApiController::updateResponse",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/api/v1/external/forms/{fileId}/schema",
+      "target": "OCA\\FormVox\\Controller\\ExternalApiController::getSchema",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/branding/{fileId}/image/{blockId}",
+      "target": "OCA\\FormVox\\Controller\\BrandingController::formBlockImage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/branding/image/{blockId}",
+      "target": "OCA\\FormVox\\Controller\\BrandingController::blockImage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/edit/{fileId}",
+      "target": "OCA\\FormVox\\Controller\\PageController::editor",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/embed/{fileId}/{token}",
+      "target": "OCA\\FormVox\\Controller\\PublicController::embedForm",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/embed/{fileId}/{token}",
+      "target": "OCA\\FormVox\\Controller\\PublicController::embedAuthenticate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/public/{fileId}/{token}",
+      "target": "OCA\\FormVox\\Controller\\PublicController::showForm",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/public/{fileId}/{token}",
+      "target": "OCA\\FormVox\\Controller\\PublicController::authenticate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/public/{fileId}/{token}/challenge",
+      "target": "OCA\\FormVox\\Controller\\PublicController::challenge",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/public/{fileId}/{token}/submit",
+      "target": "OCA\\FormVox\\Controller\\PublicController::submit",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/formvox/public/{fileId}/{token}/upload",
+      "target": "OCA\\FormVox\\Controller\\PublicController::uploadFile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/formvox/results/{fileId}",
+      "target": "OCA\\FormVox\\Controller\\PageController::results",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

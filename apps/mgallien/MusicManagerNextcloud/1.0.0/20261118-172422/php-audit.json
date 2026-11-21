@@ -1,0 +1,95 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\MusicManager\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "namespace-mismatch",
+      "level": "warn",
+      "places": [
+        "lib/Hooks/MusicManagerFilesHooks.php:15 OCA\\Elisa\\Hooks\\ElisaFilesHooks, by its path OCA\\MusicManager\\Hooks\\MusicManagerFilesHooks",
+        "lib/Hooks/MusicManagerFilesHooksStatic.php:13 OCA\\Elisa\\Hooks\\ElisaFilesHooksStatic, by its path OCA\\MusicManager\\Hooks\\MusicManagerFilesHooksStatic"
+      ],
+      "lines": [
+        "2 classes in lib/ whose name does not follow PSR-4 below OCA\\MusicManager, the namespace the server derives from <namespace> of info.xml. The loader of the server does not find such a class.",
+        "  lib/Hooks/MusicManagerFilesHooks.php:15 OCA\\Elisa\\Hooks\\ElisaFilesHooks, by its path OCA\\MusicManager\\Hooks\\MusicManagerFilesHooks",
+        "  lib/Hooks/MusicManagerFilesHooksStatic.php:13 OCA\\Elisa\\Hooks\\ElisaFilesHooksStatic, by its path OCA\\MusicManager\\Hooks\\MusicManagerFilesHooksStatic"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Hooks/MusicManagerFilesHooksStatic.php:18 OC",
+        "lib/Hooks/MusicManagerFilesHooksStatic.php:18 OC::$server"
+      ],
+      "lines": [
+        "2 uses of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Hooks/MusicManagerFilesHooksStatic.php:18 OC",
+        "  lib/Hooks/MusicManagerFilesHooksStatic.php:18 OC::$server"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/MusicManagerDatabase.php:147 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 1 place. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/MusicManagerDatabase.php:147 time()"
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/musicmanager/tracks  ocs.musicmanager.api.alltracks  lib/Controller/ApiController.php:31",
+        "GET /ocs/v2.php/apps/musicmanager/database  ocs.musicmanager.database.getdatabase  lib/Controller/DatabaseController.php:57",
+        "POST /ocs/v2.php/apps/musicmanager/refreshDatabase  ocs.musicmanager.database.refreshdatabase  lib/Controller/DatabaseController.php:82"
+      ],
+      "lines": [
+        "Nothing in the app calls 3 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/musicmanager/tracks  ocs.musicmanager.api.alltracks  lib/Controller/ApiController.php:31",
+        "  GET /ocs/v2.php/apps/musicmanager/database  ocs.musicmanager.database.getdatabase  lib/Controller/DatabaseController.php:57",
+        "  POST /ocs/v2.php/apps/musicmanager/refreshDatabase  ocs.musicmanager.database.refreshdatabase  lib/Controller/DatabaseController.php:82"
+      ]
+    }
+  ],
+  "endpoints": 3,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/musicmanager/database",
+      "target": "OCA\\MusicManager\\Controller\\DatabaseController::getDatabase",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/musicmanager/refreshDatabase",
+      "target": "OCA\\MusicManager\\Controller\\DatabaseController::refreshDatabase",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/musicmanager/tracks",
+      "target": "OCA\\MusicManager\\Controller\\ApiController::allTracks",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

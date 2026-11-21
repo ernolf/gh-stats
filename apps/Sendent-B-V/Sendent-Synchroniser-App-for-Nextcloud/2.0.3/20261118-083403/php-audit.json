@@ -1,0 +1,620 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\SendentSynchroniser\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "namespace-mismatch",
+      "level": "warn",
+      "places": [
+        "lib/Migration/Version000001Date20230430.php:10 OCA\\SendentSynchroniser\\migration\\Version000001Date20230430, by its path OCA\\SendentSynchroniser\\Migration\\Version000001Date20230430",
+        "lib/Migration/Version000001Date20230827.php:10 OCA\\SendentSynchroniser\\migration\\Version000001Date20230827, by its path OCA\\SendentSynchroniser\\Migration\\Version000001Date20230827",
+        "lib/Migration/Version000001Date20231111.php:11 OCA\\SendentSynchroniser\\migration\\Version000001Date20231111, by its path OCA\\SendentSynchroniser\\Migration\\Version000001Date20231111",
+        "lib/Migration/Version000001Date20231112.php:11 OCA\\SendentSynchroniser\\migration\\Version000001Date20231112, by its path OCA\\SendentSynchroniser\\Migration\\Version000001Date20231112",
+        "lib/Migration/Version000001Date20231112_2.php:11 OCA\\SendentSynchroniser\\migration\\Version000001Date20231112_2, by its path OCA\\SendentSynchroniser\\Migration\\Version000001Date20231112_2",
+        "lib/Migration/Version000002Date20251020.php:10 OCA\\SendentSynchroniser\\migration\\Version000002Date20251020, by its path OCA\\SendentSynchroniser\\Migration\\Version000002Date20251020"
+      ],
+      "lines": [
+        "6 classes in lib/ whose name does not follow PSR-4 below OCA\\SendentSynchroniser, the namespace the server derives from <namespace> of info.xml. The loader of the server does not find such a class.",
+        "  lib/Migration/Version000001Date20230430.php:10 OCA\\SendentSynchroniser\\migration\\Version000001Date20230430, by its path OCA\\SendentSynchroniser\\Migration\\Version000001Date20230430",
+        "  lib/Migration/Version000001Date20230827.php:10 OCA\\SendentSynchroniser\\migration\\Version000001Date20230827, by its path OCA\\SendentSynchroniser\\Migration\\Version000001Date20230827",
+        "  lib/Migration/Version000001Date20231111.php:11 OCA\\SendentSynchroniser\\migration\\Version000001Date20231111, by its path OCA\\SendentSynchroniser\\Migration\\Version000001Date20231111",
+        "  lib/Migration/Version000001Date20231112.php:11 OCA\\SendentSynchroniser\\migration\\Version000001Date20231112, by its path OCA\\SendentSynchroniser\\Migration\\Version000001Date20231112",
+        "  lib/Migration/Version000001Date20231112_2.php:11 OCA\\SendentSynchroniser\\migration\\Version000001Date20231112_2, by its path OCA\\SendentSynchroniser\\Migration\\Version000001Date20231112_2",
+        "  lib/Migration/Version000002Date20251020.php:10 OCA\\SendentSynchroniser\\migration\\Version000002Date20251020, by its path OCA\\SendentSynchroniser\\Migration\\Version000002Date20251020"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/UserController.php:77 OC\\Authentication\\Token\\IProvider",
+        "lib/Controller/UserController.php:139 OC\\Authentication\\Token\\IToken",
+        "lib/Controller/UserController.php:145 OC\\Authentication\\Events\\AppPasswordCreatedEvent",
+        "lib/Service/SyncUserService.php:41 OC\\Authentication\\Token\\IProvider"
+      ],
+      "lines": [
+        "4 uses of the private API of the server in 2 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/UserController.php:77 OC\\Authentication\\Token\\IProvider",
+        "  lib/Controller/UserController.php:139 OC\\Authentication\\Token\\IToken",
+        "  lib/Controller/UserController.php:145 OC\\Authentication\\Events\\AppPasswordCreatedEvent",
+        "  lib/Service/SyncUserService.php:41 OC\\Authentication\\Token\\IProvider"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/Notification/Notifier.php:55 OCP\\Notification\\UnknownNotificationException: there since Nextcloud 30, the app declares from 28"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that the oldest majors of Nextcloud 28 to 34 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/Notification/Notifier.php:55 OCP\\Notification\\UnknownNotificationException: there since Nextcloud 30, the app declares from 28"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:35 query()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:35 query()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/sendentsynchroniser/api/1.0/health  sendentsynchroniser.page.health  appinfo/routes.php:6 routes",
+        "GET /index.php/apps/sendentsynchroniser/api/1.0/getConsentFlowPage  sendentsynchroniser.page.getconsentflowpage  appinfo/routes.php:6 routes",
+        "GET /index.php/apps/sendentsynchroniser/api/1.0/user/activateMail  sendentsynchroniser.user.activatemail  appinfo/routes.php:6 routes",
+        "GET /index.php/apps/sendentsynchroniser/api/1.0/user/actives  sendentsynchroniser.user.getactiveusers  appinfo/routes.php:6 routes",
+        "GET /index.php/apps/sendentsynchroniser/api/1.0/status  sendentsynchroniser.status_api.index  appinfo/routes.php:6 routes",
+        "GET /index.php/apps/sendentsynchroniser/api/1.0/licensestatus  sendentsynchroniser.license_api.show  appinfo/routes.php:6 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 6 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 16 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/sendentsynchroniser/api/1.0/health  sendentsynchroniser.page.health  appinfo/routes.php:6 routes",
+        "  GET /index.php/apps/sendentsynchroniser/api/1.0/getConsentFlowPage  sendentsynchroniser.page.getconsentflowpage  appinfo/routes.php:6 routes",
+        "  GET /index.php/apps/sendentsynchroniser/api/1.0/user/activateMail  sendentsynchroniser.user.activatemail  appinfo/routes.php:6 routes",
+        "  GET /index.php/apps/sendentsynchroniser/api/1.0/user/actives  sendentsynchroniser.user.getactiveusers  appinfo/routes.php:6 routes",
+        "  GET /index.php/apps/sendentsynchroniser/api/1.0/status  sendentsynchroniser.status_api.index  appinfo/routes.php:6 routes",
+        "  GET /index.php/apps/sendentsynchroniser/api/1.0/licensestatus  sendentsynchroniser.license_api.show  appinfo/routes.php:6 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "migration-class-name",
+      "level": "warn",
+      "places": [
+        "lib/Migration/Version000001Date20230430.php:1 has no class OCA\\SendentSynchroniser\\Migration\\Version000001Date20230430",
+        "lib/Migration/Version000001Date20230827.php:1 has no class OCA\\SendentSynchroniser\\Migration\\Version000001Date20230827",
+        "lib/Migration/Version000001Date20231111.php:1 has no class OCA\\SendentSynchroniser\\Migration\\Version000001Date20231111",
+        "lib/Migration/Version000001Date20231112_2.php:1 has no class OCA\\SendentSynchroniser\\Migration\\Version000001Date20231112_2",
+        "lib/Migration/Version000001Date20231112.php:1 has no class OCA\\SendentSynchroniser\\Migration\\Version000001Date20231112",
+        "lib/Migration/Version000002Date20251020.php:1 has no class OCA\\SendentSynchroniser\\Migration\\Version000002Date20251020"
+      ],
+      "lines": [
+        "The server loads a migration in lib/Migration/ as the class OCA\\SendentSynchroniser\\Migration\\<file name>, and refuses version 0. 6 files do not fit that, and the migrations of the app do not run.",
+        "  lib/Migration/Version000001Date20230430.php:1 has no class OCA\\SendentSynchroniser\\Migration\\Version000001Date20230430",
+        "  lib/Migration/Version000001Date20230827.php:1 has no class OCA\\SendentSynchroniser\\Migration\\Version000001Date20230827",
+        "  lib/Migration/Version000001Date20231111.php:1 has no class OCA\\SendentSynchroniser\\Migration\\Version000001Date20231111",
+        "  lib/Migration/Version000001Date20231112_2.php:1 has no class OCA\\SendentSynchroniser\\Migration\\Version000001Date20231112_2",
+        "  lib/Migration/Version000001Date20231112.php:1 has no class OCA\\SendentSynchroniser\\Migration\\Version000001Date20231112",
+        "  lib/Migration/Version000002Date20251020.php:1 has no class OCA\\SendentSynchroniser\\Migration\\Version000002Date20251020"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Command/EmailTemplate.php:39 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Command/EmailTemplate.php:54 OCP\\AppFramework\\Services\\IAppConfig::setAppValue(): deprecated since Nextcloud 29; use setAppValueString()",
+        "lib/Controller/PageController.php:44 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Controller/SettingsController.php:73 OCP\\AppFramework\\Services\\IAppConfig::setAppValue(): deprecated since Nextcloud 29; use setAppValueString()",
+        "lib/Controller/SettingsController.php:84 OCP\\AppFramework\\Services\\IAppConfig::setAppValue(): deprecated since Nextcloud 29; use setAppValueString()",
+        "lib/Controller/SettingsController.php:95 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Controller/SettingsController.php:106 OCP\\AppFramework\\Services\\IAppConfig::setAppValue(): deprecated since Nextcloud 29; use setAppValueString()",
+        "lib/Controller/SettingsController.php:119 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Controller/SettingsController.php:131 OCP\\AppFramework\\Services\\IAppConfig::setAppValue(): deprecated since Nextcloud 29; use setAppValueString()",
+        "lib/Controller/SettingsController.php:146 OCP\\AppFramework\\Services\\IAppConfig::setAppValue(): deprecated since Nextcloud 29; use setAppValueString()",
+        "lib/Controller/SettingsController.php:159 OCP\\AppFramework\\Services\\IAppConfig::setAppValue(): deprecated since Nextcloud 29; use setAppValueString()",
+        "lib/Controller/SettingsController.php:173 OCP\\AppFramework\\Services\\IAppConfig::setAppValue(): deprecated since Nextcloud 29; use setAppValueString()",
+        "lib/Controller/SettingsController.php:186 OCP\\AppFramework\\Services\\IAppConfig::setAppValue(): deprecated since Nextcloud 29; use setAppValueString()",
+        "lib/Controller/SettingsController.php:197 OCP\\AppFramework\\Services\\IAppConfig::setAppValue(): deprecated since Nextcloud 29; use setAppValueString()",
+        "lib/Controller/SettingsController.php:210 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Controller/SettingsController.php:244 OCP\\AppFramework\\Services\\IAppConfig::setAppValue(): deprecated since Nextcloud 29; use setAppValueString()",
+        "lib/Controller/SettingsController.php:268 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Controller/SettingsController.php:273 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Controller/SettingsController.php:286 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Controller/SettingsController.php:318 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Controller/UserController.php:150 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Controller/UserController.php:180 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Controller/UserController.php:181 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Controller/UserController.php:181 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Cron/NotifyInactiveUsers.php:36 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Cron/NotifyInactiveUsers.php:44 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Cron/NotifyInactiveUsers.php:52 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Db/SyncUserMapper.php:95 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Service/CollectionService.php:181 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Service/CollectionService.php:189 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Service/CollectionService.php:241 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/CollectionService.php:251 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/InitialLoadManager.php:37 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/InitialLoadManager.php:42 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/SchedulingSuppressionService.php:26 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Service/SchedulingSuppressionService.php:53 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Service/SyncUserService.php:101 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Service/SyncUserService.php:186 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Service/SyncUserService.php:187 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Service/SyncUserService.php:209 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Service/SyncUserService.php:215 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Settings/Admin.php:51 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Settings/Admin.php:101 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Settings/Admin.php:102 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Settings/Admin.php:103 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Settings/Admin.php:104 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Settings/Admin.php:105 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Settings/Admin.php:106 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Settings/Admin.php:107 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Settings/Admin.php:108 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Settings/Admin.php:109 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Settings/Admin.php:110 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Settings/Admin.php:111 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Settings/Admin.php:132 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Settings/User.php:79 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Settings/User.php:118 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "lib/Settings/User.php:123 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()"
+      ],
+      "lines": [
+        "57 uses in 12 files of the public API that is deprecated in Nextcloud 28 to 34. The text of the tag names the replacement where it has one.",
+        "  lib/Command/EmailTemplate.php:39 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Command/EmailTemplate.php:54 OCP\\AppFramework\\Services\\IAppConfig::setAppValue(): deprecated since Nextcloud 29; use setAppValueString()",
+        "  lib/Controller/PageController.php:44 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Controller/SettingsController.php:73 OCP\\AppFramework\\Services\\IAppConfig::setAppValue(): deprecated since Nextcloud 29; use setAppValueString()",
+        "  lib/Controller/SettingsController.php:84 OCP\\AppFramework\\Services\\IAppConfig::setAppValue(): deprecated since Nextcloud 29; use setAppValueString()",
+        "  lib/Controller/SettingsController.php:95 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Controller/SettingsController.php:106 OCP\\AppFramework\\Services\\IAppConfig::setAppValue(): deprecated since Nextcloud 29; use setAppValueString()",
+        "  lib/Controller/SettingsController.php:119 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Controller/SettingsController.php:131 OCP\\AppFramework\\Services\\IAppConfig::setAppValue(): deprecated since Nextcloud 29; use setAppValueString()",
+        "  lib/Controller/SettingsController.php:146 OCP\\AppFramework\\Services\\IAppConfig::setAppValue(): deprecated since Nextcloud 29; use setAppValueString()",
+        "  lib/Controller/SettingsController.php:159 OCP\\AppFramework\\Services\\IAppConfig::setAppValue(): deprecated since Nextcloud 29; use setAppValueString()",
+        "  lib/Controller/SettingsController.php:173 OCP\\AppFramework\\Services\\IAppConfig::setAppValue(): deprecated since Nextcloud 29; use setAppValueString()",
+        "  lib/Controller/SettingsController.php:186 OCP\\AppFramework\\Services\\IAppConfig::setAppValue(): deprecated since Nextcloud 29; use setAppValueString()",
+        "  lib/Controller/SettingsController.php:197 OCP\\AppFramework\\Services\\IAppConfig::setAppValue(): deprecated since Nextcloud 29; use setAppValueString()",
+        "  lib/Controller/SettingsController.php:210 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Controller/SettingsController.php:244 OCP\\AppFramework\\Services\\IAppConfig::setAppValue(): deprecated since Nextcloud 29; use setAppValueString()",
+        "  lib/Controller/SettingsController.php:268 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Controller/SettingsController.php:273 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Controller/SettingsController.php:286 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Controller/SettingsController.php:318 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Controller/UserController.php:150 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Controller/UserController.php:180 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Controller/UserController.php:181 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Controller/UserController.php:181 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Cron/NotifyInactiveUsers.php:36 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Cron/NotifyInactiveUsers.php:44 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Cron/NotifyInactiveUsers.php:52 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Db/SyncUserMapper.php:95 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Service/CollectionService.php:181 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Service/CollectionService.php:189 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Service/CollectionService.php:241 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/CollectionService.php:251 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/InitialLoadManager.php:37 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/InitialLoadManager.php:42 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/SchedulingSuppressionService.php:26 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Service/SchedulingSuppressionService.php:53 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Service/SyncUserService.php:101 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Service/SyncUserService.php:186 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Service/SyncUserService.php:187 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Service/SyncUserService.php:209 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Service/SyncUserService.php:215 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Settings/Admin.php:51 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Settings/Admin.php:101 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Settings/Admin.php:102 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Settings/Admin.php:103 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Settings/Admin.php:104 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Settings/Admin.php:105 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Settings/Admin.php:106 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Settings/Admin.php:107 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Settings/Admin.php:108 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Settings/Admin.php:109 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Settings/Admin.php:110 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Settings/Admin.php:111 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Settings/Admin.php:132 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Settings/User.php:79 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Settings/User.php:118 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()",
+        "  lib/Settings/User.php:123 OCP\\AppFramework\\Services\\IAppConfig::getAppValue(): deprecated since Nextcloud 29; use getAppValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 54
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/Cron/NotifyInactiveUsers.php OCA\\SendentSynchroniser\\Cron\\NotifyInactiveUsers"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/Cron/NotifyInactiveUsers.php OCA\\SendentSynchroniser\\Cron\\NotifyInactiveUsers"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/PageController.php:45 new DateTime()",
+        "lib/Controller/SettingsController.php:337 new DateTime()",
+        "lib/Cron/NotifyInactiveUsers.php:69 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 3 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/PageController.php:45 new DateTime()",
+        "  lib/Controller/SettingsController.php:337 new DateTime()",
+        "  lib/Cron/NotifyInactiveUsers.php:69 new DateTime()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Command/EmailTemplate.php:39 getAppValue()",
+        "lib/Command/EmailTemplate.php:54 setAppValue()",
+        "lib/Controller/PageController.php:44 getAppValue()",
+        "lib/Controller/SettingsController.php:73 setAppValue()",
+        "lib/Controller/SettingsController.php:84 setAppValue()",
+        "lib/Controller/SettingsController.php:95 getAppValue()",
+        "lib/Controller/SettingsController.php:106 setAppValue()",
+        "lib/Controller/SettingsController.php:119 getAppValue()",
+        "lib/Controller/SettingsController.php:131 setAppValue()",
+        "lib/Controller/SettingsController.php:146 setAppValue()",
+        "lib/Controller/SettingsController.php:159 setAppValue()",
+        "lib/Controller/SettingsController.php:173 setAppValue()",
+        "lib/Controller/SettingsController.php:186 setAppValue()",
+        "lib/Controller/SettingsController.php:197 setAppValue()",
+        "lib/Controller/SettingsController.php:210 getAppValue()",
+        "lib/Controller/SettingsController.php:244 setAppValue()",
+        "lib/Controller/SettingsController.php:268 getAppValue()",
+        "lib/Controller/SettingsController.php:273 getAppValue()",
+        "lib/Controller/SettingsController.php:286 getAppValue()",
+        "lib/Controller/SettingsController.php:318 getAppValue()",
+        "lib/Controller/UserController.php:150 getAppValue()",
+        "lib/Controller/UserController.php:180 getAppValue()",
+        "lib/Controller/UserController.php:181 getAppValue()",
+        "lib/Cron/NotifyInactiveUsers.php:36 getAppValue()",
+        "lib/Cron/NotifyInactiveUsers.php:44 getAppValue()",
+        "lib/Cron/NotifyInactiveUsers.php:52 getAppValue()",
+        "lib/Db/SyncUserMapper.php:95 getAppValue()",
+        "lib/Service/CollectionService.php:181 getAppValue()",
+        "lib/Service/CollectionService.php:189 getAppValue()",
+        "lib/Service/InitialLoadManager.php:37 getAppValue()",
+        "lib/Service/InitialLoadManager.php:42 setAppValue()",
+        "lib/Service/SchedulingSuppressionService.php:26 getAppValue()",
+        "lib/Service/SchedulingSuppressionService.php:53 getAppValue()",
+        "lib/Service/SyncUserService.php:101 getAppValue()",
+        "lib/Service/SyncUserService.php:186 getAppValue()",
+        "lib/Service/SyncUserService.php:187 getAppValue()",
+        "lib/Service/SyncUserService.php:209 getAppValue()",
+        "lib/Service/SyncUserService.php:215 getAppValue()",
+        "lib/Settings/Admin.php:51 getAppValue()",
+        "lib/Settings/Admin.php:101 getAppValue()",
+        "lib/Settings/Admin.php:102 getAppValue()",
+        "lib/Settings/Admin.php:103 getAppValue()",
+        "lib/Settings/Admin.php:104 getAppValue()",
+        "lib/Settings/Admin.php:105 getAppValue()",
+        "lib/Settings/Admin.php:106 getAppValue()",
+        "lib/Settings/Admin.php:109 getAppValue()",
+        "lib/Settings/Admin.php:110 getAppValue()",
+        "lib/Settings/Admin.php:111 getAppValue()",
+        "lib/Settings/User.php:118 getAppValue()",
+        "lib/Settings/User.php:123 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 50 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Command/EmailTemplate.php:39 getAppValue()",
+        "  lib/Command/EmailTemplate.php:54 setAppValue()",
+        "  lib/Controller/PageController.php:44 getAppValue()",
+        "  lib/Controller/SettingsController.php:73 setAppValue()",
+        "  lib/Controller/SettingsController.php:84 setAppValue()",
+        "  lib/Controller/SettingsController.php:95 getAppValue()",
+        "  lib/Controller/SettingsController.php:106 setAppValue()",
+        "  lib/Controller/SettingsController.php:119 getAppValue()",
+        "  lib/Controller/SettingsController.php:131 setAppValue()",
+        "  lib/Controller/SettingsController.php:146 setAppValue()",
+        "  lib/Controller/SettingsController.php:159 setAppValue()",
+        "  lib/Controller/SettingsController.php:173 setAppValue()",
+        "  lib/Controller/SettingsController.php:186 setAppValue()",
+        "  lib/Controller/SettingsController.php:197 setAppValue()",
+        "  lib/Controller/SettingsController.php:210 getAppValue()",
+        "  lib/Controller/SettingsController.php:244 setAppValue()",
+        "  lib/Controller/SettingsController.php:268 getAppValue()",
+        "  lib/Controller/SettingsController.php:273 getAppValue()",
+        "  lib/Controller/SettingsController.php:286 getAppValue()",
+        "  lib/Controller/SettingsController.php:318 getAppValue()",
+        "  lib/Controller/UserController.php:150 getAppValue()",
+        "  lib/Controller/UserController.php:180 getAppValue()",
+        "  lib/Controller/UserController.php:181 getAppValue()",
+        "  lib/Cron/NotifyInactiveUsers.php:36 getAppValue()",
+        "  lib/Cron/NotifyInactiveUsers.php:44 getAppValue()",
+        "  lib/Cron/NotifyInactiveUsers.php:52 getAppValue()",
+        "  lib/Db/SyncUserMapper.php:95 getAppValue()",
+        "  lib/Service/CollectionService.php:181 getAppValue()",
+        "  lib/Service/CollectionService.php:189 getAppValue()",
+        "  lib/Service/InitialLoadManager.php:37 getAppValue()",
+        "  lib/Service/InitialLoadManager.php:42 setAppValue()",
+        "  lib/Service/SchedulingSuppressionService.php:26 getAppValue()",
+        "  lib/Service/SchedulingSuppressionService.php:53 getAppValue()",
+        "  lib/Service/SyncUserService.php:101 getAppValue()",
+        "  lib/Service/SyncUserService.php:186 getAppValue()",
+        "  lib/Service/SyncUserService.php:187 getAppValue()",
+        "  lib/Service/SyncUserService.php:209 getAppValue()",
+        "  lib/Service/SyncUserService.php:215 getAppValue()",
+        "  lib/Settings/Admin.php:51 getAppValue()",
+        "  lib/Settings/Admin.php:101 getAppValue()",
+        "  lib/Settings/Admin.php:102 getAppValue()",
+        "  lib/Settings/Admin.php:103 getAppValue()",
+        "  lib/Settings/Admin.php:104 getAppValue()",
+        "  lib/Settings/Admin.php:105 getAppValue()",
+        "  lib/Settings/Admin.php:106 getAppValue()",
+        "  lib/Settings/Admin.php:109 getAppValue()",
+        "  lib/Settings/Admin.php:110 getAppValue()",
+        "  lib/Settings/Admin.php:111 getAppValue()",
+        "  lib/Settings/User.php:118 getAppValue()",
+        "  lib/Settings/User.php:123 getAppValue()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 47
+        }
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/SettingsController.php:94 OCA\\SendentSynchroniser\\Controller\\SettingsController::getReminderType()"
+      ],
+      "lines": [
+        "1 public method of a controller is reached by no route.",
+        "  lib/Controller/SettingsController.php:94 OCA\\SendentSynchroniser\\Controller\\SettingsController::getReminderType()"
+      ]
+    }
+  ],
+  "endpoints": 27,
+  "endpointList": [
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/{path}",
+      "target": "OCA\\SendentSynchroniser\\Controller\\LicenseApiController::preflightedCors",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/getConsentFlowPage",
+      "target": "OCA\\SendentSynchroniser\\Controller\\PageController::getConsentFlowPage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/health",
+      "target": "OCA\\SendentSynchroniser\\Controller\\PageController::health",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/license",
+      "target": "OCA\\SendentSynchroniser\\Controller\\LicenseApiController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/license",
+      "target": "OCA\\SendentSynchroniser\\Controller\\LicenseApiController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/licensestatus",
+      "target": "OCA\\SendentSynchroniser\\Controller\\LicenseApiController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/licensestatusinternal",
+      "target": "OCA\\SendentSynchroniser\\Controller\\LicenseApiController::showInternal",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/settings/activeGroups",
+      "target": "OCA\\SendentSynchroniser\\Controller\\SettingsController::setActiveGroups",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/settings/defaultAddressbook",
+      "target": "OCA\\SendentSynchroniser\\Controller\\SettingsController::setDefaultAddressbook",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/settings/defaultCalendar",
+      "target": "OCA\\SendentSynchroniser\\Controller\\SettingsController::setDefaultCalendar",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/settings/emailDomain",
+      "target": "OCA\\SendentSynchroniser\\Controller\\SettingsController::setEmailDomain",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/settings/graphApiMode",
+      "target": "OCA\\SendentSynchroniser\\Controller\\SettingsController::setGraphApiMode",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/settings/imapsync",
+      "target": "OCA\\SendentSynchroniser\\Controller\\SettingsController::setIMAPSync",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/settings/notificationInterval",
+      "target": "OCA\\SendentSynchroniser\\Controller\\SettingsController::setNotificationInterval",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/settings/notificationMethod",
+      "target": "OCA\\SendentSynchroniser\\Controller\\SettingsController::getNotificationMethod",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/settings/notificationMethod",
+      "target": "OCA\\SendentSynchroniser\\Controller\\SettingsController::setNotificationMethod",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/settings/reminderType",
+      "target": "OCA\\SendentSynchroniser\\Controller\\SettingsController::setReminderType",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/settings/sendReminder",
+      "target": "OCA\\SendentSynchroniser\\Controller\\SettingsController::sendReminder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/settings/sharedSecret",
+      "target": "OCA\\SendentSynchroniser\\Controller\\SettingsController::setSharedSecret",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/settings/shouldShowDialog",
+      "target": "OCA\\SendentSynchroniser\\Controller\\SettingsController::shouldShowDialog",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/status",
+      "target": "OCA\\SendentSynchroniser\\Controller\\StatusApiController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/user/activate",
+      "target": "OCA\\SendentSynchroniser\\Controller\\UserController::activate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/user/activateMail",
+      "target": "OCA\\SendentSynchroniser\\Controller\\UserController::activateMail",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/user/actives",
+      "target": "OCA\\SendentSynchroniser\\Controller\\UserController::getActiveUsers",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/user/invalidate",
+      "target": "OCA\\SendentSynchroniser\\Controller\\UserController::invalidateSelf",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/user/invalidate",
+      "target": "OCA\\SendentSynchroniser\\Controller\\UserController::invalidate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sendentsynchroniser/api/1.0/user/invalidateAll",
+      "target": "OCA\\SendentSynchroniser\\Controller\\UserController::invalidateAll",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

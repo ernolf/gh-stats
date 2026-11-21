@@ -1,0 +1,660 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Learniq\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/OpenRegisterAutoloader.php:110 OC_App"
+      ],
+      "lines": [
+        "1 use of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/AppInfo/OpenRegisterAutoloader.php:110 OC_App"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:155 get()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:155 get()"
+      ]
+    },
+    {
+      "id": "route-target-missing",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/learniq/api/health  learniq.health.index  appinfo/routes.php:30 routes: no class OCA\\Learniq\\Controller\\HealthController",
+        "GET /index.php/apps/learniq/api/metrics  learniq.metrics.index  appinfo/routes.php:30 routes: no class OCA\\Learniq\\Controller\\MetricsController",
+        "GET /index.php/apps/learniq/api/preferences/{key}  learniq.preferences.getpreference  appinfo/routes.php:30 routes: no class OCA\\Learniq\\Controller\\PreferencesController",
+        "PUT /index.php/apps/learniq/api/preferences/{key}  learniq.preferences.setpreference  appinfo/routes.php:30 routes: no class OCA\\Learniq\\Controller\\PreferencesController"
+      ],
+      "lines": [
+        "4 routes name a controller class or a method that does not exist, or a method that is not public. A request to such a route ends in an error.",
+        "  GET /index.php/apps/learniq/api/health  learniq.health.index  appinfo/routes.php:30 routes: no class OCA\\Learniq\\Controller\\HealthController",
+        "  GET /index.php/apps/learniq/api/metrics  learniq.metrics.index  appinfo/routes.php:30 routes: no class OCA\\Learniq\\Controller\\MetricsController",
+        "  GET /index.php/apps/learniq/api/preferences/{key}  learniq.preferences.getpreference  appinfo/routes.php:30 routes: no class OCA\\Learniq\\Controller\\PreferencesController",
+        "  PUT /index.php/apps/learniq/api/preferences/{key}  learniq.preferences.setpreference  appinfo/routes.php:30 routes: no class OCA\\Learniq\\Controller\\PreferencesController"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/learniq/api/setup/status  learniq.setup.status  appinfo/routes.php:30 routes",
+        "POST /index.php/apps/learniq/api/setup/config  learniq.setup.saveconfig  appinfo/routes.php:30 routes",
+        "GET /index.php/apps/learniq/api/manifest  learniq.page.manifest  appinfo/routes.php:30 routes",
+        "POST /index.php/apps/learniq/api/credentials/admin/generate-key  learniq.keyadmin.generatekey  appinfo/routes.php:30 routes",
+        "GET /index.php/apps/learniq/api/credentials/admin/key-status  learniq.keyadmin.keystatus  appinfo/routes.php:30 routes",
+        "POST /index.php/apps/learniq/api/compliance/audit/export  learniq.auditpackexport.export  appinfo/routes.php:30 routes",
+        "POST /index.php/apps/learniq/api/assessment/qti-import  learniq.qtiimport.import  appinfo/routes.php:30 routes",
+        "GET /index.php/apps/learniq/api/assessment/qti-export  learniq.qtiexport.export  appinfo/routes.php:30 routes",
+        "GET /index.php/apps/learniq/api/course-management/course-package-export  learniq.coursepackageexport.export  appinfo/routes.php:30 routes",
+        "POST /index.php/apps/learniq/api/external-training/bulk  learniq.externaltraining.bulkrecord  appinfo/routes.php:30 routes",
+        "POST /index.php/apps/learniq/api/external-training/{recordId}/credential  learniq.externaltraining.issuecredential  appinfo/routes.php:30 routes",
+        "GET /index.php/apps/learniq/api/external-training/coverage  learniq.externaltraining.learnercoverage  appinfo/routes.php:30 routes",
+        "POST /index.php/apps/learniq/api/peer-review/{assignmentId}/allocate  learniq.peerreview.allocate  appinfo/routes.php:30 routes",
+        "POST /index.php/apps/learniq/api/payments/callback  learniq.paymenttransaction.callback  appinfo/routes.php:30 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 14 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 71 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/learniq/api/setup/status  learniq.setup.status  appinfo/routes.php:30 routes",
+        "  POST /index.php/apps/learniq/api/setup/config  learniq.setup.saveconfig  appinfo/routes.php:30 routes",
+        "  GET /index.php/apps/learniq/api/manifest  learniq.page.manifest  appinfo/routes.php:30 routes",
+        "  POST /index.php/apps/learniq/api/credentials/admin/generate-key  learniq.keyadmin.generatekey  appinfo/routes.php:30 routes",
+        "  GET /index.php/apps/learniq/api/credentials/admin/key-status  learniq.keyadmin.keystatus  appinfo/routes.php:30 routes",
+        "  POST /index.php/apps/learniq/api/compliance/audit/export  learniq.auditpackexport.export  appinfo/routes.php:30 routes",
+        "  POST /index.php/apps/learniq/api/assessment/qti-import  learniq.qtiimport.import  appinfo/routes.php:30 routes",
+        "  GET /index.php/apps/learniq/api/assessment/qti-export  learniq.qtiexport.export  appinfo/routes.php:30 routes",
+        "  GET /index.php/apps/learniq/api/course-management/course-package-export  learniq.coursepackageexport.export  appinfo/routes.php:30 routes",
+        "  POST /index.php/apps/learniq/api/external-training/bulk  learniq.externaltraining.bulkrecord  appinfo/routes.php:30 routes",
+        "  POST /index.php/apps/learniq/api/external-training/{recordId}/credential  learniq.externaltraining.issuecredential  appinfo/routes.php:30 routes",
+        "  GET /index.php/apps/learniq/api/external-training/coverage  learniq.externaltraining.learnercoverage  appinfo/routes.php:30 routes",
+        "  POST /index.php/apps/learniq/api/peer-review/{assignmentId}/allocate  learniq.peerreview.allocate  appinfo/routes.php:30 routes",
+        "  POST /index.php/apps/learniq/api/payments/callback  learniq.paymenttransaction.callback  appinfo/routes.php:30 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 11
+        }
+      ]
+    },
+    {
+      "id": "frontend-url-without-route",
+      "level": "warn",
+      "places": [
+        "src/views/MyLearningRecordView.vue:683 /apps/learniq/learning-record-shares/.../verify"
+      ],
+      "lines": [
+        "The frontend or a template builds 1 URL below /apps/learniq/ that no route of the app matches. The request fails at run time.",
+        "  src/views/MyLearningRecordView.vue:683 /apps/learniq/learning-record-shares/.../verify"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "vimeo/psalm, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/AiProcessingDisclosureController.php:147 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Controller/CoursePackageImportController.php:129 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/KeyAdminController.php:209 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/LeaderboardController.php:368 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/QtiImportController.php:121 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Lifecycle/AssessmentPublishGuard.php:181 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Lifecycle/PortfolioShareGrantHandler.php:369 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Repair/MigrateAppConfigKeys.php:211 OCP\\IAppConfig::getKeys(): deprecated since Nextcloud 13; use method getAppKeys of \\OCP\\IConfig  This function gets all keys of an app. Please note that the values are not returned.",
+        "lib/Repair/RenameDutchColumns.php:389 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "lib/Service/AiLocalityClassifier.php:148 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Service/AuditPackBuilder.php:148 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/DemoDataService.php:281 OCP\\App\\IAppManager::getInstalledApps(): deprecated since Nextcloud 32; Use either self::getEnabledApps or self::getEnabledAppsForUser",
+        "lib/Service/LearningRecordImportIntakeService.php:93 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/SettingsService.php:78 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Support/FleetAppId.php:85 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone"
+      ],
+      "lines": [
+        "15 uses in 15 files of the public API that is deprecated in Nextcloud 32 to 34. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/AiProcessingDisclosureController.php:147 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Controller/CoursePackageImportController.php:129 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/KeyAdminController.php:209 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/LeaderboardController.php:368 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/QtiImportController.php:121 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Lifecycle/AssessmentPublishGuard.php:181 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Lifecycle/PortfolioShareGrantHandler.php:369 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Repair/MigrateAppConfigKeys.php:211 OCP\\IAppConfig::getKeys(): deprecated since Nextcloud 13; use method getAppKeys of \\OCP\\IConfig  This function gets all keys of an app. Please note that the values are not returned.",
+        "  lib/Repair/RenameDutchColumns.php:389 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "  lib/Service/AiLocalityClassifier.php:148 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Service/AuditPackBuilder.php:148 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/DemoDataService.php:281 OCP\\App\\IAppManager::getInstalledApps(): deprecated since Nextcloud 32; Use either self::getEnabledApps or self::getEnabledAppsForUser",
+        "  lib/Service/LearningRecordImportIntakeService.php:93 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/SettingsService.php:78 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Support/FleetAppId.php:85 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 12
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/LtiAgsScorePollJob.php:277 new DateTimeImmutable()",
+        "lib/Controller/KeyAdminController.php:152 time()",
+        "lib/Controller/KeyAdminController.php:242 time()",
+        "lib/Controller/LearningRecordShareVerifyController.php:245 new DateTimeImmutable()",
+        "lib/Controller/PaymentTransactionController.php:287 new DateTimeImmutable()",
+        "lib/Grading/GradeFormulaEvaluator.php:123 new DateTimeImmutable()",
+        "lib/Grading/GradeFormulaEvaluator.php:235 new DateTimeImmutable()",
+        "lib/Lifecycle/ExternalTrainingVerificationGuard.php:153 new DateTimeImmutable()",
+        "lib/Lifecycle/FraudCaseDecisionGuard.php:140 new DateTimeImmutable()",
+        "lib/Lifecycle/MunicipalityFeedbackGuard.php:158 new DateTimeImmutable()",
+        "lib/Lifecycle/RejectionWaiveGuard.php:152 new DateTimeImmutable()",
+        "lib/Lifecycle/ReportPeriodComposeGuard.php:135 time()",
+        "lib/Lifecycle/SubmissionWindowGuard.php:151 new DateTimeImmutable()",
+        "lib/Listener/CourseEvaluationResponseSubmittedHandler.php:150 new DateTimeImmutable()",
+        "lib/Listener/CredentialIssuanceHandler.php:95 new DateTimeImmutable()",
+        "lib/Listener/ExemptionGrantHandler.php:139 new DateTimeImmutable()",
+        "lib/Listener/GradeRollupHandler.php:433 new DateTimeImmutable()",
+        "lib/Listener/PortfolioGradeEmitHandler.php:162 new DateTimeImmutable()",
+        "lib/Listener/SessionChangeNoticeHandler.php:141 new DateTimeImmutable()",
+        "lib/Listener/WerkprocesGradeEmitHandler.php:199 new DateTimeImmutable()",
+        "lib/Service/AuditPackBuilder.php:296 new DateTimeImmutable()",
+        "lib/Service/CompetencyAttainmentWriter.php:134 new DateTimeImmutable()",
+        "lib/Service/CoursePackage/CoursePackageImportReporter.php:65 new DateTimeImmutable()",
+        "lib/Service/CourseQualityScoreEvaluator.php:100 new DateTimeImmutable()",
+        "lib/Service/CredentialSigningService.php:99 new DateTimeImmutable()",
+        "lib/Service/CredentialSigningService.php:149 new DateTimeImmutable()",
+        "lib/Service/ExternalTrainingService.php:100 new DateTimeImmutable()",
+        "lib/Service/ExternalTrainingService.php:137 new DateTimeImmutable()",
+        "lib/Service/ItemAnalysisService.php:152 new DateTimeImmutable()",
+        "lib/Service/ItemAnalysisService.php:211 new DateTimeImmutable()",
+        "lib/Service/LearningRecordExportService.php:162 new DateTimeImmutable()",
+        "lib/Service/LearningRecordImportIntakeService.php:191 new DateTimeImmutable()",
+        "lib/Service/LessonReleaseEvaluator.php:132 new DateTimeImmutable()",
+        "lib/Service/TimetableProjector.php:102 new DateTimeImmutable()",
+        "lib/Timetabling/TimetableConflictDetector.php:352 new DateTimeImmutable()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 35 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/BackgroundJob/LtiAgsScorePollJob.php:277 new DateTimeImmutable()",
+        "  lib/Controller/KeyAdminController.php:152 time()",
+        "  lib/Controller/KeyAdminController.php:242 time()",
+        "  lib/Controller/LearningRecordShareVerifyController.php:245 new DateTimeImmutable()",
+        "  lib/Controller/PaymentTransactionController.php:287 new DateTimeImmutable()",
+        "  lib/Grading/GradeFormulaEvaluator.php:123 new DateTimeImmutable()",
+        "  lib/Grading/GradeFormulaEvaluator.php:235 new DateTimeImmutable()",
+        "  lib/Lifecycle/ExternalTrainingVerificationGuard.php:153 new DateTimeImmutable()",
+        "  lib/Lifecycle/FraudCaseDecisionGuard.php:140 new DateTimeImmutable()",
+        "  lib/Lifecycle/MunicipalityFeedbackGuard.php:158 new DateTimeImmutable()",
+        "  lib/Lifecycle/RejectionWaiveGuard.php:152 new DateTimeImmutable()",
+        "  lib/Lifecycle/ReportPeriodComposeGuard.php:135 time()",
+        "  lib/Lifecycle/SubmissionWindowGuard.php:151 new DateTimeImmutable()",
+        "  lib/Listener/CourseEvaluationResponseSubmittedHandler.php:150 new DateTimeImmutable()",
+        "  lib/Listener/CredentialIssuanceHandler.php:95 new DateTimeImmutable()",
+        "  lib/Listener/ExemptionGrantHandler.php:139 new DateTimeImmutable()",
+        "  lib/Listener/GradeRollupHandler.php:433 new DateTimeImmutable()",
+        "  lib/Listener/PortfolioGradeEmitHandler.php:162 new DateTimeImmutable()",
+        "  lib/Listener/SessionChangeNoticeHandler.php:141 new DateTimeImmutable()",
+        "  lib/Listener/WerkprocesGradeEmitHandler.php:199 new DateTimeImmutable()",
+        "  lib/Service/AuditPackBuilder.php:296 new DateTimeImmutable()",
+        "  lib/Service/CompetencyAttainmentWriter.php:134 new DateTimeImmutable()",
+        "  lib/Service/CoursePackage/CoursePackageImportReporter.php:65 new DateTimeImmutable()",
+        "  lib/Service/CourseQualityScoreEvaluator.php:100 new DateTimeImmutable()",
+        "  lib/Service/CredentialSigningService.php:99 new DateTimeImmutable()",
+        "  lib/Service/CredentialSigningService.php:149 new DateTimeImmutable()",
+        "  lib/Service/ExternalTrainingService.php:100 new DateTimeImmutable()",
+        "  lib/Service/ExternalTrainingService.php:137 new DateTimeImmutable()",
+        "  lib/Service/ItemAnalysisService.php:152 new DateTimeImmutable()",
+        "  lib/Service/ItemAnalysisService.php:211 new DateTimeImmutable()",
+        "  lib/Service/LearningRecordExportService.php:162 new DateTimeImmutable()",
+        "  lib/Service/LearningRecordImportIntakeService.php:191 new DateTimeImmutable()",
+        "  lib/Service/LessonReleaseEvaluator.php:132 new DateTimeImmutable()",
+        "  lib/Service/TimetableProjector.php:102 new DateTimeImmutable()",
+        "  lib/Timetabling/TimetableConflictDetector.php:352 new DateTimeImmutable()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 32
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/LtiAgsScorePollJob.php:153 getValueString()",
+        "lib/BackgroundJob/LtiAgsScorePollJob.php:160 getValueString()",
+        "lib/BackgroundJob/LtiAgsScorePollJob.php:191 setValueString()",
+        "lib/Controller/KeyAdminController.php:149 setValueString()",
+        "lib/Controller/KeyAdminController.php:231 getValueString()",
+        "lib/Controller/LtiToolPlacementController.php:274 getValueString()",
+        "lib/Controller/PaymentTransactionController.php:405 getValueString()",
+        "lib/Controller/SetupController.php:114 getValueString()",
+        "lib/Controller/SetupController.php:115 getValueString()",
+        "lib/Controller/SetupController.php:180 setValueString()",
+        "lib/Controller/SetupController.php:212 setValueString()",
+        "lib/Controller/SetupController.php:213 setValueString()",
+        "lib/Controller/SetupController.php:238 getValueString()",
+        "lib/Controller/SetupController.php:257 setValueString()",
+        "lib/Controller/SetupController.php:276 setValueString()",
+        "lib/Listener/DataExchangeRunHandler.php:581 getValueString()",
+        "lib/Repair/MigrateAppConfigKeys.php:174 getValueString()",
+        "lib/Repair/MigrateAppConfigKeys.php:180 getValueString()",
+        "lib/Repair/MigrateAppConfigKeys.php:187 setValueString()",
+        "lib/Repair/MigrateAppConfigKeys.php:211 getKeys()",
+        "lib/Service/AiLocalityClassifier.php:152 getValueString()",
+        "lib/Service/CredentialSigningService.php:134 getValueString()",
+        "lib/Service/CredentialSigningService.php:248 getValueString()",
+        "lib/Service/CredentialSigningService.php:265 getValueString()",
+        "lib/Service/CredentialSigningService.php:389 getValueString()",
+        "lib/Service/KeyManagementService.php:143 setValueString()",
+        "lib/Service/KeyManagementService.php:148 setValueString()",
+        "lib/Service/KeyManagementService.php:153 setValueString()",
+        "lib/Service/KeyManagementService.php:175 getValueString()",
+        "lib/Service/KeyManagementService.php:176 getValueString()",
+        "lib/Service/KeyManagementService.php:203 getValueString()",
+        "lib/Service/KeyManagementService.php:209 getValueString()",
+        "lib/Service/KeyManagementService.php:236 getValueString()",
+        "lib/Service/KeyManagementService.php:243 getValueString()",
+        "lib/Service/KeyManagementService.php:259 setValueString()",
+        "lib/Service/LearningRecordExportSigningService.php:93 getValueString()",
+        "lib/Service/LearningRecordExportSigningService.php:122 getValueString()",
+        "lib/Service/LearningRecordExportSigningService.php:138 getValueString()",
+        "lib/Service/LearningRecordExportSigningService.php:192 getValueString()",
+        "lib/Service/ListenerSlugContract.php:92 getValueBool()",
+        "lib/Service/LtiAgsPullClient.php:174 getValueString()",
+        "lib/Service/LtiAgsPullClient.php:175 getValueString()",
+        "lib/Service/PaymentInitiationClient.php:128 getValueString()",
+        "lib/Service/ReportCardPdfDelegationService.php:198 getValueString()",
+        "lib/Service/SettingsService.php:94 getValueString()",
+        "lib/Service/SettingsService.php:121 setValueString()",
+        "lib/Service/WalletOfferDelegationService.php:283 getValueString()",
+        "lib/Service/WalletRevocationPropagationService.php:196 getValueString()",
+        "lib/Timetabling/TimetableImportHandler.php:434 getValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 49 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/BackgroundJob/LtiAgsScorePollJob.php:153 getValueString()",
+        "  lib/BackgroundJob/LtiAgsScorePollJob.php:160 getValueString()",
+        "  lib/BackgroundJob/LtiAgsScorePollJob.php:191 setValueString()",
+        "  lib/Controller/KeyAdminController.php:149 setValueString()",
+        "  lib/Controller/KeyAdminController.php:231 getValueString()",
+        "  lib/Controller/LtiToolPlacementController.php:274 getValueString()",
+        "  lib/Controller/PaymentTransactionController.php:405 getValueString()",
+        "  lib/Controller/SetupController.php:114 getValueString()",
+        "  lib/Controller/SetupController.php:115 getValueString()",
+        "  lib/Controller/SetupController.php:180 setValueString()",
+        "  lib/Controller/SetupController.php:212 setValueString()",
+        "  lib/Controller/SetupController.php:213 setValueString()",
+        "  lib/Controller/SetupController.php:238 getValueString()",
+        "  lib/Controller/SetupController.php:257 setValueString()",
+        "  lib/Controller/SetupController.php:276 setValueString()",
+        "  lib/Listener/DataExchangeRunHandler.php:581 getValueString()",
+        "  lib/Repair/MigrateAppConfigKeys.php:174 getValueString()",
+        "  lib/Repair/MigrateAppConfigKeys.php:180 getValueString()",
+        "  lib/Repair/MigrateAppConfigKeys.php:187 setValueString()",
+        "  lib/Repair/MigrateAppConfigKeys.php:211 getKeys()",
+        "  lib/Service/AiLocalityClassifier.php:152 getValueString()",
+        "  lib/Service/CredentialSigningService.php:134 getValueString()",
+        "  lib/Service/CredentialSigningService.php:248 getValueString()",
+        "  lib/Service/CredentialSigningService.php:265 getValueString()",
+        "  lib/Service/CredentialSigningService.php:389 getValueString()",
+        "  lib/Service/KeyManagementService.php:143 setValueString()",
+        "  lib/Service/KeyManagementService.php:148 setValueString()",
+        "  lib/Service/KeyManagementService.php:153 setValueString()",
+        "  lib/Service/KeyManagementService.php:175 getValueString()",
+        "  lib/Service/KeyManagementService.php:176 getValueString()",
+        "  lib/Service/KeyManagementService.php:203 getValueString()",
+        "  lib/Service/KeyManagementService.php:209 getValueString()",
+        "  lib/Service/KeyManagementService.php:236 getValueString()",
+        "  lib/Service/KeyManagementService.php:243 getValueString()",
+        "  lib/Service/KeyManagementService.php:259 setValueString()",
+        "  lib/Service/LearningRecordExportSigningService.php:93 getValueString()",
+        "  lib/Service/LearningRecordExportSigningService.php:122 getValueString()",
+        "  lib/Service/LearningRecordExportSigningService.php:138 getValueString()",
+        "  lib/Service/LearningRecordExportSigningService.php:192 getValueString()",
+        "  lib/Service/ListenerSlugContract.php:92 getValueBool()",
+        "  lib/Service/LtiAgsPullClient.php:174 getValueString()",
+        "  lib/Service/LtiAgsPullClient.php:175 getValueString()",
+        "  lib/Service/PaymentInitiationClient.php:128 getValueString()",
+        "  lib/Service/ReportCardPdfDelegationService.php:198 getValueString()",
+        "  lib/Service/SettingsService.php:94 getValueString()",
+        "  lib/Service/SettingsService.php:121 setValueString()",
+        "  lib/Service/WalletOfferDelegationService.php:283 getValueString()",
+        "  lib/Service/WalletRevocationPropagationService.php:196 getValueString()",
+        "  lib/Timetabling/TimetableImportHandler.php:434 getValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 46
+        }
+      ]
+    }
+  ],
+  "endpoints": 42,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/learniq/",
+      "target": "OCA\\Learniq\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/learniq/{path}",
+      "target": "OCA\\Learniq\\Controller\\PageController::catchAll",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/learniq/api/admin/action-matrix",
+      "target": "OCA\\Learniq\\Controller\\ActionMatrixController::getMatrix",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/learniq/api/admin/action-matrix",
+      "target": "OCA\\Learniq\\Controller\\ActionMatrixController::setMatrix",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/learniq/api/ai-processing-disclosure",
+      "target": "OCA\\Learniq\\Controller\\AiProcessingDisclosureController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/learniq/api/applications/{applicationId}/learning-record-imports",
+      "target": "OCA\\Learniq\\Controller\\LearningRecordImportController::upload",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/learniq/api/assessment/qti-export",
+      "target": "OCA\\Learniq\\Controller\\QtiExportController::export",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/learniq/api/assessment/qti-import",
+      "target": "OCA\\Learniq\\Controller\\QtiImportController::import",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/learniq/api/assessments/{assessmentId}/release-status",
+      "target": "OCA\\Learniq\\Controller\\LessonReleaseController::assessmentStatus",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/learniq/api/compliance/audit/export",
+      "target": "OCA\\Learniq\\Controller\\AuditPackExportController::export",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/learniq/api/course-management/course-package-export",
+      "target": "OCA\\Learniq\\Controller\\CoursePackageExportController::export",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/learniq/api/course-management/course-package-import",
+      "target": "OCA\\Learniq\\Controller\\CoursePackageImportController::import",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/learniq/api/credentials/{id}/verify",
+      "target": "OCA\\Learniq\\Controller\\CredentialVerifyController::verify",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/learniq/api/credentials/admin/generate-key",
+      "target": "OCA\\Learniq\\Controller\\KeyAdminController::generateKey",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/learniq/api/credentials/admin/key-status",
+      "target": "OCA\\Learniq\\Controller\\KeyAdminController::keyStatus",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/learniq/api/engagement/me",
+      "target": "OCA\\Learniq\\Controller\\EngagementController::getMe",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/learniq/api/external-training/{recordId}/credential",
+      "target": "OCA\\Learniq\\Controller\\ExternalTrainingController::issueCredential",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/learniq/api/external-training/bulk",
+      "target": "OCA\\Learniq\\Controller\\ExternalTrainingController::bulkRecord",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/learniq/api/external-training/coverage",
+      "target": "OCA\\Learniq\\Controller\\ExternalTrainingController::learnerCoverage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/learniq/api/health",
+      "target": "OCA\\Learniq\\Controller\\HealthController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/learniq/api/leaderboard/{cohortId}",
+      "target": "OCA\\Learniq\\Controller\\LeaderboardController::getRankings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/learniq/api/learning-record-shares/{id}/verify",
+      "target": "OCA\\Learniq\\Controller\\LearningRecordShareVerifyController::verify",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/learniq/api/learning-records/me",
+      "target": "OCA\\Learniq\\Controller\\LearningRecordController::mine",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/learniq/api/lessons/{lessonId}/release-status",
+      "target": "OCA\\Learniq\\Controller\\LessonReleaseController::status",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/learniq/api/lti-placements/{placementId}/launch",
+      "target": "OCA\\Learniq\\Controller\\LtiToolPlacementController::launch",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/learniq/api/manifest",
+      "target": "OCA\\Learniq\\Controller\\PageController::manifest",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/learniq/api/metrics",
+      "target": "OCA\\Learniq\\Controller\\MetricsController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/learniq/api/payments/{orderId}/initiate",
+      "target": "OCA\\Learniq\\Controller\\PaymentTransactionController::initiate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/learniq/api/payments/callback",
+      "target": "OCA\\Learniq\\Controller\\PaymentTransactionController::callback",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/learniq/api/peer-review/{assignmentId}/allocate",
+      "target": "OCA\\Learniq\\Controller\\PeerReviewController::allocate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/learniq/api/preferences/{key}",
+      "target": "OCA\\Learniq\\Controller\\PreferencesController::getPreference",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/learniq/api/preferences/{key}",
+      "target": "OCA\\Learniq\\Controller\\PreferencesController::setPreference",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/learniq/api/rollover/{planId}/preview",
+      "target": "OCA\\Learniq\\Controller\\RolloverController::preview",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/learniq/api/rollover/propose",
+      "target": "OCA\\Learniq\\Controller\\RolloverController::proposeMapping",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/learniq/api/settings",
+      "target": "OCA\\Learniq\\Controller\\SettingsController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/learniq/api/settings",
+      "target": "OCA\\Learniq\\Controller\\SettingsController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/learniq/api/settings",
+      "target": "OCA\\Learniq\\Controller\\SettingsController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/learniq/api/settings/load",
+      "target": "OCA\\Learniq\\Controller\\SettingsController::load",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/learniq/api/setup/action/{actionId}",
+      "target": "OCA\\Learniq\\Controller\\SetupController::runAction",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/learniq/api/setup/config",
+      "target": "OCA\\Learniq\\Controller\\SetupController::saveConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/learniq/api/setup/status",
+      "target": "OCA\\Learniq\\Controller\\SetupController::status",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/learniq/api/timetable/mine",
+      "target": "OCA\\Learniq\\Controller\\TimetableController::mine",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

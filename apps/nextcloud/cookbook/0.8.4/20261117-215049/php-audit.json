@@ -1,0 +1,262 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Cookbook\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/Db/DbTypesPolyfillHelper.php:27 OCP\\DB\\Types: there since Nextcloud 21, the app declares from 19",
+        "lib/Db/DbTypesPolyfillHelper.php:27 OCP\\DB\\Types::INTEGER: there since Nextcloud 21, the app declares from 19",
+        "lib/Db/DbTypesPolyfillHelper.php:28 OCP\\DB\\Types::STRING: there since Nextcloud 21, the app declares from 19",
+        "lib/Service/RecipeService.php:768 OCP\\IImage::loadFromData(): there since Nextcloud 31, the app declares from 19",
+        "lib/Service/RecipeService.php:1137 OCP\\IImage::loadFromData(): there since Nextcloud 31, the app declares from 19"
+      ],
+      "lines": [
+        "5 uses in 2 files of the public API that the oldest majors of Nextcloud 19 to 21 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/Db/DbTypesPolyfillHelper.php:27 OCP\\DB\\Types: there since Nextcloud 21, the app declares from 19",
+        "  lib/Db/DbTypesPolyfillHelper.php:27 OCP\\DB\\Types::INTEGER: there since Nextcloud 21, the app declares from 19",
+        "  lib/Db/DbTypesPolyfillHelper.php:28 OCP\\DB\\Types::STRING: there since Nextcloud 21, the app declares from 19",
+        "  lib/Service/RecipeService.php:768 OCP\\IImage::loadFromData(): there since Nextcloud 31, the app declares from 19",
+        "  lib/Service/RecipeService.php:1137 OCP\\IImage::loadFromData(): there since Nextcloud 31, the app declares from 19"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/cookbook/api/version  cookbook.main.getapiversion  appinfo/routes.php:10 routes",
+        "POST /index.php/apps/cookbook/recipes/create  cookbook.main.new  appinfo/routes.php:10 routes",
+        "GET /index.php/apps/cookbook/home  cookbook.main.home  appinfo/routes.php:10 routes",
+        "GET /index.php/apps/cookbook/error  cookbook.main.error  appinfo/routes.php:10 routes",
+        "GET /index.php/apps/cookbook/recipes/create  cookbook.main.create  appinfo/routes.php:10 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 5 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 32 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/cookbook/api/version  cookbook.main.getapiversion  appinfo/routes.php:10 routes",
+        "  POST /index.php/apps/cookbook/recipes/create  cookbook.main.new  appinfo/routes.php:10 routes",
+        "  GET /index.php/apps/cookbook/home  cookbook.main.home  appinfo/routes.php:10 routes",
+        "  GET /index.php/apps/cookbook/error  cookbook.main.error  appinfo/routes.php:10 routes",
+        "  GET /index.php/apps/cookbook/recipes/create  cookbook.main.create  appinfo/routes.php:10 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/DbCacheService.php:339 time()",
+        "lib/Service/DbCacheService.php:343 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 2 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/DbCacheService.php:339 time()",
+        "  lib/Service/DbCacheService.php:343 time()"
+      ]
+    }
+  ],
+  "endpoints": 25,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cookbook/",
+      "target": "OCA\\Cookbook\\Controller\\MainController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cookbook/api/category/{category}",
+      "target": "OCA\\Cookbook\\Controller\\MainController::category",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/cookbook/api/category/{category}",
+      "target": "OCA\\Cookbook\\Controller\\MainController::categoryUpdate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cookbook/api/recipes",
+      "target": "OCA\\Cookbook\\Controller\\RecipeController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/cookbook/api/recipes",
+      "target": "OCA\\Cookbook\\Controller\\RecipeController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/cookbook/api/recipes/{id}",
+      "target": "OCA\\Cookbook\\Controller\\RecipeController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cookbook/api/recipes/{id}",
+      "target": "OCA\\Cookbook\\Controller\\RecipeController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/cookbook/api/recipes/{id}",
+      "target": "OCA\\Cookbook\\Controller\\RecipeController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cookbook/api/search/{query}",
+      "target": "OCA\\Cookbook\\Controller\\MainController::search",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cookbook/api/tags/{keywords}",
+      "target": "OCA\\Cookbook\\Controller\\MainController::tags",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cookbook/api/version",
+      "target": "OCA\\Cookbook\\Controller\\MainController::getApiVersion",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cookbook/categories",
+      "target": "OCA\\Cookbook\\Controller\\MainController::categories",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cookbook/config",
+      "target": "OCA\\Cookbook\\Controller\\ConfigController::list",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/cookbook/config",
+      "target": "OCA\\Cookbook\\Controller\\ConfigController::config",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cookbook/error",
+      "target": "OCA\\Cookbook\\Controller\\MainController::error",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cookbook/home",
+      "target": "OCA\\Cookbook\\Controller\\MainController::home",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/cookbook/import",
+      "target": "OCA\\Cookbook\\Controller\\MainController::import",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cookbook/keywords",
+      "target": "OCA\\Cookbook\\Controller\\MainController::keywords",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cookbook/recipes/{id}",
+      "target": "OCA\\Cookbook\\Controller\\MainController::recipe",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cookbook/recipes/{id}/edit",
+      "target": "OCA\\Cookbook\\Controller\\MainController::edit",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/cookbook/recipes/{id}/edit",
+      "target": "OCA\\Cookbook\\Controller\\MainController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cookbook/recipes/{id}/image",
+      "target": "OCA\\Cookbook\\Controller\\RecipeController::image",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cookbook/recipes/create",
+      "target": "OCA\\Cookbook\\Controller\\MainController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/cookbook/recipes/create",
+      "target": "OCA\\Cookbook\\Controller\\MainController::new",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/cookbook/reindex",
+      "target": "OCA\\Cookbook\\Controller\\ConfigController::reindex",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

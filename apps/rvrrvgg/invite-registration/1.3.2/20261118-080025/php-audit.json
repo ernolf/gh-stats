@@ -1,0 +1,130 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\InviteRegistration\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/invite_registration/admin/invites  invite_registration.admin.index  appinfo/routes.php:11 routes",
+        "POST /index.php/apps/invite_registration/admin/invites  invite_registration.admin.create  appinfo/routes.php:11 routes",
+        "POST /index.php/apps/invite_registration/admin/invites/{id}/revoke  invite_registration.admin.revoke  appinfo/routes.php:11 routes",
+        "DELETE /index.php/apps/invite_registration/admin/invites/{id}  invite_registration.admin.destroy  appinfo/routes.php:11 routes",
+        "GET /index.php/apps/invite_registration/i/{token}  invite_registration.register.show  appinfo/routes.php:11 routes",
+        "POST /index.php/apps/invite_registration/i/{token}  invite_registration.register.submit  appinfo/routes.php:11 routes",
+        "GET /index.php/apps/invite_registration/verify/{token}  invite_registration.verify.confirm  appinfo/routes.php:11 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 7 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 1 file of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/invite_registration/admin/invites  invite_registration.admin.index  appinfo/routes.php:11 routes",
+        "  POST /index.php/apps/invite_registration/admin/invites  invite_registration.admin.create  appinfo/routes.php:11 routes",
+        "  POST /index.php/apps/invite_registration/admin/invites/{id}/revoke  invite_registration.admin.revoke  appinfo/routes.php:11 routes",
+        "  DELETE /index.php/apps/invite_registration/admin/invites/{id}  invite_registration.admin.destroy  appinfo/routes.php:11 routes",
+        "  GET /index.php/apps/invite_registration/i/{token}  invite_registration.register.show  appinfo/routes.php:11 routes",
+        "  POST /index.php/apps/invite_registration/i/{token}  invite_registration.register.submit  appinfo/routes.php:11 routes",
+        "  GET /index.php/apps/invite_registration/verify/{token}  invite_registration.verify.confirm  appinfo/routes.php:11 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Service/RegistrationService.php:62 OCP\\Mail\\IMailer::validateMailAddress(): deprecated since Nextcloud 32; use IEmailValidator::isValid() instead"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated in Nextcloud 32 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Service/RegistrationService.php:62 OCP\\Mail\\IMailer::validateMailAddress(): deprecated since Nextcloud 32; use IEmailValidator::isValid() instead"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Db/Invite.php:61 time()",
+        "lib/Db/Verification.php:33 time()",
+        "lib/Service/InviteService.php:56 time()",
+        "lib/Service/InviteService.php:100 time()",
+        "lib/Service/RegistrationService.php:170 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 5 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Db/Invite.php:61 time()",
+        "  lib/Db/Verification.php:33 time()",
+        "  lib/Service/InviteService.php:56 time()",
+        "  lib/Service/InviteService.php:100 time()",
+        "  lib/Service/RegistrationService.php:170 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    }
+  ],
+  "endpoints": 7,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/invite_registration/admin/invites",
+      "target": "OCA\\InviteRegistration\\Controller\\AdminController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/invite_registration/admin/invites",
+      "target": "OCA\\InviteRegistration\\Controller\\AdminController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/invite_registration/admin/invites/{id}",
+      "target": "OCA\\InviteRegistration\\Controller\\AdminController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/invite_registration/admin/invites/{id}/revoke",
+      "target": "OCA\\InviteRegistration\\Controller\\AdminController::revoke",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/invite_registration/i/{token}",
+      "target": "OCA\\InviteRegistration\\Controller\\RegisterController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/invite_registration/i/{token}",
+      "target": "OCA\\InviteRegistration\\Controller\\RegisterController::submit",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/invite_registration/verify/{token}",
+      "target": "OCA\\InviteRegistration\\Controller\\VerifyController::confirm",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

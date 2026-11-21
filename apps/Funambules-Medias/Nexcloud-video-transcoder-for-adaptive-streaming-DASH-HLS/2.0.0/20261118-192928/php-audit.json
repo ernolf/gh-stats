@@ -1,0 +1,163 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Video_Converter_Fm\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:26 OC",
+        "lib/AppInfo/Application.php:26 OC::$server",
+        "lib/AppInfo/Application.php:28 OC::$server",
+        "lib/AppInfo/Application.php:45 OC::$server",
+        "lib/AppInfo/Application.php:47 OC::$server",
+        "lib/Controller/ConversionController.php:58 OC_Util",
+        "lib/Controller/ConversionController.php:60 OC\\Files\\Filesystem",
+        "lib/Service/ConversionService.php:71 OC_Util",
+        "lib/Service/ConversionService.php:74 OC\\Files\\Filesystem"
+      ],
+      "lines": [
+        "9 uses of the private API of the server in 3 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/AppInfo/Application.php:26 OC",
+        "  lib/AppInfo/Application.php:26 OC::$server",
+        "  lib/AppInfo/Application.php:28 OC::$server",
+        "  lib/AppInfo/Application.php:45 OC::$server",
+        "  lib/AppInfo/Application.php:47 OC::$server",
+        "  lib/Controller/ConversionController.php:58 OC_Util",
+        "  lib/Controller/ConversionController.php:60 OC\\Files\\Filesystem",
+        "  lib/Service/ConversionService.php:71 OC_Util",
+        "  lib/Service/ConversionService.php:74 OC\\Files\\Filesystem"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 6
+        }
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "POST /index.php/apps/video_converter_fm/ajax/convertHere.php  video_converter_fm.conversion.converthere  appinfo/routes.php:10 routes",
+        "POST /index.php/apps/video_converter_fm/api/video/probe  video_converter_fm.conversion.probevideo  appinfo/routes.php:10 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 5 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  POST /index.php/apps/video_converter_fm/ajax/convertHere.php  video_converter_fm.conversion.converthere  appinfo/routes.php:10 routes",
+        "  POST /index.php/apps/video_converter_fm/api/video/probe  video_converter_fm.conversion.probevideo  appinfo/routes.php:10 routes"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/ConversionService.php:1060 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 1 place. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/ConversionService.php:1060 time()"
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/ConversionController.php:56 OCA\\Video_Converter_Fm\\Controller\\ConversionController::getFile()",
+        "lib/Controller/ConversionController.php:367 OCA\\Video_Converter_Fm\\Controller\\ConversionController::createCmd()"
+      ],
+      "lines": [
+        "2 public methods of controllers are reached by no route.",
+        "  lib/Controller/ConversionController.php:56 OCA\\Video_Converter_Fm\\Controller\\ConversionController::getFile()",
+        "  lib/Controller/ConversionController.php:367 OCA\\Video_Converter_Fm\\Controller\\ConversionController::createCmd()"
+      ]
+    }
+  ],
+  "endpoints": 11,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/video_converter_fm/",
+      "target": "OCA\\Video_Converter_Fm\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/video_converter_fm/ajax/convertHere.php",
+      "target": "OCA\\Video_Converter_Fm\\Controller\\ConversionController::convertHere",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/video_converter_fm/api/jobs",
+      "target": "OCA\\Video_Converter_Fm\\Controller\\ConversionController::listJobs",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/video_converter_fm/api/jobs/{id}/action/{action}",
+      "target": "OCA\\Video_Converter_Fm\\Controller\\ConversionController::checkDeleteOrCancel",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/video_converter_fm/api/jobs/{id}/action/{action}",
+      "target": "OCA\\Video_Converter_Fm\\Controller\\ConversionController::deleteOrCancel",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/video_converter_fm/api/jobs/{jobId}",
+      "target": "OCA\\Video_Converter_Fm\\Controller\\ConversionController::deleteJob",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/video_converter_fm/api/jobs/{jobId}",
+      "target": "OCA\\Video_Converter_Fm\\Controller\\ConversionController::getJobStatus",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/video_converter_fm/api/jobs/all",
+      "target": "OCA\\Video_Converter_Fm\\Controller\\ConversionController::listAllJobs",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/video_converter_fm/api/video/probe",
+      "target": "OCA\\Video_Converter_Fm\\Controller\\ConversionController::probeVideo",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/video_converter_fm/conversions",
+      "target": "OCA\\Video_Converter_Fm\\Controller\\PageController::conversions",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/video_converter_fm/settings",
+      "target": "OCA\\Video_Converter_Fm\\Controller\\PageController::settings",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

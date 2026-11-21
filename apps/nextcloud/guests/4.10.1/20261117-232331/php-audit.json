@@ -1,0 +1,288 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Guests\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/AppConfigOverwrite.php:14 OC\\AppConfig",
+        "lib/Command/ListCommand.php:18 OC\\Core\\Command\\Base",
+        "lib/Config.php:92 OC",
+        "lib/Controller/APIController.php:67 OC\\L10N\\Factory",
+        "lib/Controller/UsersController.php:155 OC\\Hooks\\PublicEmitter",
+        "lib/FilteredNavigationManager.php:16 OC\\NavigationManager",
+        "lib/FilteredSettingsManager.php:27 OC\\AppFramework\\App",
+        "lib/RestrictionManager.php:93 OC\\AppConfig",
+        "lib/Storage/DirMask.php:22 OC\\Files\\Storage\\Wrapper\\PermissionsMask",
+        "lib/Storage/DirMaskCache.php:17 OC\\Files\\Cache\\Wrapper\\CachePermissionsMask"
+      ],
+      "lines": [
+        "10 uses of the private API of the server in 10 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/AppConfigOverwrite.php:14 OC\\AppConfig",
+        "  lib/Command/ListCommand.php:18 OC\\Core\\Command\\Base",
+        "  lib/Config.php:92 OC",
+        "  lib/Controller/APIController.php:67 OC\\L10N\\Factory",
+        "  lib/Controller/UsersController.php:155 OC\\Hooks\\PublicEmitter",
+        "  lib/FilteredNavigationManager.php:16 OC\\NavigationManager",
+        "  lib/FilteredSettingsManager.php:27 OC\\AppFramework\\App",
+        "  lib/RestrictionManager.php:93 OC\\AppConfig",
+        "  lib/Storage/DirMask.php:22 OC\\Files\\Storage\\Wrapper\\PermissionsMask",
+        "  lib/Storage/DirMaskCache.php:17 OC\\Files\\Cache\\Wrapper\\CachePermissionsMask"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/FilteredSettingsManager.php:85 OCP\\Settings\\IManager::getAdminDelegatedSettings(): there since Nextcloud 33, the app declares from 32"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that the oldest majors of Nextcloud 32 to 36 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/FilteredSettingsManager.php:85 OCP\\Settings\\IManager::getAdminDelegatedSettings(): there since Nextcloud 33, the app declares from 32"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:73 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:73 injectFn()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/guests/whitelist  guests.settings.getwhitelist  appinfo/routes.php:9 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 route outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 18 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/guests/whitelist  guests.settings.getwhitelist  appinfo/routes.php:9 routes"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/AppWhitelist.php:106 OCP\\Template: deprecated since Nextcloud 32; Use \\OCP\\Template\\ITemplateManager instead",
+        "lib/AppWhitelist.php:193 OCP\\App\\IAppManager::getInstalledApps(): deprecated since Nextcloud 32; Use either self::getEnabledApps or self::getEnabledAppsForUser",
+        "lib/Command/AddCommand.php:112 OCP\\Mail\\IMailer::validateMailAddress(): deprecated since Nextcloud 32; use IEmailValidator::isValid() instead",
+        "lib/Controller/UsersController.php:112 OCP\\Mail\\IMailer::validateMailAddress(): deprecated since Nextcloud 32; use IEmailValidator::isValid() instead",
+        "lib/GuestManager.php:90 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/GuestManager.php:106 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Listener/UserChangedListener.php:51 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Listener/UserChangedListener.php:66 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Migration/OwncloudGuestsMigration.php:47 OCP\\IConfig::getUsersForUserValue(): deprecated since Nextcloud 33; use IUserConfig::searchUsersByValueString directly",
+        "lib/Migration/OwncloudGuestsMigration.php:78 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Repair/ResetEmails.php:50 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Repair/ResetEmails.php:54 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/InviteService.php:31 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/InviteService.php:50 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/TransferService.php:42 OCP\\AppFramework\\QueryException: deprecated since Nextcloud 20; catch \\Psr\\Container\\ContainerExceptionInterface",
+        "lib/UserBackend.php:37 OCP\\User\\Backend\\ICountUsersBackend: deprecated since Nextcloud 31; use and implement ILimitAwareCountUsersBackend instead."
+      ],
+      "lines": [
+        "16 uses in 10 files of the public API that is deprecated in Nextcloud 32 to 36. The text of the tag names the replacement where it has one.",
+        "  lib/AppWhitelist.php:106 OCP\\Template: deprecated since Nextcloud 32; Use \\OCP\\Template\\ITemplateManager instead",
+        "  lib/AppWhitelist.php:193 OCP\\App\\IAppManager::getInstalledApps(): deprecated since Nextcloud 32; Use either self::getEnabledApps or self::getEnabledAppsForUser",
+        "  lib/Command/AddCommand.php:112 OCP\\Mail\\IMailer::validateMailAddress(): deprecated since Nextcloud 32; use IEmailValidator::isValid() instead",
+        "  lib/Controller/UsersController.php:112 OCP\\Mail\\IMailer::validateMailAddress(): deprecated since Nextcloud 32; use IEmailValidator::isValid() instead",
+        "  lib/GuestManager.php:90 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/GuestManager.php:106 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Listener/UserChangedListener.php:51 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Listener/UserChangedListener.php:66 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Migration/OwncloudGuestsMigration.php:47 OCP\\IConfig::getUsersForUserValue(): deprecated since Nextcloud 33; use IUserConfig::searchUsersByValueString directly",
+        "  lib/Migration/OwncloudGuestsMigration.php:78 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Repair/ResetEmails.php:50 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Repair/ResetEmails.php:54 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/InviteService.php:31 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/InviteService.php:50 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/TransferService.php:42 OCP\\AppFramework\\QueryException: deprecated since Nextcloud 20; catch \\Psr\\Container\\ContainerExceptionInterface",
+        "  lib/UserBackend.php:37 OCP\\User\\Backend\\ICountUsersBackend: deprecated since Nextcloud 31; use and implement ILimitAwareCountUsersBackend instead."
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 13
+        }
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Service/ConversionService.php:55"
+      ],
+      "lines": [
+        "1 transaction is opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Service/ConversionService.php:55"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/TransferService.php:77 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 1 place. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/TransferService.php:77 new DateTime()"
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 7 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version4000Date20240619221613.php:32 createTable() on a table whose name is no constant",
+        "lib/Migration/Version4000Date20240619221613.php:33 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version4000Date20240619221613.php:39 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version4000Date20240619221613.php:43 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version4000Date20240619221613.php:47 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version4000Date20240619221613.php:51 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version4000Date20240619221613.php:54 setPrimaryKey() on a table whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version4000Date20240619221613.php:32 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version4000Date20240619221613.php:33 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version4000Date20240619221613.php:39 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version4000Date20240619221613.php:43 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version4000Date20240619221613.php:47 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version4000Date20240619221613.php:51 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version4000Date20240619221613.php:54 setPrimaryKey() on a table whose name is no constant"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    }
+  ],
+  "endpoints": 12,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/guests/config",
+      "target": "OCA\\Guests\\Controller\\SettingsController::getConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/guests/config",
+      "target": "OCA\\Guests\\Controller\\SettingsController::setConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/guests/whitelist",
+      "target": "OCA\\Guests\\Controller\\SettingsController::getWhitelist",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/guests/whitelist/reset",
+      "target": "OCA\\Guests\\Controller\\SettingsController::resetWhitelist",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/guests/api/v1/convert",
+      "target": "OCA\\Guests\\Controller\\UsersController::convert",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/guests/api/v1/groups",
+      "target": "OCA\\Guests\\Controller\\APIController::groups",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/guests/api/v1/languages",
+      "target": "OCA\\Guests\\Controller\\APIController::languages",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/guests/api/v1/transfer",
+      "target": "OCA\\Guests\\Controller\\UsersController::transfer",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/guests/api/v1/users",
+      "target": "OCA\\Guests\\Controller\\UsersController::list",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/guests/api/v1/users",
+      "target": "OCA\\Guests\\Controller\\UsersController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/guests/api/v1/users/{userId}",
+      "target": "OCA\\Guests\\Controller\\UsersController::get",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/capabilities",
+      "target": "OCA\\Guests\\Capabilities",
+      "openapi": [],
+      "kind": "capability"
+    }
+  ]
+}

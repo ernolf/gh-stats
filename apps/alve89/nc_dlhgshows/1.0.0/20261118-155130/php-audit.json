@@ -1,0 +1,251 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Dlhgshows\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "templates/admin.php:19 OC",
+        "templates/admin.php:19 OC::$server",
+        "templates/admin.php:23 OC::$server",
+        "templates/index.php:16 OC",
+        "templates/index.php:16 OC::$server",
+        "templates/index.php:18 OC::$server"
+      ],
+      "lines": [
+        "6 uses of the private API of the server in 2 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  templates/admin.php:19 OC",
+        "  templates/admin.php:19 OC::$server",
+        "  templates/admin.php:23 OC::$server",
+        "  templates/index.php:16 OC",
+        "  templates/index.php:16 OC::$server",
+        "  templates/index.php:18 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "route-target-missing",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/dlhgshows/auswertung  dlhgshows.page.stats  appinfo/routes.php:3 routes: OCA\\Dlhgshows\\Controller\\PageController has no method stats()",
+        "GET /index.php/apps/dlhgshows/admin  dlhgshows.admin.index  appinfo/routes.php:3 routes: OCA\\Dlhgshows\\Controller\\AdminController has no method index()"
+      ],
+      "lines": [
+        "2 routes name a controller class or a method that does not exist, or a method that is not public. A request to such a route ends in an error.",
+        "  GET /index.php/apps/dlhgshows/auswertung  dlhgshows.page.stats  appinfo/routes.php:3 routes: OCA\\Dlhgshows\\Controller\\PageController has no method stats()",
+        "  GET /index.php/apps/dlhgshows/admin  dlhgshows.admin.index  appinfo/routes.php:3 routes: OCA\\Dlhgshows\\Controller\\AdminController has no method index()"
+      ]
+    },
+    {
+      "id": "route-duplicate",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/dlhgshows/: dlhgshows.page.index at appinfo/routes.php:3 routes, dlhgshows.page.index at lib/Controller/PageController.php:41",
+        "dlhgshows.page.index: dlhgshows.page.index at appinfo/routes.php:3 routes, dlhgshows.page.index at lib/Controller/PageController.php:41"
+      ],
+      "lines": [
+        "2 verbs and paths or route names are declared more than once. The server keeps one route per name and takes the first that matches a request, so the other one is never reached.",
+        "  GET /index.php/apps/dlhgshows/: dlhgshows.page.index at appinfo/routes.php:3 routes, dlhgshows.page.index at lib/Controller/PageController.php:41",
+        "  dlhgshows.page.index: dlhgshows.page.index at appinfo/routes.php:3 routes, dlhgshows.page.index at lib/Controller/PageController.php:41"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Service/CalendarService.php:42 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "templates/admin.php:20 OCP\\Util::callRegister(): deprecated since Nextcloud 32; directly use CsrfTokenManager instead",
+        "templates/index.php:17 OCP\\Util::callRegister(): deprecated since Nextcloud 32; directly use CsrfTokenManager instead"
+      ],
+      "lines": [
+        "3 uses in 3 files of the public API that is deprecated in Nextcloud 32. The text of the tag names the replacement where it has one.",
+        "  lib/Service/CalendarService.php:42 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "  templates/admin.php:20 OCP\\Util::callRegister(): deprecated since Nextcloud 32; directly use CsrfTokenManager instead",
+        "  templates/index.php:17 OCP\\Util::callRegister(): deprecated since Nextcloud 32; directly use CsrfTokenManager instead"
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/admin.php:119 style= attribute",
+        "templates/index.php:186 style= attribute",
+        "templates/index.php:202 style= attribute"
+      ],
+      "lines": [
+        "3 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/admin.php:119 style= attribute",
+        "  templates/index.php:186 style= attribute",
+        "  templates/index.php:202 style= attribute"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/AccessLogService.php:28 time()",
+        "lib/Service/RsvpService.php:56 time()",
+        "lib/Service/RsvpService.php:69 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 3 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/AccessLogService.php:28 time()",
+        "  lib/Service/RsvpService.php:56 time()",
+        "  lib/Service/RsvpService.php:69 time()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Controller/AdminController.php:48 setValueString()",
+        "lib/Controller/AdminController.php:50 setValueString()",
+        "lib/Controller/AdminController.php:52 setValueString()",
+        "lib/Controller/AdminController.php:53 setValueString()",
+        "lib/Controller/AdminController.php:54 setValueString()",
+        "lib/Controller/PageController.php:54 getValueString()",
+        "lib/Controller/PageController.php:55 getValueString()",
+        "lib/Controller/PageController.php:57 getValueString()",
+        "lib/Controller/PageController.php:59 getValueString()",
+        "lib/Controller/PageController.php:62 getValueString()",
+        "lib/Controller/PageController.php:66 getValueInt()",
+        "lib/Settings/Admin.php:27 getValueString()",
+        "lib/Settings/Admin.php:28 getValueString()",
+        "lib/Settings/Admin.php:30 getValueString()",
+        "lib/Settings/Admin.php:32 getValueString()",
+        "lib/Settings/Admin.php:35 getValueString()",
+        "lib/Settings/Admin.php:39 getValueInt()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 17 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Controller/AdminController.php:48 setValueString()",
+        "  lib/Controller/AdminController.php:50 setValueString()",
+        "  lib/Controller/AdminController.php:52 setValueString()",
+        "  lib/Controller/AdminController.php:53 setValueString()",
+        "  lib/Controller/AdminController.php:54 setValueString()",
+        "  lib/Controller/PageController.php:54 getValueString()",
+        "  lib/Controller/PageController.php:55 getValueString()",
+        "  lib/Controller/PageController.php:57 getValueString()",
+        "  lib/Controller/PageController.php:59 getValueString()",
+        "  lib/Controller/PageController.php:62 getValueString()",
+        "  lib/Controller/PageController.php:66 getValueInt()",
+        "  lib/Settings/Admin.php:27 getValueString()",
+        "  lib/Settings/Admin.php:28 getValueString()",
+        "  lib/Settings/Admin.php:30 getValueString()",
+        "  lib/Settings/Admin.php:32 getValueString()",
+        "  lib/Settings/Admin.php:35 getValueString()",
+        "  lib/Settings/Admin.php:39 getValueInt()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 14
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "POST /ocs/v2.php/apps/dlhgshows/api/tracking/session  ocs.dlhgshows.calendar.tracksession  lib/Controller/CalendarController.php:70"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 OCS route. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  POST /ocs/v2.php/apps/dlhgshows/api/tracking/session  ocs.dlhgshows.calendar.tracksession  lib/Controller/CalendarController.php:70"
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 3 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 9,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dlhgshows/",
+      "target": "OCA\\Dlhgshows\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dlhgshows/",
+      "target": "OCA\\Dlhgshows\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dlhgshows/admin",
+      "target": "OCA\\Dlhgshows\\Controller\\AdminController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dlhgshows/admin/save",
+      "target": "OCA\\Dlhgshows\\Controller\\AdminController::save",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dlhgshows/api/rsvp",
+      "target": "OCA\\Dlhgshows\\Controller\\RsvpController::upsert",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dlhgshows/auswertung",
+      "target": "OCA\\Dlhgshows\\Controller\\PageController::stats",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/dlhgshows/api/calendars",
+      "target": "OCA\\Dlhgshows\\Controller\\CalendarController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/dlhgshows/api/calendars/{calendarId}/events",
+      "target": "OCA\\Dlhgshows\\Controller\\CalendarController::events",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/dlhgshows/api/tracking/session",
+      "target": "OCA\\Dlhgshows\\Controller\\CalendarController::trackSession",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

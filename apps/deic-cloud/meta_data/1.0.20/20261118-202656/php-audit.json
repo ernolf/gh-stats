@@ -1,0 +1,323 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\MetaData\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:43 OCP\\App\\IAppManager::isEnabledForAnyone(): there since Nextcloud 32, the app declares from 28",
+        "lib/Service/TagService.php:56 OCP\\SystemTag\\ISystemTag::getColor(): there since Nextcloud 31, the app declares from 28"
+      ],
+      "lines": [
+        "2 uses in 2 files of the public API that the oldest majors of Nextcloud 28 to 35 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/AppInfo/Application.php:43 OCP\\App\\IAppManager::isEnabledForAnyone(): there since Nextcloud 32, the app declares from 28",
+        "  lib/Service/TagService.php:56 OCP\\SystemTag\\ISystemTag::getColor(): there since Nextcloud 31, the app declares from 28"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "POST /index.php/apps/meta_data/internal/tags/sync  meta_data.internal.synctag  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/meta_data/internal/tags/delete  meta_data.internal.deletetag  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/meta_data/internal/filetags-by-token  meta_data.internal.getfiletagsbytoken  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/meta_data/internal/filekey-by-token  meta_data.internal.setfilekeybytoken  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/meta_data/internal/filetag-by-token  meta_data.internal.setfiletagbytoken  appinfo/routes.php:5 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 5 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 4 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  POST /index.php/apps/meta_data/internal/tags/sync  meta_data.internal.synctag  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/meta_data/internal/tags/delete  meta_data.internal.deletetag  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/meta_data/internal/filetags-by-token  meta_data.internal.getfiletagsbytoken  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/meta_data/internal/filekey-by-token  meta_data.internal.setfilekeybytoken  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/meta_data/internal/filetag-by-token  meta_data.internal.setfiletagbytoken  appinfo/routes.php:5 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Service/TagService.php:826 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated in Nextcloud 28 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Service/TagService.php:826 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/InternalController.php:164 time()",
+        "lib/Service/TagService.php:674 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 2 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/InternalController.php:164 time()",
+        "  lib/Service/TagService.php:674 time()"
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/meta_data/api/v1/tags  ocs.meta_data.api.gettags  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/meta_data/api/v1/tags  ocs.meta_data.api.newtag  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/meta_data/api/v1/filetags  ocs.meta_data.api.getfiletags  appinfo/routes.php:5 ocs",
+        "PUT /ocs/v2.php/apps/meta_data/api/v1/filetags  ocs.meta_data.api.addfiletag  appinfo/routes.php:5 ocs",
+        "DELETE /ocs/v2.php/apps/meta_data/api/v1/filetags  ocs.meta_data.api.removefiletag  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/meta_data/api/v1/searchfiles  ocs.meta_data.api.searchfiles  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/meta_data/api/v1/filemeta  ocs.meta_data.api.getfilekeys  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/meta_data/api/v1/filemeta  ocs.meta_data.api.updatefilekey  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/meta_data/api/v1/getmetadata  ocs.meta_data.api.getmetadata  appinfo/routes.php:5 ocs"
+      ],
+      "lines": [
+        "Nothing in the app calls 9 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/meta_data/api/v1/tags  ocs.meta_data.api.gettags  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/meta_data/api/v1/tags  ocs.meta_data.api.newtag  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/meta_data/api/v1/filetags  ocs.meta_data.api.getfiletags  appinfo/routes.php:5 ocs",
+        "  PUT /ocs/v2.php/apps/meta_data/api/v1/filetags  ocs.meta_data.api.addfiletag  appinfo/routes.php:5 ocs",
+        "  DELETE /ocs/v2.php/apps/meta_data/api/v1/filetags  ocs.meta_data.api.removefiletag  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/meta_data/api/v1/searchfiles  ocs.meta_data.api.searchfiles  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/meta_data/api/v1/filemeta  ocs.meta_data.api.getfilekeys  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/meta_data/api/v1/filemeta  ocs.meta_data.api.updatefilekey  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/meta_data/api/v1/getmetadata  ocs.meta_data.api.getmetadata  appinfo/routes.php:5 ocs"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 6
+        }
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 18 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 24,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/meta_data/",
+      "target": "OCA\\MetaData\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/meta_data/internal/filekey-by-token",
+      "target": "OCA\\MetaData\\Controller\\InternalController::setFileKeyByToken",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/meta_data/internal/filetag-by-token",
+      "target": "OCA\\MetaData\\Controller\\InternalController::setFileTagByToken",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/meta_data/internal/filetags-by-token",
+      "target": "OCA\\MetaData\\Controller\\InternalController::getFileTagsByToken",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/meta_data/internal/tags/delete",
+      "target": "OCA\\MetaData\\Controller\\InternalController::deleteTag",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/meta_data/internal/tags/sync",
+      "target": "OCA\\MetaData\\Controller\\InternalController::syncTag",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/meta_data/api/v1/filemeta",
+      "target": "OCA\\MetaData\\Controller\\ApiController::getFileKeys",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/meta_data/api/v1/filemeta",
+      "target": "OCA\\MetaData\\Controller\\ApiController::updateFileKey",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/meta_data/api/v1/filetags",
+      "target": "OCA\\MetaData\\Controller\\ApiController::removeFileTag",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/meta_data/api/v1/filetags",
+      "target": "OCA\\MetaData\\Controller\\ApiController::getFileTags",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/meta_data/api/v1/filetags",
+      "target": "OCA\\MetaData\\Controller\\ApiController::addFileTag",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/meta_data/api/v1/getmetadata",
+      "target": "OCA\\MetaData\\Controller\\ApiController::getMetadata",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/meta_data/api/v1/searchfiles",
+      "target": "OCA\\MetaData\\Controller\\ApiController::searchFiles",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/meta_data/api/v1/tags",
+      "target": "OCA\\MetaData\\Controller\\ApiController::getTags",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/meta_data/api/v1/tags",
+      "target": "OCA\\MetaData\\Controller\\ApiController::newTag",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/meta_data/api/v1/tags/{tagId}",
+      "target": "OCA\\MetaData\\Controller\\ApiController::deleteTag",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/meta_data/api/v1/tags/{tagId}",
+      "target": "OCA\\MetaData\\Controller\\ApiController::getTagById",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/meta_data/api/v1/tags/{tagId}",
+      "target": "OCA\\MetaData\\Controller\\ApiController::updateTag",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/meta_data/api/v1/tags/{tagId}/files",
+      "target": "OCA\\MetaData\\Controller\\ApiController::getTaggedFiles",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/meta_data/api/v1/tags/{tagId}/keys",
+      "target": "OCA\\MetaData\\Controller\\ApiController::getKeys",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/meta_data/api/v1/tags/{tagId}/keys",
+      "target": "OCA\\MetaData\\Controller\\ApiController::newKey",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/meta_data/api/v1/tags/{tagId}/keys/{keyId}",
+      "target": "OCA\\MetaData\\Controller\\ApiController::deleteKey",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/meta_data/api/v1/tags/{tagId}/keys/{keyId}",
+      "target": "OCA\\MetaData\\Controller\\ApiController::updateKey",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/meta_data/api/v1/tags/{tagId}/owner",
+      "target": "OCA\\MetaData\\Controller\\ApiController::setTagOwner",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

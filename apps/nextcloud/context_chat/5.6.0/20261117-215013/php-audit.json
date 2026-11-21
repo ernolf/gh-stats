@@ -1,0 +1,460 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\ContextChat\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/BackgroundJobs/FileSystemListenerJob.php:82 OC\\Files\\SetupManager",
+        "lib/BackgroundJobs/RotateLogsJob.php:30 OC",
+        "lib/Controller/QueueController.php:338 OC\\User\\NoUserException",
+        "lib/Logger.php:36 OC",
+        "lib/Service/MetadataService.php:188 OC\\Files\\SetupManager",
+        "lib/Service/StorageService.php:362 OC\\Files\\Cache\\CacheQueryBuilder"
+      ],
+      "lines": [
+        "6 uses of the private API of the server in 6 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/BackgroundJobs/FileSystemListenerJob.php:82 OC\\Files\\SetupManager",
+        "  lib/BackgroundJobs/RotateLogsJob.php:30 OC",
+        "  lib/Controller/QueueController.php:338 OC\\User\\NoUserException",
+        "  lib/Logger.php:36 OC",
+        "  lib/Service/MetadataService.php:188 OC\\Files\\SetupManager",
+        "  lib/Service/StorageService.php:362 OC\\Files\\Cache\\CacheQueryBuilder"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "PUT /index.php/apps/context_chat/config  context_chat.config.setconfig  appinfo/routes.php:8 routes",
+        "PUT /index.php/apps/context_chat/admin-config  context_chat.config.setadminconfig  appinfo/routes.php:8 routes",
+        "GET /index.php/apps/context_chat/providers  context_chat.provider.getproviders  appinfo/routes.php:8 routes",
+        "GET /index.php/apps/context_chat/default-provider-key  context_chat.provider.getdefaultproviderkey  appinfo/routes.php:8 routes",
+        "POST /index.php/apps/context_chat/sources-metadata  context_chat.provider.getmetadatafor  appinfo/routes.php:8 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 5 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 4 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  PUT /index.php/apps/context_chat/config  context_chat.config.setconfig  appinfo/routes.php:8 routes",
+        "  PUT /index.php/apps/context_chat/admin-config  context_chat.config.setadminconfig  appinfo/routes.php:8 routes",
+        "  GET /index.php/apps/context_chat/providers  context_chat.provider.getproviders  appinfo/routes.php:8 routes",
+        "  GET /index.php/apps/context_chat/default-provider-key  context_chat.provider.getdefaultproviderkey  appinfo/routes.php:8 routes",
+        "  POST /index.php/apps/context_chat/sources-metadata  context_chat.provider.getmetadatafor  appinfo/routes.php:8 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "vimeo/psalm, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Controller/QueueController.php:196",
+        "lib/Controller/QueueController.php:292",
+        "lib/Db/FsEventMapper.php:52",
+        "lib/Db/FsEventMapper.php:126",
+        "lib/Service/ReindexService.php:277"
+      ],
+      "lines": [
+        "5 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Controller/QueueController.php:196",
+        "  lib/Controller/QueueController.php:292",
+        "  lib/Db/FsEventMapper.php:52",
+        "  lib/Db/FsEventMapper.php:126",
+        "  lib/Service/ReindexService.php:277"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJobs/FileSystemListenerJob.php OCA\\ContextChat\\BackgroundJobs\\FileSystemListenerJob",
+        "lib/BackgroundJobs/RotateLogsJob.php OCA\\ContextChat\\BackgroundJobs\\RotateLogsJob"
+      ],
+      "lines": [
+        "2 timed jobs do not say whether they are time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJobs/FileSystemListenerJob.php OCA\\ContextChat\\BackgroundJobs\\FileSystemListenerJob",
+        "  lib/BackgroundJobs/RotateLogsJob.php OCA\\ContextChat\\BackgroundJobs\\RotateLogsJob"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Db/QueueActionMapper.php:46 new DateTime()",
+        "lib/Db/QueueActionMapper.php:100 new DateTime()",
+        "lib/Db/QueueActionMapper.php:122 new DateTime()",
+        "lib/Db/QueueActionMapper.php:145 new DateTime()",
+        "lib/Db/QueueActionMapper.php:150 new DateTime()",
+        "lib/Db/QueueContentItemMapper.php:48 new DateTime()",
+        "lib/Db/QueueContentItemMapper.php:88 new DateTime()",
+        "lib/Db/QueueContentItemMapper.php:111 new DateTime()",
+        "lib/Db/QueueContentItemMapper.php:134 new DateTime()",
+        "lib/Db/QueueContentItemMapper.php:187 new DateTime()",
+        "lib/Db/QueueContentItemMapper.php:192 new DateTime()",
+        "lib/Db/QueueMapper.php:49 new DateTime()",
+        "lib/Db/QueueMapper.php:183 new DateTime()",
+        "lib/Db/QueueMapper.php:210 new DateTime()",
+        "lib/Db/QueueMapper.php:235 new DateTime()",
+        "lib/Db/QueueMapper.php:240 new DateTime()",
+        "lib/Repair/AppInstallStep.php:39 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 17 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Db/QueueActionMapper.php:46 new DateTime()",
+        "  lib/Db/QueueActionMapper.php:100 new DateTime()",
+        "  lib/Db/QueueActionMapper.php:122 new DateTime()",
+        "  lib/Db/QueueActionMapper.php:145 new DateTime()",
+        "  lib/Db/QueueActionMapper.php:150 new DateTime()",
+        "  lib/Db/QueueContentItemMapper.php:48 new DateTime()",
+        "  lib/Db/QueueContentItemMapper.php:88 new DateTime()",
+        "  lib/Db/QueueContentItemMapper.php:111 new DateTime()",
+        "  lib/Db/QueueContentItemMapper.php:134 new DateTime()",
+        "  lib/Db/QueueContentItemMapper.php:187 new DateTime()",
+        "  lib/Db/QueueContentItemMapper.php:192 new DateTime()",
+        "  lib/Db/QueueMapper.php:49 new DateTime()",
+        "  lib/Db/QueueMapper.php:183 new DateTime()",
+        "  lib/Db/QueueMapper.php:210 new DateTime()",
+        "  lib/Db/QueueMapper.php:235 new DateTime()",
+        "  lib/Db/QueueMapper.php:240 new DateTime()",
+        "  lib/Repair/AppInstallStep.php:39 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 14
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJobs/FileSystemListenerJob.php:51 getAppValueString()",
+        "lib/BackgroundJobs/RotateLogsJob.php:31 getAppValueString()",
+        "lib/BackgroundJobs/SchedulerJob.php:58 setAppValueInt()",
+        "lib/BackgroundJobs/StorageCrawlJob.php:104 setAppValueInt()",
+        "lib/BackgroundJobs/StorageCrawlJob.php:114 getAppValueInt()",
+        "lib/Controller/ConfigController.php:41 setUserValue()",
+        "lib/Controller/ConfigController.php:54 setAppValueString()",
+        "lib/Controller/QueueController.php:387 getAppValueInt()",
+        "lib/Controller/QueueController.php:403 getAppValueInt()",
+        "lib/Controller/QueueController.php:413 setAppValueInt()",
+        "lib/Controller/QueueController.php:416 setAppValueInt()",
+        "lib/Controller/QueueController.php:426 setAppValueInt()",
+        "lib/Controller/QueueController.php:437 setAppValueInt()",
+        "lib/Logger.php:37 getAppValueString()",
+        "lib/Migration/Version004000000Date20241217110041.php:94 setAppValueString()",
+        "lib/Migration/Version005000001Date20251124093628.php:55 getAppKeys()",
+        "lib/Migration/Version005000001Date20251124093628.php:62 getAppValueInt()",
+        "lib/Migration/Version005000001Date20251124093628.php:63 setAppValueInt()",
+        "lib/Migration/Version005000001Date20251124093628.php:71 getAppValueString()",
+        "lib/Migration/Version005000001Date20251124093628.php:72 setAppValueString()",
+        "lib/Migration/Version005004000Date20260302135634.php:83 getAppValueInt()",
+        "lib/Migration/Version005004000Date20260302135634.php:91 setAppValueInt()",
+        "lib/Migration/Version4000Date20241108004215.php:64 setAppValueString()",
+        "lib/Public/ContentManager.php:47 getAppValueString()",
+        "lib/Repair/AppInstallStep.php:37 getAppValueInt()",
+        "lib/Repair/AppInstallStep.php:39 setAppValueInt()",
+        "lib/Service/FetchGuard.php:66 setAppValueInt()",
+        "lib/Service/FetchGuard.php:118 setAppValueInt()",
+        "lib/Service/FetchGuard.php:126 getAppValueInt()",
+        "lib/Service/FetchGuard.php:129 setAppValueInt()",
+        "lib/Service/FetchGuard.php:244 getAppValueInt()",
+        "lib/Service/LangRopeService.php:65 getAppValueString()",
+        "lib/Service/LangRopeService.php:87 setAppValueString()",
+        "lib/Service/LangRopeService.php:89 setAppValueString()",
+        "lib/Service/LangRopeService.php:94 getAppValueString()",
+        "lib/Service/ProviderConfigService.php:81 getAppValueString()",
+        "lib/Service/ProviderConfigService.php:88 setAppValueString()",
+        "lib/Service/ProviderConfigService.php:112 setAppValueString()",
+        "lib/Service/ProviderConfigService.php:126 setAppValueString()",
+        "lib/Service/ProviderConfigService.php:179 setAppValueString()",
+        "lib/Service/ReindexService.php:296 setAppValueInt()",
+        "lib/Service/ReindexService.php:298 setAppValueInt()",
+        "lib/Service/StatisticsService.php:38 getAppValueInt()",
+        "lib/Service/StatisticsService.php:40 getAppValueInt()",
+        "lib/Service/StatisticsService.php:116 getAppValueInt()",
+        "lib/Service/StatisticsService.php:118 getAppValueInt()",
+        "lib/Service/StatisticsService.php:127 setAppValueInt()",
+        "lib/Service/StatisticsService.php:128 setAppValueInt()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 48 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/BackgroundJobs/FileSystemListenerJob.php:51 getAppValueString()",
+        "  lib/BackgroundJobs/RotateLogsJob.php:31 getAppValueString()",
+        "  lib/BackgroundJobs/SchedulerJob.php:58 setAppValueInt()",
+        "  lib/BackgroundJobs/StorageCrawlJob.php:104 setAppValueInt()",
+        "  lib/BackgroundJobs/StorageCrawlJob.php:114 getAppValueInt()",
+        "  lib/Controller/ConfigController.php:41 setUserValue()",
+        "  lib/Controller/ConfigController.php:54 setAppValueString()",
+        "  lib/Controller/QueueController.php:387 getAppValueInt()",
+        "  lib/Controller/QueueController.php:403 getAppValueInt()",
+        "  lib/Controller/QueueController.php:413 setAppValueInt()",
+        "  lib/Controller/QueueController.php:416 setAppValueInt()",
+        "  lib/Controller/QueueController.php:426 setAppValueInt()",
+        "  lib/Controller/QueueController.php:437 setAppValueInt()",
+        "  lib/Logger.php:37 getAppValueString()",
+        "  lib/Migration/Version004000000Date20241217110041.php:94 setAppValueString()",
+        "  lib/Migration/Version005000001Date20251124093628.php:55 getAppKeys()",
+        "  lib/Migration/Version005000001Date20251124093628.php:62 getAppValueInt()",
+        "  lib/Migration/Version005000001Date20251124093628.php:63 setAppValueInt()",
+        "  lib/Migration/Version005000001Date20251124093628.php:71 getAppValueString()",
+        "  lib/Migration/Version005000001Date20251124093628.php:72 setAppValueString()",
+        "  lib/Migration/Version005004000Date20260302135634.php:83 getAppValueInt()",
+        "  lib/Migration/Version005004000Date20260302135634.php:91 setAppValueInt()",
+        "  lib/Migration/Version4000Date20241108004215.php:64 setAppValueString()",
+        "  lib/Public/ContentManager.php:47 getAppValueString()",
+        "  lib/Repair/AppInstallStep.php:37 getAppValueInt()",
+        "  lib/Repair/AppInstallStep.php:39 setAppValueInt()",
+        "  lib/Service/FetchGuard.php:66 setAppValueInt()",
+        "  lib/Service/FetchGuard.php:118 setAppValueInt()",
+        "  lib/Service/FetchGuard.php:126 getAppValueInt()",
+        "  lib/Service/FetchGuard.php:129 setAppValueInt()",
+        "  lib/Service/FetchGuard.php:244 getAppValueInt()",
+        "  lib/Service/LangRopeService.php:65 getAppValueString()",
+        "  lib/Service/LangRopeService.php:87 setAppValueString()",
+        "  lib/Service/LangRopeService.php:89 setAppValueString()",
+        "  lib/Service/LangRopeService.php:94 getAppValueString()",
+        "  lib/Service/ProviderConfigService.php:81 getAppValueString()",
+        "  lib/Service/ProviderConfigService.php:88 setAppValueString()",
+        "  lib/Service/ProviderConfigService.php:112 setAppValueString()",
+        "  lib/Service/ProviderConfigService.php:126 setAppValueString()",
+        "  lib/Service/ProviderConfigService.php:179 setAppValueString()",
+        "  lib/Service/ReindexService.php:296 setAppValueInt()",
+        "  lib/Service/ReindexService.php:298 setAppValueInt()",
+        "  lib/Service/StatisticsService.php:38 getAppValueInt()",
+        "  lib/Service/StatisticsService.php:40 getAppValueInt()",
+        "  lib/Service/StatisticsService.php:116 getAppValueInt()",
+        "  lib/Service/StatisticsService.php:118 getAppValueInt()",
+        "  lib/Service/StatisticsService.php:127 setAppValueInt()",
+        "  lib/Service/StatisticsService.php:128 setAppValueInt()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 45
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/context_chat/files/{fileId}  ocs.context_chat.queue.getfilecontents  lib/Controller/QueueController.php:67",
+        "GET /ocs/v2.php/apps/context_chat/queues/documents/  ocs.context_chat.queue.getdocumentsqueueitems  lib/Controller/QueueController.php:95",
+        "DELETE /ocs/v2.php/apps/context_chat/queues/documents/  ocs.context_chat.queue.deletedocumentsqueueitems  lib/Controller/QueueController.php:193",
+        "GET /ocs/v2.php/apps/context_chat/queues/documents/stats  ocs.context_chat.queue.countdocumentsqueueitems  lib/Controller/QueueController.php:223",
+        "GET /ocs/v2.php/apps/context_chat/queues/actions/  ocs.context_chat.queue.getactionsqueueitems  lib/Controller/QueueController.php:249",
+        "DELETE /ocs/v2.php/apps/context_chat/queues/actions/  ocs.context_chat.queue.deleteactionsqueueitems  lib/Controller/QueueController.php:289",
+        "GET /ocs/v2.php/apps/context_chat/queues/actions/stats  ocs.context_chat.queue.countactionsqueueitems  lib/Controller/QueueController.php:311",
+        "POST /ocs/v2.php/apps/context_chat/resolve_scope_list  ocs.context_chat.util.resolvescopelist  lib/Controller/UtilController.php:48",
+        "POST /ocs/v2.php/apps/context_chat/enrich_sources  ocs.context_chat.util.enrichsources  lib/Controller/UtilController.php:89"
+      ],
+      "lines": [
+        "Nothing in the app calls 9 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/context_chat/files/{fileId}  ocs.context_chat.queue.getfilecontents  lib/Controller/QueueController.php:67",
+        "  GET /ocs/v2.php/apps/context_chat/queues/documents/  ocs.context_chat.queue.getdocumentsqueueitems  lib/Controller/QueueController.php:95",
+        "  DELETE /ocs/v2.php/apps/context_chat/queues/documents/  ocs.context_chat.queue.deletedocumentsqueueitems  lib/Controller/QueueController.php:193",
+        "  GET /ocs/v2.php/apps/context_chat/queues/documents/stats  ocs.context_chat.queue.countdocumentsqueueitems  lib/Controller/QueueController.php:223",
+        "  GET /ocs/v2.php/apps/context_chat/queues/actions/  ocs.context_chat.queue.getactionsqueueitems  lib/Controller/QueueController.php:249",
+        "  DELETE /ocs/v2.php/apps/context_chat/queues/actions/  ocs.context_chat.queue.deleteactionsqueueitems  lib/Controller/QueueController.php:289",
+        "  GET /ocs/v2.php/apps/context_chat/queues/actions/stats  ocs.context_chat.queue.countactionsqueueitems  lib/Controller/QueueController.php:311",
+        "  POST /ocs/v2.php/apps/context_chat/resolve_scope_list  ocs.context_chat.util.resolvescopelist  lib/Controller/UtilController.php:48",
+        "  POST /ocs/v2.php/apps/context_chat/enrich_sources  ocs.context_chat.util.enrichsources  lib/Controller/UtilController.php:89"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 6
+        }
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/QueueController.php:380 OCA\\ContextChat\\Controller\\QueueController::getJobCount()"
+      ],
+      "lines": [
+        "1 public method of a controller is reached by no route.",
+        "  lib/Controller/QueueController.php:380 OCA\\ContextChat\\Controller\\QueueController::getJobCount()"
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 9 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 15,
+  "endpointList": [
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/context_chat/admin-config",
+      "target": "OCA\\ContextChat\\Controller\\ConfigController::setAdminConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/context_chat/config",
+      "target": "OCA\\ContextChat\\Controller\\ConfigController::setConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/context_chat/default-provider-key",
+      "target": "OCA\\ContextChat\\Controller\\ProviderController::getDefaultProviderKey",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/context_chat/download-logs-nextcloud",
+      "target": "OCA\\ContextChat\\Controller\\LogController::getNextcloudLogs",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/context_chat/providers",
+      "target": "OCA\\ContextChat\\Controller\\ProviderController::getProviders",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/context_chat/sources-metadata",
+      "target": "OCA\\ContextChat\\Controller\\ProviderController::getMetadataFor",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/context_chat/enrich_sources",
+      "target": "OCA\\ContextChat\\Controller\\UtilController::enrichSources",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/context_chat/files/{fileId}",
+      "target": "OCA\\ContextChat\\Controller\\QueueController::getFileContents",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/context_chat/queues/actions/",
+      "target": "OCA\\ContextChat\\Controller\\QueueController::deleteActionsQueueItems",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/context_chat/queues/actions/",
+      "target": "OCA\\ContextChat\\Controller\\QueueController::getActionsQueueItems",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/context_chat/queues/actions/stats",
+      "target": "OCA\\ContextChat\\Controller\\QueueController::countActionsQueueItems",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/context_chat/queues/documents/",
+      "target": "OCA\\ContextChat\\Controller\\QueueController::deleteDocumentsQueueItems",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/context_chat/queues/documents/",
+      "target": "OCA\\ContextChat\\Controller\\QueueController::getDocumentsQueueItems",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/context_chat/queues/documents/stats",
+      "target": "OCA\\ContextChat\\Controller\\QueueController::countDocumentsQueueItems",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/context_chat/resolve_scope_list",
+      "target": "OCA\\ContextChat\\Controller\\UtilController::resolveScopeList",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

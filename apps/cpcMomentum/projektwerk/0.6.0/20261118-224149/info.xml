@@ -1,0 +1,127 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+
+    <id>projektwerk</id>
+    <name>ProjektWerk</name>
+    <summary>Projekte gemeinsam mit dem Kunden fuehren</summary>
+    <description><![CDATA[
+# ProjektWerk
+
+Kanban-Werkzeug fuer die eigene Nextcloud, mit dem ein Dienstleister seine Projekte **gemeinsam mit dem Kunden** fuehrt: ein Board pro Projekt, auf dem interne und kundensichtbare Vorgaenge nebeneinander liegen, getrennt durch eine Sichtbarkeit am einzelnen Ticket.
+
+Der eigentliche Zweck ist nicht das Board, sondern die **sichtbare Zustaendigkeit**: Liegt ein Vorgang beim Kunden, steht das am Ticket — als geteilter Zustand, den beide Seiten sehen, statt als Behauptung in einer E-Mail.
+
+## Features
+
+- **Ein Board, zwei Sichten** — Sichtbarkeit am einzelnen Ticket (Alle Beteiligten / Intern / Nur ich) statt zweier getrennter Boards
+- **Symmetrisch** — auch die Kundenseite hat interne Vorgaenge; es gibt keine Admin-Ausnahme
+- **Wartet auf Kunde** — abgeleiteter, beidseitig sichtbarer Zustand mit Datum, statt Nachfassen per E-Mail
+- **Arbeitsschritte** — einzeln zuweisbar, ausdruecklich auch an Personen der Kundenseite
+- **Dateien bleiben Dateien** — Anhaenge liegen in den echten Projektordnern, der Ablageort ist die Sichtbarkeit
+- **Meine Aufgaben** — projektuebergreifende Sicht ueber Tickets und Arbeitsschritte
+- **Kunden ohne Fremdkonto** — Zusammenarbeit auf der eigenen Nextcloud, wahlweise per Gastzugang
+
+## Freier Umfang und WerkPlus
+
+Frei enthalten sind zehn aktive Projekte mit je einem Board und ein Kundenprojekt. WerkPlus schaltet weitere Projekte, Kundenprojekte und Boards frei, dazu Antworten per E-Mail und den KI-Zugriff ueber MCP.
+
+Fuer die Lizenzpruefung gehen nur der WerkPlus-Schluessel, eine aus der Nextcloud abgeleitete Kennung und die Versionen der aktivierten Werk-Apps an api.werkwolke.de. Ein Schluessel gilt fuer alle Werk-Apps einer Nextcloud. Niemals Vorgaenge, Kommentare, Dateien, Namen, Adressen, Benutzer- oder Datei-IDs.
+    ]]></description>
+
+    <version>0.6.0</version>
+    <licence>AGPL-3.0-or-later</licence>
+
+    <author mail="axel.deffner@cpcmomentum.com" homepage="https://github.com/cpcMomentum">Axel Deffner</author>
+
+    <namespace>Projektwerk</namespace>
+
+    <category>organization</category>
+    <category>tools</category>
+
+    <bugs>https://github.com/cpcMomentum/projektwerk/issues</bugs>
+    <repository type="git">https://github.com/cpcMomentum/projektwerk.git</repository>
+    <screenshot>https://raw.githubusercontent.com/cpcMomentum/projektwerk/main/screenshots/01-board.png</screenshot>
+    <screenshot>https://raw.githubusercontent.com/cpcMomentum/projektwerk/main/screenshots/02-vorgang.png</screenshot>
+    <screenshot>https://raw.githubusercontent.com/cpcMomentum/projektwerk/main/screenshots/03-kommentare.png</screenshot>
+    <screenshot>https://raw.githubusercontent.com/cpcMomentum/projektwerk/main/screenshots/04-kundensicht.png</screenshot>
+    <screenshot>https://raw.githubusercontent.com/cpcMomentum/projektwerk/main/screenshots/05-ueberblick.png</screenshot>
+    <screenshot>https://raw.githubusercontent.com/cpcMomentum/projektwerk/main/screenshots/06-meine-aufgaben.png</screenshot>
+
+    <dependencies>
+        <php min-version="8.3"/>
+        <database>sqlite</database>
+        <database>mysql</database>
+        <database>pgsql</database>
+        <nextcloud min-version="33" max-version="35"/>
+    </dependencies>
+    <!-- Die <database>-Deklaration ist PFLICHT (Lehre rechnungswerk #118):
+         Ohne sie nimmt NC an, die App unterstuetze auch Oracle, und erzwingt
+         auf NC <= 32 Oracle-Namenslimits bei Migrationen (Tabellenname ohne
+         oc_-Praefix max. 22 Zeichen). Genau deshalb lautet das Tabellen-
+         praefix dieser App `pwerk_` und nicht `projektwerk_`.
+         Element-Reihenfolge laut Store-XSD: php -> database -> nextcloud. -->
+
+    <!--
+        Der Nachlauf zum Mailversand.
+
+        **Hier und nicht im `Application::register()`.** Dort stand bis zum
+        2026-08-12 ein `$context->registerBackgroundJob(...)` — diese Methode
+        gibt es in `IRegistrationContext` **nicht**. Die Folge war kein stiller
+        Ausfall des Auftrags, sondern ein Abbruch der gesamten
+        App-Registrierung: Nextcloud faengt den Fehler in `Coordinator::register()`
+        ab, protokolliert „Error during app service registration" und liefert
+        danach auf **jeden** Aufruf der App 503 aus.
+
+        Der von der Plattform vorgesehene Weg ist dieses Element; die
+        mitgelieferten Apps (activity, admin_audit) machen es genauso.
+    -->
+    <background-jobs>
+        <job>OCA\Projektwerk\BackgroundJob\MailRetryJob</job>
+        <job>OCA\Projektwerk\BackgroundJob\ReplyIntakeJob</job>
+        <job>OCA\Projektwerk\BackgroundJob\IdemCleanupJob</job>
+        <job>OCA\Projektwerk\BackgroundJob\ForgetRetryJob</job>
+        <job>OCA\Projektwerk\BackgroundJob\LicenseRefreshJob</job>
+    </background-jobs>
+
+    <!--
+        Das Netz fuer einen abgebrochenen Anhang-Umzug (#188): Bricht ein
+        Sichtbarkeitswechsel zwischen Datei-Move und DB-Schreiben ab, zeigt der
+        Anhang „fehlt", bis er nachgezogen wird. Der Schritt heilt das beim
+        Upgrade; von Hand geht es ueber `projektwerk:attachments:relocate`.
+    -->
+    <repair-steps>
+        <post-migration>
+            <step>OCA\Projektwerk\Repair\RelocateAttachments</step>
+            <!--
+                „Was ist neu?"-Fenster (#315): merkt beim Update einer
+                Bestandsinstallation, dass sie schon vor dem Fenster bestand.
+                post-migration laeuft nur beim Update, nie bei Neuinstallation —
+                so bleibt das Fenster bei frischen Installationen still.
+            -->
+            <step>OCA\Projektwerk\Repair\WhatsNewBootstrap</step>
+        </post-migration>
+    </repair-steps>
+
+	<!--
+		Der Papierkorb dieser App liegt auf der Kommandozeile: Eine Ansicht
+		geloeschter Vorgaenge in der Oberflaeche waere ein zweiter Ort, an dem
+		Tickets leben — und damit ein zweiter Ort, an dem die
+		Sichtbarkeitsregel stimmen muesste.
+	-->
+	<commands>
+		<command>OCA\Projektwerk\Command\TicketRestore</command>
+		<command>OCA\Projektwerk\Command\AttachmentsRelocate</command>
+		<command>OCA\Projektwerk\Command\AttachmentsVerify</command>
+		<command>OCA\Projektwerk\Command\ProjectSetManager</command>
+	</commands>
+
+    <navigations>
+        <navigation>
+            <name>ProjektWerk</name>
+            <route>projektwerk.page.index</route>
+            <icon>app.svg</icon>
+            <order>10</order>
+        </navigation>
+    </navigations>
+</info>
