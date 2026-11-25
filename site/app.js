@@ -328,10 +328,11 @@ function categories() {
 	return new Map(query('SELECT id, name FROM categories ORDER BY name COLLATE NOCASE').map((r) => [r.id, r.name]))
 }
 
-// warn, sec, sec_other, abandoned, endpoints, loader and unreferenced are the
-// counts gh-stats-site-db and gh-stats-security-site take from the findings.
+// warn, style, sec, sec_other, abandoned, endpoints, loader and unreferenced
+// are the counts gh-stats-site-db and gh-stats-security-site take from the
+// findings.
 const MEASUREMENT = `m.dir, m.host, m.owner, m.repo, m.subdir, m.app_id, m.version, m.restrictable, m.server, m.tag, m.tarball, m.signed, m.diff, m.info_xml,
-	m.declared, m.shipped_version, m.source, m.warn, m.sec, m.sec_other, m.abandoned, m.endpoints, m.loader, m.unreferenced,
+	m.declared, m.shipped_version, m.source, m.warn, m.style, m.sec, m.sec_other, m.abandoned, m.endpoints, m.loader, m.unreferenced,
 	(SELECT s.repo FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_repo,
 	(SELECT s.path FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_path,
 	(SELECT s.app_ref FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_ref`
@@ -1306,8 +1307,9 @@ function findingEntries(tool, fs, under = new Map(), notes = new Map()) {
 			return finding(f, under, notes)
 		}
 		const noun = security ? `${f.security === true ? 'security ' : ''}finding` : 'message'
-		return el('details', { class: `finding ${f.level ?? ''}` },
-			el('summary', {}, el('span', { class: 'level' }, f.level ?? ''), ' ', el('code', {}, f.file),
+		const level = f.style ? 'style' : f.level ?? ''
+		return el('details', { class: `finding ${level}` },
+			el('summary', {}, el('span', { class: 'level' }, level), ' ', el('code', {}, f.file),
 				` ${group.length} ${noun}${group.length === 1 ? '' : 's'}`, f.counted_in ? `, counted in ${f.counted_in}` : ''),
 			el('ol', {}, ...group.map((g) => el('li', {}, el('pre', {}, g.text.startsWith(`${g.file}:`) ? g.text.slice(g.file.length + 1) : g.text),
 				...(g.found_in ? [el('p', { class: 'hint' }, `Found in ${g.found_in.join(', ')}.`)] : [])))))
@@ -1331,15 +1333,28 @@ function securityTargets(m) {
 }
 
 // The warnings of a lint target are one warning, folded: its summary counts
-// the messages and the files they are in, and it opens into the notes on its
-// warnings and the entries per file.
-function lintFold(tool, warns, notes = new Map()) {
+// the messages, the files and the rules they are in, and it opens into the
+// notes on its warnings and one entry per rule, the most frequent first, which
+// counts its places and opens into the entries per file; those of
+// lint-actions-security are its workflows. The findings of a style lint are no
+// warnings and fold apart the same way, under the level style.
+function lintFold(tool, warns, notes = new Map(), level = 'warn') {
 	const noun = tool.startsWith('security/') ? 'finding' : 'message'
-	const files = new Set(warns.filter((f) => f.file !== null).map((f) => f.file)).size
-	return el('details', { class: 'finding warn' },
-		el('summary', {}, el('span', { class: 'level' }, 'warn'), ' ', `${warns.length} ${noun}${warns.length === 1 ? '' : 's'}`,
-			files ? ` in ${files} file${files === 1 ? '' : 's'}` : ''),
-		...warns.flatMap((f) => notes.get(f) ?? []), ...findingEntries(tool, warns))
+	const count = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
+	const filesOf = (fs) => new Set(fs.filter((f) => f.file !== null).map((f) => f.file)).size
+	const rules = [...Map.groupBy(warns, (f) => f.id ?? '').values()].sort((a, b) => b.length - a.length)
+	const files = filesOf(warns)
+	return el('details', { class: `finding ${level}` },
+		el('summary', {}, el('span', { class: 'level' }, level), ' ', count(warns.length, noun),
+			files ? ` in ${count(files, 'file')}` : '', `, ${count(rules.length, 'rule')}`),
+		...warns.flatMap((f) => notes.get(f) ?? []),
+		...rules.map((group) => {
+			const n = filesOf(group)
+			return el('details', { class: `finding ${level}` },
+				el('summary', {}, el('span', { class: 'level' }, level), ' ', group[0].id === null ? 'no rule' : el('code', {}, group[0].id),
+					` ${count(group.length, noun)}`, n ? ` in ${count(n, 'file')}` : ''),
+				...findingEntries(tool, group))
+		}))
 }
 
 // The head of the section of a tool: the commands that produce its findings in
@@ -1538,7 +1553,7 @@ const RUN_TABLES = { 'runtime-audit': runtimeAuditTables, 'install-test': instal
 // beneath their head.
 function checksBlock(m, collapse) {
 	const rank = ([tool, fs]) => (tool.startsWith('security/') ? 4 : 0) + (fs.some((f) => f.level === 'warn' && f.security && !f.counted_in) ? 2 : 0)
-		+ (fs.some((f) => f.level === 'warn') ? 1 : 0)
+		+ (fs.some((f) => f.level === 'warn' && !f.style) ? 1 : 0)
 	const fields = fieldsOf(m.dir)
 	const run = el('section', { class: 'run' })
 	const start = el('button', { type: 'button', class: 'quiet', title: 'Back to the start of this measurement', hidden: '' }, '↑ Start')
@@ -1569,7 +1584,8 @@ function checksBlock(m, collapse) {
 			}
 			const tools = [...Map.groupBy(fs.filter((f) => !covered.has(f)), (f) => f.tool)].sort((a, b) => rank(b) - rank(a))
 			status.replaceWith(...tools.map(([tool, fs]) => {
-				const warns = fs.filter((f) => f.level === 'warn').sort((a, b) => Number(b.security === true) - Number(a.security === true))
+				const warns = fs.filter((f) => f.level === 'warn' && !f.style).sort((a, b) => Number(b.security === true) - Number(a.security === true))
+				const style = fs.filter((f) => f.level === 'warn' && f.style)
 				const rest = fs.filter((f) => f.level !== 'warn')
 				const counts = ['ok', 'info'].map((l) => [l, rest.filter((f) => f.level === l).length]).filter(([, n]) => n)
 				const elsewhere = warns.filter((f) => f.counted_in).length
@@ -1581,6 +1597,7 @@ function checksBlock(m, collapse) {
 				return el('div', { class: tool.startsWith('security/') ? 'tool security' : 'tool' }, el('h5', {}, toolHeads[baseTool(tool)].title, ' ', el('code', { class: 'target' }, tool), ...split), toolHead(tool),
 					...(tables[tool] ? RUN_TABLES[tool](tables[tool]) : []),
 					...(warns.length && baseTool(tool).startsWith('lint-') ? [lintFold(tool, warns, notes)] : findingEntries(tool, warns, under, notes)),
+					...(style.length ? [lintFold(tool, style, notes, 'style')] : []),
 					...(rest.length
 						? [el('details', {}, el('summary', {}, counts.map(([l, n]) => `${n} ${l}`).join(', ')), ...findingEntries(tool, rest, under, notes))]
 						: []))
@@ -1616,17 +1633,16 @@ function closeOpened(kinds) {
 // them in the row returned with it, built on first use, which spans the
 // table from its second column and closes from the head of each measurement
 // too. A version given names the release measured
-// when it is another than the one the row shows. Where the database has the
-// security results, the cells of their column come third, to go before the
-// cell, and open the same row; span counts the columns without it.
+// when it is another than the one the row shows. The cell of the style column
+// and, where the database has the security results, that of their column come
+// third, to go before the cell, and open the same row; span counts the columns
+// without them.
 function checksCell(runs, span, version = null) {
 	const checks = el('tr', { class: 'checks', hidden: '' })
-	if (securityResults) {
-		span += 1
-	}
+	span += securityResults ? 2 : 1
 	if (!runs) {
 		return [el('td', { class: 'check-col', title: 'not measured' }), checks,
-			securityResults ? [el('td', { class: 'num check-col', title: 'not measured' })] : []]
+			[el('td', { class: 'num check-col', title: 'not measured' }), ...(securityResults ? [el('td', { class: 'num check-col', title: 'not measured' })] : [])]]
 	}
 	const warn = warnings(runs)
 	const button = el('button', {
@@ -1666,8 +1682,22 @@ function checksCell(runs, span, version = null) {
 	// A rebuild keeps the directory of a release and only adds runs to it.
 	checks.dataset.reopen = [...new Set(runs.map((m) => m.dir.replace(/\/[^/]*$/, '')))].join(' ')
 	checks.reopen = () => show(true)
+	const toggle = () => show(checks.hidden)
 	return [el('td', { class: 'check-col' }, button, ...(version ? [' ', el('span', { class: 'check-of' }, version)] : [])), checks,
-		securityResults ? [securityCell(runs, () => show(checks.hidden), version)] : []]
+		[styleCell(runs, toggle, version), ...(securityResults ? [securityCell(runs, toggle, version)] : [])]]
+}
+
+// The cell of the style column counts the rules of the style lints that the
+// measurements break, each once however many places break it.
+function styleCell(runs, toggle, version) {
+	const n = styleRules(runs)
+	const button = el('button', {
+		type: 'button',
+		class: 'check-count',
+		title: `${n} rule${n === 1 ? '' : 's'} of the style lints broken${version ? ` in ${version}` : ''}: markdownlint, yamllint and Stylelint`,
+	}, n ? String(n) : '✓')
+	button.addEventListener('click', toggle)
+	return el('td', { class: 'num check-col' }, button)
 }
 
 // The cell of the security column counts the security findings; the other
@@ -1694,6 +1724,12 @@ function warnings(runs) {
 	return runs ? runs.reduce((n, m) => n + m.warn, 0) : null
 }
 
+// The rules of the style lints the measurements of a release break, null when
+// it has none.
+function styleRules(runs) {
+	return runs ? runs.reduce((n, m) => n + m.style, 0) : null
+}
+
 // The security findings of the measurements of a release, or with sec_other
 // the other warnings of the security targets, null when none of them has
 // security results.
@@ -1706,6 +1742,11 @@ function securityWarnings(runs, count = 'sec') {
 // one.
 function counted(tool, fs) {
 	return baseTool(tool).startsWith('lint-') ? Math.min(fs.length, 1) : fs.length
+}
+
+// The column head of the style lints.
+function styleHead() {
+	return el('th', { class: 'num', title: 'rules of the style lints broken: markdownlint, yamllint and Stylelint, each once however many places break it' }, 'Style')
 }
 
 // The column head of the security results, where the database has them.
@@ -1737,8 +1778,10 @@ function abandonedCell(n, version = null) {
 // where every measurement found the class loading optimized, 0 where one made
 // a class loading finding, whose ids loaderIds names; all null where no
 // measurement counted the endpoints, and unreferenced null as well where none
-// could read all routes.
+// could read all routes. The row keeps the rules of the style lints broken as
+// well, as style.
 function setCode(row, runs) {
+	row.style = styleRules(runs)
 	const known = (runs ?? []).filter((m) => m.endpoints !== null)
 	const ids = [...new Set(known.flatMap((m) => (m.loader === 'optimized' ? [] : m.loader.split(','))))]
 	row.endpoints = known.length ? known.reduce((n, m) => n + m.endpoints, 0) : null
@@ -2006,7 +2049,7 @@ function shippedRow(releases) {
 	const row = line(main, head, since)
 	const p = {
 		tab: 'shipped', name: main.name, tag: main.version, published: main.published, nc: row.nc, enabled: main.enabled, tree: main.repo === SERVER_REPO,
-		total: null, d1: null, d7: null, d30: null, stars: null, since, warn: row.warn, sec: row.sec, abandoned: row.abandoned, endpoints: row.endpoints, loader: row.loader, loaderIds: row.loaderIds, unreferenced: row.unreferenced,
+		total: null, d1: null, d7: null, d30: null, stars: null, since, warn: row.warn, style: row.style, sec: row.sec, abandoned: row.abandoned, endpoints: row.endpoints, loader: row.loader, loaderIds: row.loaderIds, unreferenced: row.unreferenced,
 		lines: releases.filter((s) => s !== main)
 			.map((s) => line(s, el('td', { class: 'line-label' }, `Nextcloud ${s.major}`))),
 		search: `${main.name} ${main.id} ${main.repo}`.toLowerCase(), categories: new Set(JSON.parse(main.categories ?? '[]')),
@@ -2062,6 +2105,7 @@ function initOverview() {
 		p.main = el('tbody', {}, ...lineRows(main, head, starsCell(main)),
 			...(members.some(isServerProject) ? serverMasterRows() : []))
 		p.warn = main.warn
+		p.style = main.style
 		p.sec = main.sec
 		p.abandoned = main.abandoned
 		p.endpoints = main.endpoints
@@ -2631,7 +2675,7 @@ function appReleases(id, requests) {
 			.at(-1)?.version
 	return el('table', {},
 		el('thead', {}, el('tr', {}, ...['Version', 'Released', 'Channel', 'Nextcloud', 'PHP', 'Databases', 'PHP extensions', 'Licences']
-			.map((h) => el('th', {}, h)), ...securityHead(), el('th', { title: 'warnings the ncmake analysers found in the release' }, 'Checks'),
+			.map((h) => el('th', {}, h)), styleHead(), ...securityHead(), el('th', { title: 'warnings the ncmake analysers found in the release' }, 'Checks'),
 		...(asks ? [el('th', { title: 'opens a prefilled issue that asks for the measurement' }, 'Request')] : []))),
 		...releases.map((r) => {
 			const [checks, checksRow, sec] = checksCell(runs.get(r.version), asks ? 9 : 8)
@@ -2669,7 +2713,7 @@ function appShipped(releases) {
 	const asks = Boolean(issues)
 	return el('table', {},
 		el('thead', {}, el('tr', {}, ...['Nextcloud', 'Published', 'App version', 'Enabled', 'Source'].map((h) => el('th', {}, h)),
-			...securityHead(), el('th', { title: 'warnings the ncmake analysers found in the app as the server release ships it' }, 'Checks'),
+			styleHead(), ...securityHead(), el('th', { title: 'warnings the ncmake analysers found in the app as the server release ships it' }, 'Checks'),
 			...(asks ? [el('th', { title: 'opens a prefilled issue that asks for the measurement' }, 'Request')] : []))),
 		...releases.map((s) => {
 			const runs = measuredShipped.get(`${s.id}\n${s.ref}`)
@@ -2711,7 +2755,7 @@ function appTags(u) {
 	const rows = tags.length ? tags.map((t) => [t, tagVersion(t)]) : [['default branch', u.version ?? '']]
 	return el('table', {},
 		el('thead', {}, el('tr', {}, ...['Tag', 'Version'].map((h) => el('th', {}, h)),
-			...securityHead(), el('th', { title: 'warnings the ncmake analysers found in the ncmake build' }, 'Checks'),
+			styleHead(), ...securityHead(), el('th', { title: 'warnings the ncmake analysers found in the ncmake build' }, 'Checks'),
 			...(asks ? [el('th', { title: 'opens a prefilled issue that asks for the measurement' }, 'Request')] : []))),
 		...rows.map(([tag, version]) => {
 			const [checks, checksRow, sec] = checksCell(version ? runs.get(version) : undefined, asks ? 3 : 2)
@@ -2755,7 +2799,7 @@ function appLines(lines) {
 			el('th', { class: 'num', title: 'the endpoints the release offers, as php-audit counts them' }, 'Endpoints'),
 			el('th', { title: 'whether php-audit found the class loading optimized' }, 'Class loader'),
 			el('th', { class: 'num', title: 'routes that no code of the release refers to, as php-audit names them' }, 'Unreferenced routes'),
-			...securityHead(), el('th', { title: 'warnings the ncmake analysers found in the release shown' }, 'Checks'))),
+			styleHead(), ...securityHead(), el('th', { title: 'warnings the ncmake analysers found in the release shown' }, 'Checks'))),
 		...lines.map((r) => {
 			const [abandonedTd, checks, checksRow, sec] = lineChecks(r, 12)
 			return el('tbody', {}, el('tr', {}, el('td', {}, lineLabel(r.line)), ...releaseCells(r, measured.get(`${r.project}\n${r.tag}`)), ...abandonedTd, ...sec, checks), checksRow)
