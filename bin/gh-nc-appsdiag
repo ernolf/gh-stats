@@ -196,7 +196,9 @@ host/group/subgroup/repo.
 Clones the app, reports what it is built with, and on confirmation adds the
 ncmake bootstrap stub as GNUmakefile, which make reads before a makefile or a
 Makefile of the app. Those stay in the checkout untouched; an own GNUmakefile is
-moved aside. Then every target is offered in turn: y runs it, n skips it, q
+moved aside. make reuse lints the tree as the app has it: for its run the stub
+is taken out again, an own GNUmakefile is back in place, and make reads the stub
+from outside the checkout. Then every target is offered in turn: y runs it, n skips it, q
 stops asking. After the list any other target can be typed, ARGS= included. The
 full output of every run, the exit codes and the summary go to the log; the
 analyser results go beside it as JSON, and so does the diff of what make dist
@@ -642,6 +644,12 @@ ncmake_main=""
 ncmake_tree=""
 ncmake_differs=""
 ncmake_checked=0
+# The stub as this run put it into the checkout, kept outside it, and whether an
+# own GNUmakefile had to make room; make_f reads it from there while the tree is
+# the app's own.
+stub_file=""
+stub_moved=0
+make_f=()
 inv_files=()
 build_name=""
 build_kind=""
@@ -892,12 +900,14 @@ install_stub() {
 		if [ -e "$APP_DIR/$STUB" ]; then
 			[ -e "$APP_DIR/$STUB.orig" ] && { rm -f "$tmp"; die "$STUB.orig already exists in $APP_DIR"; }
 			mv "$APP_DIR/$STUB" "$APP_DIR/$STUB.orig"
+			stub_moved=1
 			log "   own $STUB moved to $STUB.orig"
 		fi
 		# Copied rather than moved: mktemp creates the file with mode 600, a copy
-		# gets the mode the umask gives every other file in the checkout.
+		# gets the mode the umask gives every other file in the checkout. The file
+		# itself stays for own_tree.
 		cp "$tmp" "$APP_DIR/$STUB"
-		rm -f "$tmp"
+		stub_file="$tmp"
 		log "   stub installed ($(wc -l < "$APP_DIR/$STUB") lines)"
 	fi
 	ncmake_fetch_main
@@ -918,6 +928,27 @@ install_stub() {
 	elif [ -z "$ncmake_differs" ]; then
 		log "   ncmake files match main at $ncmake_main"
 	fi
+}
+
+# REUSE judges every file of the tree, and the stub this run added is none of the
+# app's: it would count as one more file and bring a licence of its own, MIT,
+# whose text an app under another licence does not ship. So while make reuse runs,
+# the checkout is the app's again, an own GNUmakefile back in place, and make
+# reads the stub from outside it. A stub the app commits is the app's own and
+# stays. An interrupted run leaves the checkout as the app has it, which is what
+# install_stub starts from.
+own_tree() {
+	[ -n "$stub_file" ] || return 0
+	rm -f "$APP_DIR/$STUB"
+	[ "$stub_moved" = 0 ] || mv "$APP_DIR/$STUB.orig" "$APP_DIR/$STUB"
+	make_f=(-f "$stub_file")
+}
+
+stub_tree() {
+	[ ${#make_f[@]} -gt 0 ] || return 0
+	[ "$stub_moved" = 0 ] || mv "$APP_DIR/$STUB" "$APP_DIR/$STUB.orig"
+	cp "$stub_file" "$APP_DIR/$STUB"
+	make_f=()
 }
 
 # The head of ncmake's main branch and the blob of every file in its tree, as
@@ -1006,7 +1037,8 @@ run_target() {
 		mk=install-test
 		args+=("TARBALL=$install_tarball")
 	fi
-	if ( cd "$APP_DIR" && make "$mk" "${args[@]}" ) 2>&1 | tee_plain "$LOG"; then rc=0; else rc=$?; fi
+	[ "$t" != reuse ] || own_tree
+	if ( cd "$APP_DIR" && make "${make_f[@]}" "$mk" "${args[@]}" ) 2>&1 | tee_plain "$LOG"; then rc=0; else rc=$?; fi
 	[ "$rc" = 0 ] || stopped_lines[$t]="$(tail -n "+$from" "$LOG" | stopped_line)"
 	results+=("$t	$rc	$((SECONDS - start))")
 	log "----- make $t: exit $rc after $((SECONDS - start))s"
@@ -1021,6 +1053,7 @@ run_target() {
 	# A failed target can still have written its result: reuse exits non-zero
 	# exactly when it has something to report, and that report is what is kept.
 	json_run "$t" "$from"
+	stub_tree
 	[ "$t" != deps-audit ] || deps_keep
 	return 0
 }
@@ -1096,7 +1129,7 @@ json_run() {
 	fi
 	mkdir -p "$RUN_DIR"
 	out="$RUN_DIR/${t}.json"
-	( cd "$APP_DIR" && make "$t" ARGS=--json ) 2>>"$LOG" >"$out.raw" || true
+	( cd "$APP_DIR" && make "${make_f[@]}" "$t" ARGS=--json ) 2>>"$LOG" >"$out.raw" || true
 	split_json "$out.raw" "$out" || warn "make $t ARGS=--json produced nothing"
 	json_check "$t" "$out"
 }
@@ -1949,6 +1982,7 @@ on_exit() {
 	[ -z "$SHIPPED_TREE" ] || rm -rf "$SHIPPED_TREE"
 	[ -z "$UNTAGGED_DIR" ] || rm -rf "$UNTAGGED_DIR"
 	[ -z "$SECURITY_TMP" ] || rm -rf "$SECURITY_TMP"
+	[ -z "$stub_file" ] || rm -f "$stub_file"
 	if [ "$fanned" = 1 ]; then
 		rm -rf "$CHECKOUT"
 		rm -f "$LOG"
