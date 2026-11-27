@@ -43,6 +43,10 @@ const samplesLoaded = new Map()
 // The line rows of each project and the project of each app, for the app pages.
 const projectLines = new Map()
 let appProjects
+// The project of nextcloud/server, whose lines the server page shows.
+let serverProject = null
+// The app of each run whose checkout named none, by run directory.
+let orphanApps = new Map()
 // What the start page had ticked and where it was scrolled to, while an app
 // page is open.
 let startTicks = null
@@ -385,8 +389,7 @@ function measurementsByLine(byRelease) {
 // versions is measured once, under the newest of them; the others share that
 // measurement.
 function measurementsByVersion(id) {
-	const runs = Map.groupBy(query(`SELECT ${MEASUREMENT} FROM measurements m WHERE m.app_id = $id AND m.server IS NULL`, { $id: id }),
-		(r) => r.version)
+	const runs = Map.groupBy(runsOfApp(id).filter((m) => !m.server), runVersion)
 	const tagged = sources.get(id) ?? []
 	for (const s of tagged) {
 		const same = runs.has(s.version) ? undefined
@@ -416,6 +419,76 @@ function measurementsOfServer() {
 
 function isServerRun(m) {
 	return m.host === 'github.com' && `${m.owner}/${m.repo}` === SERVER_REPO && m.subdir === null
+}
+
+// A run whose checkout has no appinfo/info.xml, or that stopped before reading
+// it, names no app. It belongs to the app the App Store lists for the
+// repository at its version, else to the only app the App Store lists for the
+// repository, else to the app outside the App Store kept for the repository
+// and its directory, else to the only app of the project of the repository.
+const ORPHAN_APPS = `
+	SELECT m.dir, coalesce(
+	  (SELECT min(s.id) FROM sources s WHERE s.host = m.host AND lower(s.repo) = lower(m.owner || '/' || m.repo) AND s.version = m.version),
+	  (SELECT CASE WHEN count(DISTINCT s.id) = 1 THEN min(s.id) END FROM sources s WHERE s.host = m.host AND lower(s.repo) = lower(m.owner || '/' || m.repo)),
+	  (SELECT CASE WHEN count(*) = 1 THEN min(a.id) END FROM apps a WHERE a.host = m.host AND lower(a.owner) = lower(m.owner) AND lower(a.repo) = lower(m.repo)),
+	  (SELECT min(u.id) FROM unlisted u WHERE u.host = m.host AND lower(u.repo) = lower(m.owner || '/' || m.repo) AND coalesce(u.path, '') = coalesce(m.subdir, '')),
+	  (SELECT CASE WHEN count(DISTINCT a.id) = 1 THEN min(a.id) END FROM projects j JOIN projects k ON k.project = j.project
+	     JOIN apps a ON a.host = k.host AND lower(a.owner) = lower(k.owner) AND lower(a.repo) = lower(k.repo)
+	    WHERE j.host = m.host AND lower(j.owner) = lower(m.owner) AND lower(j.repo) = lower(m.repo))) AS app
+	  FROM measurements m WHERE m.app_id IS NULL AND m.server IS NULL`
+
+function initOrphans() {
+	db.run(`CREATE TEMP TABLE orphan_apps AS ${ORPHAN_APPS}`)
+	orphanApps = new Map(query('SELECT dir, app FROM orphan_apps WHERE app IS NOT NULL').map((r) => [r.dir, r.app]))
+}
+
+function appOf(m) {
+	return m.app_id ?? orphanApps.get(m.dir) ?? null
+}
+
+// The release line of a server ref: master, or the major of a tag such as v32.0.15.
+function serverLine(ref) {
+	return ref === 'master' ? 'master' : ref.replace(/^v/, '').split('.')[0]
+}
+
+// The version a run measured, which names its tab on the page of its app: the
+// release line for nextcloud/server, server-<ref> for an app as a server
+// release ships it, else the version of the release, or the directory the run
+// is kept under where it read none.
+function runVersion(m) {
+	if (isServerRun(m)) {
+		return serverLine(m.server)
+	}
+	if (m.server) {
+		return `server-${m.server.replace(/^v/, '')}`
+	}
+	return m.version ?? m.dir.split('/').at(-2)
+}
+
+function versionLabel(v) {
+	return v.startsWith('server-') ? `Nextcloud ${v.slice(7)}` : v
+}
+
+// The page that shows a run, null for a run of no known app.
+function pageOf(m) {
+	if (isServerRun(m)) {
+		return `#server/${serverLine(m.server)}`
+	}
+	const id = appOf(m)
+	return id === null ? null : `#app/${encodeURIComponent(id)}/${encodeURIComponent(runVersion(m))}`
+}
+
+// The link from a figure of the overview to the tab of the page that shows the
+// runs it counts, in a new browser tab; runs of several apps link each page,
+// named by its app. The page itself keeps such a link in place.
+function detailLink(runs, tab, attrs, ...text) {
+	const pages = [...new Map(runs.map((m) => [pageOf(m), m]))].filter(([p]) => p)
+	const link = (p, a, ...content) => el('a', { ...a, class: `detail ${a.class ?? ''}`.trim(), href: `${p}${tab ? `/${tab}` : ''}`, target: '_blank', rel: 'noopener' }, ...content)
+	if (pages.length === 1) {
+		return [link(pages[0][0], attrs, ...text)]
+	}
+	const name = (m) => (isServerRun(m) ? 'server' : appOf(m))
+	return [el('span', attrs, ...text), ...pages.flatMap(([p, m]) => [' ', link(p, { class: 'check-of', title: `The page of ${name(m)}` }, name(m))])]
 }
 
 // The findings of a run, by tool, from the file beside the database, and where
@@ -472,35 +545,28 @@ async function loadFailed(status, what, e, retry) {
 
 // == Reload ==
 
-// What is open outlasts the reload a rebuilt site needs: the check reports,
-// older lines and comparisons, the ticked rows, and where the part that asked
-// for the reload sits in the window. The tab keeps it in sessionStorage for the
-// one load that follows; without storage the page reloads with all closed.
+// What is open outlasts the reload a rebuilt site needs: older lines and
+// comparisons, the ticked rows, and where the part that asked for the reload
+// sits in the window. The tab keeps it in sessionStorage for the one load that
+// follows; without storage the page reloads with all closed. The page of an
+// app reopens by its address.
 const REOPEN_KEY = 'gh-stats.reopen'
 const REOPEN_PAUSE = 60000
 let reopenedAt = 0
 
-// The checks of a release can open in the table, below a comparison and on the
-// page of its app.
-function reopenPlace(tr) {
-	return tr.closest('#app') ? 'app' : tr.previousElementSibling?.classList.contains('compare') ? 'compare' : 'table'
-}
-
-function reopenRow(kind, key, place) {
-	return [...document.querySelectorAll(`tr.${kind}[data-reopen]`)].find((tr) => tr.dataset.reopen === key && reopenPlace(tr) === place)
+function reopenRow(key) {
+	return [...document.querySelectorAll('tr.compare[data-reopen]')].find((tr) => tr.dataset.reopen === key)
 }
 
 function carryOver(status) {
-	const open = (kind) => [...document.querySelectorAll(`tr.${kind}[data-reopen]:not([hidden])`)]
-	const anchor = status.closest('tr[data-reopen]')
+	const anchor = status.closest('tr.compare[data-reopen]')
 	const s = {
 		at: Date.now(),
 		older: [...document.querySelectorAll('button.toggle[data-reopen][aria-expanded="true"]')].map((b) => b.dataset.reopen),
-		compare: open('compare').map((tr) => [tr.dataset.reopen, tr.dataset.tag]),
-		checks: open('checks').map((tr) => [tr.dataset.reopen, reopenPlace(tr)]),
+		compare: [...document.querySelectorAll('tr.compare[data-reopen]:not([hidden])')].map((tr) => [tr.dataset.reopen, tr.dataset.tag]),
 		ticks: (startTicks ?? [...picked.values()]).map((r) => `${r.project}\n${r.line}`),
-		anchor: anchor ? [anchor.classList.contains('checks') ? 'checks' : 'compare', anchor.dataset.reopen, reopenPlace(anchor)] : null,
-		top: (anchor ?? document.getElementById('charts')).getBoundingClientRect().top,
+		anchor: anchor?.dataset.reopen ?? null,
+		top: (anchor ?? status.closest('.run') ?? document.getElementById('charts')).getBoundingClientRect().top,
 	}
 	try {
 		sessionStorage.setItem(REOPEN_KEY, JSON.stringify(s))
@@ -509,8 +575,7 @@ function carryOver(status) {
 	}
 }
 
-// Comparisons open before the checks, as a comparison brings the row its checks
-// open in. A part the rebuilt site no longer has stays closed.
+// A part the rebuilt site no longer has stays closed.
 function reopenCarried() {
 	let s
 	try {
@@ -533,16 +598,16 @@ function reopenCarried() {
 		swapPicks(ticked)
 	}
 	const toggles = [...document.querySelectorAll('button.toggle[data-reopen]')]
-	for (const key of s.older) {
+	for (const key of s.older ?? []) {
 		toggles.find((b) => b.dataset.reopen === key)?.reopen()
 	}
-	for (const [key, tag] of s.compare) {
-		reopenRow('compare', key, 'table')?.reopen(tag)
+	for (const [key, tag] of s.compare ?? []) {
+		reopenRow(key)?.reopen(tag)
 	}
-	for (const [key, place] of s.checks) {
-		reopenRow('checks', key, place)?.reopen()
+	if (startTicks) {
+		return
 	}
-	const anchor = s.anchor ? reopenRow(...s.anchor) : document.getElementById('charts')
+	const anchor = s.anchor ? reopenRow(s.anchor) : document.getElementById('charts')
 	if (anchor) {
 		scrollBy(0, anchor.getBoundingClientRect().top - s.top)
 	}
@@ -946,9 +1011,7 @@ function compareSelect(row) {
 		row.compare.hidden = !select.value
 		row.compare.dataset.tag = select.value
 		const runs = select.value && measured.get(`${row.project}\n${select.value}`)
-		const [checks, checksRow, sec] = checksCell(runs, 15)
-		row.compareChecks.replaceWith(checksRow)
-		row.compareChecks = checksRow
+		const [checks, sec] = checksCell(runs || undefined)
 		if (select.value) {
 			// The figures take the place of this cell once the samples are there.
 			const figures = el('td', { class: 'hint', colspan: String(4 + PERIODS.length) })
@@ -963,7 +1026,7 @@ function compareSelect(row) {
 				loading.then(show, (e) => loadFailed(figures, 'The downloads of this project', e, show))
 			}
 			row.compare.append(el('td'), el('td', { class: 'compare-label' }, 'compared with'),
-				figures, el('td', { class: 'num' }), abandonedCell(abandoned(runs)), ...codeCells(setCode({}, runs)), ...sec, checks, el('td'))
+				figures, el('td', { class: 'num' }), abandonedCell(abandoned(runs), null, runs), ...codeCells(setCode({}, runs), null, runs), ...sec, checks, el('td'))
 			show()
 			opened.compare.add(none)
 		} else {
@@ -1462,18 +1525,6 @@ function yesNo(b, noIsBad = true) {
 	return b === null || b === undefined ? cell('–', 'muted') : cell(b ? 'yes' : 'no', !b && noIsBad ? 'open' : '')
 }
 
-// The routes of a run: those it requested and those it skipped for lack of a
-// value of a parameter, with the controller each one calls.
-function routeTable(run, skipped) {
-	const rows = run.requests.map((r) => el('tr', {},
-		cell(r.verb), cell(code(r.path)), cell(code(r.target)), cell(r.as), yesNo(r.public, false),
-		statusCell(r.anon), statusCell(r.auth), yesNo(r.registered), logCell(r.log)))
-	rows.push(...skipped.map((s) => el('tr', { class: 'skipped' },
-		cell(s.verb), cell(code(s.path)), cell(code(s.target)), cell('–', 'muted'), yesNo(s.public, false),
-		el('td', { colspan: '3', class: 'muted' }, `skipped: no value for ${s.missing.join(', ')}`), cell(''))))
-	return auditTable(['Verb', 'Path', 'Controller', 'As', 'Public', 'Anonymous', 'Signed in', 'Registered', 'Log'], rows)
-}
-
 // A step whose result is an HTTP status failed with 5xx, any other with an
 // exit code other than 0; the setup checks exit with 1 for a warning of any
 // check of the server, so their exit code marks nothing.
@@ -1501,15 +1552,7 @@ function runHead(run) {
 
 function runtimeAuditTables(data) {
 	return data.runs.map((run) => el('details', { class: 'audit-run' },
-		el('summary', {}, `${runHead(run)}: ${run.requests.length} routes, ${data.skipped.length} skipped, `
-			+ `${run.commands.length} commands, ${run.jobs.length} jobs, ${run.settings.length} settings forms`),
-		el('h6', {}, 'Routes'),
-		...(run.routesListed ? [] : [el('p', { class: 'muted' }, 'The server listed no routes, so whether it registers each one is not known.')]),
-		routeTable(run, data.skipped),
-		...(run.notRegistered.length
-			? [el('h6', {}, 'Routes of the inventory the server does not register'),
-				auditTable(['Verb', 'Path', 'Controller'], run.notRegistered.map((r) => el('tr', {}, cell(r.verb), cell(code(r.path)), cell(code(r.target)))))]
-			: []),
+		el('summary', {}, `${runHead(run)}: ${run.commands.length} commands, ${run.jobs.length} jobs, ${run.settings.length} settings forms`),
 		...(run.commands.length ? [el('h6', {}, 'Commands, occ <command> --help'), stepTable(run.commands)] : []),
 		...namedList('New commands', run.newCommands),
 		...(run.jobs.length ? [el('h6', {}, 'Background jobs, occ background-job:execute --force-execute'), stepTable(run.jobs)] : []),
@@ -1558,100 +1601,324 @@ function declaredIn(source, m) {
 	return base ? el('a', { href: `${base}${file}${line ? `#L${line}` : ''}` }, code(source)) : code(source)
 }
 
-// The endpoints as php-audit reads them from the source, without their access:
-// a route outside OCS is route, whether a page, an API or a public page.
-function endpointTables(data, m) {
-	const n = data.endpoints.length
-	return n ? [el('details', { class: 'audit-run' },
-		el('summary', {}, `${n} endpoint${n === 1 ? '' : 's'} the source declares`),
-		auditTable(['Verb', 'Path', 'Kind', 'Controller', 'OpenAPI scope', 'Declared in'], data.endpoints.map((e) => el('tr', {},
-			cell(e.verb ?? '–'), cell(code(e.path)), cell(e.kind), cell(code(e.target)), cell((e.openapi ?? []).join(', ')), cell(declaredIn(e.source, m))))))] : []
+// == Endpoints ==
+
+// An endpoint is the same in the inventory of php-audit and in the requests of
+// runtime-audit by its verb and its path.
+function endpointKey(e) {
+	return `${e.verb ?? ''}\n${e.path}`
 }
 
-const RUN_TABLES = { 'runtime-audit': runtimeAuditTables, 'install-test': installTestTables, 'install-test-tarball': installTestTables, 'php-audit': endpointTables }
+const ENDPOINT_KINDS = { route: ['route', 'routes'], OCS: ['OCS route', 'OCS routes'], DAV: ['DAV plugin', 'DAV plugins'], capability: ['capability', 'capabilities'] }
 
-// Warnings in full, grouped by the tool that found them, the security targets
-// first, those with a security finding before the others, then the tools with
-// warnings; within a tool the security findings come first, ok and info only as
-// counts that open on demand. A security target names how many of its warnings
-// are security findings, counted as its column counts them, without a secret
-// in the history that counts in another release. A finding that
-// another one covers shows beneath that one only, and a target all of whose
-// findings are covered has no section. The head of a measurement, its name and badges, stays in view while
-// its findings scroll beneath it, with the button that collapses the row and,
-// while it sticks, the one back to the start of the measurement. The findings,
-// and the badges taken from them, follow once their file has arrived, and the
-// sections of runtime-audit and install-test show the tables of their runs
-// beneath their head.
-function checksBlock(m, collapse) {
+function plural(n, one, many = `${one}s`) {
+	return `${n} ${n === 1 ? one : many}`
+}
+
+// The terms of the table, for a reader who does not write Nextcloud apps.
+const ENDPOINT_TERMS = [
+	['Route', 'a URL of the app under index.php/apps/<app id>/, a page or an API of its own, declared in appinfo/routes.php or by a route attribute of its controller method.'],
+	['OCS route', 'a route under ocs/v2.php/apps/<app id>/, the API Nextcloud offers its clients, which answers in the OCS envelope.'],
+	['OpenAPI scope', 'the part of the OpenAPI description of the Nextcloud API the endpoint is in, set by the #[OpenAPI] attribute of its controller method: default, administration or federation, and ignore for one left out of it; an OCS route without the attribute is in default.'],
+	['Registered', 'whether the server, with the app enabled, lists the route.'],
+	['Signed in, Anonymous', 'the HTTP status of the route to a request with credentials and to one without; a status of 500 or more is a server error.'],
+]
+
+// The servers runtime-audit ran on, each with its requests by endpoint and the
+// endpoints it does not register.
+function auditServers(audit) {
+	return (audit?.runs ?? []).map((run) => ({
+		run,
+		requests: new Map(run.requests.map((r) => [endpointKey(r), r])),
+		missing: new Set(run.notRegistered.map(endpointKey)),
+	}))
+}
+
+// One row per endpoint: what the source declares, as php-audit reads it, and
+// what each server runtime-audit ran on answered. An endpoint runtime-audit
+// knows and php-audit does not list gets a row without the source half.
+function endpointRows(declared, audit) {
+	const rows = new Map(declared.map((e) => [endpointKey(e), e]))
+	for (const r of [...(audit?.skipped ?? []), ...(audit?.runs ?? []).flatMap((run) => [...run.requests, ...run.notRegistered])]) {
+		if (!rows.has(endpointKey(r))) {
+			rows.set(endpointKey(r), { verb: r.verb, path: r.path, target: r.target, kind: null, openapi: [], source: null })
+		}
+	}
+	return [...rows.values()]
+}
+
+// A route the server lists is registered, unless it is among those runtime-audit
+// names as not registered; whether a DAV plugin or a capability is there, the
+// listing does not say.
+function serverCells(s, skipped, e) {
+	const key = endpointKey(e)
+	const r = s.requests.get(key)
+	const registered = r ? yesNo(r.registered)
+		: s.missing.has(key) ? yesNo(false)
+			: s.run.routesListed && (e.kind === 'route' || e.kind === 'OCS' || e.kind === null) ? yesNo(true)
+				: cell('–', 'muted')
+	if (r) {
+		const status = (n, title) => {
+			const td = statusCell(n)
+			td.title = title
+			return td
+		}
+		return [registered, status(r.auth, `requested as ${r.as}`),
+			status(r.anon, r.public ? 'without credentials; a public page, which answers anyone' : 'without credentials'), logCell(r.log)]
+	}
+	const skip = skipped.get(key)
+	return [registered, skip
+		? el('td', { colspan: '3', class: 'muted' }, 'not called: no value for ', ...skip.missing.flatMap((x, i) => [i ? ', ' : '', code(x)]))
+		: el('td', { colspan: '3', class: 'muted' }, '–')]
+}
+
+function endpointHeadline(rows, servers, skipped) {
+	const kinds = Map.groupBy(rows.filter((e) => e.kind), (e) => e.kind)
+	const declared = rows.length - (kinds.get(null)?.length ?? 0)
+	const parts = [...kinds].filter(([k]) => k !== null).map(([k, xs]) => plural(xs.length, ...(ENDPOINT_KINDS[k] ?? [k])))
+	const extra = rows.filter((e) => e.kind === null).length
+	return [
+		el('p', {}, declared ? `The source declares ${plural(declared, 'endpoint')}: ${parts.join(', ')}.` : 'php-audit lists no endpoint of this run.',
+			extra ? ` ${plural(extra, 'more endpoint')} runtime-audit knows and php-audit does not list.` : ''),
+		...servers.map(({ run, requests, missing }) => {
+			const failed = [...requests.values()].filter((r) => r.auth >= 500 || r.anon >= 500).length
+			return el('p', {}, `On Nextcloud ${run.server ?? run.tag}, runtime-audit called ${plural(requests.size, 'route')}, signed in and without credentials, `
+				+ `and could not call ${plural(skipped.size, 'route')} for lack of a value of a path parameter. `
+				+ `${run.routesListed ? `${plural(missing.size, 'route')} not registered` : 'The server listed no routes, so whether it registers each one is not known'}`
+				+ `${failed ? `, ${plural(failed, 'route')} answered with a server error` : ''}.`)
+		}),
+	]
+}
+
+// The Endpoints tab opens with the one table of the endpoints of a run, ahead
+// of the findings of php-audit and runtime-audit on them.
+function endpointLead(m, d) {
+	const declared = d.tables['php-audit']?.endpoints ?? []
+	const audit = d.tables['runtime-audit']
+	if (!declared.length && !audit) {
+		return [el('p', { class: 'hint' }, 'php-audit listed no endpoints in this run, and runtime-audit did not run.')]
+	}
+	const rows = endpointRows(declared, audit)
+	const servers = auditServers(audit)
+	const skipped = new Map((audit?.skipped ?? []).map((s) => [endpointKey(s), s]))
+	const wiki = (tool) => (toolHeads[tool] ? [' ', el('a', { class: 'wiki', href: toolHeads[tool].wiki, title: `What ${tool} checks` }, 'wiki')] : [])
+	return [
+		...endpointHeadline(rows, servers, skipped),
+		el('dl', { class: 'facts terms' }, ...ENDPOINT_TERMS.flatMap(([k, v]) => [el('dt', {}, k), el('dd', {}, v)])),
+		el('div', { class: 'tool-head' }, el('p', {}, 'The source half is what ', code('php-audit'), ...wiki('php-audit'),
+			' reads, each server half what ', code('runtime-audit'), ...wiki('runtime-audit'), ' saw; their findings on the endpoints follow the table.')),
+		el('div', { class: 'audit-scroll' }, el('table', { class: 'audit endpoints' },
+			el('thead', {},
+				el('tr', {}, el('th', { colspan: '6' }, 'Source'), ...servers.map(({ run }) => el('th', { colspan: '4', class: 'server' }, `Nextcloud ${run.server ?? run.tag}`))),
+				el('tr', {}, ...['Verb', 'Path', 'Kind', 'Controller', 'OpenAPI scope', 'Declared in'].map((h) => el('th', {}, h)),
+					...servers.flatMap(() => ['Registered', 'Signed in', 'Anonymous', 'Log'].map((h, i) => el('th', i ? {} : { class: 'server' }, h))))),
+			el('tbody', {}, ...rows.map((e) => el('tr', e.kind === null ? { class: 'skipped' } : {},
+				cell(e.verb ?? '–'), cell(code(e.path)), cell(e.kind ?? '–', e.kind ? '' : 'muted'), cell(code(e.target)),
+				cell((e.openapi ?? []).join(', ')), cell(declaredIn(e.source, m)),
+				...servers.flatMap((s) => serverCells(s, skipped, e))))))),
+	]
+}
+
+// == Detail tabs ==
+
+// The findings php-audit and runtime-audit make on the endpoints; route-open
+// is a security finding.
+const ENDPOINT_FINDINGS = {
+	'php-audit': new Set(['route-target-missing', 'route-duplicate', 'route-unreferenced', 'cors-unreferenced', 'ocs-unreferenced',
+		'frontend-url-without-route', 'controller-method-unrouted', 'csrf-off-state-changing', 'public-without-rate-limit',
+		'annotations-only', 'openapi-drift', 'openapi-missing', 'routes-unreadable']),
+	'runtime-audit': new Set(['route-not-registered', 'route-server-error', 'controller-not-built', 'route-parameter-missing', 'routes-skipped']),
+}
+
+// The tabs of a measured version, in the order they show. A finding goes to
+// the tab of the lowest rank that takes it, so a security finding of php-audit
+// is in Security, and Checks takes the rest. A tab may put something of its
+// own ahead of the findings of a run, head and lead, and show the tables of a
+// tool, which then has its section there with no finding in the tab as well.
+// A further tab is one more entry.
+const DETAIL_TABS = [
+	{
+		id: 'endpoints', label: 'Endpoints', rank: 3,
+		takes: (f) => ENDPOINT_FINDINGS[baseTool(f.tool)]?.has(f.id) ?? false,
+		lead: endpointLead,
+	},
+	{
+		id: 'l10n', label: 'L10N', rank: 2,
+		takes: (f) => ['l10n-lint', 'l10n-check'].includes(baseTool(f.tool)),
+	},
+	{
+		id: 'style', label: 'Style', rank: 1,
+		takes: (f) => f.style === true,
+	},
+	{
+		id: 'security', label: 'Security', rank: 0,
+		takes: (f) => f.tool.startsWith('security/') || baseTool(f.tool) === 'secrets-audit' || f.security === true || f.id === 'route-open',
+		head: (m) => (securityResults ? securityTargets(m) : []),
+	},
+	{
+		id: 'checks', label: 'Checks', rank: 9,
+		takes: () => true,
+		head: (m, d) => [...badgeRow(d.fs, d.fields), ...defectNotes(d.fields), ...(isServerRun(m) ? [] : [el('p', {}, diffText(m))]), ...licenceText(d.fields)],
+		tables: { 'runtime-audit': runtimeAuditTables, 'install-test': installTestTables, 'install-test-tarball': installTestTables },
+	},
+]
+
+// The tab a version opens on without one in the address, when no tab has a
+// warning.
+const DEFAULT_TAB = 'checks'
+
+function tabOf(f) {
+	return DETAIL_TABS.filter((t) => t.takes(f)).sort((a, b) => a.rank - b.rank)[0].id
+}
+
+// The findings, tables and fields of a run, each fetched once per load of the
+// page; a fetch that failed is tried again on the next ask. A finding that
+// another one covers shows beneath that one only, in its tab.
+const runData = new Map()
+
+function loadRun(m) {
+	if (!runData.has(m.dir)) {
+		const loading = Promise.all([findingsOf(m), tablesOf(m)]).then(([fs, tables]) => {
+			const { under, covered } = coverage(fs)
+			const shown = fs.filter((f) => !covered.has(f))
+			return { fs, tables, fields: fieldsOf(m.dir), under, tabs: Map.groupBy(shown, tabOf) }
+		})
+		loading.catch(() => runData.delete(m.dir))
+		runData.set(m.dir, loading)
+	}
+	return runData.get(m.dir)
+}
+
+function runTitle(m) {
+	return isServerRun(m)
+		? el('h4', {}, `${SERVER_REPO} ${m.server} `, el('a', { href: `${results}/${m.dir}` }, 'run directory'), ...runStarted(m))
+		: el('h4', {}, `${appOf(m) ?? m.dir} ${m.version ?? ''}${m.server ? ` as Nextcloud ${m.server.replace(/^v/, '')} ships it` : ''} `,
+			el('a', { href: `${results}/${m.dir}` }, 'run directory'), ...infoXmlLink(m), ...runStarted(m))
+}
+
+// A tool section: its findings in the tab, the security findings first, ok and
+// info only as counts that open on demand, the style findings folded apart,
+// and the tables of its runs where the tab shows them. A security target names
+// how many of its warnings are security findings, counted as its column
+// counts them, without a secret in the history that counts in another release.
+function toolSection(tab, tool, fs, m, d, notes) {
+	const warns = fs.filter((f) => f.level === 'warn' && !f.style).sort((a, b) => Number(b.security === true) - Number(a.security === true))
+	const style = fs.filter((f) => f.level === 'warn' && f.style)
+	const rest = fs.filter((f) => f.level !== 'warn')
+	const counts = ['ok', 'info'].map((l) => [l, rest.filter((f) => f.level === l).length]).filter(([, n]) => n)
+	const elsewhere = warns.filter((f) => f.counted_in).length
+	const split = tool.startsWith('security/') && warns.length
+		? [' ', el('span', { class: 'check-of' },
+			`${counted(tool, warns.filter((f) => f.security && !f.counted_in))} security, ${counted(tool, warns.filter((f) => !f.security && !f.counted_in))} other`,
+			elsewhere ? `, ${elsewhere} counted in another release` : '')]
+		: []
+	const tables = tab.tables?.[tool] && d.tables[tool] ? tab.tables[tool](d.tables[tool], m) : []
+	return el('div', { class: tool.startsWith('security/') ? 'tool security' : 'tool' },
+		el('h5', {}, toolHeads[baseTool(tool)]?.title ?? tool, ' ', el('code', { class: 'target' }, tool), ...split), toolHead(tool),
+		...tables,
+		...(warns.length && baseTool(tool).startsWith('lint-') ? [lintFold(tool, warns, notes)] : findingEntries(tool, warns, d.under, notes)),
+		...(style.length ? [lintFold(tool, style, notes, 'style')] : []),
+		...(rest.length
+			? [el('details', {}, el('summary', {}, counts.map(([l, n]) => `${n} ${l}`).join(', ')), ...findingEntries(tool, rest, d.under, notes))]
+			: []))
+}
+
+// A run in a tab: its head, which stays in view while its findings scroll
+// beneath it, with the way back to its start once it sticks, what the tab
+// puts ahead, and the sections of the tools, the security targets first, those
+// with a security finding before the others, then the tools with warnings.
+function runSection(tab, m, d) {
 	const rank = ([tool, fs]) => (tool.startsWith('security/') ? 4 : 0) + (fs.some((f) => f.level === 'warn' && f.security && !f.counted_in) ? 2 : 0)
 		+ (fs.some((f) => f.level === 'warn' && !f.style) ? 1 : 0)
-	const fields = fieldsOf(m.dir)
+	const fs = d.tabs.get(tab.id) ?? []
+	const notes = new Map()
+	const drift = fs.find((f) => f.id === 'version-drift' && f.level === 'warn')
+	if (drift) {
+		notes.set(drift, shippedVersionNote(m))
+	}
+	const tools = [...Map.groupBy(fs, (f) => f.tool)]
+	for (const tool of Object.keys(tab.tables ?? {})) {
+		if (d.tables[tool] && !tools.some(([t]) => t === tool)) {
+			tools.push([tool, []])
+		}
+	}
+	tools.sort((a, b) => rank(b) - rank(a))
 	const run = el('section', { class: 'run' })
-	const start = el('button', { type: 'button', class: 'quiet', title: 'Back to the start of this measurement', hidden: '' }, '↑ Start')
+	const start = el('button', { type: 'button', class: 'quiet', title: 'Back to the start of this run', hidden: '' }, '↑ Start')
+	const head = el('div', { class: 'run-head' }, el('div', { class: 'run-actions' }, start), runTitle(m))
 	start.addEventListener('click', () => {
 		scrollBy(0, run.getBoundingClientRect().top - parseFloat(getComputedStyle(head).top))
 	})
-	const head = el('div', { class: 'run-head' },
-		el('div', { class: 'run-actions' }, start, collapse()),
-		isServerRun(m)
-			? el('h4', {}, `${SERVER_REPO} ${m.server} `, el('a', { href: `${results}/${m.dir}` }, 'run directory'), ...runStarted(m))
-			: el('h4', {}, `${m.app_id ?? m.dir} ${m.version ?? ''} `, el('a', { href: `${results}/${m.dir}` }, 'run directory'), ...infoXmlLink(m), ...runStarted(m)))
-	const status = el('p', { class: 'hint' })
-	run.append(head,
-		...defectNotes(fields),
-		...(isServerRun(m) ? [] : [el('p', {}, diffText(m))]),
-		...licenceText(fields),
-		...(securityResults ? securityTargets(m) : []),
-		status)
-	const load = () => {
-		status.replaceChildren('Loading the findings of this run.')
-		Promise.all([findingsOf(m), tablesOf(m)]).then(([fs, tables]) => {
-			head.append(...badgeRow(fs, fields))
-			const { under, covered } = coverage(fs)
-			const drift = fs.find((f) => f.id === 'version-drift' && f.level === 'warn' && !covered.has(f))
-			const notes = new Map()
-			if (drift) {
-				notes.set(drift, shippedVersionNote(m))
-			}
-			const tools = [...Map.groupBy(fs.filter((f) => !covered.has(f)), (f) => f.tool)].sort((a, b) => rank(b) - rank(a))
-			status.replaceWith(...tools.map(([tool, fs]) => {
-				const warns = fs.filter((f) => f.level === 'warn' && !f.style).sort((a, b) => Number(b.security === true) - Number(a.security === true))
-				const style = fs.filter((f) => f.level === 'warn' && f.style)
-				const rest = fs.filter((f) => f.level !== 'warn')
-				const counts = ['ok', 'info'].map((l) => [l, rest.filter((f) => f.level === l).length]).filter(([, n]) => n)
-				const elsewhere = warns.filter((f) => f.counted_in).length
-				const split = tool.startsWith('security/') && warns.length
-					? [' ', el('span', { class: 'check-of' },
-						`${counted(tool, warns.filter((f) => f.security && !f.counted_in))} security, ${counted(tool, warns.filter((f) => !f.security && !f.counted_in))} other`,
-						elsewhere ? `, ${elsewhere} counted in another release` : '')]
-					: []
-				return el('div', { class: tool.startsWith('security/') ? 'tool security' : 'tool' }, el('h5', {}, toolHeads[baseTool(tool)].title, ' ', el('code', { class: 'target' }, tool), ...split), toolHead(tool),
-					...(tables[tool] ? RUN_TABLES[tool](tables[tool], m) : []),
-					...(warns.length && baseTool(tool).startsWith('lint-') ? [lintFold(tool, warns, notes)] : findingEntries(tool, warns, under, notes)),
-					...(style.length ? [lintFold(tool, style, notes, 'style')] : []),
-					...(rest.length
-						? [el('details', {}, el('summary', {}, counts.map(([l, n]) => `${n} ${l}`).join(', ')), ...findingEntries(tool, rest, under, notes))]
-						: []))
-			}))
-		}, (e) => loadFailed(status, 'The findings of this run', e, load))
-	}
-	load()
+	const ahead = [...(tab.head?.(m, d) ?? []), ...(tab.lead?.(m, d) ?? [])]
+	run.append(head, ...ahead, ...tools.map(([tool, xs]) => toolSection(tab, tool, xs, m, d, notes)),
+		...(tools.length || ahead.length ? [] : [el('p', { class: 'hint' }, `No ${tab.label} findings in this run.`)]))
 	return run
 }
 
-// A head sticks once it has left the top of its measurement; only then does
-// the way back to that start show.
+// A measured version: the tabs of its findings, each counting its warnings,
+// and beneath them its runs, the newest first. The runs load once the version
+// is opened; a tab is built the first time it shows.
+function versionPanel(base, runs) {
+	const sorted = [...runs].sort((a, b) => (b.stamp ?? '').localeCompare(a.stamp ?? ''))
+	const nav = el('nav', { class: 'detail-tabs', 'aria-label': 'Findings by kind' })
+	const status = el('p', { class: 'hint' })
+	const body = el('div')
+	const panel = el('div', { class: 'version-panel' }, nav, status, body)
+	const built = new Map()
+	let loaded = null
+	let wanted = null
+	const select = () => {
+		if (!loaded) {
+			return
+		}
+		const tab = DETAIL_TABS.find((t) => t.id === wanted)
+			?? DETAIL_TABS.find((t) => loaded.counts.get(t.id)) ?? DETAIL_TABS.find((t) => t.id === DEFAULT_TAB)
+		for (const a of nav.children) {
+			if (a.dataset.tab === tab.id) {
+				a.setAttribute('aria-current', 'page')
+			} else {
+				a.removeAttribute('aria-current')
+			}
+		}
+		if (!built.has(tab.id)) {
+			built.set(tab.id, el('div', {}, ...sorted.map((m, i) => runSection(tab, m, loaded.data[i]))))
+		}
+		body.replaceChildren(built.get(tab.id))
+	}
+	panel.show = (tab) => {
+		wanted = tab
+		select()
+	}
+	const load = () => {
+		status.hidden = false
+		status.replaceChildren(`Loading the findings of ${sorted.length === 1 ? 'this run' : `these ${sorted.length} runs`}.`)
+		Promise.all(sorted.map(loadRun)).then((data) => {
+			const counts = new Map(DETAIL_TABS.map((t) => [t.id, data.reduce((n, d) => n + (d.tabs.get(t.id) ?? []).filter((f) => f.level === 'warn').length, 0)]))
+			loaded = { data, counts }
+			nav.replaceChildren(...DETAIL_TABS.map((t) => {
+				const n = counts.get(t.id)
+				return el('a', { href: `${base}/${t.id}`, class: 'detail-tab', 'data-tab': t.id, title: plural(n, 'warning') },
+					t.label, ...(n ? [' ', el('span', { class: 'tab-count' }, `⚠ ${n}`)] : []))
+			}))
+			status.hidden = true
+			select()
+		}, (e) => loadFailed(status, 'The findings of this version', e, load))
+	}
+	load()
+	return panel
+}
+
+// A head sticks once it has left the top of its run; only then does the way
+// back to that start show.
 function markStuck() {
-	for (const head of document.querySelectorAll('tr.checks:not([hidden]) .run-head')) {
+	for (const head of document.querySelectorAll('#app .run-head')) {
 		head.querySelector('.run-actions button').hidden = head.getBoundingClientRect().top - head.parentElement.getBoundingClientRect().top < 1
 	}
 }
 
-// The check reports, older lines and comparisons open now, each by the
-// function that closes it, so Reset and Collapse reach those of rows the
-// filters hide.
-const opened = { checks: new Set(), older: new Set(), compare: new Set() }
+// The older lines and comparisons open now, each by the function that closes
+// it, so Reset and Collapse reach those of rows the filters hide.
+const opened = { older: new Set(), compare: new Set() }
 
 function closeOpened(kinds) {
 	for (const kind of kinds) {
@@ -1661,93 +1928,47 @@ function closeOpened(kinds) {
 	}
 }
 
-// The cell counts the warnings of the measurements of a release; a click opens
-// them in the row returned with it, built on first use, which spans the
-// table from its second column and closes from the head of each measurement
-// too. A version given names the release measured
-// when it is another than the one the row shows. The cell of the style column
-// and, where the database has the security results, that of their column come
-// third, to go before the cell, and open the same row; span counts the columns
-// without them.
-function checksCell(runs, span, version = null) {
-	const checks = el('tr', { class: 'checks', hidden: '' })
-	span += securityResults ? 2 : 1
+// The cell counts the warnings of the measurements of a release and links the
+// version on the page of its app, in a new browser tab. A version given names
+// the release measured when it is another than the one the row shows. The
+// cell of the style column and, where the database has the security results,
+// that of their column come second, to go before the cell, and link their
+// tabs.
+function checksCell(runs, version = null) {
 	if (!runs) {
-		return [el('td', { class: 'check-col', title: 'not measured' }), checks,
+		return [el('td', { class: 'check-col', title: 'not measured' }),
 			[el('td', { class: 'num check-col', title: 'not measured' }), ...(securityResults ? [el('td', { class: 'num check-col', title: 'not measured' })] : [])]]
 	}
 	const warn = warnings(runs)
-	const button = el('button', {
-		type: 'button',
-		class: warn ? 'check-count warn' : 'check-count',
-		'aria-expanded': 'false',
-		title: `${warn} warning${warn === 1 ? '' : 's'} of the ncmake analysers in ${runs.length} measurement${runs.length === 1 ? '' : 's'}${version ? ` of ${version}` : ''}`,
-	}, warn ? `⚠ ${warn}` : '✓')
-	const show = (open) => {
-		if (open && !checks.hasChildNodes()) {
-			const collapse = () => {
-				const shut = el('button', { type: 'button', class: 'quiet', title: 'Collapse these checks' }, 'Collapse')
-				shut.addEventListener('click', () => {
-					show(false)
-					button.focus()
-				})
-				return shut
-			}
-			checks.append(el('td'), el('td', { colspan: String(span) }, ...runs.map((m) => checksBlock(m, collapse))))
-		}
-		checks.hidden = !open
-		button.setAttribute('aria-expanded', String(open))
-		if (open) {
-			opened.checks.add(close)
-		} else {
-			opened.checks.delete(close)
-		}
-	}
-	// Closed by Reset or Collapse, the report also folds what was opened in it.
-	const close = () => {
-		show(false)
-		for (const d of checks.querySelectorAll('details[open]')) {
-			d.open = false
-		}
-	}
-	button.addEventListener('click', () => show(checks.hidden))
-	// A rebuild keeps the directory of a release and only adds runs to it.
-	checks.dataset.reopen = [...new Set(runs.map((m) => m.dir.replace(/\/[^/]*$/, '')))].join(' ')
-	checks.reopen = () => show(true)
-	const toggle = () => show(checks.hidden)
-	return [el('td', { class: 'check-col' }, button, ...(version ? [' ', el('span', { class: 'check-of' }, version)] : [])), checks,
-		[styleCell(runs, toggle, version), ...(securityResults ? [securityCell(runs, toggle, version)] : [])]]
+	const title = `${plural(warn, 'warning')} of the ncmake analysers in ${plural(runs.length, 'measurement')}${version ? ` of ${version}` : ''}`
+	return [el('td', { class: 'check-col' }, ...detailLink(runs, null, { class: warn ? 'check-count warn' : 'check-count', title }, warn ? `⚠ ${warn}` : '✓'),
+		...(version ? [' ', el('span', { class: 'check-of' }, version)] : [])),
+	[styleCell(runs, version), ...(securityResults ? [securityCell(runs, version)] : [])]]
 }
 
 // The cell of the style column counts the rules of the style lints that the
 // measurements break, each once however many places break it.
-function styleCell(runs, toggle, version) {
+function styleCell(runs, version) {
 	const n = styleRules(runs)
-	const button = el('button', {
-		type: 'button',
+	return el('td', { class: 'num check-col' }, ...detailLink(runs, 'style', {
 		class: 'check-count',
-		title: `${n} rule${n === 1 ? '' : 's'} of the style lints broken${version ? ` in ${version}` : ''}: markdownlint, yamllint and Stylelint`,
-	}, n ? String(n) : '✓')
-	button.addEventListener('click', toggle)
-	return el('td', { class: 'num check-col' }, button)
+		title: `${plural(n, 'rule')} of the style lints broken${version ? ` in ${version}` : ''}: markdownlint, yamllint and Stylelint`,
+	}, n ? String(n) : '✓'))
 }
 
 // The cell of the security column counts the security findings; the other
 // warnings of the security targets follow it as a number of their own.
-function securityCell(runs, toggle, version) {
+function securityCell(runs, version) {
 	const n = securityWarnings(runs)
 	if (n === null) {
 		return el('td', { class: 'num check-col', title: 'no security results' })
 	}
 	const other = securityWarnings(runs, 'sec_other')
-	const button = el('button', {
-		type: 'button',
+	return el('td', { class: 'num check-col' }, ...detailLink(runs, 'security', {
 		class: n ? 'check-count warn' : 'check-count',
-		title: `${n} security finding${n === 1 ? '' : 's'} and ${other} other warning${other === 1 ? '' : 's'} of the security targets${version ? ` in ${version}` : ''}`,
-	}, n ? `⚠ ${n}` : '✓')
-	button.addEventListener('click', toggle)
-	return el('td', { class: 'num check-col' }, button,
-		...(other ? [' ', el('span', { class: 'check-of', title: `${other} warning${other === 1 ? '' : 's'} of the security targets that ${other === 1 ? 'is no security finding' : 'are no security findings'}` }, `+${other}`)] : []))
+		title: `${plural(n, 'security finding')} and ${plural(other, 'other warning')} of the security targets${version ? ` in ${version}` : ''}`,
+	}, n ? `⚠ ${n}` : '✓'),
+	...(other ? [' ', el('span', { class: 'check-of', title: `${plural(other, 'warning')} of the security targets that ${other === 1 ? 'is no security finding' : 'are no security findings'}` }, `+${other}`)] : []))
 }
 
 // The warnings of the measurements of a release, null when it has none, so an
@@ -1794,15 +2015,21 @@ function abandoned(runs) {
 }
 
 // A version given names the release measured when it is another than the one
-// the row shows.
-function abandonedCell(n, version = null) {
+// the row shows; runs given link the figure to the Checks of their page.
+function abandonedCell(n, version = null, runs = null) {
 	if (n === null) {
 		return el('td', { class: 'num check-col', title: 'deps-audit did not run' })
 	}
 	return el('td', {
 		class: 'num check-col',
 		title: `${n} abandoned package${n === 1 ? '' : 's'} that the release ships, as deps-audit names them${version ? `, in ${version}` : ''}`,
-	}, String(n))
+	}, ...figure(runs, 'checks', String(n)))
+}
+
+// A figure links the tab of the page that shows the runs it counts, where it
+// has runs.
+function figure(runs, tab, text) {
+	return runs ? detailLink(runs, tab, {}, text) : [text]
 }
 
 // The figures of php-audit over the measurements of a release, kept on the row
@@ -1825,21 +2052,21 @@ function setCode(row, runs) {
 }
 
 // A version given names the release measured when it is another than the one
-// the row shows.
-function codeCells(row, version = null) {
+// the row shows; runs given link the figures to the Endpoints of their page.
+function codeCells(row, version = null, runs = null) {
 	const where = version ? `, in ${version}` : ''
 	if (row.endpoints === null) {
 		return [1, 2, 3].map(() => el('td', { class: 'num check-col', title: 'php-audit did not count the endpoints' }))
 	}
 	const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
 	return [
-		el('td', { class: 'num check-col', title: `${plural(row.endpoints, 'endpoint')} the release offers: routes, OCS routes, DAV plugins and capabilities, as php-audit counts them${where}` }, String(row.endpoints)),
+		el('td', { class: 'num check-col', title: `${plural(row.endpoints, 'endpoint')} the release offers: routes, OCS routes, DAV plugins and capabilities, as php-audit counts them${where}` }, ...figure(runs, 'endpoints', String(row.endpoints))),
 		row.loader
 			? el('td', { class: 'mark check-col', title: `the class loading is optimized: no class loading finding of php-audit${where}` }, '✓')
 			: el('td', { class: 'mark check-col', title: `class loading findings of php-audit${where}: ${row.loaderIds.join(', ')}` }, '[!]'),
 		row.unreferenced === null
 			? el('td', { class: 'num check-col', title: `php-audit could not read every route${where}, as some are no constants` })
-			: el('td', { class: 'num check-col', title: `${plural(row.unreferenced, 'route')} outside OCS that nothing in the release calls, as php-audit names them${where}` }, String(row.unreferenced)),
+			: el('td', { class: 'num check-col', title: `${plural(row.unreferenced, 'route')} outside OCS that nothing in the release calls, as php-audit names them${where}` }, ...figure(runs, 'endpoints', String(row.unreferenced))),
 	]
 }
 
@@ -1848,9 +2075,9 @@ function codeCells(row, version = null) {
 // keeps the counts of the cells to sort by. The server is measured in
 // nextcloud/server at the newest release of each major, so its line takes
 // the run of that release.
-function lineChecks(row, span) {
+function lineChecks(row) {
 	if (isServerProject(row)) {
-		return serverLineChecks(row, span)
+		return serverLineChecks(row)
 	}
 	const own = measured.get(`${row.project}\n${row.tag}`)
 	if (own) {
@@ -1858,7 +2085,7 @@ function lineChecks(row, span) {
 		row.sec = securityWarnings(own)
 		row.abandoned = abandoned(own)
 		setCode(row, own)
-		return [[abandonedCell(row.abandoned), ...codeCells(row)], ...checksCell(own, span)]
+		return [[abandonedCell(row.abandoned, null, own), ...codeCells(row, null, own)], ...checksCell(own)]
 	}
 	const runs = measuredLines.get(`${row.project}\n${row.line}`)
 	const version = runs?.[0].version ?? runs?.[0].tag
@@ -1866,10 +2093,10 @@ function lineChecks(row, span) {
 	row.sec = securityWarnings(runs)
 	row.abandoned = abandoned(runs)
 	setCode(row, runs)
-	return [[abandonedCell(row.abandoned, version), ...codeCells(row, version)], ...checksCell(runs, span, version)]
+	return [[abandonedCell(row.abandoned, version, runs), ...codeCells(row, version, runs)], ...checksCell(runs, version)]
 }
 
-function serverLineChecks(row, span) {
+function serverLineChecks(row) {
 	const prefix = `v${lineLabel(row.line)}.`
 	const ref = measuredServer.has(row.tag) ? row.tag
 		: [...measuredServer.keys()].filter((r) => r.startsWith(prefix))
@@ -1880,7 +2107,7 @@ function serverLineChecks(row, span) {
 	row.sec = securityWarnings(runs)
 	row.abandoned = abandoned(runs)
 	setCode(row, runs)
-	return [[abandonedCell(row.abandoned, version), ...codeCells(row, version)], ...checksCell(runs, span, version)]
+	return [[abandonedCell(row.abandoned, version, runs), ...codeCells(row, version, runs)], ...checksCell(runs, version)]
 }
 
 // The run of nextcloud/server at master, below the row of its newest release,
@@ -1890,25 +2117,23 @@ function serverMasterRows() {
 	if (!runs) {
 		return []
 	}
-	const [checks, checksRow, sec] = checksCell(runs, 15)
+	const [checks, sec] = checksCell(runs)
 	const tr = el('tr', {}, el('td', { class: 'pick' }), el('td', { class: 'line-label' }, 'master'),
 		el('td', { class: 'tag' }, el('a', { href: `https://github.com/${SERVER_REPO}/tree/master` }, 'master')),
 		el('td'), el('td'), ...['total', ...PERIODS, 'stars'].map(() => el('td', { class: 'num' })),
-		abandonedCell(abandoned(runs)), ...codeCells(setCode({}, runs)), ...sec, checks, el('td'))
-	return [tr, checksRow]
+		abandonedCell(abandoned(runs), null, runs), ...codeCells(setCode({}, runs), null, runs), ...sec, checks, el('td'))
+	return [tr]
 }
 
 // The tick puts the row into the charts.
 function lineRows(row, first, stars = el('td', { class: 'num' })) {
 	row.pick = el('input', { type: 'checkbox', 'aria-label': `Chart ${row.name} line ${lineLabel(row.line)}` })
 	row.pick.addEventListener('change', () => pickRow(row, row.pick.checked))
-	const [abandonedTd, checks, checksRow, sec] = lineChecks(row, 15)
-	row.checks = checksRow
+	const [abandonedTd, checks, sec] = lineChecks(row)
 	row.tr = el('tr', {}, el('td', { class: 'pick' }, row.pick), first, ...releaseCells(row, measured.get(`${row.project}\n${row.tag}`)), stars, ...abandonedTd, ...sec, checks, el('td'))
 	row.compare = el('tr', { class: 'compare', hidden: '' })
-	row.compareChecks = el('tr', { class: 'checks', hidden: '' })
 	row.tr.lastChild.append(compareSelect(row))
-	return [row.tr, row.checks, row.compare, row.compareChecks]
+	return [row.tr, row.compare]
 }
 
 // A project whose apps are all ExApps goes to their tab, one with any other app
@@ -1962,7 +2187,7 @@ function catalogueRow(a) {
 	p.abandoned = abandoned(runs)
 	setCode(p, runs)
 	const [label, reason] = downloadReason(a)
-	const [checks, checksRow, sec] = checksCell(runs, 15)
+	const [checks, sec] = checksCell(runs)
 	if (!runs) {
 		const [why, title] = released && a.nightly
 			? ['nightly only', 'the App Store lists only nightlies of this app, and no nightly is measured']
@@ -1979,7 +2204,7 @@ function catalogueRow(a) {
 		el('td', {}, ncRange(a.platform)),
 		el('td', {}, a.published === null ? '' : date(a.published)),
 		...['total', ...PERIODS].map(() => el('td', empty)), el('td', { class: 'num' }),
-		abandonedCell(p.abandoned), ...codeCells(p), ...sec, checks, el('td')), checksRow)
+		abandonedCell(p.abandoned, null, runs), ...codeCells(p, null, runs), ...sec, checks, el('td')))
 	p.older = el('tbody', { class: 'older', hidden: '' })
 	p.toggle = el('button', { type: 'button', class: 'toggle', hidden: '' })
 	return p
@@ -2002,7 +2227,7 @@ function unlistedRow(u) {
 	p.sec = securityWarnings(runs)
 	p.abandoned = abandoned(runs)
 	setCode(p, runs)
-	const [checks, checksRow, sec] = checksCell(runs, 15)
+	const [checks, sec] = checksCell(runs)
 	if (!runs) {
 		const [why, title] = u.exapp
 			? ['ExApp', EXAPP_TEXT]
@@ -2020,7 +2245,7 @@ function unlistedRow(u) {
 		el('td', {}, ncRange(u.platform)),
 		el('td'),
 		...['total', ...PERIODS].map(() => el('td', empty)), el('td', { class: 'num' }),
-		abandonedCell(p.abandoned), ...codeCells(p), ...sec, checks, el('td')), checksRow)
+		abandonedCell(p.abandoned, null, runs), ...codeCells(p, null, runs), ...sec, checks, el('td')))
 	p.older = el('tbody', { class: 'older', hidden: '' })
 	p.toggle = el('button', { type: 'button', class: 'toggle', hidden: '' })
 	return p
@@ -2057,10 +2282,10 @@ function shippedRow(releases) {
 	const main = releases.find((s) => s.ref === 'master') ?? releases[0]
 	const line = (s, first, since = null) => {
 		const runs = measuredShipped.get(`${s.id}\n${s.ref}`)
-		const [checks, checksRow, sec] = checksCell(runs, 13)
+		const [checks, sec] = checksCell(runs)
 		const r = {
-			published: s.published, nc: `>=${s.major} <=${s.major}`, warn: warnings(runs), sec: securityWarnings(runs), abandoned: abandoned(runs), ...setCode({}, runs), checks: checksRow,
-			compare: el('tr', { class: 'compare', hidden: '' }), compareChecks: el('tr', { class: 'checks', hidden: '' }),
+			published: s.published, nc: `>=${s.major} <=${s.major}`, warn: warnings(runs), sec: securityWarnings(runs), abandoned: abandoned(runs), ...setCode({}, runs),
+			compare: el('tr', { class: 'compare', hidden: '' }),
 		}
 		r.tr = el('tr', {}, el('td', { class: 'pick' }), first,
 			el('td', { class: 'tag' }, el('a', { href: shippedSource(s) }, s.version)),
@@ -2070,7 +2295,7 @@ function shippedRow(releases) {
 			s.enabled ? el('td', { class: 'mark', title: ENABLED[s.enabled][0] }, ENABLED_CODE[s.enabled]) : el('td'),
 			el('td', { class: 'mark' }, s.restrictable === 0 ? 'X' : ''),
 			el('td', { class: 'mark' }, s.repo === SERVER_REPO ? 'X' : ''),
-			abandonedCell(r.abandoned), ...codeCells(r), ...sec, checks)
+			abandonedCell(r.abandoned, null, runs), ...codeCells(r, null, runs), ...sec, checks)
 		return r
 	}
 	const head = el('td', {}, el('span', { class: 'name' }, el('a', { href: `#app/${encodeURIComponent(main.id)}` }, main.name)),
@@ -2086,7 +2311,7 @@ function shippedRow(releases) {
 			.map((s) => line(s, el('td', { class: 'line-label' }, `Nextcloud ${s.major}`))),
 		search: `${main.name} ${main.id} ${main.repo}`.toLowerCase(), categories: new Set(JSON.parse(main.categories ?? '[]')),
 	}
-	p.main = el('tbody', {}, row.tr, row.checks)
+	p.main = el('tbody', {}, row.tr)
 	p.older = el('tbody', { class: 'older', hidden: '' })
 	p.toggle = olderToggle(p, `shipped\n${main.id}`)
 	head.append(p.toggle)
@@ -2094,6 +2319,7 @@ function shippedRow(releases) {
 }
 
 function initOverview() {
+	initOrphans()
 	initCharts()
 	measured = measurementsByRelease()
 	measuredLines = measurementsByLine(measured)
@@ -2130,12 +2356,17 @@ function initOverview() {
 		// tags have it.
 		const links = [...own, ...tooled].flatMap((a, i) => [i ? el('br') : '',
 			a.tarball ? a.name : el('a', { href: `#app/${encodeURIComponent(a.id)}` }, a.name)])
-		const head = el('td', {}, el('span', { class: 'name' }, ...(links.length ? links : [p.name])),
+		// nextcloud/server has a page of its own.
+		const server = members.some(isServerProject)
+		if (server) {
+			serverProject = project
+		}
+		const head = el('td', {}, el('span', { class: 'name' }, ...(links.length ? links : [server ? el('a', { href: '#server' }, p.name) : p.name])),
 			...[...own, ...tooled].flatMap((a) => securityMark(a.id)),
 			...members.flatMap((r) => [slugLink(repoUrl(r), slugOf(r)), ...unreachableMark(r)]),
 			...own.flatMap((a) => shippedMark(a.id)), ...tooled.flatMap(exappMark))
 		p.main = el('tbody', {}, ...lineRows(main, head, starsCell(main)),
-			...(members.some(isServerProject) ? serverMasterRows() : []))
+			...(server ? serverMasterRows() : []))
 		p.warn = main.warn
 		p.style = main.style
 		p.sec = main.sec
@@ -2180,7 +2411,6 @@ function initOverview() {
 		[i ? ', ' : '', el('b', {}, code), ` ${ENABLED[k][0]}`])))
 	const reset = document.getElementById('reset')
 	const collapse = document.getElementById('collapse')
-	const collapseWhat = document.getElementById('collapse-what')
 	let sortKey = 'total'
 	let sortDesc = true
 
@@ -2247,7 +2477,7 @@ function initOverview() {
 			if (p.tab !== tab || (f && p.search.includes(f) === invert.checked) || (c && !p.categories.has(c)) || (listed !== null && p.listed !== listed) || (e && !e.includes(p.enabled)) || (tree !== null && p.tree !== tree) || (!counts(p) && !older.length)) {
 				continue
 			}
-			p.older.replaceChildren(...older.flatMap((r) => [r.tr, r.checks, r.compare, r.compareChecks]))
+			p.older.replaceChildren(...older.flatMap((r) => [r.tr, r.compare]))
 			p.toggle.hidden = !older.length
 			p.toggle.textContent = `${older.length} older line${older.length > 1 ? 's' : ''}`
 			frag.append(p.main, p.older)
@@ -2382,7 +2612,7 @@ function initOverview() {
 	// on the start page: a reload keeps the fragment, which would open the page
 	// of the app again.
 	reset.addEventListener('click', () => {
-		closeOpened(['checks', 'older', 'compare'])
+		closeOpened(['older', 'compare'])
 		sinceHelp.hidden = true
 		sinceHelpToggle.setAttribute('aria-expanded', 'false')
 		restore({})
@@ -2392,7 +2622,7 @@ function initOverview() {
 	})
 	reset.hidden = false
 	collapse.addEventListener('click', () => {
-		closeOpened({ all: ['checks', 'older'], older: ['older'], checks: ['checks'] }[collapseWhat.value])
+		closeOpened(['older'])
 	})
 	restore(readSettings())
 	render()
@@ -2516,37 +2746,71 @@ function writeSettings(s) {
 
 // == App page ==
 
-// The page of an app is #app/<id>, so it opens without loading the database
-// again and the browser's back button returns to the start page.
+// The page shown, by its address without version and tab, and how it shows
+// one of its tabs.
+let shownPage = null
+
+// The page of an app is #app/<id>/<version>/<tab>, that of the server
+// #server/<line>/<tab>, each part after the first optional, so a page opens
+// without loading the database again and the browser's back button returns
+// to the start page. Another tab of the page open switches in place.
 function route() {
-	const m = /^#app\/(.+)$/.exec(location.hash)
-	if (m) {
-		let id = m[1]
-		try {
-			id = decodeURIComponent(id)
-		} catch {
-			// A malformed escape names no app; the page says so.
+	const [kind, ...parts] = location.hash.slice(1).split('/')
+	const decode = (s) => {
+		if (!s) {
+			return null
 		}
-		openApp(id)
-	} else if (startTicks) {
-		closeApp()
+		try {
+			return decodeURIComponent(s)
+		} catch {
+			// A malformed escape names nothing; the page says so.
+			return s
+		}
 	}
+	const [id, version, tab] = (kind === 'server' ? [null, ...parts] : parts).map(decode)
+	if (kind !== 'server' && !(kind === 'app' && id !== null)) {
+		if (startTicks) {
+			closeApp()
+		}
+		return
+	}
+	const base = kind === 'server' ? '#server' : `#app/${encodeURIComponent(id)}`
+	if (shownPage?.base !== base) {
+		openPage(base, id)
+	}
+	shownPage.show(version, tab)
 }
 
-// The charts move into the app page and chart all lines of the app's project;
-// the start page gets its charts and ticks back when the page closes.
-function openApp(id) {
+// A link from the page to another of its own tabs, which the overview opens
+// in a new browser tab, stays in this one.
+function initPages() {
+	document.getElementById('app-body').addEventListener('click', (e) => {
+		const a = e.target.closest('a.detail')
+		const href = a?.getAttribute('href') ?? ''
+		if (shownPage && (href === shownPage.base || href.startsWith(`${shownPage.base}/`))) {
+			e.preventDefault()
+			location.hash = href
+		}
+	})
+}
+
+// The charts move into the page and chart all lines of the project of the
+// app, or of the server; the start page gets its charts and ticks back when
+// the page closes.
+function openPage(base, id) {
 	const charts = document.getElementById('charts')
 	document.getElementById('overview').prepend(charts)
 	if (!startTicks) {
 		startScroll = scrollY
 		startTicks = swapPicks([])
 	}
-	const lines = projectLines.get(appProjects.get(id))
+	const lines = projectLines.get(id === null ? serverProject : appProjects.get(id))
 	const body = document.getElementById('app-body')
-	body.replaceChildren(...appPage(id, lines))
-	if (lines) {
-		document.getElementById('app-charts').append(charts)
+	shownPage = pageView(base, id === null ? serverPage(lines) : appPage(id, lines), id === null ? serverVersions() : appVersions(id))
+	body.replaceChildren(...shownPage.nodes)
+	const holder = document.getElementById('app-charts')
+	if (lines && holder) {
+		holder.append(charts)
 		swapPicks(lines)
 	} else {
 		swapPicks([])
@@ -2561,11 +2825,77 @@ function closeApp() {
 	document.getElementById('overview').prepend(document.getElementById('charts'))
 	swapPicks(startTicks)
 	startTicks = null
+	shownPage = null
 	document.getElementById('app').hidden = true
 	document.getElementById('app-body').replaceChildren()
 	document.getElementById('overview').hidden = false
 	document.title = 'gh-stats'
 	scrollTo(0, startScroll)
+}
+
+// The name of the page, then its tabs: the overview, and one per measured
+// version, each a list of [version, label, runs]. A version opens the first
+// time it shows and stays built; one the page does not have shows the
+// overview. The panels stay in the page while hidden, so the charts in the
+// overview keep their size.
+function pageView(base, overview, versions) {
+	const first = el('div', { class: 'page-panel' }, ...overview)
+	const name = first.querySelector('h2')
+	const nav = el('nav', { class: 'page-tabs', 'aria-label': 'Overview and measured versions' },
+		el('a', { href: base, 'data-version': '' }, 'Overview'),
+		...versions.map(([v, label, runs]) => el('a', { href: `${base}/${encodeURIComponent(v)}`, 'data-version': v, title: plural(runs.length, 'run') }, label)))
+	const holder = el('div', {}, first)
+	const panels = new Map()
+	const show = (version, tab) => {
+		const hit = versions.find(([v]) => v === version)
+		const v = hit ? version : ''
+		for (const a of nav.children) {
+			if (a.dataset.version === v) {
+				a.setAttribute('aria-current', 'page')
+			} else {
+				a.removeAttribute('aria-current')
+			}
+		}
+		if (hit && !panels.has(v)) {
+			const panel = versionPanel(`${base}/${encodeURIComponent(v)}`, hit[2])
+			panels.set(v, panel)
+			holder.append(panel)
+		}
+		first.hidden = Boolean(hit)
+		for (const [k, panel] of panels) {
+			panel.hidden = k !== v
+		}
+		if (hit) {
+			panels.get(v).show(tab)
+		}
+	}
+	return { base, nodes: [...(name ? [name] : []), nav, holder], show }
+}
+
+// The measurements of an app, those of its releases and those of the server
+// releases that ship it, with the runs that named no app and belong to it.
+function runsOfApp(id) {
+	return query(`SELECT ${MEASUREMENT} FROM measurements m
+		WHERE NOT (m.host = 'github.com' AND m.owner = 'nextcloud' AND m.repo = 'server' AND m.subdir IS NULL)
+		AND (m.app_id = $id OR m.dir IN (SELECT dir FROM orphan_apps WHERE app = $id))`, { $id: id })
+}
+
+// The versions of an app: its releases, the newest first, then the server
+// releases that ship it, then what the runs of no release are kept under.
+function appVersions(id) {
+	const group = (v) => (v.startsWith('server-') ? 1 : /^\d/.test(v) ? 0 : 2)
+	const bare = (v) => v.replace(/^server-/, '')
+	return [...Map.groupBy(runsOfApp(id), runVersion)]
+		.sort(([a], [b]) => group(a) - group(b) || bare(b).localeCompare(bare(a), 'en', { numeric: true }))
+		.map(([v, runs]) => [v, versionLabel(v), runs])
+}
+
+// The versions of the server are its release lines, master first, each with
+// the runs of all its releases.
+function serverVersions() {
+	return [...Map.groupBy([...measuredServer.values()].flat(), (m) => serverLine(m.server))]
+		.sort(([a], [b]) => (b === 'master') - (a === 'master') || Number(b) - Number(a))
+		.map(([l, runs]) => [l, l === 'master' ? 'master' : `Nextcloud ${l}`, runs])
 }
 
 // The catalogue names a language in lower case with its region or script
@@ -2702,7 +3032,7 @@ function appReleases(id, requests) {
 			.map((h) => el('th', {}, h)), styleHead(), ...securityHead(), el('th', { title: 'warnings the ncmake analysers found in the release' }, 'Checks'),
 		...(asks ? [el('th', { title: 'opens a prefilled issue that asks for the measurement' }, 'Request')] : []))),
 		...releases.map((r) => {
-			const [checks, checksRow, sec] = checksCell(runs.get(r.version), asks ? 9 : 8)
+			const [checks, sec] = checksCell(runs.get(r.version))
 			return el('tbody', {}, el('tr', {},
 				el('td', {}, r.version, ...restrictionMark(runs.get(r.version) ?? []), ...sourceMark(sourceOf(id, r.version))),
 				el('td', {}, (r.created ?? '').slice(0, 10)),
@@ -2713,7 +3043,7 @@ function appReleases(id, requests) {
 				el('td', { class: 'wrap' }, specList(r.php_extensions)),
 				el('td', {}, JSON.parse(r.licenses).join(', ')),
 				...sec, checks,
-				...(asks ? [requestCell(id, r, runs.get(r.version), newest)] : [])), checksRow)
+				...(asks ? [requestCell(id, r, runs.get(r.version), newest)] : [])))
 		}))
 }
 
@@ -2741,7 +3071,7 @@ function appShipped(releases) {
 			...(asks ? [el('th', { title: 'opens a prefilled issue that asks for the measurement' }, 'Request')] : []))),
 		...releases.map((s) => {
 			const runs = measuredShipped.get(`${s.id}\n${s.ref}`)
-			const [checks, checksRow, sec] = checksCell(runs, asks ? 6 : 5)
+			const [checks, sec] = checksCell(runs)
 			return el('tbody', {}, el('tr', {},
 				el('td', {}, serverLink(s)),
 				el('td', {}, s.published === null ? '' : date(s.published)),
@@ -2749,7 +3079,7 @@ function appShipped(releases) {
 				el('td', {}, ...enabledMark(s)),
 				el('td', {}, el('a', { href: shippedSource(s) }, s.path ? `${s.repo}/${s.path}` : s.repo)),
 				...sec, checks,
-				...(asks ? [shippedRequestCell(s, runs)] : [])), checksRow)
+				...(asks ? [shippedRequestCell(s, runs)] : [])))
 		}))
 }
 
@@ -2782,12 +3112,12 @@ function appTags(u) {
 			styleHead(), ...securityHead(), el('th', { title: 'warnings the ncmake analysers found in the ncmake build' }, 'Checks'),
 			...(asks ? [el('th', { title: 'opens a prefilled issue that asks for the measurement' }, 'Request')] : []))),
 		...rows.map(([tag, version]) => {
-			const [checks, checksRow, sec] = checksCell(version ? runs.get(version) : undefined, asks ? 3 : 2)
+			const [checks, sec] = checksCell(version ? runs.get(version) : undefined)
 			return el('tbody', {}, el('tr', {},
 				el('td', {}, tag),
 				el('td', {}, version, ...restrictionMark(runs.get(version) ?? [])),
 				...sec, checks,
-				...(asks ? [unlistedRequestCell(u.id, version, runs.get(version), newest)] : [])), checksRow)
+				...(asks ? [unlistedRequestCell(u.id, version, runs.get(version), newest)] : [])))
 		}))
 }
 
@@ -2825,8 +3155,8 @@ function appLines(lines) {
 			el('th', { class: 'num', title: 'routes that no code of the release refers to, as php-audit names them' }, 'Unreferenced routes'),
 			styleHead(), ...securityHead(), el('th', { title: 'warnings the ncmake analysers found in the release shown' }, 'Checks'))),
 		...lines.map((r) => {
-			const [abandonedTd, checks, checksRow, sec] = lineChecks(r, 12)
-			return el('tbody', {}, el('tr', {}, el('td', {}, lineLabel(r.line)), ...releaseCells(r, measured.get(`${r.project}\n${r.tag}`)), ...abandonedTd, ...sec, checks), checksRow)
+			const [abandonedTd, checks, sec] = lineChecks(r)
+			return el('tbody', {}, el('tr', {}, el('td', {}, lineLabel(r.line)), ...releaseCells(r, measured.get(`${r.project}\n${r.tag}`)), ...abandonedTd, ...sec, checks))
 		}))
 }
 
@@ -2906,5 +3236,78 @@ function appPage(id, lines) {
 	return [page]
 }
 
+// == Server page ==
+
+const SERVER_README = 'https://raw.githubusercontent.com/nextcloud/server/master/README.md'
+
+// The screenshots of the server are the images of its README outside a link;
+// its badges are each inside one. The README is fetched when the page opens,
+// so it shows what nextcloud/server shows now.
+async function readmeShots(holder) {
+	holder.replaceChildren(el('p', { class: 'hint' }, 'Loading the screenshots from the README of nextcloud/server.'))
+	try {
+		const res = await fetch(SERVER_README)
+		if (!res.ok) {
+			throw new Error(`${SERVER_README}: HTTP ${res.status}`)
+		}
+		const doc = new DOMParser().parseFromString(DOMPurify.sanitize(marked.parse(await res.text()), DESCRIPTION), 'text/html')
+		const shots = [...doc.querySelectorAll('img')].filter((img) => !img.closest('a'))
+			.map((img) => img.getAttribute('src') ?? '').filter((src) => /^https?:\/\//i.test(src))
+		holder.replaceChildren(shots.length
+			? el('ul', { class: 'shots' }, ...shots.map((src, i) => el('li', {}, remoteImage(src, `Screenshot ${i + 1}`, true))))
+			: el('p', { class: 'hint' }, 'The README of nextcloud/server shows no screenshot.'))
+	} catch (e) {
+		const again = el('button', { type: 'button', class: 'quiet' }, 'Try again')
+		again.addEventListener('click', () => readmeShots(holder))
+		holder.replaceChildren(el('p', { class: 'hint' }, `The README of nextcloud/server could not be loaded (${e.message}). `, again))
+	}
+}
+
+// The apps the server ships, each in the newest release that ships it, master
+// only for an app no release ships yet, with the checks of that measurement.
+function serverShipped() {
+	const newest = [...Map.groupBy(shippedApps(), (s) => s.id).values()]
+		.map((xs) => xs.find((s) => s.ref !== 'master') ?? xs[0])
+		.sort((a, b) => a.name.localeCompare(b.name, 'en'))
+	return el('table', {},
+		el('thead', {}, el('tr', {}, ...['App', 'Nextcloud', 'App version', 'Enabled', 'Source'].map((h) => el('th', {}, h)),
+			styleHead(), ...securityHead(), el('th', { title: 'warnings the ncmake analysers found in the app as the server release ships it' }, 'Checks'))),
+		el('tbody', {}, ...newest.map((s) => {
+			const [checks, sec] = checksCell(measuredShipped.get(`${s.id}\n${s.ref}`))
+			return el('tr', {},
+				el('td', {}, el('a', { href: `#app/${encodeURIComponent(s.id)}` }, s.name)),
+				el('td', {}, serverLink(s)),
+				el('td', {}, s.version, ...restrictionMark([s])),
+				el('td', {}, ...enabledMark(s)),
+				el('td', {}, el('a', { href: shippedSource(s) }, s.path ? `${s.repo}/${s.path}` : s.repo)),
+				...sec, checks)
+		})))
+}
+
+// The server has a page of its own: its screenshots, the apps it ships, and
+// below them the downloads of its release lines. Its measurements are the
+// tabs of its lines.
+function serverPage(lines) {
+	const shots = el('div')
+	readmeShots(shots)
+	return [el('div', {},
+		el('h2', {}, 'Nextcloud server'),
+		factList([
+			['Source', el('a', { href: `https://github.com/${SERVER_REPO}` }, SERVER_REPO)],
+			...(serverProject ? [['Repositories', ...appRepos(serverProject)]] : []),
+		]),
+		el('h3', {}, 'Screenshots'),
+		shots,
+		el('p', { class: 'hint' }, 'From the ', el('a', { href: `https://github.com/${SERVER_REPO}#readme` }, `README of ${SERVER_REPO}`), '.'),
+		el('h3', {}, 'Shipped apps'),
+		el('div', { class: 'scroll' }, serverShipped()),
+		el('h3', {}, 'Downloads'),
+		...(lines
+			? [el('div', { class: 'scroll' }, appLines(lines)), el('div', { id: 'app-charts' })]
+			: [el('p', { class: 'hint' }, 'gh-stats samples no repository of the server.')]))]
+}
+
+
+initPages()
 initScrolling()
 load()
