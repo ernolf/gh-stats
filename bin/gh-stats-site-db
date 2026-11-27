@@ -419,11 +419,12 @@ if [ -n "$results" ]; then
 		  | "INSERT INTO targets VALUES (\($dir | q), \($n | v), \(.exit | v), \(.json_skipped | v), \($files | any(. == $n + ".json") | v), \(.analyser | v), \(.stopped | v), \(.json_invalid | v));"),
 		  (.transifex // empty | "INSERT INTO fields VALUES (\($dir | q), \("summary" | q), \("transifex" | q), \(tojson | q));")
 	'
+	# A line of a finding can be a fold, an object whose own lines the text takes in.
 	findings_jq="$sql_defs$tables_jq"'
 		(if $name == "" then input_filename else $name end | ltrimstr($root) | rtrimstr(".gz") | rtrimstr(".json")) as $p
 		| ($p | sub("/[^/]*$"; "") | q) as $dir | ($p | sub("^.*/"; "")) as $tool | . as $r
 		| ((.findings? // []) | to_entries[]
-		  | "INSERT INTO findings VALUES (\($dir), \($tool | q), \(.key + 1), \(.value.level | v), \(.value.id | v), \(.value.lines // [] | join("\n") | q), \(.value.file | v), \(.value.line | v), \(.value.covers | if . == null then null else tojson end | v), \(.value.count | v), \(.value.folds | if . == null then null else tojson end | v), \(.value | style($tool) | v));"),
+		  | "INSERT INTO findings VALUES (\($dir), \($tool | q), \(.key + 1), \(.value.level | v), \(.value.id | v), \([.value.lines[]? | if type == "object" then .lines[]? else . end] | join("\n") | q), \(.value.file | v), \(.value.line | v), \(.value.covers | if . == null then null else tojson end | v), \(.value.count | v), \(.value.folds | if . == null then null else tojson end | v), \(.value | style($tool) | v));"),
 		  (($fields[$tool] // [])[] as $f | ($r | objects | .[$f]) // empty
 		  | "INSERT INTO fields VALUES (\($dir), \($tool | q), \($f | q), \(tojson | q));"),
 		  ((.findings? // [])[] as $x | ($finding_fields[$tool][$x.id]? // [])[] as $f | $x[$f] // empty
