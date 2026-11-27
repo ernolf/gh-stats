@@ -2589,20 +2589,12 @@ function webLink(url, text) {
 	return /^https?:\/\//i.test(url ?? '') ? el('a', { href: url }, text) : null
 }
 
-// An image stays a placeholder until the visitor loads the images of the page,
-// as loading it tells its host the visitor's address. Inside a link the
-// placeholder is plain text, since a link cannot hold another.
-function imageHolder(src, alt, linked) {
-	const attrs = { class: 'image-holder', 'data-src': src, 'data-alt': alt }
-	return linked ? el('a', { ...attrs, href: src }, alt || 'image') : el('span', attrs, alt || 'image')
-}
-
-// The referrer policy is set before the source, which starts the fetch.
-function loadImages(root) {
-	for (const h of root.querySelectorAll('[data-src]')) {
-		h.replaceChildren(el('img', { referrerpolicy: 'no-referrer', loading: 'lazy', alt: h.dataset.alt, src: h.dataset.src }))
-		h.removeAttribute('data-src')
-	}
+// An image from the host the author names, without a referrer: the policy is
+// set before the source, which starts the fetch. Outside a link it links to
+// itself; inside one it cannot, since a link cannot hold another.
+function remoteImage(src, alt, linked) {
+	const img = el('img', { referrerpolicy: 'no-referrer', loading: 'lazy', alt, src })
+	return linked ? el('a', { href: src }, img) : img
 }
 
 // Descriptions are Markdown with HTML allowed. What stays of it is text,
@@ -2623,7 +2615,7 @@ function description(md) {
 	for (const img of doc.querySelectorAll('img')) {
 		const src = img.getAttribute('src') ?? ''
 		const alt = img.getAttribute('alt') ?? ''
-		img.replaceWith(/^https?:\/\//i.test(src) ? imageHolder(src, alt, !img.closest('a')) : alt)
+		img.replaceWith(/^https?:\/\//i.test(src) ? remoteImage(src, alt, !img.closest('a')) : alt)
 	}
 	doc.querySelectorAll('a').forEach(newTab)
 	return [...doc.body.childNodes]
@@ -2897,18 +2889,12 @@ function appPage(id, lines) {
 		el('p', { class: 'summary', lang: summary.lang, dir: 'auto' }, summary.value),
 		el('ul', { class: 'app-links' }, ...links.map((a) => el('li', {}, a))),
 		factList(facts))
-	const images = el('p', { class: 'hint' }, el('button', { type: 'button', class: 'quiet' }, 'Load images'),
-		' Images come from the hosts the authors name and load only on request.')
-	images.firstChild.addEventListener('click', () => {
-		loadImages(page)
-		images.remove()
-	})
 	page.append(
 		el('h3', {}, 'Description'),
 		el('div', { class: 'description', lang: desc.lang, dir: 'auto' }, ...description(desc.value)),
 		...(shots.length
 			? [el('h3', {}, 'Screenshots'),
-				el('ul', { class: 'shots' }, ...shots.map((u, i) => el('li', {}, imageHolder(u, `Screenshot ${i + 1}`, true))))]
+				el('ul', { class: 'shots' }, ...shots.map((u, i) => el('li', {}, remoteImage(u, `Screenshot ${i + 1}`, true))))]
 			: []),
 		...shippedPart,
 		el('h3', {}, 'Releases in the App Store'),
@@ -2917,9 +2903,6 @@ function appPage(id, lines) {
 		...(lines
 			? [el('div', { class: 'scroll' }, appLines(lines)), el('div', { id: 'app-charts' })]
 			: [el('p', { class: 'hint' }, 'gh-stats samples no GitHub, Forgejo or Gitea repository of this app.')]))
-	if (page.querySelector('[data-src]')) {
-		page.querySelector('h3').before(images)
-	}
 	return [page]
 }
 
