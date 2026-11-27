@@ -479,16 +479,17 @@ function pageOf(m) {
 }
 
 // The link from a figure of the overview to the tab of the page that shows the
-// runs it counts, in a new browser tab; runs of several apps link each page,
-// named by its app. The page itself keeps such a link in place.
+// runs it counts; runs of several apps link each page, named by its app, one
+// beneath the other, so a release that ships many apps keeps its column narrow.
 function detailLink(runs, tab, attrs, ...text) {
 	const pages = [...new Map(runs.map((m) => [pageOf(m), m]))].filter(([p]) => p)
-	const link = (p, a, ...content) => el('a', { ...a, class: `detail ${a.class ?? ''}`.trim(), href: `${p}${tab ? `/${tab}` : ''}`, target: '_blank', rel: 'noopener' }, ...content)
+	const link = (p, a, ...content) => el('a', { ...a, class: `detail ${a.class ?? ''}`.trim(), href: `${p}${tab ? `/${tab}` : ''}` }, ...content)
 	if (pages.length === 1) {
 		return [link(pages[0][0], attrs, ...text)]
 	}
 	const name = (m) => (isServerRun(m) ? 'server' : appOf(m))
-	return [el('span', attrs, ...text), ...pages.flatMap(([p, m]) => [' ', link(p, { class: 'check-of', title: `The page of ${name(m)}` }, name(m))])]
+	return [el('span', attrs, ...text),
+		el('span', { class: 'check-pages' }, ...pages.map(([p, m]) => link(p, { class: 'check-of', title: `The page of ${name(m)}` }, name(m))))]
 }
 
 // The findings of a run, by tool, from the file beside the database, and where
@@ -1758,7 +1759,6 @@ const DETAIL_TABS = [
 	{
 		id: 'checks', label: 'Checks', rank: 9,
 		takes: () => true,
-		head: (m, d) => [...badgeRow(d.fs, d.fields), ...defectNotes(d.fields), ...(isServerRun(m) ? [] : [el('p', {}, diffText(m))]), ...licenceText(d.fields)],
 		tables: { 'runtime-audit': runtimeAuditTables, 'install-test': installTestTables, 'install-test-tarball': installTestTables },
 	},
 ]
@@ -1855,15 +1855,26 @@ function runSection(tab, m, d) {
 	return run
 }
 
-// A measured version: the tabs of its findings, each counting its warnings,
-// and beneath them its runs, the newest first. The runs load once the version
-// is opened; a tab is built the first time it shows.
+// What a run says of the release as a whole, ahead of the tabs of its
+// findings: the badges, the defects of the toolchain, the release diff and the
+// licences of the shipped packages. Of several runs each says it under its
+// title.
+function runSummary(m, d, titled) {
+	return el('div', { class: 'run-summary' }, ...(titled ? [runTitle(m)] : []),
+		...badgeRow(d.fs, d.fields), ...defectNotes(d.fields), ...(isServerRun(m) ? [] : [el('p', {}, diffText(m))]), ...licenceText(d.fields))
+}
+
+// A measured version: what its runs say of the release, then the tabs of its
+// findings, each counting its warnings, and beneath them its runs, the newest
+// first. The runs load once the version is opened; a tab is built the first
+// time it shows.
 function versionPanel(base, runs) {
 	const sorted = [...runs].sort((a, b) => (b.stamp ?? '').localeCompare(a.stamp ?? ''))
+	const summary = el('div')
 	const nav = el('nav', { class: 'detail-tabs', 'aria-label': 'Findings by kind' })
 	const status = el('p', { class: 'hint' })
 	const body = el('div')
-	const panel = el('div', { class: 'version-panel' }, nav, status, body)
+	const panel = el('div', { class: 'version-panel' }, summary, nav, status, body)
 	const built = new Map()
 	let loaded = null
 	let wanted = null
@@ -1895,6 +1906,7 @@ function versionPanel(base, runs) {
 		Promise.all(sorted.map(loadRun)).then((data) => {
 			const counts = new Map(DETAIL_TABS.map((t) => [t.id, data.reduce((n, d) => n + (d.tabs.get(t.id) ?? []).filter((f) => f.level === 'warn').length, 0)]))
 			loaded = { data, counts }
+			summary.replaceChildren(...sorted.map((m, i) => runSummary(m, data[i], sorted.length > 1)))
 			nav.replaceChildren(...DETAIL_TABS.map((t) => {
 				const n = counts.get(t.id)
 				return el('a', { href: `${base}/${t.id}`, class: 'detail-tab', 'data-tab': t.id, title: plural(n, 'warning') },
@@ -1929,7 +1941,7 @@ function closeOpened(kinds) {
 }
 
 // The cell counts the warnings of the measurements of a release and links the
-// version on the page of its app, in a new browser tab. A version given names
+// Checks of the version on the page of its app. A version given names
 // the release measured when it is another than the one the row shows. The
 // cell of the style column and, where the database has the security results,
 // that of their column come second, to go before the cell, and link their
@@ -1941,7 +1953,7 @@ function checksCell(runs, version = null) {
 	}
 	const warn = warnings(runs)
 	const title = `${plural(warn, 'warning')} of the ncmake analysers in ${plural(runs.length, 'measurement')}${version ? ` of ${version}` : ''}`
-	return [el('td', { class: 'check-col' }, ...detailLink(runs, null, { class: warn ? 'check-count warn' : 'check-count', title }, warn ? `⚠ ${warn}` : '✓'),
+	return [el('td', { class: 'check-col' }, ...detailLink(runs, 'checks', { class: warn ? 'check-count warn' : 'check-count', title }, warn ? `⚠ ${warn}` : '✓'),
 		...(version ? [' ', el('span', { class: 'check-of' }, version)] : [])),
 	[styleCell(runs, version), ...(securityResults ? [securityCell(runs, version)] : [])]]
 }
@@ -2781,19 +2793,6 @@ function route() {
 	shownPage.show(version, tab)
 }
 
-// A link from the page to another of its own tabs, which the overview opens
-// in a new browser tab, stays in this one.
-function initPages() {
-	document.getElementById('app-body').addEventListener('click', (e) => {
-		const a = e.target.closest('a.detail')
-		const href = a?.getAttribute('href') ?? ''
-		if (shownPage && (href === shownPage.base || href.startsWith(`${shownPage.base}/`))) {
-			e.preventDefault()
-			location.hash = href
-		}
-	})
-}
-
 // The charts move into the page and chart all lines of the project of the
 // app, or of the server; the start page gets its charts and ticks back when
 // the page closes.
@@ -3263,30 +3262,18 @@ async function readmeShots(holder) {
 	}
 }
 
-// The apps the server ships, each in the newest release that ships it, master
-// only for an app no release ships yet, with the checks of that measurement.
-function serverShipped() {
-	const newest = [...Map.groupBy(shippedApps(), (s) => s.id).values()]
-		.map((xs) => xs.find((s) => s.ref !== 'master') ?? xs[0])
-		.sort((a, b) => a.name.localeCompare(b.name, 'en'))
-	return el('table', {},
-		el('thead', {}, el('tr', {}, ...['App', 'Nextcloud', 'App version', 'Enabled', 'Source'].map((h) => el('th', {}, h)),
-			styleHead(), ...securityHead(), el('th', { title: 'warnings the ncmake analysers found in the app as the server release ships it' }, 'Checks'))),
-		el('tbody', {}, ...newest.map((s) => {
-			const [checks, sec] = checksCell(measuredShipped.get(`${s.id}\n${s.ref}`))
-			return el('tr', {},
-				el('td', {}, el('a', { href: `#app/${encodeURIComponent(s.id)}` }, s.name)),
-				el('td', {}, serverLink(s)),
-				el('td', {}, s.version, ...restrictionMark([s])),
-				el('td', {}, ...enabledMark(s)),
-				el('td', {}, el('a', { href: shippedSource(s) }, s.path ? `${s.repo}/${s.path}` : s.repo)),
-				...sec, checks)
-		})))
+// The apps the server ships have their tab on the start page, with its
+// filters and its order, so the page of the server leads there. The tab
+// switches once the start page is back, after route has closed the page.
+function shippedAppsLink() {
+	const a = el('a', { href: '#' }, 'Shipped Apps')
+	a.addEventListener('click', () => addEventListener('hashchange', () => document.querySelector('#tabs button[data-tab="shipped"]').click(), { once: true }))
+	return a
 }
 
-// The server has a page of its own: its screenshots, the apps it ships, and
-// below them the downloads of its release lines. Its measurements are the
-// tabs of its lines.
+// The server has a page of its own: its screenshots, the way to the apps it
+// ships, and below them the downloads of its release lines. Its measurements
+// are the tabs of its lines.
 function serverPage(lines) {
 	const shots = el('div')
 	readmeShots(shots)
@@ -3300,7 +3287,7 @@ function serverPage(lines) {
 		shots,
 		el('p', { class: 'hint' }, 'From the ', el('a', { href: `https://github.com/${SERVER_REPO}#readme` }, `README of ${SERVER_REPO}`), '.'),
 		el('h3', {}, 'Shipped apps'),
-		el('div', { class: 'scroll' }, serverShipped()),
+		el('p', {}, 'The apps the server ships, with their checks, are in the tab ', shippedAppsLink(), ' of the start page.'),
 		el('h3', {}, 'Downloads'),
 		...(lines
 			? [el('div', { class: 'scroll' }, appLines(lines)), el('div', { id: 'app-charts' })]
@@ -3308,6 +3295,5 @@ function serverPage(lines) {
 }
 
 
-initPages()
 initScrolling()
 load()
