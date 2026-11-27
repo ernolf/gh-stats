@@ -331,7 +331,7 @@ function categories() {
 // warn, style, sec, sec_other, abandoned, endpoints, loader and unreferenced
 // are the counts gh-stats-site-db and gh-stats-security-site take from the
 // findings.
-const MEASUREMENT = `m.dir, m.host, m.owner, m.repo, m.subdir, m.app_id, m.version, m.restrictable, m.server, m.tag, m.tarball, m.signed, m.diff, m.info_xml,
+const MEASUREMENT = `m.dir, m.host, m.owner, m.repo, m.subdir, m.app_id, m.version, m.restrictable, m.server, m.tag, m.stamp, m.tarball, m.signed, m.diff, m.info_xml,
 	m.declared, m.shipped_version, m.source, m.warn, m.style, m.sec, m.sec_other, m.abandoned, m.endpoints, m.loader, m.unreferenced,
 	(SELECT s.repo FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_repo,
 	(SELECT s.path FROM shipped s WHERE s.ref = m.server AND s.id = m.app_id) AS shipped_path,
@@ -1370,6 +1370,19 @@ function toolHead(tool) {
 			' ', el('a', { class: 'wiki', href: head.wiki, title: `What ${baseTool(tool)} checks` }, 'wiki')))
 }
 
+// When the run started, from the stamp of its directory, which is UTC, in the
+// time zone of the reader, so that after a recheck the head tells whether the
+// measurement is already the new run.
+function runStarted(m) {
+	const hit = /^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})$/.exec(m.stamp ?? '')
+	if (!hit) {
+		return []
+	}
+	const iso = `${hit[1]}-${hit[2]}-${hit[3]}T${hit[4]}:${hit[5]}:${hit[6]}Z`
+	return [' ', el('time', { datetime: iso, title: 'When this run started' },
+		new Date(iso).toLocaleString('en', { dateStyle: 'medium', timeStyle: 'long' }))]
+}
+
 // The info.xml the analysers read: the copy the run kept, else, for a run from
 // before such copies, the file at the ref it measured. That of master is the
 // branch, which may have moved on since the build the run measured.
@@ -1582,8 +1595,8 @@ function checksBlock(m, collapse) {
 	const head = el('div', { class: 'run-head' },
 		el('div', { class: 'run-actions' }, start, collapse()),
 		isServerRun(m)
-			? el('h4', {}, `${SERVER_REPO} ${m.server} `, el('a', { href: `${results}/${m.dir}` }, 'run directory'))
-			: el('h4', {}, `${m.app_id ?? m.dir} ${m.version ?? ''} `, el('a', { href: `${results}/${m.dir}` }, 'run directory'), ...infoXmlLink(m)))
+			? el('h4', {}, `${SERVER_REPO} ${m.server} `, el('a', { href: `${results}/${m.dir}` }, 'run directory'), ...runStarted(m))
+			: el('h4', {}, `${m.app_id ?? m.dir} ${m.version ?? ''} `, el('a', { href: `${results}/${m.dir}` }, 'run directory'), ...infoXmlLink(m), ...runStarted(m)))
 	const status = el('p', { class: 'hint' })
 	run.append(head,
 		...defectNotes(fields),
