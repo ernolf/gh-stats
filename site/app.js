@@ -1526,14 +1526,33 @@ function installTestTables(data) {
 			: el('p', { class: 'muted' }, 'No log lines.')))
 }
 
+// The place php-audit names for an endpoint, file:line with the key of
+// routes.php after it, or a file alone, linked to that line at the ref the run
+// measured where the repository is on GitHub. A run from before endpoints
+// carried their place has none.
+function declaredIn(source, m) {
+	if (!source) {
+		return ''
+	}
+	const hit = /^(.+?):(\d+)(?: |$)/.exec(source)
+	const [file, line] = hit ? [hit[1], hit[2]] : [source, null]
+	let base = null
+	if (m.shipped_repo) {
+		base = `https://github.com/${m.shipped_repo}/blob/${encodeURIComponent(m.shipped_ref)}/${m.shipped_path ? `${m.shipped_path}/` : ''}`
+	} else if (m.tag && m.host === 'github.com') {
+		base = `${repoUrl(m)}/blob/${encodeURIComponent(m.tag)}/${m.subdir ? `${m.subdir}/` : ''}`
+	}
+	return base ? el('a', { href: `${base}${file}${line ? `#L${line}` : ''}` }, code(source)) : code(source)
+}
+
 // The endpoints as php-audit reads them from the source, without their access:
 // a route outside OCS is route, whether a page, an API or a public page.
-function endpointTables(data) {
+function endpointTables(data, m) {
 	const n = data.endpoints.length
 	return n ? [el('details', { class: 'audit-run' },
 		el('summary', {}, `${n} endpoint${n === 1 ? '' : 's'} the source declares`),
-		auditTable(['Verb', 'Path', 'Kind', 'Controller', 'OpenAPI scope'], data.endpoints.map((e) => el('tr', {},
-			cell(e.verb ?? '–'), cell(code(e.path)), cell(e.kind), cell(code(e.target)), cell((e.openapi ?? []).join(', '))))))] : []
+		auditTable(['Verb', 'Path', 'Kind', 'Controller', 'OpenAPI scope', 'Declared in'], data.endpoints.map((e) => el('tr', {},
+			cell(e.verb ?? '–'), cell(code(e.path)), cell(e.kind), cell(code(e.target)), cell((e.openapi ?? []).join(', ')), cell(declaredIn(e.source, m))))))] : []
 }
 
 const RUN_TABLES = { 'runtime-audit': runtimeAuditTables, 'install-test': installTestTables, 'install-test-tarball': installTestTables, 'php-audit': endpointTables }
@@ -1595,7 +1614,7 @@ function checksBlock(m, collapse) {
 						elsewhere ? `, ${elsewhere} counted in another release` : '')]
 					: []
 				return el('div', { class: tool.startsWith('security/') ? 'tool security' : 'tool' }, el('h5', {}, toolHeads[baseTool(tool)].title, ' ', el('code', { class: 'target' }, tool), ...split), toolHead(tool),
-					...(tables[tool] ? RUN_TABLES[tool](tables[tool]) : []),
+					...(tables[tool] ? RUN_TABLES[tool](tables[tool], m) : []),
 					...(warns.length && baseTool(tool).startsWith('lint-') ? [lintFold(tool, warns, notes)] : findingEntries(tool, warns, under, notes)),
 					...(style.length ? [lintFold(tool, style, notes, 'style')] : []),
 					...(rest.length
