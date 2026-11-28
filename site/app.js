@@ -2947,10 +2947,17 @@ function pageView(base, overview, versions) {
 
 // The measurements of an app, those of its releases and those of the server
 // releases that ship it, with the runs that named no app and belong to it.
+// A run that ended because the repository has no tag for the version it was
+// asked for, a version the App Store does not list either, measured a version
+// that does not exist and is left out. A release the App Store lists without a
+// tag stays: gh-nc-appsdiag measures it from its tarball, and one that ended
+// on no tag all the same shows under that release.
 function runsOfApp(id) {
 	return query(`SELECT ${MEASUREMENT} FROM measurements m
 		WHERE NOT (m.host = 'github.com' AND m.owner = 'nextcloud' AND m.repo = 'server' AND m.subdir IS NULL)
-		AND (m.app_id = $id OR m.dir IN (SELECT dir FROM orphan_apps WHERE app = $id))`, { $id: id })
+		AND (m.app_id = $id OR m.dir IN (SELECT dir FROM orphan_apps WHERE app = $id))
+		AND NOT (m.status = 'aborted' AND m.tag IS NULL AND m.reason LIKE 'no tag for %'
+		  AND NOT EXISTS (SELECT 1 FROM app_releases r WHERE r.id = $id AND r.version = m.version))`, { $id: id })
 }
 
 // The versions of an app: its releases, the newest first, then the server
