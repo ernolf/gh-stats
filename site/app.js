@@ -1731,6 +1731,13 @@ const ENDPOINT_FINDINGS = {
 	'runtime-audit': new Set(['route-not-registered', 'route-server-error', 'controller-not-built', 'route-parameter-missing', 'routes-skipped']),
 }
 
+// The findings on licences besides those of reuse: the licences of the
+// packages that ship and the licence the files of the checkout state.
+const LICENCE_FINDINGS = {
+	'deps-audit': new Set(['licence-incompatible', 'licence-non-free', 'licence-missing', 'licence-unknown', 'licence-summary']),
+	'consistency-audit': new Set(['license-drift']),
+}
+
 // The tabs of a measured version, in the order they show. A finding goes to
 // the tab of the lowest rank that takes it, so a security finding of php-audit
 // is in Security, and Checks takes the rest. A tab may put something of its
@@ -1755,6 +1762,11 @@ const DETAIL_TABS = [
 		id: 'security', label: 'Security', rank: 0,
 		takes: (f) => f.tool.startsWith('security/') || baseTool(f.tool) === 'secrets-audit' || f.security === true || f.id === 'route-open',
 		head: (m) => (securityResults ? securityTargets(m) : []),
+	},
+	{
+		id: 'licenses', label: 'Licenses', rank: 4,
+		takes: (f) => baseTool(f.tool) === 'reuse' || (LICENCE_FINDINGS[baseTool(f.tool)]?.has(f.id) ?? false),
+		head: (m, d) => licenceText(d.fields),
 	},
 	{
 		id: 'checks', label: 'Checks', rank: 9,
@@ -1789,11 +1801,26 @@ function loadRun(m) {
 	return runData.get(m.dir)
 }
 
+function runName(m) {
+	return isServerRun(m) ? `${SERVER_REPO} ${m.server}` : `${appOf(m) ?? m.dir} ${m.version ?? ''}`
+}
+
+// The source a run measured: an app the server ships at the ref of that
+// server release, any other at its tag. A run of a tarball alone names none.
+function sourceRef(m) {
+	if (m.shipped_repo) {
+		return { href: shippedSource({ repo: m.shipped_repo, app_ref: m.shipped_ref, path: m.shipped_path }), title: `${m.shipped_ref} of ${m.shipped_repo}` }
+	}
+	return m.tag && m.host ? { href: `${repoUrl(m)}/releases/tag/${encodeURIComponent(m.tag)}`, title: `${m.tag} of ${slugOf(m)}` } : null
+}
+
 function runTitle(m) {
-	return isServerRun(m)
-		? el('h4', {}, `${SERVER_REPO} ${m.server} `, el('a', { href: `${results}/${m.dir}` }, 'run directory'), ...runStarted(m))
-		: el('h4', {}, `${appOf(m) ?? m.dir} ${m.version ?? ''}${m.server ? ` as Nextcloud ${m.server.replace(/^v/, '')} ships it` : ''} `,
-			el('a', { href: `${results}/${m.dir}` }, 'run directory'), ...infoXmlLink(m), ...runStarted(m))
+	const ref = sourceRef(m)
+	const started = runStarted(m)
+	return el('h4', {}, ref ? el('a', { class: 'run-name', href: ref.href, title: ref.title }, runName(m)) : runName(m),
+		!isServerRun(m) && m.server ? ` as Nextcloud ${m.server.replace(/^v/, '')} ships it` : '', ' ',
+		el('a', { href: `${results}/${m.dir}` }, 'run directory'), ...(isServerRun(m) ? [] : infoXmlLink(m)),
+		...(started.length ? [' ', el('span', { class: 'checked' }, 'Checked: ', started[1])] : []))
 }
 
 // A tool section: its findings in the tab, the security findings first, ok and
@@ -1826,7 +1853,7 @@ function toolSection(tab, tool, fs, m, d, notes) {
 // The name of a run and when it started, which tells the runs of a version
 // apart in a tab; the full title stands above the tabs.
 function runLabel(m) {
-	return el('h4', {}, isServerRun(m) ? `${SERVER_REPO} ${m.server}` : `${appOf(m) ?? m.dir} ${m.version ?? ''}`, ...runStarted(m))
+	return el('h4', {}, runName(m), ...runStarted(m))
 }
 
 // A run in a tab: what the tab puts ahead and the sections of the tools, the
@@ -1866,24 +1893,34 @@ function runSection(tab, m, d, several) {
 }
 
 // What a run says of the release as a whole, ahead of the tabs of its
-// findings: its title, the badges, the defects of the toolchain, the release
-// diff and the licences of the shipped packages.
-function runSummary(m, d) {
-	return el('div', { class: 'run-summary' }, runTitle(m),
-		...badgeRow(d.fs, d.fields), ...defectNotes(d.fields), ...(isServerRun(m) ? [] : [el('p', {}, diffText(m))]), ...licenceText(d.fields))
+// findings: the badges, the defects of the toolchain and the release diff. Of
+// several runs each says it under its label.
+function runSummary(m, d, several) {
+	return el('div', { class: 'run-summary' }, ...(several ? [runLabel(m)] : []),
+		...badgeRow(d.fs, d.fields), ...defectNotes(d.fields), ...(isServerRun(m) ? [] : [el('p', {}, diffText(m))]))
 }
 
-// A measured version: what its runs say of the release, then the tabs of its
-// findings, each counting its warnings, and beneath them its runs, the newest
-// first. The runs load once the version is opened; a tab is built the first
-// time it shows.
+// A measured version: the titles of its runs, what they say of the release,
+// then the tabs of its findings, each counting its warnings, and beneath them
+// its runs, the newest first. The titles and the tabs stay at the top of the
+// window while the rest scrolls beneath them; the heads of the runs stick
+// below them, at the heights app.js keeps in --version-head and --version-top.
+// The runs load once the version is opened; a tab is built the first time it
+// shows.
 function versionPanel(base, runs) {
 	const sorted = [...runs].sort((a, b) => (b.stamp ?? '').localeCompare(a.stamp ?? ''))
+	const head = el('div', { class: 'version-head' }, ...sorted.map(runTitle))
 	const summary = el('div')
 	const nav = el('nav', { class: 'detail-tabs', 'aria-label': 'Findings by kind' })
 	const status = el('p', { class: 'hint' })
 	const body = el('div')
-	const panel = el('div', { class: 'version-panel' }, summary, nav, status, body)
+	const panel = el('div', { class: 'version-panel' }, head, summary, nav, status, body)
+	const heights = new ResizeObserver(() => {
+		panel.style.setProperty('--version-head', `${head.offsetHeight}px`)
+		panel.style.setProperty('--version-top', `${head.offsetHeight + nav.offsetHeight}px`)
+	})
+	heights.observe(head)
+	heights.observe(nav)
 	const built = new Map()
 	let loaded = null
 	let wanted = null
@@ -1915,7 +1952,7 @@ function versionPanel(base, runs) {
 		Promise.all(sorted.map(loadRun)).then((data) => {
 			const counts = new Map(DETAIL_TABS.map((t) => [t.id, data.reduce((n, d) => n + (d.tabs.get(t.id) ?? []).filter((f) => f.level === 'warn').length, 0)]))
 			loaded = { data, counts }
-			summary.replaceChildren(...sorted.map((m, i) => runSummary(m, data[i])))
+			summary.replaceChildren(...sorted.map((m, i) => runSummary(m, data[i], sorted.length > 1)))
 			nav.replaceChildren(...DETAIL_TABS.map((t) => {
 				const n = counts.get(t.id)
 				return el('a', { href: `${base}/${t.id}`, class: 'detail-tab', 'data-tab': t.id, title: plural(n, 'warning') },
