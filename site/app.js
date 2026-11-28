@@ -24,6 +24,8 @@ let security
 // The repository and tag of each App Store release that is no release asset,
 // by app id.
 let sources
+// The forge of each host, by which the source tree of a tag is linked.
+let forges
 // Whether the database holds the security results, which only a private copy
 // of the site has.
 let securityResults = false
@@ -306,6 +308,19 @@ function exappMark(u) {
 
 function tagSources() {
 	return Map.groupBy(query('SELECT id, version, host, repo, tag FROM sources'), (r) => r.id)
+}
+
+function hostForges() {
+	return new Map(query('SELECT host, forge FROM forges').map((r) => [r.host, r.forge]))
+}
+
+// The path of the source tree at a ref, by forge. A host whose forge the
+// database does not name gets no link rather than a wrong one.
+const TREE_PATHS = { github: 'tree', gitea: 'src/tag', gitlab: '-/tree', bitbucket: 'src' }
+
+function treeUrl(r, tag) {
+	const path = TREE_PATHS[forges.get(r.host)]
+	return path ? `${repoUrl(r)}/${path}/${encodeURIComponent(tag)}${r.subdir ? `/${r.subdir}` : ''}` : null
 }
 
 function sourceOf(id, version) {
@@ -1805,13 +1820,14 @@ function runName(m) {
 	return isServerRun(m) ? `${SERVER_REPO} ${m.server}` : `${appOf(m) ?? m.dir} ${m.version ?? ''}`
 }
 
-// The source a run measured: an app the server ships at the ref of that
+// The source tree a run measured: an app the server ships at the ref of that
 // server release, any other at its tag. A run of a tarball alone names none.
 function sourceRef(m) {
 	if (m.shipped_repo) {
 		return { href: shippedSource({ repo: m.shipped_repo, app_ref: m.shipped_ref, path: m.shipped_path }), title: `${m.shipped_ref} of ${m.shipped_repo}` }
 	}
-	return m.tag && m.host ? { href: `${repoUrl(m)}/releases/tag/${encodeURIComponent(m.tag)}`, title: `${m.tag} of ${slugOf(m)}` } : null
+	const href = m.tag && m.host ? treeUrl(m, m.tag) : null
+	return href ? { href, title: `${m.tag} of ${slugOf(m)}` } : null
 }
 
 function runTitle(m) {
@@ -2386,6 +2402,7 @@ function initOverview() {
 	shipped = shippedSince()
 	security = securityOverdue()
 	sources = tagSources()
+	forges = hostForges()
 	const repos = Map.groupBy(projectRepos(), (r) => r.project)
 	const apps = Map.groupBy(projectApps(), (r) => r.project)
 	appProjects = new Map([...apps.values()].flat().map((a) => [a.id, a.project]))

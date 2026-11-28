@@ -21,6 +21,9 @@
 # repositories as well, and gh-stats-site-db puts each into the project of its
 # app, so the start page links it and counts its stars.
 #
+# Of every host besides GitHub it found a repository on, it names the forge, by
+# which the site links the source tree a run measured.
+#
 # The result replaces its previous copy, from which an app whose releases are
 # unchanged is taken over until it is due again.
 
@@ -85,7 +88,8 @@ it is downloaded from another one, to <file>, as JSON:
     "developed": [{"id": "mail", "host": "github.com", "repo": "nextcloud/mail",
                    "tag": "v5.13.2", "checked": "2026-11-01T00:20:00Z",
                    "download": "https://github.com/nextcloud-releases/mail/...",
-                   "candidates": ["github.com/nextcloud/mail"]}, ...]
+                   "candidates": ["github.com/nextcloud/mail"]}, ...],
+    "forges": {"git.example.org": "gitlab", "codeberg.org": "gitea", ...}
   }
 
 Under apps, a release counts when it is stable, no nightly and a version of
@@ -150,6 +154,13 @@ confirmed before with the same download and does not confirm now keeps its
 previous entry. A run checks for SOURCES_CONFIRM_SECONDS seconds; the apps it
 does not reach keep the entry they had and are checked by the next run. The
 time is UTC throughout.
+
+Under forges, every host besides GitHub that an entry under apps or developed
+names has the forge its API answers as: gitea for Forgejo and Gitea, which
+answer /api/v1/version, gitlab for GitLab, which answers the project of the
+entry under /api/v4/projects, and bitbucket for bitbucket.org, whose API at
+api.bitbucket.org answers the repository. A host that answers as none of them
+keeps the forge of the previous <file>, and is left out without one.
 
 Options:
   -f, --file <file>  the file to read and replace (default: next to APPSTORE_CACHE)
@@ -422,8 +433,36 @@ while IFS= read -r app; do
 	printf '%s\n' "$entry" >> "$tmp/developed_entries"
 done < "$tmp/developed"
 
+# == Forges ==
+# forge_of <host> <repo>: the forge whose API the host answers with, asked for
+# the repository of an entry where the API names projects; nothing when it
+# answers as none.
+forge_of() {
+	local host="$1" repo="$2"
+	if curl -fsS --retry "$RETRIES" --max-time 30 "https://$host/api/v1/version" 2>/dev/null \
+		| "$JQ" -e '.version | strings' >/dev/null 2>&1; then
+		echo gitea
+	elif curl -fsS --retry "$RETRIES" --max-time 30 "https://$host/api/v4/projects/$("$JQ" -rn --arg r "$repo" '$r | @uri')" 2>/dev/null \
+		| "$JQ" -e '.id | numbers' >/dev/null 2>&1; then
+		echo gitlab
+	elif [ "$host" = bitbucket.org ] && curl -fsS --retry "$RETRIES" --max-time 30 "https://api.bitbucket.org/2.0/repositories/$repo" 2>/dev/null \
+		| "$JQ" -e '.type == "repository"' >/dev/null 2>&1; then
+		echo bitbucket
+	fi
+}
+
+: > "$tmp/forges"
+while IFS=$'\t' read -r host repo; do
+	forge="$(forge_of "$host" "$repo")"
+	# A host that is down for a run keeps the forge it answered before.
+	[ -n "$forge" ] || forge="$("$JQ" -r --arg host "$host" '.forges[$host]? // empty' "$prev")"
+	[ -z "$forge" ] || printf '%s\t%s\n' "$host" "$forge" >> "$tmp/forges"
+done < <("$JQ" -rs 'map(select(.repo != null and .host != "github.com")) | group_by(.host)[] | [.[0].host, .[0].repo] | @tsv' \
+	"$tmp/entries" "$tmp/developed_entries")
+
 # == Result ==
-"$JQ" -n --arg scanned "$now" --slurpfile apps "$tmp/entries" --slurpfile developed "$tmp/developed_entries" \
-	'{scanned: $scanned, apps: ($apps | sort_by(.id | ascii_downcase)), developed: ($developed | sort_by(.id | ascii_downcase))}' > "$SOURCES_FILE.new"
+"$JQ" -n --arg scanned "$now" --slurpfile apps "$tmp/entries" --slurpfile developed "$tmp/developed_entries" --rawfile forges "$tmp/forges" \
+	'{scanned: $scanned, apps: ($apps | sort_by(.id | ascii_downcase)), developed: ($developed | sort_by(.id | ascii_downcase)),
+	  forges: ($forges | split("\n") | map(select(. != "") | split("\t") | {key: .[0], value: .[1]}) | from_entries)}' > "$SOURCES_FILE.new"
 mv "$SOURCES_FILE.new" "$SOURCES_FILE"
-echo "sources written to $SOURCES_FILE ($("$JQ" -r '"\([.apps[] | select(.repo != null)] | length) of \(.apps | length) apps resolved"' "$SOURCES_FILE"), $resolved resolved, $kept taken over; $("$JQ" -r '"\([.developed[] | select(.repo != null)] | length) of \(.developed | length) development repositories confirmed"' "$SOURCES_FILE"), $confirmed checked, $kept_developed taken over, $waiting waiting for the next run)"
+echo "sources written to $SOURCES_FILE ($("$JQ" -r '"\([.apps[] | select(.repo != null)] | length) of \(.apps | length) apps resolved"' "$SOURCES_FILE"), $resolved resolved, $kept taken over; $("$JQ" -r '"\([.developed[] | select(.repo != null)] | length) of \(.developed | length) development repositories confirmed"' "$SOURCES_FILE"), $confirmed checked, $kept_developed taken over, $waiting waiting for the next run; $("$JQ" -r '.forges | length' "$SOURCES_FILE") forges)"
