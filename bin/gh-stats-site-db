@@ -270,7 +270,9 @@ heads="$(dirname "$(readlink -f "$0")")/../site/tool-heads.json"
 # releases and into apps.json when it has others; an app with both would be in
 # both, and the entry of apps.json, read first, describes it.
 catalogue="$(mktemp)"
-trap 'rm -f "$catalogue"' EXIT
+tools="$(mktemp)"
+parts_dir="$(mktemp -d)"
+trap 'rm -rf "$catalogue" "$tools" "$parts_dir"' EXIT
 jq -n --arg appapi "$APPSTORE_APPAPI_CACHE" '
 	[inputs | (input_filename == $appapi) as $exapp
 	 | (if type == "array" then . else .data end)[] | . + {exapp: $exapp}]
@@ -356,6 +358,9 @@ links_sql="$(jq -r "$release_url"'
 # endpoints its public result lists are kept, for the endpoint table.
 # q doubles each quote with split and join, not gsub: a finding may quote a
 # whole minified line of megabytes, and gsub takes minutes and gigabytes on it.
+# fjoin joins the halves of a long array and then the two strings: join of jq
+# 1.7 takes over a minute on the 70,000 lines of one finding of
+# integrity-check, fjoin under a second.
 result_fields='{"build-audit": ["toolchain", "frameworks", "libraries", "defects"], "php-compat": ["range", "next"], "integrity-check": ["state", "certificate", "files"], "l10n-lint": ["strings"], "php-audit": ["endpoints"]}'
 finding_fields='{"deps-audit": {"licence-summary": ["licences"]}, "php-audit": {"route-unreferenced": ["places"]}}'
 tables_jq='
@@ -382,7 +387,9 @@ tables_jq='
 			(.endpointList // empty | {endpoints: .})
 		else empty end;'
 sql_defs='
-	def q: "'\''" + (split("'\''") | join("'\'''\''")) + "'\''";
+	def fjoin($s): if length <= 64 then join($s)
+		else (length / 2 | floor) as $h | (.[:$h] | fjoin($s)) + $s + (.[$h:] | fjoin($s)) end;
+	def q: "'\''" + (split("'\''") | fjoin("'\'''\''")) + "'\''";
 	def v: if . == null then "NULL" elif type == "string" then q
 		elif type == "boolean" then (if . then "1" else "0" end) else tostring end;
 	# A finding of a lint target that checks only the form of a file: every rule
@@ -394,26 +401,42 @@ sql_defs='
 		or ($tool == "lint-web" and .linter == "Stylelint");'
 # A result jq cannot read is left out and named in unreadable. sql_of runs jq
 # with its arguments over all files of the array files at once and adds what it
-# prints to results_sql; only when that fails is each file read alone, and a run
+# prints to the parts; only when that fails is each file read alone, and a run
 # that fails on files jq reads is a defect here and stops the build.
-results_sql=''
+# What jq prints goes into part files that the database
+# reads in the order of parts, not through shell variables, and jq runs on every
+# CPU: sql_of splits files into one run of consecutive files per CPU, and the
+# gzipped results are read one per CPU at a time. Writing each run to a part of
+# its own keeps the order of the rows that of a single run.
 unreadable=()
+parts=()
+cpus="$(nproc)"
+new_part() {
+	part="$parts_dir/${#parts[@]}.sql"
+	parts+=("$part")
+}
 readable() {
 	case "$1" in *.gz) gzip -dc "$1" | jq empty ;; *) jq empty "$1" ;; esac 2>/dev/null
 }
 sql_of() {
-	local f="" out="" ok=()
+	local f="" i=0 per=0 failed=0 ok=() pids=()
 	[ ${#files[@]} -gt 0 ] || return 0
-	if ! out="$(printf '%s\0' "${files[@]}" | xargs -0 -r jq "$@")"; then
-		for f in "${files[@]}"; do
-			if readable "$f"; then ok+=("$f"); else unreadable+=("${f#"$results/"}"); fi
-		done
-		[ ${#ok[@]} -lt ${#files[@]} ] || die "jq failed on results it reads"
-		[ ${#ok[@]} -gt 0 ] || return 0
-		out="$(printf '%s\0' "${ok[@]}" | xargs -0 -r jq "$@")"
-	fi
-	results_sql+="
-$out"
+	per=$(( (${#files[@]} + cpus - 1) / cpus ))
+	for (( i = 0; i < ${#files[@]}; i += per )); do
+		new_part
+		printf '%s\0' "${files[@]:i:per}" | xargs -0 -r jq "$@" >"$part" &
+		pids+=($!)
+	done
+	for i in "${pids[@]}"; do wait "$i" || failed=1; done
+	[ $failed -eq 1 ] || return 0
+	parts=("${parts[@]:0:${#parts[@]}-${#pids[@]}}")
+	for f in "${files[@]}"; do
+		if readable "$f"; then ok+=("$f"); else unreadable+=("${f#"$results/"}"); fi
+	done
+	[ ${#ok[@]} -lt ${#files[@]} ] || die "jq failed on results it reads"
+	[ ${#ok[@]} -gt 0 ] || return 0
+	new_part
+	printf '%s\0' "${ok[@]}" | xargs -0 -r jq "$@" >"$part"
 }
 if [ -n "$results" ]; then
 	mapfile -d '' files < <(find "$results" -name summary.json -print0)
@@ -430,7 +453,7 @@ if [ -n "$results" ]; then
 		(if $name == "" then input_filename else $name end | ltrimstr($root) | rtrimstr(".gz") | rtrimstr(".json")) as $p
 		| ($p | sub("/[^/]*$"; "") | q) as $dir | ($p | sub("^.*/"; "")) as $tool | . as $r
 		| ((.findings? // []) | to_entries[]
-		  | "INSERT INTO findings VALUES (\($dir), \($tool | q), \(.key + 1), \(.value.level | v), \(.value.id | v), \([.value.lines[]? | if type == "object" then .lines[]? else . end] | join("\n") | q), \(.value.file | v), \(.value.line | v), \(.value.covers | if . == null then null else tojson end | v), \(.value.count | v), \(.value.folds | if . == null then null else tojson end | v), \(.value | style($tool) | v));"),
+		  | "INSERT INTO findings VALUES (\($dir), \($tool | q), \(.key + 1), \(.value.level | v), \(.value.id | v), \([.value.lines[]? | if type == "object" then .lines[]? else . end] | fjoin("\n") | q), \(.value.file | v), \(.value.line | v), \(.value.covers | if . == null then null else tojson end | v), \(.value.count | v), \(.value.folds | if . == null then null else tojson end | v), \(.value | style($tool) | v));"),
 		  (($fields[$tool] // [])[] as $f | ($r | objects | .[$f]) // empty
 		  | "INSERT INTO fields VALUES (\($dir), \($tool | q), \($f | q), \(tojson | q));"),
 		  ((.findings? // [])[] as $x | ($finding_fields[$tool][$x.id]? // [])[] as $f | $x[$f] // empty
@@ -438,16 +461,29 @@ if [ -n "$results" ]; then
 		  ($r | objects | table($tool) | "INSERT INTO tables VALUES (\($dir), \($tool | q), \(tojson | q));")'
 	mapfile -d '' files < <(find "$results" -name '*.json' ! -name summary.json ! -name reuse.json ! -path '*/release/*' -print0)
 	sql_of -r --arg root "$results/" --arg name '' --argjson fields "$result_fields" --argjson finding_fields "$finding_fields" "$findings_jq"
-	while IFS= read -r -d '' f; do
-		if sql="$(gzip -dc "$f" | jq -r --arg root "$results/" --arg name "$f" --argjson fields "$result_fields" --argjson finding_fields "$finding_fields" "$findings_jq")"; then
-			results_sql+="
-$sql"
-		elif readable "$f"; then
+	# A part whose jq fails is marked with a .failed file beside it and emptied
+	# once all have run.
+	mapfile -d '' files < <(find "$results" -name '*.json.gz' ! -name reuse.json.gz ! -path '*/release/*' -print0)
+	gz_parts=()
+	running=0
+	for f in ${files[@]+"${files[@]}"}; do
+		new_part
+		gz_parts+=("$part")
+		gzip -dc "$f" | jq -r --arg root "$results/" --arg name "$f" --argjson fields "$result_fields" --argjson finding_fields "$finding_fields" "$findings_jq" >"$part" \
+			|| : >"$part.failed" &
+		running=$((running + 1))
+		[ $running -lt "$cpus" ] || { wait -n; running=$((running - 1)); }
+	done
+	wait
+	for i in ${files[@]+"${!files[@]}"}; do
+		f="${files[i]}" part="${gz_parts[i]}"
+		[ -e "$part.failed" ] || continue
+		if readable "$f"; then
 			die "jq failed on $f, which it reads"
-		else
-			unreadable+=("${f#"$results/"}")
 		fi
-	done < <(find "$results" -name '*.json.gz' ! -name reuse.json.gz ! -path '*/release/*' -print0)
+		unreadable+=("${f#"$results/"}")
+		: >"$part"
+	done
 	# The run of nextcloud/server at a server release is the REUSE project of
 	# every app of its tree. Of its reuse.json only the files below apps/ that
 	# fail are kept, one row per file and problem: no copyright or no licensing
@@ -464,13 +500,13 @@ $sql"
 	for f in "$results"/nextcloud/server/server-*/*/reuse.json "$results"/nextcloud/server/server-*/*/reuse.json.gz; do
 		[ -f "$f" ] || continue
 		d="${f%/*}"
-		if sql="$(case "$f" in *.gz) gzip -dc "$f" ;; *) cat "$f" ;; esac | jq -r --arg dir "${d#"$results/"}" "$reuse_jq")"; then
-			results_sql+="
-$sql"
-		elif readable "$f"; then
-			die "jq failed on $f, which it reads"
-		else
+		new_part
+		if ! case "$f" in *.gz) gzip -dc "$f" ;; *) cat "$f" ;; esac | jq -r --arg dir "${d#"$results/"}" "$reuse_jq" >"$part"; then
+			if readable "$f"; then
+				die "jq failed on $f, which it reads"
+			fi
 			unreadable+=("${f#"$results/"}")
+			: >"$part"
 		fi
 	done
 fi
@@ -569,10 +605,27 @@ trap 'rm -rf "$out" "$findings" "$samples_dir" "$tables_dir"' ERR
 # The key of a repository in the projects: owner/repo on GitHub, host/owner/repo
 # elsewhere, lowercase.
 host_k="CASE WHEN host = 'github.com' THEN '' ELSE host || '/' END"
+# The links of the catalogue compare owner and repository with releases without
+# case, which the primary key of releases cannot serve: each of those lookups
+# would scan every release of the host, minutes in all. The index exists only
+# around the two statements that look up releases that way, so it changes the
+# plan of no other one and is not shipped.
+release_index_create="CREATE INDEX releases_nocase ON releases (host, owner COLLATE NOCASE, repo COLLATE NOCASE, tag, prerelease, pre_tag);"
+release_index_drop="DROP INDEX releases_nocase;"
+results_read=""
+for part in ${parts[@]+"${parts[@]}"}; do
+	results_read+=".read '$part'"$'\n'
+done
 sq="'"
 "$SQLITE" -bail "$DB" "VACUUM INTO '${out//$sq/$sq$sq}'"
 "$SQLITE" -bail "$out" "PRAGMA journal_mode = DELETE" >/dev/null
 "$SQLITE" -bail "$out" <<SQL
+-- The sqlite3 of Debian and Ubuntu overwrites every page it frees, which costs
+-- the drop of the findings and the samples close to a minute; the closing
+-- VACUUM leaves no free page anyway. The pragma prints the value it sets.
+.output /dev/null
+PRAGMA secure_delete = OFF;
+.output stdout
 DROP TABLE etags;
 
 -- GitHub, Forgejo and Gitea resolve owner and repository names without case,
@@ -670,10 +723,12 @@ ALTER TABLE releases ADD COLUMN pre INTEGER;
 ALTER TABLE releases ADD COLUMN mismatch INTEGER;
 CREATE TEMP TABLE sv AS SELECT host, owner, repo, rtag, $nver AS nver, stable
   FROM (SELECT host, owner, repo, tag AS rtag, version AS tag, ($store_stable) AS stable FROM links);
+$release_index_create
 UPDATE releases SET store = x.stable, vkey = x.vkey
   FROM (SELECT host, owner, repo, rtag, max(stable) AS stable, max($vkey) AS vkey FROM sv GROUP BY host, owner, repo, rtag) x
  WHERE x.host = releases.host AND x.owner = releases.owner COLLATE NOCASE AND x.repo = releases.repo COLLATE NOCASE
    AND x.rtag = releases.tag;
+$release_index_drop
 UPDATE releases SET pre = CASE WHEN store IS NULL THEN prerelease OR pre_tag ELSE NOT store END,
                     mismatch = store IS 1 AND (prerelease OR pre_tag);
 
@@ -975,7 +1030,7 @@ CREATE TEMP TABLE reuse_files (
   PRIMARY KEY (dir, path, problem)
 ) WITHOUT ROWID;
 BEGIN;
-$results_sql
+$results_read
 COMMIT;
 DELETE FROM measurements WHERE EXISTS (
   SELECT 1 FROM measurements m
@@ -1213,9 +1268,11 @@ COMMIT;
 ALTER TABLE app_releases ADD COLUMN stable INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE app_releases ADD COLUMN mismatch INTEGER NOT NULL DEFAULT 0;
 UPDATE app_releases SET stable = coalesce(($store_stable), 0);
+$release_index_create
 UPDATE app_releases SET mismatch = 1 WHERE stable AND EXISTS (
   SELECT 1 FROM links l JOIN releases r ON l.host = r.host AND l.owner = r.owner AND l.repo = r.repo AND l.tag = r.tag
    WHERE l.id = app_releases.id AND l.version = app_releases.version AND (r.prerelease OR r.pre_tag));
+$release_index_drop
 
 -- changelog-lint judges a release by what the App Store shows of it. A shipped
 -- app reaches its users with the server release, whose changes, those of the
@@ -1362,6 +1419,10 @@ SELECT (SELECT count(*) FROM findings) AS findings, sum(writefile('${findings//$
                         'style', CASE WHEN f.style THEN json('true') END) AS o
        FROM findings f WHERE f.dir = m.dir ORDER BY f.tool, f.n)))) AS bytes
   FROM measurements m;
+-- The tools of those files, for the check of the tool heads below.
+CREATE TEMP TABLE exported_tools AS
+SELECT writefile('${tools//$sq/$sq$sq}', (SELECT group_concat(tool, char(10)) FROM (
+  SELECT DISTINCT f.tool FROM findings f WHERE f.dir IN (SELECT dir FROM measurements)))) AS bytes;
 DROP TABLE findings;
 -- The runs of runtime-audit and install-test of a measurement, as the JSON
 -- object by tool the tables of the run block read; only a measurement with one
@@ -1411,7 +1472,7 @@ SQL
 # site/tool-heads.json gives it, titled by what the tool checks, so a tool
 # without an entry there, or an entry without a title, fails the build instead
 # of showing up without one.
-missing="$(find "$findings" -name '*.json' -print0 | xargs -0 -r jq -r '.[].tool | sub("^security/"; "")' | sort -u \
+missing="$(jq -R -r 'sub("^security/"; "")' "$tools" | sort -u \
 	| jq -R -r --slurpfile heads "$heads" 'select(. as $t | $heads[0][$t].title // "" | . == "")' | paste -sd ' ')"
 if [ -n "$missing" ]; then
 	rm -rf "$out" "$findings" "$samples_dir" "$tables_dir"
