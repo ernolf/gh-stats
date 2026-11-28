@@ -20,8 +20,8 @@ let ui
 let plot
 let pending = false
 
-// A ticked line stands for its line; a release ticked on the page of its app
-// is a series of its own beside them.
+// A row of a line is ticked by its line, a release on the page of its app by
+// its tag.
 function pickKey(row) {
 	return row.release ? `${row.project}\n\n${row.tag}` : `${row.project}\n${row.line}`
 }
@@ -67,19 +67,14 @@ function rows(sql, params = {}) {
 	return out
 }
 
-// What a ticked row stands for in the charts: its release, all releases of its
-// line, or all releases of its project; a ticked release stands for itself.
-// Rows that stand for the same item count once.
+// A ticked row stands for the release it shows, never for its line or its
+// project: the downloads of several releases add up every update of the same
+// users. Rows that show the same release count once.
 function chartItems() {
 	const items = new Map()
 	for (const row of picked.values()) {
-		const scope = row.release ? 'release' : ui.scope.value
-		const item = scope === 'project'
-			? { key: row.project, label: row.name, project: row.project }
-			: scope === 'line'
-				? { key: `${row.project}\n${row.line}`, label: `${row.name} line ${lineLabel(row.line)}`, project: row.project, line: row.line }
-				: { key: `${row.project}\n\n${row.tag}`, label: `${row.name} ${row.tag}`, project: row.project, tag: row.tag }
-		items.set(item.key, item)
+		const key = `${row.project}\n\n${row.tag}`
+		items.set(key, { key, label: `${row.name} ${row.tag}`, project: row.project, tag: row.tag })
 	}
 	return [...items.values()]
 }
@@ -87,29 +82,15 @@ function chartItems() {
 // The counted assets of an item, each with the group it is split into and when
 // the sampling of its repository began.
 function assetsOf(item, split) {
-	const where = ['j.project = $project']
-	const params = { $project: item.project }
-	if (item.tag !== undefined) {
-		where.push('s.tag = $tag')
-		params.$tag = item.tag
-	}
-	if (item.line !== undefined) {
-		where.push(`s.tag IN (
-			SELECT r.tag FROM releases r JOIN projects k ON r.host = k.host AND r.owner = k.owner AND r.repo = k.repo
-			 WHERE k.project = $project AND substr(r.vkey, 1, 12) = $line)`)
-		params.$line = item.line
-	}
-	const group = split === 'release'
-		? 's.tag'
-		: split === 'asset'
-			? `CASE ${ASSETS.map((e) => `WHEN s.asset GLOB '*.${e}' THEN '${e}'`).join(' ')} END`
-			: "''"
+	const group = split === 'asset'
+		? `CASE ${ASSETS.map((e) => `WHEN s.asset GLOB '*.${e}' THEN '${e}'`).join(' ')} END`
+		: "''"
 	return {
 		cte: `assets AS (
 			SELECT DISTINCT s.host, s.owner, s.repo, s.tag, s.asset, ${group} AS g, j.first
 			  FROM samples s JOIN projects j ON s.host = j.host AND s.owner = j.owner AND s.repo = j.repo
-			 WHERE ${where.join(' AND ')} AND (${assetFilter}))`,
-		params,
+			 WHERE j.project = $project AND s.tag = $tag AND (${assetFilter}))`,
+		params: { $project: item.project, $tag: item.tag },
 	}
 }
 
@@ -425,14 +406,16 @@ function drawChips() {
 	ui.all.checked = false
 	ui.all.disabled = !picked.size
 	ui.chips.replaceChildren(...[...picked.values()].map((row) => {
-		const name = row.release ? `${row.name} ${row.tag}` : `${row.name} line ${lineLabel(row.line)}`
+		const name = `${row.name} ${row.tag}`
 		const remove = el('button', { type: 'button', 'aria-label': `Remove ${name}` }, '×')
 		remove.addEventListener('click', () => {
 			row.pick.checked = false
 			pickRow(row, false)
 		})
-		return el('span', { class: 'chip' }, row.release ? name : `${row.name} ${lineLabel(row.line)}`, remove)
+		return el('span', { class: 'chip' }, name, remove)
 	}))
+	// The tick of a line on the page of an app follows the ticks of its releases.
+	document.getElementById('app-charts')?.sync?.()
 }
 
 // Several controls can change in one task, as when the selection is cleared;
@@ -495,11 +478,11 @@ function initCharts() {
 	const id = (name) => document.getElementById(name)
 	ui = {
 		hint: id('charts-hint'), status: id('charts-status'), body: id('charts-body'), chips: id('picked'), note: id('history-note'),
-		scope: id('scope'), split: id('split'), figure: id('share-figure'), shares: id('shares'),
+		split: id('split'), figure: id('share-figure'), shares: id('shares'),
 		measure: id('measure'), bucket: id('bucket'), range: id('range'), style: id('style'), log: id('log'),
 		history: id('history'), all: id('pick-all'),
 	}
-	for (const c of [ui.scope, ui.split, ui.figure, ui.measure, ui.bucket, ui.range, ui.style, ui.log]) {
+	for (const c of [ui.split, ui.figure, ui.measure, ui.bucket, ui.range, ui.style, ui.log]) {
 		c.addEventListener('change', drawCharts)
 	}
 	id('unpick').addEventListener('click', unpickAll)

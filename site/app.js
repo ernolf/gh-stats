@@ -2206,9 +2206,10 @@ function serverMasterRows() {
 	return [tr]
 }
 
-// The tick puts the row into the charts.
+// The tick puts the release the row shows into the charts, never its whole
+// line: the downloads of several releases add up every update of the same users.
 function lineRows(row, first, stars = el('td', { class: 'num' })) {
-	row.pick = el('input', { type: 'checkbox', 'aria-label': `Chart ${row.name} line ${lineLabel(row.line)}` })
+	row.pick = el('input', { type: 'checkbox', 'aria-label': `Chart ${row.name} ${row.tag}` })
 	row.pick.addEventListener('change', () => pickRow(row, row.pick.checked))
 	const [abandonedTd, checks, sec] = lineChecks(row)
 	row.tr = el('tr', {}, el('td', { class: 'pick' }, row.pick), first, ...releaseCells(row, measured.get(`${row.project}\n${row.tag}`)), stars, ...abandonedTd, ...sec, checks, el('td'))
@@ -2756,7 +2757,7 @@ function initScrolling() {
 // window or with the site data blocked, the page starts from the defaults.
 const SETTINGS_KEY = 'gh-stats.settings'
 const OVERVIEW_SETTINGS = ['filter', 'invert', 'since', 'category', 'nc', 'nc-newer', 'store', 'enabled', 'source']
-const CHART_SETTINGS = ['scope', 'split', 'share-figure', 'measure', 'bucket', 'range', 'style', 'log']
+const CHART_SETTINGS = ['split', 'share-figure', 'measure', 'bucket', 'range', 'style', 'log']
 
 // The defaults are those the page is written with.
 function controlDefault(c) {
@@ -2863,10 +2864,10 @@ function route() {
 	shownPage.show(version, tab)
 }
 
-// The charts move into the page and chart all lines of the project of the
-// app, or of the server; the start page gets its charts and ticks back when
-// the page closes. The page of an app ticks its lines and releases in its own
-// table, so it needs no Clear to take them out.
+// The charts move into the page and chart the newest release of each line of
+// the project of the app, or of the server; the start page gets its charts and
+// ticks back when the page closes. The page of an app ticks its releases in its
+// own table, so it needs no Clear to take them out.
 function openPage(base, id) {
 	const charts = document.getElementById('charts')
 	document.getElementById('overview').prepend(charts)
@@ -3130,10 +3131,16 @@ function versionKey(version) {
 // of its repository, joined by the version the tag names, else by the version
 // key the catalogue links the tag under, as v.387 for 3.87.0, beside the
 // downloads gh-stats sampled. The rows group by release line, the newest
-// release of a line on its row and the older ones folded below. A line with
-// downloads and every tag have a tick, a tag being a series of its own; the
-// ticks of the lines are returned, for the page to chart them all. Requests
-// are offered for the apps that are measured, which no ExApp is.
+// release of a line on its row and the older ones folded below. Every tag has
+// a tick and is a series of its own: the downloads of a line add up every
+// update of the same users, which says nothing. The tick of a line with
+// downloads ticks the releases of the line with the most downloads, as many as
+// the chart shows, and clears the others; once they are all ticked, it clears
+// them. It shows partly ticked when other releases of the line are ticked. The
+// tick of the newest release of each line is returned, for the page to open
+// with those, and sync brings the ticks of the lines in step with those of the
+// releases. Requests are offered for the apps that are measured, which no
+// ExApp is.
 function appReleases(id, releases, requests, lines) {
 	const runs = measurementsByVersion(id)
 	const asks = Boolean(requests && issues)
@@ -3190,8 +3197,8 @@ function appReleases(id, releases, requests, lines) {
 		const pick = el('td', { class: 'pick' })
 		if (t) {
 			const box = el('input', { type: 'checkbox', 'aria-label': `Chart ${name} ${t.tag}` })
-			const tick = { project, line: r.key.slice(0, 12), tag: t.tag, name, release: true, pick: box }
-			box.addEventListener('change', () => pickRow(tick, box.checked))
+			r.tick = { project, line: r.key.slice(0, 12), tag: t.tag, name, release: true, pick: box }
+			box.addEventListener('change', () => pickRow(r.tick, box.checked))
 			pick.append(box)
 			r.marks = s ? [] : restrictionMark(own ?? [])
 			r.tagCell = el('td', { class: 'tag' }, t.tag, ...r.marks)
@@ -3211,23 +3218,61 @@ function appReleases(id, releases, requests, lines) {
 	}
 
 	const ticks = []
+	const syncs = []
 	const bodies = [...Map.groupBy(rows, (r) => r.key.slice(0, 12))].flatMap(([line, group]) => {
 		const label = el('td', {}, lineLabel(line))
 		const pick = el('td', { class: 'pick' })
-		const l = shown.get(line)
-		if (l) {
-			const box = el('input', { type: 'checkbox', 'aria-label': `Chart ${l.name} line ${lineLabel(line)}` })
-			// The row of the start page keeps its own tick.
-			const tick = { ...l, pick: box }
-			box.addEventListener('change', () => pickRow(tick, box.checked))
-			pick.append(box)
-			ticks.push(tick)
-		}
 		const [head, ...older] = group
 		const p = {
 			main: el('tbody', {}, rowOf(head, sampled ? [pick, label] : [label])),
 			older: el('tbody', { class: 'older', hidden: '' },
 				...older.map((r) => rowOf(r, sampled ? [el('td', { class: 'pick' }), el('td')] : [el('td')]))),
+		}
+		const own = group.flatMap((r) => (r.tick ? [r.tick] : []))
+		ticks.push(...own.slice(0, 1))
+		const l = shown.get(line)
+		if (l && own.length) {
+			const box = el('input', { type: 'checkbox', 'aria-label': `Chart the releases of ${l.name} line ${lineLabel(line)} with the most downloads` })
+			// Ranking needs the samples of the project, so a line with no more
+			// releases than the chart shows takes them all without it.
+			let chosen = own.length > MAX_SERIES ? null : new Set(own)
+			const full = () => Boolean(chosen) && own.every((t) => t.pick.checked === chosen.has(t))
+			const sync = () => {
+				box.checked = full()
+				box.indeterminate = !box.checked && own.some((t) => t.pick.checked)
+			}
+			const apply = () => {
+				chosen ??= new Set(own.map((t) => [t, releaseFigures(project, t.tag).total])
+					.sort((a, b) => b[1] - a[1]).slice(0, MAX_SERIES).map(([t]) => t))
+				for (const t of own) {
+					if (t.pick.checked !== chosen.has(t)) {
+						t.pick.checked = chosen.has(t)
+						pickRow(t, t.pick.checked)
+					}
+				}
+				sync()
+			}
+			box.addEventListener('change', () => {
+				if (!box.checked) {
+					for (const t of own.filter((x) => x.pick.checked)) {
+						t.pick.checked = false
+						pickRow(t, false)
+					}
+					sync()
+					return
+				}
+				const loading = chosen ? null : samplesOf([project])
+				if (!loading) {
+					apply()
+					return
+				}
+				box.disabled = true
+				loading.then(apply, () => sync()).finally(() => {
+					box.disabled = false
+				})
+			})
+			pick.append(box)
+			syncs.push(sync)
 		}
 		fill(head)
 		if (older.length) {
@@ -3263,7 +3308,7 @@ function appReleases(id, releases, requests, lines) {
 			styleHead(), ...securityHead(), el('th', { title: 'warnings the ncmake analysers found in the release' }, 'Checks'),
 			...(asks ? [el('th', { title: 'opens a prefilled issue that asks for the measurement' }, 'Request')] : []))),
 		...bodies)
-	return { table, ticks }
+	return { table, ticks, sync: () => syncs.forEach((f) => f()) }
 }
 
 // The newest release of each major, the newest pre-release of a major without
@@ -3441,9 +3486,10 @@ function appPage(id, lines) {
 		el('p', { class: 'summary', lang: summary.lang, dir: 'auto' }, summary.value),
 		el('ul', { class: 'app-links' }, ...links.map((a) => el('li', {}, a))),
 		factList(facts))
-	const { table, ticks } = appReleases(id, releases, !d.exapp, lines)
+	const { table, ticks, sync } = appReleases(id, releases, !d.exapp, lines)
 	const charts = el('div', { id: 'app-charts' })
 	charts.ticks = ticks
+	charts.sync = sync
 	page.append(
 		el('h3', {}, 'Description'),
 		el('div', { class: 'description', lang: desc.lang, dir: 'auto' }, ...description(desc.value)),
