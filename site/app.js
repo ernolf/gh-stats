@@ -973,6 +973,13 @@ function releaseCells(fig, runs = []) {
 	return [
 		el('td', { class: 'tag' }, releaseLink(fig), ...(fig.mismatch ? [mismatchMark()] : []), ...restrictionMark(runs)),
 		el('td', {}, ncRange(fig.nc)),
+		...figureCells(fig),
+	]
+}
+
+// When a release was published, and its downloads in total and in each period.
+function figureCells(fig) {
+	return [
 		el('td', {}, date(fig.published)),
 		...['total', ...PERIODS.map((d) => 'd' + d)].map((k) => fig[k] === null
 			? el('td', { class: 'num na', title: 'the release or its sampling is younger than this period' })
@@ -2858,7 +2865,8 @@ function route() {
 
 // The charts move into the page and chart all lines of the project of the
 // app, or of the server; the start page gets its charts and ticks back when
-// the page closes.
+// the page closes. The page of an app ticks its lines and releases in its own
+// table, so it needs no Clear to take them out.
 function openPage(base, id) {
 	const charts = document.getElementById('charts')
 	document.getElementById('overview').prepend(charts)
@@ -2871,9 +2879,10 @@ function openPage(base, id) {
 	shownPage = pageView(base, id === null ? serverPage(lines) : appPage(id, lines), id === null ? serverVersions() : appVersions(id))
 	body.replaceChildren(...shownPage.nodes)
 	const holder = document.getElementById('app-charts')
+	document.getElementById('unpick').hidden = Boolean(holder?.ticks)
 	if (lines && holder) {
 		holder.append(charts)
-		swapPicks(lines)
+		swapPicks(holder.ticks ?? lines)
 	} else {
 		swapPicks([])
 	}
@@ -2885,6 +2894,7 @@ function openPage(base, id) {
 
 function closeApp() {
 	document.getElementById('overview').prepend(document.getElementById('charts'))
+	document.getElementById('unpick').hidden = false
 	swapPicks(startTicks)
 	startTicks = null
 	shownPage = null
@@ -3077,36 +3087,183 @@ function appRepos(project) {
 				: [])))
 }
 
-// Requests are offered for the apps that are measured, which no ExApp is.
-function appReleases(id, requests) {
-	const runs = measurementsByVersion(id)
-	const releases = query(`
+function appStoreReleases(id) {
+	return query(`
 		SELECT version, created, nightly, stable, mismatch, licenses, platform, php, databases, php_extensions
 		  FROM app_releases WHERE id = $id ORDER BY created DESC`, { $id: id })
+}
+
+// The licence of an app rarely changes. Where it did, each licence is named
+// with the releases it covers, in the order of their versions.
+function licenceLines(releases) {
+	const spans = []
+	const ordered = [...releases].sort((a, b) => compareVersions(a.version.split('-')[0], b.version.split('-')[0])
+		|| (a.created ?? '').localeCompare(b.created ?? ''))
+	for (const r of ordered) {
+		const licence = JSON.parse(r.licenses).join(', ')
+		if (!licence) {
+			continue
+		}
+		if (spans.at(-1)?.licence === licence) {
+			spans.at(-1).last = r.version
+		} else {
+			spans.push({ licence, first: r.version, last: r.version })
+		}
+	}
+	if (spans.length < 2) {
+		return spans.map((s) => s.licence)
+	}
+	return spans.map((s, i) => el('div', {}, i === 0
+		? `${s.licence} until ${s.last}`
+		: i === spans.length - 1 ? `${s.licence} since ${s.first}` : `${s.licence} from ${s.first} until ${s.last}`))
+}
+
+// The version key gh-stats-site-db sorts tags by, of a version the App Store
+// lists: from the first digit on, without a -prerelease suffix, the first four
+// components zero-padded to six digits each.
+function versionKey(version) {
+	const parts = tagVersion(version).split('-')[0].split('.')
+	return [0, 1, 2, 3].map((i) => String(parseInt(parts[i], 10) || 0).padStart(6, '0').slice(-6)).join('')
+}
+
+// The releases of an app, a row each: its release in the App Store and the tag
+// of its repository, joined by the version the tag names, else by the version
+// key the catalogue links the tag under, as v.387 for 3.87.0, beside the
+// downloads gh-stats sampled. The rows group by release line, the newest
+// release of a line on its row and the older ones folded below. A line with
+// downloads and every tag have a tick, a tag being a series of its own; the
+// ticks of the lines are returned, for the page to chart them all. Requests
+// are offered for the apps that are measured, which no ExApp is.
+function appReleases(id, releases, requests, lines) {
+	const runs = measurementsByVersion(id)
 	const asks = Boolean(requests && issues)
 	const newest = releases.filter((r) => r.stable && !r.nightly && STABLE.test(r.version))
 		.map((r) => r.version).sort(compareVersions).at(-1)
 		?? releases.filter((r) => !r.nightly && PRERELEASE.test(r.version))
 			.sort((a, b) => compareVersions(a.version.split('-')[0], b.version.split('-')[0]) || a.created.localeCompare(b.created))
 			.at(-1)?.version
-	return el('table', {},
-		el('thead', {}, el('tr', {}, ...['Version', 'Released', 'Channel', 'Nextcloud', 'PHP', 'Databases', 'PHP extensions', 'Licences']
-			.map((h) => el('th', {}, h)), styleHead(), ...securityHead(), el('th', { title: 'warnings the ncmake analysers found in the release' }, 'Checks'),
-		...(asks ? [el('th', { title: 'opens a prefilled issue that asks for the measurement' }, 'Request')] : []))),
-		...releases.map((r) => {
-			const [checks, sec] = checksCell(runs.get(r.version))
-			return el('tbody', {}, el('tr', {},
-				el('td', {}, r.version, ...restrictionMark(runs.get(r.version) ?? []), ...sourceMark(sourceOf(id, r.version))),
-				el('td', {}, (r.created ?? '').slice(0, 10)),
-				el('td', {}, r.nightly ? 'nightly' : r.stable ? 'stable' : 'pre-release', ...(r.mismatch ? [mismatchMark()] : [])),
-				el('td', {}, ncRange(r.platform)),
-				el('td', {}, r.php ?? ''),
-				el('td', { class: 'wrap' }, specList(r.databases)),
-				el('td', { class: 'wrap' }, specList(r.php_extensions)),
-				el('td', {}, JSON.parse(r.licenses).join(', ')),
-				...sec, checks,
-				...(asks ? [requestCell(id, r, runs.get(r.version), newest)] : [])))
-		}))
+	const sampled = Boolean(lines)
+	const project = lines?.[0].project
+	const name = lines?.[0].name
+	// No tag is empty, so this gives every tag of the project.
+	const tags = sampled ? otherReleases(project, '') : []
+	const free = new Set(tags)
+	const rows = releases.map((s) => ({ store: s, key: versionKey(s.version), time: s.created ? Date.parse(s.created) / 1000 : 0 }))
+	for (const match of [(r, t) => tagVersion(t.tag) === r.store.version, (r, t) => t.vkey === r.key]) {
+		for (const r of rows.filter((x) => !x.tag)) {
+			r.tag = tags.find((t) => free.has(t) && match(r, t))
+			free.delete(r.tag)
+		}
+	}
+	rows.push(...[...free].map((t) => ({ tag: t, key: t.vkey, time: t.published })))
+	rows.sort((a, b) => b.key.localeCompare(a.key) || b.time - a.time)
+
+	const shown = new Map((lines ?? []).map((l) => [l.line, l]))
+	const known = new Map((lines ?? []).map((l) => [l.tag, l]))
+	// The figures of the release a line row of the start page shows come with
+	// the database; those of any other tag need the samples of the project.
+	const fill = (r) => {
+		if (!r.figures || r.filled) {
+			return
+		}
+		r.filled = true
+		const show = () => {
+			const fig = known.get(r.tag.tag)
+			const loading = fig ? null : samplesOf([project])
+			if (loading) {
+				r.figures.replaceChildren('Loading the downloads.')
+				loading.then(show, (e) => loadFailed(r.figures, 'The downloads of this project', e, show))
+				return
+			}
+			const f = fig ?? releaseFigures(project, r.tag.tag)
+			r.tagCell.replaceChildren(releaseLink(f), ...(!r.store && f.mismatch ? [mismatchMark()] : []), ...r.marks)
+			r.figures.replaceWith(...figureCells(f))
+		}
+		show()
+	}
+	// A tag the App Store does not list carries the marks of its measurement.
+	const rowOf = (r, first) => {
+		const s = r.store
+		const t = r.tag
+		const own = s ? runs.get(s.version) : measured.get(`${project}\n${t.tag}`)
+		const [checks, sec] = checksCell(own)
+		const pick = el('td', { class: 'pick' })
+		if (t) {
+			const box = el('input', { type: 'checkbox', 'aria-label': `Chart ${name} ${t.tag}` })
+			const tick = { project, line: r.key.slice(0, 12), tag: t.tag, name, release: true, pick: box }
+			box.addEventListener('change', () => pickRow(tick, box.checked))
+			pick.append(box)
+			r.marks = s ? [] : restrictionMark(own ?? [])
+			r.tagCell = el('td', { class: 'tag' }, t.tag, ...r.marks)
+			r.figures = el('td', { class: 'hint', colspan: String(2 + PERIODS.length) })
+		}
+		return el('tr', {}, ...first, ...(sampled ? [pick] : []),
+			el('td', {}, ...(s ? [s.version, ...restrictionMark(own ?? []), ...sourceMark(sourceOf(id, s.version))] : [])),
+			el('td', {}, (s?.created ?? '').slice(0, 10)),
+			el('td', {}, ...(s ? [s.nightly ? 'nightly' : s.stable ? 'stable' : 'pre-release', ...(s.mismatch ? [mismatchMark()] : [])] : [])),
+			el('td', {}, ncRange(s ? s.platform : t.nc)),
+			el('td', {}, s?.php ?? ''),
+			el('td', { class: 'wrap' }, s ? specList(s.databases) : ''),
+			el('td', { class: 'wrap' }, s ? specList(s.php_extensions) : ''),
+			...(sampled ? (t ? [r.tagCell, r.figures] : Array.from({ length: 3 + PERIODS.length }, () => el('td'))) : []),
+			abandonedCell(abandoned(own), null, own), ...codeCells(setCode({}, own), null, own), ...sec, checks,
+			...(asks ? [s ? requestCell(id, s, own, newest) : el('td', { class: 'request-col' })] : []))
+	}
+
+	const ticks = []
+	const bodies = [...Map.groupBy(rows, (r) => r.key.slice(0, 12))].flatMap(([line, group]) => {
+		const label = el('td', {}, lineLabel(line))
+		const pick = el('td', { class: 'pick' })
+		const l = shown.get(line)
+		if (l) {
+			const box = el('input', { type: 'checkbox', 'aria-label': `Chart ${l.name} line ${lineLabel(line)}` })
+			// The row of the start page keeps its own tick.
+			const tick = { ...l, pick: box }
+			box.addEventListener('change', () => pickRow(tick, box.checked))
+			pick.append(box)
+			ticks.push(tick)
+		}
+		const [head, ...older] = group
+		const p = {
+			main: el('tbody', {}, rowOf(head, sampled ? [pick, label] : [label])),
+			older: el('tbody', { class: 'older', hidden: '' },
+				...older.map((r) => rowOf(r, sampled ? [el('td', { class: 'pick' }), el('td')] : [el('td')]))),
+		}
+		fill(head)
+		if (older.length) {
+			const toggle = olderToggle(p, `app\n${id}\n${line}`)
+			toggle.textContent = `${older.length} older release${older.length > 1 ? 's' : ''}`
+			// The figures of the older releases are worked out once they show.
+			const open = () => older.forEach(fill)
+			toggle.addEventListener('click', open)
+			const reopen = toggle.reopen
+			toggle.reopen = () => {
+				open()
+				reopen()
+			}
+			label.append(' ', toggle)
+		}
+		return [p.main, p.older]
+	})
+	const table = el('table', {},
+		el('thead', {}, el('tr', {},
+			...(sampled ? [el('th', { class: 'pick' })] : []), el('th', {}, 'Line'), ...(sampled ? [el('th', { class: 'pick' })] : []),
+			el('th', { title: 'the version the App Store lists' }, 'Version'),
+			el('th', { title: 'when the release was uploaded to the App Store' }, 'Released'),
+			...['Channel', 'Nextcloud', 'PHP', 'Databases', 'PHP extensions'].map((h) => el('th', {}, h)),
+			...(sampled
+				? [el('th', { title: 'the tag of the release in its repository' }, 'Tag'),
+					el('th', { title: 'when the repository published the release' }, 'Published'),
+					...['Total', '1 day', '7 days', '30 days'].map((h) => el('th', { class: 'num' }, h))]
+				: []),
+			el('th', { class: 'num', title: 'abandoned packages that ship with the release, as deps-audit names them' }, 'Abandoned'),
+			el('th', { class: 'num', title: 'the endpoints the release offers, as php-audit counts them' }, 'Endpoints'),
+			el('th', { title: 'whether php-audit found the class loading optimized' }, 'Class loader'),
+			el('th', { class: 'num', title: 'routes that no code of the release refers to, as php-audit names them' }, 'Unreferenced routes'),
+			styleHead(), ...securityHead(), el('th', { title: 'warnings the ncmake analysers found in the release' }, 'Checks'),
+			...(asks ? [el('th', { title: 'opens a prefilled issue that asks for the measurement' }, 'Request')] : []))),
+		...bodies)
+	return { table, ticks }
 }
 
 // The newest release of each major, the newest pre-release of a major without
@@ -3223,8 +3380,8 @@ function appLines(lines) {
 }
 
 // What the App Store shows of the app, in the browser's language where the
-// app has it, the server releases that ship it, and below it the downloads
-// gh-stats sampled. A shipped app the App Store does not list has the page of
+// app has it, the server releases that ship it, and below it its releases with
+// the downloads gh-stats sampled. A shipped app the App Store does not list has the page of
 // its server releases alone, an app outside both that of its tags.
 function appPage(id, lines) {
 	const d = query('SELECT * FROM app_details WHERE id = $id', { $id: id })[0]
@@ -3263,10 +3420,13 @@ function appPage(id, lines) {
 		webLink(d.developer_docs, 'Developer documentation'),
 	].filter(Boolean)
 	const names = categories()
+	const releases = appStoreReleases(id)
+	const licence = licenceLines(releases)
 	const facts = [
 		['App id', el('code', {}, id)],
 		['Categories', JSON.parse(d.categories).map((c) => names.get(c) ?? c).join(', ')],
 		['Authors', ...authors],
+		...(licence.length ? [['Licence', ...licence]] : []),
 		['Rating', rating(d.rating_overall, d.rating_num_overall)],
 		['Recent rating', rating(d.rating_recent, d.rating_num_recent)],
 		['Added', (d.created ?? '').slice(0, 10)],
@@ -3281,6 +3441,9 @@ function appPage(id, lines) {
 		el('p', { class: 'summary', lang: summary.lang, dir: 'auto' }, summary.value),
 		el('ul', { class: 'app-links' }, ...links.map((a) => el('li', {}, a))),
 		factList(facts))
+	const { table, ticks } = appReleases(id, releases, !d.exapp, lines)
+	const charts = el('div', { id: 'app-charts' })
+	charts.ticks = ticks
 	page.append(
 		el('h3', {}, 'Description'),
 		el('div', { class: 'description', lang: desc.lang, dir: 'auto' }, ...description(desc.value)),
@@ -3289,11 +3452,10 @@ function appPage(id, lines) {
 				el('ul', { class: 'shots' }, ...shots.map((u, i) => el('li', {}, remoteImage(u, `Screenshot ${i + 1}`, true))))]
 			: []),
 		...shippedPart,
-		el('h3', {}, 'Releases in the App Store'),
-		el('div', { class: 'scroll' }, appReleases(id, !d.exapp)),
-		el('h3', {}, 'Downloads'),
+		el('h3', {}, 'Releases'),
+		el('div', { class: 'scroll' }, table),
 		...(lines
-			? [el('div', { class: 'scroll' }, appLines(lines)), el('div', { id: 'app-charts' })]
+			? [charts]
 			: [el('p', { class: 'hint' }, 'gh-stats samples no GitHub, Forgejo or Gitea repository of this app.')]))
 	return [page]
 }
