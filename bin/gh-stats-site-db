@@ -160,6 +160,11 @@ repository under its current name, plus
              maintainer that no measured release has fixed within the
              deadline, and the day it was reported; empty without
              security-overdue.json
+  forges     the forge of every host, by which the site links the source
+             tree a run measured: github for github.com, the forge
+             gh-nc-sources found by the API of the host, else gitea for the
+             other hosts of the projects and of the unlisted apps, which are
+             Forgejo or Gitea hosts
 
 Beside <file>, findings/<run dir>.json holds the findings of each run as a JSON
 array: the findings of the analysers with the file and line they name, the
@@ -219,9 +224,10 @@ Environment (or /etc/gh-stats/gh-stats.env):
                   (default: next to apps.json)
   UNLISTED_CACHE  the unlisted apps unlisted.json of gh-nc-unlisted, optional
                   (default: next to apps.json)
-  SOURCES_CACHE   the tags of the releases that are no release asset and the
-                  development repositories, sources.json of gh-nc-sources,
-                  optional (default: next to apps.json)
+  SOURCES_CACHE   the tags of the releases that are no release asset, the
+                  development repositories and the forges of their hosts,
+                  sources.json of gh-nc-sources, optional (default: next to
+                  apps.json)
   SECURITY_OVERDUE_CACHE  the overdue apps security-overdue.json of
                   gh-stats-security --overdue, optional (default: next to
                   apps.json)
@@ -531,7 +537,7 @@ if [ -r "$UNLISTED_CACHE" ]; then
 fi
 # The catalogue workflow keeps the repository and tag of each release that is no
 # release asset; without them the site marks none as measured from a tag.
-sources_sql='' developed_sql=''
+sources_sql='' developed_sql='' forges_sql=''
 if [ -r "$SOURCES_CACHE" ]; then
 	sources_sql="$(jq -r "$sql_defs"'
 		.apps[] | select(.repo != null) | . as $a | .versions[] | select(.tag != null)
@@ -542,6 +548,11 @@ if [ -r "$SOURCES_CACHE" ]; then
 	developed_sql="$(jq -r "$sql_defs"'
 		.developed[]? | select(.repo != null) | (.repo | split("/")) as $s
 		| "INSERT OR IGNORE INTO developed VALUES (\(.id | q), \(.host | q), \($s[:-1] | join("/") | q), \($s[-1] | q), \(.tag | q));"
+	' "$SOURCES_CACHE")"
+	# The forge of each host the API answered for; a host without one is linked
+	# by what the other tables say of it, or not at all.
+	forges_sql="$(jq -r "$sql_defs"'
+		.forges // {} | to_entries[] | "INSERT OR IGNORE INTO forges VALUES (\(.key | q), \(.value | q));"
 	' "$SOURCES_CACHE")"
 fi
 # The security workflow keeps the apps whose reported finding is overdue;
@@ -1178,6 +1189,12 @@ CREATE TABLE security_overdue (
   id       TEXT NOT NULL PRIMARY KEY,
   reported TEXT NOT NULL
 ) WITHOUT ROWID;
+-- The forge of each host, by which the site links the source tree of a tag;
+-- the paths differ between forges.
+CREATE TABLE forges (
+  host  TEXT NOT NULL PRIMARY KEY,
+  forge TEXT NOT NULL
+) WITHOUT ROWID;
 BEGIN;
 $catalogue_sql
 $categories_sql
@@ -1185,6 +1202,13 @@ $shipped_sql
 $unlisted_sql
 $sources_sql
 $overdue_sql
+$forges_sql
+INSERT OR IGNORE INTO forges VALUES ('github.com', 'github');
+-- The sampler samples only hosts that answer as Forgejo or Gitea, the
+-- catalogue apps of the projects are downloaded from their releases, and
+-- gh-nc-unlisted lists apps only on such hosts.
+INSERT OR IGNORE INTO forges SELECT DISTINCT host, 'gitea' FROM projects WHERE host <> 'github.com';
+INSERT OR IGNORE INTO forges SELECT DISTINCT host, 'gitea' FROM unlisted WHERE host <> 'github.com';
 COMMIT;
 ALTER TABLE app_releases ADD COLUMN stable INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE app_releases ADD COLUMN mismatch INTEGER NOT NULL DEFAULT 0;
@@ -1380,7 +1404,8 @@ UNION ALL SELECT 'shipped', count(DISTINCT id) FROM shipped
 UNION ALL SELECT 'unlisted', count(*) FROM unlisted
 UNION ALL SELECT 'sources', count(*) FROM sources
 UNION ALL SELECT 'developed', count(*) FROM developed
-UNION ALL SELECT 'security_overdue', count(*) FROM security_overdue;
+UNION ALL SELECT 'security_overdue', count(*) FROM security_overdue
+UNION ALL SELECT 'forges', count(*) FROM forges;
 SQL
 # Every tool the site shows a section for opens it with the head that
 # site/tool-heads.json gives it, titled by what the tool checks, so a tool
