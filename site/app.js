@@ -1823,11 +1823,18 @@ function toolSection(tab, tool, fs, m, d, notes) {
 			: []))
 }
 
-// A run in a tab: its head, which stays in view while its findings scroll
-// beneath it, with the way back to its start once it sticks, what the tab
-// puts ahead, and the sections of the tools, the security targets first, those
-// with a security finding before the others, then the tools with warnings.
-function runSection(tab, m, d) {
+// The name of a run and when it started, which tells the runs of a version
+// apart in a tab; the full title stands above the tabs.
+function runLabel(m) {
+	return el('h4', {}, isServerRun(m) ? `${SERVER_REPO} ${m.server}` : `${appOf(m) ?? m.dir} ${m.version ?? ''}`, ...runStarted(m))
+}
+
+// A run in a tab: what the tab puts ahead and the sections of the tools, the
+// security targets first, those with a security finding before the others,
+// then the tools with warnings. Of a version with several runs each opens with
+// its label, which stays in view while its findings scroll beneath it, with
+// the way back to its start once it sticks; a single run needs none.
+function runSection(tab, m, d, several) {
 	const rank = ([tool, fs]) => (tool.startsWith('security/') ? 4 : 0) + (fs.some((f) => f.level === 'warn' && f.security && !f.counted_in) ? 2 : 0)
 		+ (fs.some((f) => f.level === 'warn' && !f.style) ? 1 : 0)
 	const fs = d.tabs.get(tab.id) ?? []
@@ -1844,23 +1851,25 @@ function runSection(tab, m, d) {
 	}
 	tools.sort((a, b) => rank(b) - rank(a))
 	const run = el('section', { class: 'run' })
-	const start = el('button', { type: 'button', class: 'quiet', title: 'Back to the start of this run', hidden: '' }, '↑ Start')
-	const head = el('div', { class: 'run-head' }, el('div', { class: 'run-actions' }, start), runTitle(m))
-	start.addEventListener('click', () => {
-		scrollBy(0, run.getBoundingClientRect().top - parseFloat(getComputedStyle(head).top))
-	})
+	if (several) {
+		const start = el('button', { type: 'button', class: 'quiet', title: 'Back to the start of this run', hidden: '' }, '↑ Start')
+		const head = el('div', { class: 'run-head' }, el('div', { class: 'run-actions' }, start), runLabel(m))
+		start.addEventListener('click', () => {
+			scrollBy(0, run.getBoundingClientRect().top - parseFloat(getComputedStyle(head).top))
+		})
+		run.append(head)
+	}
 	const ahead = [...(tab.head?.(m, d) ?? []), ...(tab.lead?.(m, d) ?? [])]
-	run.append(head, ...ahead, ...tools.map(([tool, xs]) => toolSection(tab, tool, xs, m, d, notes)),
+	run.append(...ahead, ...tools.map(([tool, xs]) => toolSection(tab, tool, xs, m, d, notes)),
 		...(tools.length || ahead.length ? [] : [el('p', { class: 'hint' }, `No ${tab.label} findings in this run.`)]))
 	return run
 }
 
 // What a run says of the release as a whole, ahead of the tabs of its
-// findings: the badges, the defects of the toolchain, the release diff and the
-// licences of the shipped packages. Of several runs each says it under its
-// title.
-function runSummary(m, d, titled) {
-	return el('div', { class: 'run-summary' }, ...(titled ? [runTitle(m)] : []),
+// findings: its title, the badges, the defects of the toolchain, the release
+// diff and the licences of the shipped packages.
+function runSummary(m, d) {
+	return el('div', { class: 'run-summary' }, runTitle(m),
 		...badgeRow(d.fs, d.fields), ...defectNotes(d.fields), ...(isServerRun(m) ? [] : [el('p', {}, diffText(m))]), ...licenceText(d.fields))
 }
 
@@ -1892,7 +1901,7 @@ function versionPanel(base, runs) {
 			}
 		}
 		if (!built.has(tab.id)) {
-			built.set(tab.id, el('div', {}, ...sorted.map((m, i) => runSection(tab, m, loaded.data[i]))))
+			built.set(tab.id, el('div', {}, ...sorted.map((m, i) => runSection(tab, m, loaded.data[i], sorted.length > 1))))
 		}
 		body.replaceChildren(built.get(tab.id))
 	}
@@ -1906,7 +1915,7 @@ function versionPanel(base, runs) {
 		Promise.all(sorted.map(loadRun)).then((data) => {
 			const counts = new Map(DETAIL_TABS.map((t) => [t.id, data.reduce((n, d) => n + (d.tabs.get(t.id) ?? []).filter((f) => f.level === 'warn').length, 0)]))
 			loaded = { data, counts }
-			summary.replaceChildren(...sorted.map((m, i) => runSummary(m, data[i], sorted.length > 1)))
+			summary.replaceChildren(...sorted.map((m, i) => runSummary(m, data[i])))
 			nav.replaceChildren(...DETAIL_TABS.map((t) => {
 				const n = counts.get(t.id)
 				return el('a', { href: `${base}/${t.id}`, class: 'detail-tab', 'data-tab': t.id, title: plural(n, 'warning') },
