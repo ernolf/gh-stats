@@ -35,6 +35,7 @@ export default [
 				DOMPurify: 'readonly',
 				drawCharts: 'readonly',
 				initCharts: 'readonly',
+				MAX_SERIES: 'readonly',
 				picked: 'readonly',
 				pickRow: 'readonly',
 				swapPicks: 'readonly',
