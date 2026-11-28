@@ -20,8 +20,14 @@ let ui
 let plot
 let pending = false
 
+// A ticked line stands for its line; a release ticked on the page of its app
+// is a series of its own beside them.
+function pickKey(row) {
+	return row.release ? `${row.project}\n\n${row.tag}` : `${row.project}\n${row.line}`
+}
+
 function pickRow(row, on) {
-	const key = `${row.project}\n${row.line}`
+	const key = pickKey(row)
 	if (on) {
 		picked.set(key, row)
 	} else {
@@ -41,7 +47,7 @@ function swapPicks(next) {
 	picked.clear()
 	for (const row of next) {
 		row.pick.checked = true
-		picked.set(`${row.project}\n${row.line}`, row)
+		picked.set(pickKey(row), row)
 	}
 	drawCharts()
 	return before
@@ -62,14 +68,15 @@ function rows(sql, params = {}) {
 }
 
 // What a ticked row stands for in the charts: its release, all releases of its
-// line, or all releases of its project. Rows that stand for the same item count
-// once.
+// line, or all releases of its project; a ticked release stands for itself.
+// Rows that stand for the same item count once.
 function chartItems() {
 	const items = new Map()
 	for (const row of picked.values()) {
-		const item = ui.scope.value === 'project'
+		const scope = row.release ? 'release' : ui.scope.value
+		const item = scope === 'project'
 			? { key: row.project, label: row.name, project: row.project }
-			: ui.scope.value === 'line'
+			: scope === 'line'
 				? { key: `${row.project}\n${row.line}`, label: `${row.name} line ${lineLabel(row.line)}`, project: row.project, line: row.line }
 				: { key: `${row.project}\n\n${row.tag}`, label: `${row.name} ${row.tag}`, project: row.project, tag: row.tag }
 		items.set(item.key, item)
@@ -418,12 +425,13 @@ function drawChips() {
 	ui.all.checked = false
 	ui.all.disabled = !picked.size
 	ui.chips.replaceChildren(...[...picked.values()].map((row) => {
-		const remove = el('button', { type: 'button', 'aria-label': `Remove ${row.name} line ${lineLabel(row.line)}` }, '×')
+		const name = row.release ? `${row.name} ${row.tag}` : `${row.name} line ${lineLabel(row.line)}`
+		const remove = el('button', { type: 'button', 'aria-label': `Remove ${name}` }, '×')
 		remove.addEventListener('click', () => {
 			row.pick.checked = false
 			pickRow(row, false)
 		})
-		return el('span', { class: 'chip' }, `${row.name} ${lineLabel(row.line)}`, remove)
+		return el('span', { class: 'chip' }, row.release ? name : `${row.name} ${lineLabel(row.line)}`, remove)
 	}))
 }
 
