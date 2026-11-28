@@ -1,0 +1,645 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Absence\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "display-name-lookup",
+      "level": "warn",
+      "places": [
+        "lib/Activity/Provider.php:84",
+        "lib/Notification/Notifier.php:267",
+        "lib/Service/EmployeeJsonService.php:466",
+        "lib/Service/EmployeeListService.php:143",
+        "lib/Service/ImportService.php:127",
+        "lib/Service/LeaveImportService.php:311",
+        "lib/Service/NotificationService.php:395",
+        "lib/Service/ProfileService.php:172",
+        "lib/Service/RequestService.php:553"
+      ],
+      "lines": [
+        "9 places load a user with IUserManager::get() only to ask for the display name. IUserManager::getDisplayName(), there since Nextcloud 25, answers from a cache and loads no user.",
+        "  lib/Activity/Provider.php:84",
+        "  lib/Notification/Notifier.php:267",
+        "  lib/Service/EmployeeJsonService.php:466",
+        "  lib/Service/EmployeeListService.php:143",
+        "  lib/Service/ImportService.php:127",
+        "  lib/Service/LeaveImportService.php:311",
+        "  lib/Service/NotificationService.php:395",
+        "  lib/Service/ProfileService.php:172",
+        "  lib/Service/RequestService.php:553"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 6
+        }
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/EmployeeController.php:147 OCP\\Collaboration\\Collaborators\\ISearch::search(): deprecated since Nextcloud 35; Use filteredSearch instead.",
+        "lib/Controller/PageController.php:52 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Migration/ConvertConfigTypes.php:80 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Migration/Version1019Date20261118120000.php:61 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig"
+      ],
+      "lines": [
+        "4 uses in 4 files of the public API that is deprecated in Nextcloud 34 to 36. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/EmployeeController.php:147 OCP\\Collaboration\\Collaborators\\ISearch::search(): deprecated since Nextcloud 35; Use filteredSearch instead.",
+        "  lib/Controller/PageController.php:52 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Migration/ConvertConfigTypes.php:80 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Migration/Version1019Date20261118120000.php:61 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Migration/ConvertConfigTypes.php:78",
+        "lib/Migration/Version1013Date20261111130000.php:108",
+        "lib/Migration/Version1018Date20261117180000.php:134",
+        "lib/Migration/Version1021Date20261118120000.php:52",
+        "lib/Service/EmployeeJsonService.php:143",
+        "lib/Service/EmployeeService.php:152",
+        "lib/Service/EntitlementService.php:92",
+        "lib/Service/EntitlementService.php:193",
+        "lib/Service/EntitlementService.php:276",
+        "lib/Service/HolidayService.php:249",
+        "lib/Service/ImportService.php:150",
+        "lib/Service/LeaveImportService.php:169"
+      ],
+      "lines": [
+        "12 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Migration/ConvertConfigTypes.php:78",
+        "  lib/Migration/Version1013Date20261111130000.php:108",
+        "  lib/Migration/Version1018Date20261117180000.php:134",
+        "  lib/Migration/Version1021Date20261118120000.php:52",
+        "  lib/Service/EmployeeJsonService.php:143",
+        "  lib/Service/EmployeeService.php:152",
+        "  lib/Service/EntitlementService.php:92",
+        "  lib/Service/EntitlementService.php:193",
+        "  lib/Service/EntitlementService.php:276",
+        "  lib/Service/HolidayService.php:249",
+        "  lib/Service/ImportService.php:150",
+        "  lib/Service/LeaveImportService.php:169"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 9
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/CommentMailJob.php OCA\\Absence\\BackgroundJob\\CommentMailJob",
+        "lib/BackgroundJob/EncryptAttachmentsJob.php OCA\\Absence\\BackgroundJob\\EncryptAttachmentsJob"
+      ],
+      "lines": [
+        "2 timed jobs do not say whether they are time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/CommentMailJob.php OCA\\Absence\\BackgroundJob\\CommentMailJob",
+        "  lib/BackgroundJob/EncryptAttachmentsJob.php OCA\\Absence\\BackgroundJob\\EncryptAttachmentsJob"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version1019Date20261118120000.php:90 time()",
+        "lib/Migration/Version1024Date20261126150000.php:130 time()",
+        "lib/Service/NotificationService.php:230 new DateTime()",
+        "lib/Service/NotificationService.php:408 new DateTime()",
+        "lib/Service/NotificationService.php:448 new DateTime()",
+        "lib/Service/NotificationService.php:503 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 6 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Migration/Version1019Date20261118120000.php:90 time()",
+        "  lib/Migration/Version1024Date20261126150000.php:130 time()",
+        "  lib/Service/NotificationService.php:230 new DateTime()",
+        "  lib/Service/NotificationService.php:408 new DateTime()",
+        "  lib/Service/NotificationService.php:448 new DateTime()",
+        "  lib/Service/NotificationService.php:503 new DateTime()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version1011Date20261110120000.php:28 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version1011Date20261110120000.php:31 getColumn() on a table whose name is no constant",
+        "lib/Migration/Version1011Date20261110120000.php:32 getNotnull() on a table whose name is no constant",
+        "lib/Migration/Version1011Date20261110120000.php:33 setNotnull() on a table whose name is no constant",
+        "lib/Migration/Version1012Date20261111120000.php:92 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version1012Date20261111120000.php:95 getColumn() on a table whose name is no constant",
+        "lib/Migration/Version1012Date20261111120000.php:98 getType() on a table whose name is no constant",
+        "lib/Migration/Version1012Date20261111120000.php:98 setType() on a table whose name is no constant",
+        "lib/Migration/Version1012Date20261111120000.php:99 setLength() on a table whose name is no constant",
+        "lib/Migration/Version1012Date20261111120000.php:104 hasIndex() on a table whose name is no constant",
+        "lib/Migration/Version1012Date20261111120000.php:105 addUniqueIndex() on a table whose name is no constant",
+        "lib/Migration/Version1012Date20261111120000.php:105 addIndex() on a table whose name is no constant",
+        "lib/Migration/Version1014Date20261111140000.php:48 dropTable() on a table whose name is no constant",
+        "lib/Migration/Version1015Date20261117120000.php:41 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version1015Date20261117120000.php:45 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version1021Date20261118120000.php:39 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version1021Date20261118120000.php:42 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version1023Date20261118140000.php:35 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version1023Date20261118140000.php:36 dropColumn() on a table whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version1011Date20261110120000.php:28 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version1011Date20261110120000.php:31 getColumn() on a table whose name is no constant",
+        "  lib/Migration/Version1011Date20261110120000.php:32 getNotnull() on a table whose name is no constant",
+        "  lib/Migration/Version1011Date20261110120000.php:33 setNotnull() on a table whose name is no constant",
+        "  lib/Migration/Version1012Date20261111120000.php:92 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version1012Date20261111120000.php:95 getColumn() on a table whose name is no constant",
+        "  lib/Migration/Version1012Date20261111120000.php:98 getType() on a table whose name is no constant",
+        "  lib/Migration/Version1012Date20261111120000.php:98 setType() on a table whose name is no constant",
+        "  lib/Migration/Version1012Date20261111120000.php:99 setLength() on a table whose name is no constant",
+        "  lib/Migration/Version1012Date20261111120000.php:104 hasIndex() on a table whose name is no constant",
+        "  lib/Migration/Version1012Date20261111120000.php:105 addUniqueIndex() on a table whose name is no constant",
+        "  lib/Migration/Version1012Date20261111120000.php:105 addIndex() on a table whose name is no constant",
+        "  lib/Migration/Version1014Date20261111140000.php:48 dropTable() on a table whose name is no constant",
+        "  lib/Migration/Version1015Date20261117120000.php:41 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version1015Date20261117120000.php:45 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version1021Date20261118120000.php:39 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version1021Date20261118120000.php:42 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version1023Date20261118140000.php:35 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version1023Date20261118140000.php:36 dropColumn() on a table whose name is no constant"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 16
+        }
+      ]
+    }
+  ],
+  "endpoints": 63,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/",
+      "target": "OCA\\Absence\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/absence/api/attachments/{id}",
+      "target": "OCA\\Absence\\Controller\\AttachmentController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/attachments/{id}",
+      "target": "OCA\\Absence\\Controller\\AttachmentController::download",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/balance",
+      "target": "OCA\\Absence\\Controller\\BalanceController::mine",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/calendar",
+      "target": "OCA\\Absence\\Controller\\CalendarController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/coverage",
+      "target": "OCA\\Absence\\Controller\\CoverageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/employees",
+      "target": "OCA\\Absence\\Controller\\EmployeeController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/employees/{uid}/away",
+      "target": "OCA\\Absence\\Controller\\EmployeeController::away",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/employees/{uid}/balance",
+      "target": "OCA\\Absence\\Controller\\BalanceController::forEmployee",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/employees/json",
+      "target": "OCA\\Absence\\Controller\\EmployeeController::exportJson",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/absence/api/employees/json",
+      "target": "OCA\\Absence\\Controller\\EmployeeController::importJson",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/absence/api/employees/remind",
+      "target": "OCA\\Absence\\Controller\\EmployeeController::remind",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/employees/search",
+      "target": "OCA\\Absence\\Controller\\EmployeeController::search",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/employees/teammates",
+      "target": "OCA\\Absence\\Controller\\EmployeeController::teammates",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/entitlements",
+      "target": "OCA\\Absence\\Controller\\EntitlementController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/absence/api/entitlements",
+      "target": "OCA\\Absence\\Controller\\EntitlementController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/absence/api/entitlements/{id}",
+      "target": "OCA\\Absence\\Controller\\EntitlementController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/entitlements/{id}/history",
+      "target": "OCA\\Absence\\Controller\\EntitlementController::history",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/absence/api/entitlements/apply-default",
+      "target": "OCA\\Absence\\Controller\\EntitlementController::applyDefault",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/absence/api/entitlements/bulk",
+      "target": "OCA\\Absence\\Controller\\EntitlementController::bulk",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/entitlements/on-default",
+      "target": "OCA\\Absence\\Controller\\EntitlementController::onDefault",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/entitlements/pro-rata",
+      "target": "OCA\\Absence\\Controller\\EntitlementController::proRata",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/export/balances",
+      "target": "OCA\\Absence\\Controller\\ExportController::balances",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/export/requests",
+      "target": "OCA\\Absence\\Controller\\ExportController::requests",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/groups",
+      "target": "OCA\\Absence\\Controller\\EmployeeController::groups",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/holidays",
+      "target": "OCA\\Absence\\Controller\\HolidayController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/absence/api/holidays",
+      "target": "OCA\\Absence\\Controller\\HolidayController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/absence/api/holidays/{id}",
+      "target": "OCA\\Absence\\Controller\\HolidayController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/absence/api/holidays/{id}",
+      "target": "OCA\\Absence\\Controller\\HolidayController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/holidays/applying",
+      "target": "OCA\\Absence\\Controller\\HolidayController::applying",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/holidays/history",
+      "target": "OCA\\Absence\\Controller\\HolidayController::history",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/absence/api/holidays/import",
+      "target": "OCA\\Absence\\Controller\\HolidayController::import",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/holidays/regions",
+      "target": "OCA\\Absence\\Controller\\HolidayController::regions",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/absence/api/import/leave",
+      "target": "OCA\\Absence\\Controller\\ImportController::leave",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/leave-types",
+      "target": "OCA\\Absence\\Controller\\LeaveTypeController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/absence/api/leave-types",
+      "target": "OCA\\Absence\\Controller\\LeaveTypeController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/absence/api/leave-types/{id}",
+      "target": "OCA\\Absence\\Controller\\LeaveTypeController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/absence/api/leave-types/{id}",
+      "target": "OCA\\Absence\\Controller\\LeaveTypeController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/personal/config",
+      "target": "OCA\\Absence\\Controller\\ConfigController::personal",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/absence/api/personal/config",
+      "target": "OCA\\Absence\\Controller\\ConfigController::updatePersonal",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/profiles/{uid}",
+      "target": "OCA\\Absence\\Controller\\ProfileController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/absence/api/profiles/{uid}/contract",
+      "target": "OCA\\Absence\\Controller\\ProfileController::updateContract",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/reports/balances",
+      "target": "OCA\\Absence\\Controller\\ReportController::balances",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/reports/insights",
+      "target": "OCA\\Absence\\Controller\\ReportController::insights",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/reports/sick-leave",
+      "target": "OCA\\Absence\\Controller\\ReportController::sickLeave",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/reports/trends",
+      "target": "OCA\\Absence\\Controller\\ReportController::trends",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/requests",
+      "target": "OCA\\Absence\\Controller\\RequestController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/absence/api/requests",
+      "target": "OCA\\Absence\\Controller\\RequestController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/requests/{id}",
+      "target": "OCA\\Absence\\Controller\\RequestController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/absence/api/requests/{id}",
+      "target": "OCA\\Absence\\Controller\\RequestController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/absence/api/requests/{id}/approve",
+      "target": "OCA\\Absence\\Controller\\RequestController::approve",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/requests/{id}/attachments",
+      "target": "OCA\\Absence\\Controller\\AttachmentController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/absence/api/requests/{id}/attachments",
+      "target": "OCA\\Absence\\Controller\\AttachmentController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/absence/api/requests/{id}/cancel",
+      "target": "OCA\\Absence\\Controller\\RequestController::cancel",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/absence/api/requests/{id}/comments",
+      "target": "OCA\\Absence\\Controller\\RequestController::addComment",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/absence/api/requests/{id}/reject",
+      "target": "OCA\\Absence\\Controller\\RequestController::reject",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/session",
+      "target": "OCA\\Absence\\Controller\\ConfigController::session",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/settings",
+      "target": "OCA\\Absence\\Controller\\SettingsController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/absence/api/settings",
+      "target": "OCA\\Absence\\Controller\\SettingsController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/settings/employees-preview",
+      "target": "OCA\\Absence\\Controller\\SettingsController::employeesPreview",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/absence/api/settings/groups/{kind}",
+      "target": "OCA\\Absence\\Controller\\SettingsController::createGroup",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/absence/api/team/balances",
+      "target": "OCA\\Absence\\Controller\\BalanceController::team",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": null,
+      "path": "/remote.php/dav",
+      "target": "OCA\\Absence\\DAV\\CalendarPlugin",
+      "openapi": [],
+      "kind": "DAV"
+    }
+  ]
+}

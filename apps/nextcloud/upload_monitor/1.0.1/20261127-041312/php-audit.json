@@ -1,0 +1,93 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\UploadMonitor\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "implements-consumable",
+      "level": "warn",
+      "places": [
+        "lib/Db/Rule.php:30 OCA\\UploadMonitor\\Db\\Rule extends OCP\\AppFramework\\Db\\SnowflakeAwareEntity"
+      ],
+      "lines": [
+        "1 class implements or extends what the public API marks #[Consumable] in a major of Nextcloud 33 to 35: an app calls it, and the server may add a method to it in any release, which breaks a class that implements it.",
+        "  lib/Db/Rule.php:30 OCA\\UploadMonitor\\Db\\Rule extends OCP\\AppFramework\\Db\\SnowflakeAwareEntity"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/CheckInactivity.php OCA\\UploadMonitor\\BackgroundJob\\CheckInactivity"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/CheckInactivity.php OCA\\UploadMonitor\\BackgroundJob\\CheckInactivity"
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 4 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 4,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/upload_monitor/api/v1/rules",
+      "target": "OCA\\UploadMonitor\\Controller\\RuleController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/upload_monitor/api/v1/rules",
+      "target": "OCA\\UploadMonitor\\Controller\\RuleController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/upload_monitor/api/v1/rules/{id}",
+      "target": "OCA\\UploadMonitor\\Controller\\RuleController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/upload_monitor/api/v1/rules/{id}",
+      "target": "OCA\\UploadMonitor\\Controller\\RuleController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

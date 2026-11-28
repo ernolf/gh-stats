@@ -1,0 +1,836 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\RegiBase\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:43 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:43 injectFn()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/regibase/api/templates  regibase.api.templates  appinfo/routes.php:10 routes",
+        "POST /index.php/apps/regibase/api/templates  regibase.api.createtemplate  appinfo/routes.php:11 routes",
+        "GET /index.php/apps/regibase/api/collections  regibase.api.collections  appinfo/routes.php:20 routes",
+        "POST /index.php/apps/regibase/api/collections  regibase.api.createcollection  appinfo/routes.php:22 routes",
+        "PUT /index.php/apps/regibase/api/collection-order  regibase.api.reordercollections  appinfo/routes.php:23 routes",
+        "GET /index.php/apps/regibase/api/collection-categories  regibase.api.getcategories  appinfo/routes.php:24 routes",
+        "PUT /index.php/apps/regibase/api/collection-categories  regibase.api.putcategories  appinfo/routes.php:25 routes",
+        "PUT /index.php/apps/regibase/api/collection-category  regibase.api.putcategorymeta  appinfo/routes.php:26 routes",
+        "POST /index.php/apps/regibase/api/collections-hide  regibase.api.hidesecretcategories  appinfo/routes.php:27 routes",
+        "POST /index.php/apps/regibase/api/collections-reveal  regibase.api.revealsecretcollections  appinfo/routes.php:28 routes",
+        "GET /index.php/apps/regibase/api/users/search  regibase.api.searchusers  appinfo/routes.php:41 routes",
+        "POST /index.php/apps/regibase/api/records/delete  regibase.api.deleterecords  appinfo/routes.php:50 routes",
+        "POST /index.php/apps/regibase/api/transfer  regibase.api.transfer  appinfo/routes.php:59 routes",
+        "GET /index.php/apps/regibase/api/history  regibase.api.history  appinfo/routes.php:62 routes",
+        "POST /index.php/apps/regibase/api/history/undo  regibase.api.undo  appinfo/routes.php:66 routes",
+        "DELETE /index.php/apps/regibase/api/history  regibase.api.clearhistory  appinfo/routes.php:67 routes",
+        "POST /index.php/apps/regibase/api/import/analyze  regibase.api.importanalyze  appinfo/routes.php:70 routes",
+        "POST /index.php/apps/regibase/api/import/commit  regibase.api.importcommit  appinfo/routes.php:71 routes",
+        "POST /index.php/apps/regibase/api/images  regibase.api.uploadimage  appinfo/routes.php:74 routes",
+        "POST /index.php/apps/regibase/api/files  regibase.api.uploadfile  appinfo/routes.php:78 routes",
+        "POST /index.php/apps/regibase/api/files/resolve  regibase.api.resolvefilepath  appinfo/routes.php:79 routes",
+        "GET /index.php/apps/regibase/api/files/browse  regibase.api.browsefiles  appinfo/routes.php:80 routes",
+        "GET /index.php/apps/regibase/api/settings  regibase.api.getsettings  appinfo/routes.php:85 routes",
+        "PUT /index.php/apps/regibase/api/settings  regibase.api.updatesettings  appinfo/routes.php:86 routes",
+        "GET /index.php/apps/regibase/api/secrets/owned  regibase.api.ownedsecrets  appinfo/routes.php:89 routes",
+        "POST /index.php/apps/regibase/api/secrets/rekey  regibase.api.rekeysecrets  appinfo/routes.php:90 routes",
+        "POST /index.php/apps/regibase/api/backup  regibase.api.backup  appinfo/routes.php:91 routes",
+        "GET /index.php/apps/regibase/api/contacts/addressbooks  regibase.api.contactsaddressbooks  appinfo/routes.php:93 routes",
+        "POST /index.php/apps/regibase/api/contacts/import  regibase.api.contactsimport  appinfo/routes.php:94 routes",
+        "GET /index.php/apps/regibase/api/tables/list  regibase.api.tableslist  appinfo/routes.php:97 routes",
+        "POST /index.php/apps/regibase/api/tables/import  regibase.api.tablesimport  appinfo/routes.php:98 routes",
+        "GET /index.php/apps/regibase/api/ai/status  regibase.ai.status  appinfo/routes.php:102 routes",
+        "POST /index.php/apps/regibase/api/ai/ask  regibase.ai.ask  appinfo/routes.php:103 routes",
+        "POST /index.php/apps/regibase/api/ai/forget  regibase.ai.forget  appinfo/routes.php:105 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 34 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 5 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/regibase/api/templates  regibase.api.templates  appinfo/routes.php:10 routes",
+        "  POST /index.php/apps/regibase/api/templates  regibase.api.createtemplate  appinfo/routes.php:11 routes",
+        "  GET /index.php/apps/regibase/api/collections  regibase.api.collections  appinfo/routes.php:20 routes",
+        "  POST /index.php/apps/regibase/api/collections  regibase.api.createcollection  appinfo/routes.php:22 routes",
+        "  PUT /index.php/apps/regibase/api/collection-order  regibase.api.reordercollections  appinfo/routes.php:23 routes",
+        "  GET /index.php/apps/regibase/api/collection-categories  regibase.api.getcategories  appinfo/routes.php:24 routes",
+        "  PUT /index.php/apps/regibase/api/collection-categories  regibase.api.putcategories  appinfo/routes.php:25 routes",
+        "  PUT /index.php/apps/regibase/api/collection-category  regibase.api.putcategorymeta  appinfo/routes.php:26 routes",
+        "  POST /index.php/apps/regibase/api/collections-hide  regibase.api.hidesecretcategories  appinfo/routes.php:27 routes",
+        "  POST /index.php/apps/regibase/api/collections-reveal  regibase.api.revealsecretcollections  appinfo/routes.php:28 routes",
+        "  GET /index.php/apps/regibase/api/users/search  regibase.api.searchusers  appinfo/routes.php:41 routes",
+        "  POST /index.php/apps/regibase/api/records/delete  regibase.api.deleterecords  appinfo/routes.php:50 routes",
+        "  POST /index.php/apps/regibase/api/transfer  regibase.api.transfer  appinfo/routes.php:59 routes",
+        "  GET /index.php/apps/regibase/api/history  regibase.api.history  appinfo/routes.php:62 routes",
+        "  POST /index.php/apps/regibase/api/history/undo  regibase.api.undo  appinfo/routes.php:66 routes",
+        "  DELETE /index.php/apps/regibase/api/history  regibase.api.clearhistory  appinfo/routes.php:67 routes",
+        "  POST /index.php/apps/regibase/api/import/analyze  regibase.api.importanalyze  appinfo/routes.php:70 routes",
+        "  POST /index.php/apps/regibase/api/import/commit  regibase.api.importcommit  appinfo/routes.php:71 routes",
+        "  POST /index.php/apps/regibase/api/images  regibase.api.uploadimage  appinfo/routes.php:74 routes",
+        "  POST /index.php/apps/regibase/api/files  regibase.api.uploadfile  appinfo/routes.php:78 routes",
+        "  POST /index.php/apps/regibase/api/files/resolve  regibase.api.resolvefilepath  appinfo/routes.php:79 routes",
+        "  GET /index.php/apps/regibase/api/files/browse  regibase.api.browsefiles  appinfo/routes.php:80 routes",
+        "  GET /index.php/apps/regibase/api/settings  regibase.api.getsettings  appinfo/routes.php:85 routes",
+        "  PUT /index.php/apps/regibase/api/settings  regibase.api.updatesettings  appinfo/routes.php:86 routes",
+        "  GET /index.php/apps/regibase/api/secrets/owned  regibase.api.ownedsecrets  appinfo/routes.php:89 routes",
+        "  POST /index.php/apps/regibase/api/secrets/rekey  regibase.api.rekeysecrets  appinfo/routes.php:90 routes",
+        "  POST /index.php/apps/regibase/api/backup  regibase.api.backup  appinfo/routes.php:91 routes",
+        "  GET /index.php/apps/regibase/api/contacts/addressbooks  regibase.api.contactsaddressbooks  appinfo/routes.php:93 routes",
+        "  POST /index.php/apps/regibase/api/contacts/import  regibase.api.contactsimport  appinfo/routes.php:94 routes",
+        "  GET /index.php/apps/regibase/api/tables/list  regibase.api.tableslist  appinfo/routes.php:97 routes",
+        "  POST /index.php/apps/regibase/api/tables/import  regibase.api.tablesimport  appinfo/routes.php:98 routes",
+        "  GET /index.php/apps/regibase/api/ai/status  regibase.ai.status  appinfo/routes.php:102 routes",
+        "  POST /index.php/apps/regibase/api/ai/ask  regibase.ai.ask  appinfo/routes.php:103 routes",
+        "  POST /index.php/apps/regibase/api/ai/forget  regibase.ai.forget  appinfo/routes.php:105 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 31
+        }
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Command/Base.php:104 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Command/Base.php:105 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Command/Base.php:106 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/AiController.php:54 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/AiController.php:57 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:310 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:392 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/ApiController.php:393 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/ApiController.php:394 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/ApiController.php:395 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/ApiController.php:399 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:406 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:409 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:584 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:601 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:659 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:665 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:666 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:690 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:701 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:707 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:770 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:1194 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:1199 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:1207 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:1209 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:1210 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:1211 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:1249 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:1312 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:1319 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:1325 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:1344 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:1348 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:1351 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:1354 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:1357 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:1361 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:1412 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:1414 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:1415 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:1416 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:1421 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:1547 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:1625 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:1640 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ApiController.php:1907 OCP\\Collaboration\\Collaborators\\ISearch::search(): deprecated since Nextcloud 35; Use filteredSearch instead.",
+        "lib/Controller/PageController.php:42 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Db/ShareEntity.php:71 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Migration/Version000011Date20260730160000.php:62 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/AiService.php:109 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/AiService.php:123 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/AiTools.php:49 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/AiTools.php:81 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/AiTools.php:88 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/AiTools.php:94 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/AiTools.php:238 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/AiTools.php:250 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/AiTools.php:583 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/AiTools.php:587 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/AiTools.php:590 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/HistoryService.php:31 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/HistoryService.php:43 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ImageService.php:38 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ImageService.php:47 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ImageService.php:421 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "lib/Service/Kdf.php:24 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/RecordVersionService.php:33 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/RecordVersionService.php:39 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/RecordVersionService.php:45 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/RecordVersionService.php:51 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "lines": [
+        "71 uses in 12 files of the public API that is deprecated in Nextcloud 30 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Command/Base.php:104 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Command/Base.php:105 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Command/Base.php:106 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/AiController.php:54 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/AiController.php:57 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:310 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:392 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/ApiController.php:393 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/ApiController.php:394 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/ApiController.php:395 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/ApiController.php:399 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:406 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:409 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:584 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:601 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:659 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:665 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:666 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:690 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:701 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:707 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:770 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:1194 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:1199 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:1207 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:1209 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:1210 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:1211 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:1249 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:1312 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:1319 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:1325 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:1344 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:1348 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:1351 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:1354 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:1357 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:1361 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:1412 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:1414 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:1415 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:1416 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:1421 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:1547 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:1625 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:1640 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ApiController.php:1907 OCP\\Collaboration\\Collaborators\\ISearch::search(): deprecated since Nextcloud 35; Use filteredSearch instead.",
+        "  lib/Controller/PageController.php:42 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Db/ShareEntity.php:71 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Migration/Version000011Date20260730160000.php:62 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/AiService.php:109 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/AiService.php:123 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/AiTools.php:49 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/AiTools.php:81 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/AiTools.php:88 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/AiTools.php:94 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/AiTools.php:238 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/AiTools.php:250 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/AiTools.php:583 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/AiTools.php:587 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/AiTools.php:590 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/HistoryService.php:31 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/HistoryService.php:43 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ImageService.php:38 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ImageService.php:47 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ImageService.php:421 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "  lib/Service/Kdf.php:24 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/RecordVersionService.php:33 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/RecordVersionService.php:39 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/RecordVersionService.php:45 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/RecordVersionService.php:51 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 68
+        }
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Command/MasterKey.php:339",
+        "lib/Controller/ApiController.php:367",
+        "lib/Controller/ApiController.php:1603",
+        "lib/Listener/AccountDeletedListener.php:36",
+        "lib/Service/RegiBaseService.php:899"
+      ],
+      "lines": [
+        "5 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Command/MasterKey.php:339",
+        "  lib/Controller/ApiController.php:367",
+        "  lib/Controller/ApiController.php:1603",
+        "  lib/Listener/AccountDeletedListener.php:36",
+        "  lib/Service/RegiBaseService.php:899"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/ShareExpiry.php OCA\\RegiBase\\BackgroundJob\\ShareExpiry"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/ShareExpiry.php OCA\\RegiBase\\BackgroundJob\\ShareExpiry"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Db/ShareEntity.php:65 time()",
+        "lib/Service/AiTools.php:81 time()",
+        "lib/Service/AiTools.php:96 time()",
+        "lib/Service/RegiBaseService.php:507 new DateTimeImmutable()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 4 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Db/ShareEntity.php:65 time()",
+        "  lib/Service/AiTools.php:81 time()",
+        "  lib/Service/AiTools.php:96 time()",
+        "  lib/Service/RegiBaseService.php:507 new DateTimeImmutable()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/AiService.php:109 getAppValue()",
+        "lib/Service/AiService.php:123 setAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 2 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/AiService.php:109 getAppValue()",
+        "  lib/Service/AiService.php:123 setAppValue()"
+      ]
+    }
+  ],
+  "endpoints": 71,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/regibase/",
+      "target": "OCA\\RegiBase\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/ai/admin",
+      "target": "OCA\\RegiBase\\Controller\\AiController::saveAdmin",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/ai/ask",
+      "target": "OCA\\RegiBase\\Controller\\AiController::ask",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/ai/forget",
+      "target": "OCA\\RegiBase\\Controller\\AiController::forget",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/regibase/api/ai/result/{id}",
+      "target": "OCA\\RegiBase\\Controller\\AiController::result",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/regibase/api/ai/status",
+      "target": "OCA\\RegiBase\\Controller\\AiController::status",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/backup",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::backup",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/regibase/api/collection-categories",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::getCategories",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/regibase/api/collection-categories",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::putCategories",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/regibase/api/collection-category",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::putCategoryMeta",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/regibase/api/collection-order",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::reorderCollections",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/regibase/api/collections",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::collections",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/collections",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::createCollection",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/collections-hide",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::hideSecretCategories",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/collections-reveal",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::revealSecretCollections",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/regibase/api/collections/{id}",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::deleteCollection",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/regibase/api/collections/{id}",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::getCollection",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/index.php/apps/regibase/api/collections/{id}",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::updateCollection",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/collections/{id}/duplicate",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::duplicateCollection",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/regibase/api/collections/{id}/export",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::exportCollection",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/regibase/api/collections/{id}/fields",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::putFields",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/regibase/api/collections/{id}/record-order",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::reorderRecords",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/regibase/api/collections/{id}/records",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::records",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/collections/{id}/records",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::createRecord",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/collections/{id}/records/bulk",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::bulkUpdateRecords",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/regibase/api/collections/{id}/sessions",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::sessionVersions",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/collections/{id}/sessions/{vid}/restore",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::restoreSessionVersion",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/regibase/api/collections/{id}/shares",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::collectionShares",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/collections/{id}/shares",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::addShare",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/regibase/api/collections/{id}/shares/{uid}",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::removeShare",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/index.php/apps/regibase/api/collections/{id}/shares/{uid}",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::updateShare",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/collections/{id}/tables-export",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::tablesExport",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/collections/{id}/unlock",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::unlockShare",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/regibase/api/contacts/addressbooks",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::contactsAddressbooks",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/contacts/import",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::contactsImport",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/regibase/api/emoji/{lang}",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::getEmoji",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/files",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::uploadFile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/regibase/api/files/{id}",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::getFile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/regibase/api/files/{id}/meta",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::fileMeta",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/regibase/api/files/browse",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::browseFiles",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/files/resolve",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::resolveFilePath",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/regibase/api/history",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::clearHistory",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/regibase/api/history",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::history",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/history/undo",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::undo",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/regibase/api/i18n/{lang}",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::getI18n",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/images",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::uploadImage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/regibase/api/images/{id}",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::getImage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/import/analyze",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::importAnalyze",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/import/commit",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::importCommit",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/regibase/api/records/{id}",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::deleteRecord",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/regibase/api/records/{id}",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::getRecord",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/regibase/api/records/{id}",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::updateRecord",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/regibase/api/records/{id}/versions",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::recordVersions",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/regibase/api/records/{id}/versions/{number}",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::readRecordVersion",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/records/{id}/versions/restore",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::restoreRecordVersion",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/records/delete",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::deleteRecords",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/restore",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::restore",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/regibase/api/secrets/owned",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::ownedSecrets",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/secrets/rekey",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::rekeySecrets",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/regibase/api/settings",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::getSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/regibase/api/settings",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::updateSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/tables/import",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::tablesImport",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/regibase/api/tables/list",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::tablesList",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/regibase/api/templates",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::templates",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/templates",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::createTemplate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/regibase/api/templates/{id}",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::deleteTemplate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/regibase/api/templates/{id}",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::updateTemplate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/regibase/api/templates/builtin/{key}",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::resetBuiltinTemplate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/templates/builtin/{key}",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::editBuiltinTemplate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/regibase/api/transfer",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::transfer",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/regibase/api/users/search",
+      "target": "OCA\\RegiBase\\Controller\\ApiController::searchUsers",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

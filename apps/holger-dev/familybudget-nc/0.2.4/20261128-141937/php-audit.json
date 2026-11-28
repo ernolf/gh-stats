@@ -1,0 +1,508 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\FamilyBudget\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/BookController.php:21 OC::$server",
+        "lib/Controller/BookController.php:22 OC::$server",
+        "lib/Controller/BookController.php:56 OC::$server",
+        "lib/Controller/BookController.php:272 OC::$server",
+        "lib/Controller/ExpenseController.php:21 OC::$server",
+        "lib/Controller/ExpenseController.php:22 OC::$server",
+        "lib/Controller/ExpenseController.php:107 OC::$server",
+        "lib/Controller/OcsApiController.php:21 OC::$server",
+        "lib/Controller/OcsApiController.php:22 OC::$server",
+        "lib/Controller/OcsApiController.php:53 OC::$server",
+        "lib/Controller/OcsApiController.php:213 OC::$server",
+        "lib/Controller/OcsApiController.php:368 OC::$server"
+      ],
+      "lines": [
+        "12 uses of the private API of the server in 3 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/BookController.php:21 OC::$server",
+        "  lib/Controller/BookController.php:22 OC::$server",
+        "  lib/Controller/BookController.php:56 OC::$server",
+        "  lib/Controller/BookController.php:272 OC::$server",
+        "  lib/Controller/ExpenseController.php:21 OC::$server",
+        "  lib/Controller/ExpenseController.php:22 OC::$server",
+        "  lib/Controller/ExpenseController.php:107 OC::$server",
+        "  lib/Controller/OcsApiController.php:21 OC::$server",
+        "  lib/Controller/OcsApiController.php:22 OC::$server",
+        "  lib/Controller/OcsApiController.php:53 OC::$server",
+        "  lib/Controller/OcsApiController.php:213 OC::$server",
+        "  lib/Controller/OcsApiController.php:368 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 9
+        }
+      ]
+    },
+    {
+      "id": "ocp-missing",
+      "level": "warn",
+      "places": [
+        "lib/Controller/BookController.php:57 OCP\\ILogger::error(): Nextcloud 30 is the last major to have it, the app declares up to 31; use \\Psr\\Log\\LoggerInterface::error",
+        "lib/Controller/ExpenseController.php:108 OCP\\ILogger::error(): Nextcloud 30 is the last major to have it, the app declares up to 31; use \\Psr\\Log\\LoggerInterface::error",
+        "lib/Controller/OcsApiController.php:54 OCP\\ILogger::error(): Nextcloud 30 is the last major to have it, the app declares up to 31; use \\Psr\\Log\\LoggerInterface::error",
+        "lib/Controller/OcsApiController.php:369 OCP\\ILogger::error(): Nextcloud 30 is the last major to have it, the app declares up to 31; use \\Psr\\Log\\LoggerInterface::error"
+      ],
+      "lines": [
+        "4 uses in 3 files of the public API that a major of Nextcloud 27 to 31 no longer has. The app fails there where it comes to that line, or the server no longer calls the method it overrides.",
+        "  lib/Controller/BookController.php:57 OCP\\ILogger::error(): Nextcloud 30 is the last major to have it, the app declares up to 31; use \\Psr\\Log\\LoggerInterface::error",
+        "  lib/Controller/ExpenseController.php:108 OCP\\ILogger::error(): Nextcloud 30 is the last major to have it, the app declares up to 31; use \\Psr\\Log\\LoggerInterface::error",
+        "  lib/Controller/OcsApiController.php:54 OCP\\ILogger::error(): Nextcloud 30 is the last major to have it, the app declares up to 31; use \\Psr\\Log\\LoggerInterface::error",
+        "  lib/Controller/OcsApiController.php:369 OCP\\ILogger::error(): Nextcloud 30 is the last major to have it, the app declares up to 31; use \\Psr\\Log\\LoggerInterface::error"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "route-duplicate",
+      "level": "warn",
+      "places": [
+        "familybudget.book.rename: familybudget.book.rename at appinfo/routes.php:9 routes, familybudget.book.rename at appinfo/routes.php:10 routes, familybudget.book.rename at appinfo/routes.php:11 routes",
+        "ocs.familybudget.ocsapi.booksrename: ocs.familybudget.ocsapi.booksrename at appinfo/routes.php:27 ocs, ocs.familybudget.ocsapi.booksrename at appinfo/routes.php:28 ocs, ocs.familybudget.ocsapi.booksrename at appinfo/routes.php:29 ocs"
+      ],
+      "lines": [
+        "2 verbs and paths or route names are declared more than once. The server keeps one route per name and takes the first that matches a request, so the other one is never reached.",
+        "  familybudget.book.rename: familybudget.book.rename at appinfo/routes.php:9 routes, familybudget.book.rename at appinfo/routes.php:10 routes, familybudget.book.rename at appinfo/routes.php:11 routes",
+        "  ocs.familybudget.ocsapi.booksrename: ocs.familybudget.ocsapi.booksrename at appinfo/routes.php:27 ocs, ocs.familybudget.ocsapi.booksrename at appinfo/routes.php:28 ocs, ocs.familybudget.ocsapi.booksrename at appinfo/routes.php:29 ocs"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/familybudget/books  familybudget.book.index  appinfo/routes.php:7 routes",
+        "POST /index.php/apps/familybudget/books  familybudget.book.create  appinfo/routes.php:8 routes",
+        "PUT /index.php/apps/familybudget/books/{id}  familybudget.book.rename  appinfo/routes.php:9 routes",
+        "PATCH /index.php/apps/familybudget/books/{id}  familybudget.book.rename  appinfo/routes.php:10 routes",
+        "POST /index.php/apps/familybudget/books/{id}/rename  familybudget.book.rename  appinfo/routes.php:11 routes",
+        "POST /index.php/apps/familybudget/books/{id}/invite  familybudget.book.invite  appinfo/routes.php:12 routes",
+        "GET /index.php/apps/familybudget/books/{id}/members  familybudget.book.members  appinfo/routes.php:13 routes",
+        "DELETE /index.php/apps/familybudget/books/{id}/members/{uid}  familybudget.book.removemember  appinfo/routes.php:14 routes",
+        "GET /index.php/apps/familybudget/books/{id}/expenses  familybudget.expense.index  appinfo/routes.php:16 routes",
+        "POST /index.php/apps/familybudget/books/{id}/expenses  familybudget.expense.create  appinfo/routes.php:17 routes",
+        "PATCH /index.php/apps/familybudget/books/{id}/expenses/{eid}  familybudget.expense.update  appinfo/routes.php:18 routes",
+        "DELETE /index.php/apps/familybudget/books/{id}/expenses/{eid}  familybudget.expense.delete  appinfo/routes.php:19 routes",
+        "DELETE /index.php/apps/familybudget/books/{id}  familybudget.book.delete  appinfo/routes.php:20 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 13 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 13 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/familybudget/books  familybudget.book.index  appinfo/routes.php:7 routes",
+        "  POST /index.php/apps/familybudget/books  familybudget.book.create  appinfo/routes.php:8 routes",
+        "  PUT /index.php/apps/familybudget/books/{id}  familybudget.book.rename  appinfo/routes.php:9 routes",
+        "  PATCH /index.php/apps/familybudget/books/{id}  familybudget.book.rename  appinfo/routes.php:10 routes",
+        "  POST /index.php/apps/familybudget/books/{id}/rename  familybudget.book.rename  appinfo/routes.php:11 routes",
+        "  POST /index.php/apps/familybudget/books/{id}/invite  familybudget.book.invite  appinfo/routes.php:12 routes",
+        "  GET /index.php/apps/familybudget/books/{id}/members  familybudget.book.members  appinfo/routes.php:13 routes",
+        "  DELETE /index.php/apps/familybudget/books/{id}/members/{uid}  familybudget.book.removemember  appinfo/routes.php:14 routes",
+        "  GET /index.php/apps/familybudget/books/{id}/expenses  familybudget.expense.index  appinfo/routes.php:16 routes",
+        "  POST /index.php/apps/familybudget/books/{id}/expenses  familybudget.expense.create  appinfo/routes.php:17 routes",
+        "  PATCH /index.php/apps/familybudget/books/{id}/expenses/{eid}  familybudget.expense.update  appinfo/routes.php:18 routes",
+        "  DELETE /index.php/apps/familybudget/books/{id}/expenses/{eid}  familybudget.expense.delete  appinfo/routes.php:19 routes",
+        "  DELETE /index.php/apps/familybudget/books/{id}  familybudget.book.delete  appinfo/routes.php:20 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 10
+        }
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/BookController.php:56 OCP\\ILogger: deprecated since Nextcloud 20; use the PSR-3 logger \\Psr\\Log\\LoggerInterface",
+        "lib/Controller/ExpenseController.php:107 OCP\\ILogger: deprecated since Nextcloud 20; use the PSR-3 logger \\Psr\\Log\\LoggerInterface",
+        "lib/Controller/OcsApiController.php:53 OCP\\ILogger: deprecated since Nextcloud 20; use the PSR-3 logger \\Psr\\Log\\LoggerInterface",
+        "lib/Controller/PageController.php:28 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ],
+      "lines": [
+        "4 uses in 4 files of the public API that is deprecated in Nextcloud 27 to 31. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/BookController.php:56 OCP\\ILogger: deprecated since Nextcloud 20; use the PSR-3 logger \\Psr\\Log\\LoggerInterface",
+        "  lib/Controller/ExpenseController.php:107 OCP\\ILogger: deprecated since Nextcloud 20; use the PSR-3 logger \\Psr\\Log\\LoggerInterface",
+        "  lib/Controller/OcsApiController.php:53 OCP\\ILogger: deprecated since Nextcloud 20; use the PSR-3 logger \\Psr\\Log\\LoggerInterface",
+        "  lib/Controller/PageController.php:28 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Controller/BookController.php:90",
+        "lib/Controller/BookController.php:307",
+        "lib/Controller/ExpenseController.php:145",
+        "lib/Controller/ExpenseController.php:192",
+        "lib/Controller/ExpenseController.php:227",
+        "lib/Controller/OcsApiController.php:77",
+        "lib/Controller/OcsApiController.php:270",
+        "lib/Controller/OcsApiController.php:405",
+        "lib/Controller/OcsApiController.php:446",
+        "lib/Controller/OcsApiController.php:482"
+      ],
+      "lines": [
+        "10 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Controller/BookController.php:90",
+        "  lib/Controller/BookController.php:307",
+        "  lib/Controller/ExpenseController.php:145",
+        "  lib/Controller/ExpenseController.php:192",
+        "  lib/Controller/ExpenseController.php:227",
+        "  lib/Controller/OcsApiController.php:77",
+        "  lib/Controller/OcsApiController.php:270",
+        "  lib/Controller/OcsApiController.php:405",
+        "  lib/Controller/OcsApiController.php:446",
+        "  lib/Controller/OcsApiController.php:482"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/BookController.php:88 new DateTimeImmutable()",
+        "lib/Controller/BookController.php:215 new DateTimeImmutable()",
+        "lib/Controller/ExpenseController.php:141 new DateTimeImmutable()",
+        "lib/Controller/OcsApiController.php:75 new DateTimeImmutable()",
+        "lib/Controller/OcsApiController.php:166 new DateTimeImmutable()",
+        "lib/Controller/OcsApiController.php:401 new DateTimeImmutable()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 6 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/BookController.php:88 new DateTimeImmutable()",
+        "  lib/Controller/BookController.php:215 new DateTimeImmutable()",
+        "  lib/Controller/ExpenseController.php:141 new DateTimeImmutable()",
+        "  lib/Controller/OcsApiController.php:75 new DateTimeImmutable()",
+        "  lib/Controller/OcsApiController.php:166 new DateTimeImmutable()",
+        "  lib/Controller/OcsApiController.php:401 new DateTimeImmutable()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/familybudget/books  ocs.familybudget.ocsapi.books  appinfo/routes.php:25 ocs",
+        "POST /ocs/v2.php/apps/familybudget/books  ocs.familybudget.ocsapi.bookscreate  appinfo/routes.php:26 ocs",
+        "PUT /ocs/v2.php/apps/familybudget/books/{id}  ocs.familybudget.ocsapi.booksrename  appinfo/routes.php:27 ocs",
+        "PATCH /ocs/v2.php/apps/familybudget/books/{id}  ocs.familybudget.ocsapi.booksrename  appinfo/routes.php:28 ocs",
+        "POST /ocs/v2.php/apps/familybudget/books/{id}/rename  ocs.familybudget.ocsapi.booksrename  appinfo/routes.php:29 ocs",
+        "POST /ocs/v2.php/apps/familybudget/books/{id}/invite  ocs.familybudget.ocsapi.booksinvite  appinfo/routes.php:30 ocs",
+        "GET /ocs/v2.php/apps/familybudget/books/{id}/members  ocs.familybudget.ocsapi.booksmembers  appinfo/routes.php:31 ocs",
+        "DELETE /ocs/v2.php/apps/familybudget/books/{id}/members/{uid}  ocs.familybudget.ocsapi.booksremovemember  appinfo/routes.php:32 ocs",
+        "DELETE /ocs/v2.php/apps/familybudget/books/{id}  ocs.familybudget.ocsapi.booksdelete  appinfo/routes.php:33 ocs",
+        "GET /ocs/v2.php/apps/familybudget/books/{id}/expenses  ocs.familybudget.ocsapi.expensesindex  appinfo/routes.php:35 ocs",
+        "POST /ocs/v2.php/apps/familybudget/books/{id}/expenses  ocs.familybudget.ocsapi.expensescreate  appinfo/routes.php:36 ocs",
+        "PATCH /ocs/v2.php/apps/familybudget/books/{id}/expenses/{eid}  ocs.familybudget.ocsapi.expensesupdate  appinfo/routes.php:37 ocs",
+        "DELETE /ocs/v2.php/apps/familybudget/books/{id}/expenses/{eid}  ocs.familybudget.ocsapi.expensesdelete  appinfo/routes.php:38 ocs"
+      ],
+      "lines": [
+        "Nothing in the app calls 13 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/familybudget/books  ocs.familybudget.ocsapi.books  appinfo/routes.php:25 ocs",
+        "  POST /ocs/v2.php/apps/familybudget/books  ocs.familybudget.ocsapi.bookscreate  appinfo/routes.php:26 ocs",
+        "  PUT /ocs/v2.php/apps/familybudget/books/{id}  ocs.familybudget.ocsapi.booksrename  appinfo/routes.php:27 ocs",
+        "  PATCH /ocs/v2.php/apps/familybudget/books/{id}  ocs.familybudget.ocsapi.booksrename  appinfo/routes.php:28 ocs",
+        "  POST /ocs/v2.php/apps/familybudget/books/{id}/rename  ocs.familybudget.ocsapi.booksrename  appinfo/routes.php:29 ocs",
+        "  POST /ocs/v2.php/apps/familybudget/books/{id}/invite  ocs.familybudget.ocsapi.booksinvite  appinfo/routes.php:30 ocs",
+        "  GET /ocs/v2.php/apps/familybudget/books/{id}/members  ocs.familybudget.ocsapi.booksmembers  appinfo/routes.php:31 ocs",
+        "  DELETE /ocs/v2.php/apps/familybudget/books/{id}/members/{uid}  ocs.familybudget.ocsapi.booksremovemember  appinfo/routes.php:32 ocs",
+        "  DELETE /ocs/v2.php/apps/familybudget/books/{id}  ocs.familybudget.ocsapi.booksdelete  appinfo/routes.php:33 ocs",
+        "  GET /ocs/v2.php/apps/familybudget/books/{id}/expenses  ocs.familybudget.ocsapi.expensesindex  appinfo/routes.php:35 ocs",
+        "  POST /ocs/v2.php/apps/familybudget/books/{id}/expenses  ocs.familybudget.ocsapi.expensescreate  appinfo/routes.php:36 ocs",
+        "  PATCH /ocs/v2.php/apps/familybudget/books/{id}/expenses/{eid}  ocs.familybudget.ocsapi.expensesupdate  appinfo/routes.php:37 ocs",
+        "  DELETE /ocs/v2.php/apps/familybudget/books/{id}/expenses/{eid}  ocs.familybudget.ocsapi.expensesdelete  appinfo/routes.php:38 ocs"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 10
+        }
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 13 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 27,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/familybudget/",
+      "target": "OCA\\FamilyBudget\\Controller\\PageController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:5 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/familybudget/books",
+      "target": "OCA\\FamilyBudget\\Controller\\BookController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:7 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/familybudget/books",
+      "target": "OCA\\FamilyBudget\\Controller\\BookController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:8 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/familybudget/books/{id}",
+      "target": "OCA\\FamilyBudget\\Controller\\BookController::delete",
+      "openapi": [],
+      "source": "appinfo/routes.php:20 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/index.php/apps/familybudget/books/{id}",
+      "target": "OCA\\FamilyBudget\\Controller\\BookController::rename",
+      "openapi": [],
+      "source": "appinfo/routes.php:10 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/familybudget/books/{id}",
+      "target": "OCA\\FamilyBudget\\Controller\\BookController::rename",
+      "openapi": [],
+      "source": "appinfo/routes.php:9 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/familybudget/books/{id}/expenses",
+      "target": "OCA\\FamilyBudget\\Controller\\ExpenseController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:16 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/familybudget/books/{id}/expenses",
+      "target": "OCA\\FamilyBudget\\Controller\\ExpenseController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:17 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/familybudget/books/{id}/expenses/{eid}",
+      "target": "OCA\\FamilyBudget\\Controller\\ExpenseController::delete",
+      "openapi": [],
+      "source": "appinfo/routes.php:19 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/index.php/apps/familybudget/books/{id}/expenses/{eid}",
+      "target": "OCA\\FamilyBudget\\Controller\\ExpenseController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:18 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/familybudget/books/{id}/invite",
+      "target": "OCA\\FamilyBudget\\Controller\\BookController::invite",
+      "openapi": [],
+      "source": "appinfo/routes.php:12 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/familybudget/books/{id}/members",
+      "target": "OCA\\FamilyBudget\\Controller\\BookController::members",
+      "openapi": [],
+      "source": "appinfo/routes.php:13 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/familybudget/books/{id}/members/{uid}",
+      "target": "OCA\\FamilyBudget\\Controller\\BookController::removeMember",
+      "openapi": [],
+      "source": "appinfo/routes.php:14 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/familybudget/books/{id}/rename",
+      "target": "OCA\\FamilyBudget\\Controller\\BookController::rename",
+      "openapi": [],
+      "source": "appinfo/routes.php:11 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/familybudget/books",
+      "target": "OCA\\FamilyBudget\\Controller\\OcsApiController::books",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:25 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/familybudget/books",
+      "target": "OCA\\FamilyBudget\\Controller\\OcsApiController::booksCreate",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:26 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/familybudget/books/{id}",
+      "target": "OCA\\FamilyBudget\\Controller\\OcsApiController::booksDelete",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:33 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/ocs/v2.php/apps/familybudget/books/{id}",
+      "target": "OCA\\FamilyBudget\\Controller\\OcsApiController::booksRename",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:28 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/familybudget/books/{id}",
+      "target": "OCA\\FamilyBudget\\Controller\\OcsApiController::booksRename",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:27 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/familybudget/books/{id}/expenses",
+      "target": "OCA\\FamilyBudget\\Controller\\OcsApiController::expensesIndex",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:35 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/familybudget/books/{id}/expenses",
+      "target": "OCA\\FamilyBudget\\Controller\\OcsApiController::expensesCreate",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:36 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/familybudget/books/{id}/expenses/{eid}",
+      "target": "OCA\\FamilyBudget\\Controller\\OcsApiController::expensesDelete",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:38 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/ocs/v2.php/apps/familybudget/books/{id}/expenses/{eid}",
+      "target": "OCA\\FamilyBudget\\Controller\\OcsApiController::expensesUpdate",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:37 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/familybudget/books/{id}/invite",
+      "target": "OCA\\FamilyBudget\\Controller\\OcsApiController::booksInvite",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:30 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/familybudget/books/{id}/members",
+      "target": "OCA\\FamilyBudget\\Controller\\OcsApiController::booksMembers",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:31 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/familybudget/books/{id}/members/{uid}",
+      "target": "OCA\\FamilyBudget\\Controller\\OcsApiController::booksRemoveMember",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:32 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/familybudget/books/{id}/rename",
+      "target": "OCA\\FamilyBudget\\Controller\\OcsApiController::booksRename",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:29 ocs",
+      "kind": "OCS"
+    }
+  ]
+}

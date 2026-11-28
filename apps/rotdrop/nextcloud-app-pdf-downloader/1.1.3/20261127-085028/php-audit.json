@@ -1,0 +1,232 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\PdfDownloader\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/BackgroundJob/DownloadsCleanupJob.php:157 OC_Util",
+        "lib/BackgroundJob/PdfGeneratorJob.php:250 OC_Util"
+      ],
+      "lines": [
+        "2 uses of the private API of the server in 2 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/BackgroundJob/DownloadsCleanupJob.php:157 OC_Util",
+        "  lib/BackgroundJob/PdfGeneratorJob.php:250 OC_Util"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:66 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:66 injectFn()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/pdf_downloader/download/{sourcePath}/{cacheId}  pdf_downloader.multi_pdf_download.get  appinfo/routes.php:65 routes",
+        "POST /index.php/apps/pdf_downloader/save/{sourcePath}/{destinationPath}/{cacheId}  pdf_downloader.multi_pdf_download.save  appinfo/routes.php:73 routes",
+        "POST /index.php/apps/pdf_downloader/schedule/{jobType}/{sourcePath}/{destinationPath}  pdf_downloader.multi_pdf_download.schedule  appinfo/routes.php:82 routes",
+        "GET /index.php/apps/pdf_downloader/list/{sourcePath}  pdf_downloader.multi_pdf_download.list  appinfo/routes.php:90 routes",
+        "POST /index.php/apps/pdf_downloader/clean/{sourcePath}/{cacheId}  pdf_downloader.multi_pdf_download.clean  appinfo/routes.php:95 routes",
+        "GET /index.php/apps/pdf_downloader/fonts  pdf_downloader.multi_pdf_download.get_fonts  appinfo/routes.php:103 routes",
+        "GET /index.php/apps/pdf_downloader/sample/font/{text}/{font}/{fontSize}  pdf_downloader.multi_pdf_download.get_font_sample  appinfo/routes.php:108 routes",
+        "GET /index.php/apps/pdf_downloader/sample/page-label/{template}/{path}/{pageNumber}/{totalPages}  pdf_downloader.multi_pdf_download.get_page_label_sample  appinfo/routes.php:116 routes",
+        "GET /index.php/apps/pdf_downloader/sample/pdf-filename/{template}/{path}  pdf_downloader.multi_pdf_download.get_pdf_file_name_sample  appinfo/routes.php:121 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 9 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 24 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/pdf_downloader/download/{sourcePath}/{cacheId}  pdf_downloader.multi_pdf_download.get  appinfo/routes.php:65 routes",
+        "  POST /index.php/apps/pdf_downloader/save/{sourcePath}/{destinationPath}/{cacheId}  pdf_downloader.multi_pdf_download.save  appinfo/routes.php:73 routes",
+        "  POST /index.php/apps/pdf_downloader/schedule/{jobType}/{sourcePath}/{destinationPath}  pdf_downloader.multi_pdf_download.schedule  appinfo/routes.php:82 routes",
+        "  GET /index.php/apps/pdf_downloader/list/{sourcePath}  pdf_downloader.multi_pdf_download.list  appinfo/routes.php:90 routes",
+        "  POST /index.php/apps/pdf_downloader/clean/{sourcePath}/{cacheId}  pdf_downloader.multi_pdf_download.clean  appinfo/routes.php:95 routes",
+        "  GET /index.php/apps/pdf_downloader/fonts  pdf_downloader.multi_pdf_download.get_fonts  appinfo/routes.php:103 routes",
+        "  GET /index.php/apps/pdf_downloader/sample/font/{text}/{font}/{fontSize}  pdf_downloader.multi_pdf_download.get_font_sample  appinfo/routes.php:108 routes",
+        "  GET /index.php/apps/pdf_downloader/sample/page-label/{template}/{path}/{pageNumber}/{totalPages}  pdf_downloader.multi_pdf_download.get_page_label_sample  appinfo/routes.php:116 routes",
+        "  GET /index.php/apps/pdf_downloader/sample/pdf-filename/{template}/{path}  pdf_downloader.multi_pdf_download.get_pdf_file_name_sample  appinfo/routes.php:121 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 6
+        }
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/PdfGeneratorJob.php:80 OCP\\AppFramework\\IAppContainer: deprecated since Nextcloud 25",
+        "lib/Controller/SettingsController.php:266 OCP\\AppFramework\\IAppContainer: deprecated since Nextcloud 25",
+        "lib/Listener/FilesActionListener.php:64 OCP\\AppFramework\\IAppContainer: deprecated since Nextcloud 25"
+      ],
+      "lines": [
+        "3 uses in 3 files of the public API that is deprecated in Nextcloud 25 to 27. The text of the tag names the replacement where it has one.",
+        "  lib/BackgroundJob/PdfGeneratorJob.php:80 OCP\\AppFramework\\IAppContainer: deprecated since Nextcloud 25",
+        "  lib/Controller/SettingsController.php:266 OCP\\AppFramework\\IAppContainer: deprecated since Nextcloud 25",
+        "  lib/Listener/FilesActionListener.php:64 OCP\\AppFramework\\IAppContainer: deprecated since Nextcloud 25"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Migration/CheckDependencies.php:92 new DateTime()",
+        "lib/Service/FileSystemWalker.php:681 new DateTimeImmutable()",
+        "lib/Service/NotificationService.php:100 new DateTime()",
+        "lib/Service/NotificationService.php:146 new DateTime()",
+        "lib/Service/NotificationService.php:189 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 5 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Migration/CheckDependencies.php:92 new DateTime()",
+        "  lib/Service/FileSystemWalker.php:681 new DateTimeImmutable()",
+        "  lib/Service/NotificationService.php:100 new DateTime()",
+        "  lib/Service/NotificationService.php:146 new DateTime()",
+        "  lib/Service/NotificationService.php:189 new DateTime()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    }
+  ],
+  "endpoints": 17,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/pdf_downloader/{a}/{b}/{c}/{d}/{e}/{f}/{g}",
+      "target": "OCA\\PdfDownloader\\Controller\\CatchAllController::get",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/pdf_downloader/{a}/{b}/{c}/{d}/{e}/{f}/{g}",
+      "target": "OCA\\PdfDownloader\\Controller\\CatchAllController::post",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/pdf_downloader/clean/{sourcePath}/{cacheId}",
+      "target": "OCA\\PdfDownloader\\Controller\\MultiPdfDownloadController::clean",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/pdf_downloader/download/{sourcePath}/{cacheId}",
+      "target": "OCA\\PdfDownloader\\Controller\\MultiPdfDownloadController::get",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/pdf_downloader/fonts",
+      "target": "OCA\\PdfDownloader\\Controller\\MultiPdfDownloadController::getFonts",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/pdf_downloader/list/{sourcePath}",
+      "target": "OCA\\PdfDownloader\\Controller\\MultiPdfDownloadController::list",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/pdf_downloader/sample/font/{text}/{font}/{fontSize}",
+      "target": "OCA\\PdfDownloader\\Controller\\MultiPdfDownloadController::getFontSample",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/pdf_downloader/sample/page-label/{template}/{path}/{pageNumber}/{totalPages}",
+      "target": "OCA\\PdfDownloader\\Controller\\MultiPdfDownloadController::getPageLabelSample",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/pdf_downloader/sample/pdf-filename/{template}/{path}",
+      "target": "OCA\\PdfDownloader\\Controller\\MultiPdfDownloadController::getPdfFileNameSample",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/pdf_downloader/save/{sourcePath}/{destinationPath}/{cacheId}",
+      "target": "OCA\\PdfDownloader\\Controller\\MultiPdfDownloadController::save",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/pdf_downloader/schedule/{jobType}/{sourcePath}/{destinationPath}",
+      "target": "OCA\\PdfDownloader\\Controller\\MultiPdfDownloadController::schedule",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/pdf_downloader/settings/admin",
+      "target": "OCA\\PdfDownloader\\Controller\\SettingsController::getAdmin",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/pdf_downloader/settings/admin/{setting}",
+      "target": "OCA\\PdfDownloader\\Controller\\SettingsController::getAdmin",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/pdf_downloader/settings/admin/{setting}",
+      "target": "OCA\\PdfDownloader\\Controller\\SettingsController::setAdmin",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/pdf_downloader/settings/personal",
+      "target": "OCA\\PdfDownloader\\Controller\\SettingsController::getPersonal",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/pdf_downloader/settings/personal/{setting}",
+      "target": "OCA\\PdfDownloader\\Controller\\SettingsController::getPersonal",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/pdf_downloader/settings/personal/{setting}",
+      "target": "OCA\\PdfDownloader\\Controller\\SettingsController::setPersonal",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

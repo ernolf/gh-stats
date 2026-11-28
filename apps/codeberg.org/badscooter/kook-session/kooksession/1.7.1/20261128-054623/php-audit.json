@@ -1,0 +1,822 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\KookSession\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/kooksession/photo/{fileId}  kooksession.photo.afficher  lib/Controller/PhotoController.php:54",
+        "GET /index.php/apps/kooksession/video/{fileId}  kooksession.photo.video  lib/Controller/PhotoController.php:80",
+        "GET /index.php/apps/kooksession/video/{fileId}/miniature  kooksession.photo.miniaturevideo  lib/Controller/PhotoController.php:102"
+      ],
+      "lines": [
+        "Nothing in the app calls 3 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 4 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/kooksession/photo/{fileId}  kooksession.photo.afficher  lib/Controller/PhotoController.php:54",
+        "  GET /index.php/apps/kooksession/video/{fileId}  kooksession.photo.video  lib/Controller/PhotoController.php:80",
+        "  GET /index.php/apps/kooksession/video/{fileId}/miniature  kooksession.photo.miniaturevideo  lib/Controller/PhotoController.php:102"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/PageController.php:62 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Controller/PartagePublicController.php:84 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Service/EnvoiService.php:86 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead"
+      ],
+      "lines": [
+        "3 uses in 3 files of the public API that is deprecated in Nextcloud 34 to 36. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/PageController.php:62 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Controller/PartagePublicController.php:84 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Service/EnvoiService.php:86 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead"
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/partage.php:162 style= attribute"
+      ],
+      "lines": [
+        "1 inline style in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/partage.php:162 style= attribute"
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Service/SessionService.php:106",
+        "lib/Service/SessionService.php:129",
+        "lib/Service/SessionService.php:152"
+      ],
+      "lines": [
+        "3 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Service/SessionService.php:106",
+        "  lib/Service/SessionService.php:129",
+        "  lib/Service/SessionService.php:152"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Db/EquipementMapper.php:46 time()",
+        "lib/Db/SessionMapper.php:95 time()",
+        "lib/Service/AbstractCrudService.php:96 time()",
+        "lib/Service/AbstractCrudService.php:106 time()",
+        "lib/Service/AbstractPhotosService.php:68 time()",
+        "lib/Service/AbstractPhotosService.php:85 time()",
+        "lib/Service/EnvoiService.php:131 time()",
+        "lib/Service/EnvoiService.php:279 time()",
+        "lib/Service/EnvoiService.php:355 time()",
+        "lib/Service/PartageService.php:95 time()",
+        "lib/Service/PartageService.php:111 time()",
+        "lib/Service/PartageService.php:142 time()",
+        "lib/Service/SessionMediaService.php:118 time()",
+        "lib/Service/SessionMediaService.php:139 time()",
+        "lib/Service/SessionService.php:114 time()",
+        "lib/Service/SessionService.php:139 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 16 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Db/EquipementMapper.php:46 time()",
+        "  lib/Db/SessionMapper.php:95 time()",
+        "  lib/Service/AbstractCrudService.php:96 time()",
+        "  lib/Service/AbstractCrudService.php:106 time()",
+        "  lib/Service/AbstractPhotosService.php:68 time()",
+        "  lib/Service/AbstractPhotosService.php:85 time()",
+        "  lib/Service/EnvoiService.php:131 time()",
+        "  lib/Service/EnvoiService.php:279 time()",
+        "  lib/Service/EnvoiService.php:355 time()",
+        "  lib/Service/PartageService.php:95 time()",
+        "  lib/Service/PartageService.php:111 time()",
+        "  lib/Service/PartageService.php:142 time()",
+        "  lib/Service/SessionMediaService.php:118 time()",
+        "  lib/Service/SessionMediaService.php:139 time()",
+        "  lib/Service/SessionService.php:114 time()",
+        "  lib/Service/SessionService.php:139 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 13
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/kooksession/api/v1/accompagnateurs  ocs.kooksession.accompagnateur.index  lib/Controller/AccompagnateurController.php:29",
+        "GET /ocs/v2.php/apps/kooksession/api/v1/accompagnateurs/{id}  ocs.kooksession.accompagnateur.show  lib/Controller/AccompagnateurController.php:35",
+        "POST /ocs/v2.php/apps/kooksession/api/v1/accompagnateurs  ocs.kooksession.accompagnateur.create  lib/Controller/AccompagnateurController.php:41",
+        "PUT /ocs/v2.php/apps/kooksession/api/v1/accompagnateurs/{id}  ocs.kooksession.accompagnateur.update  lib/Controller/AccompagnateurController.php:47",
+        "DELETE /ocs/v2.php/apps/kooksession/api/v1/accompagnateurs/{id}  ocs.kooksession.accompagnateur.destroy  lib/Controller/AccompagnateurController.php:53",
+        "GET /ocs/v2.php/apps/kooksession/api/v1/equipements  ocs.kooksession.equipement.index  lib/Controller/EquipementController.php:29",
+        "GET /ocs/v2.php/apps/kooksession/api/v1/equipements/{id}  ocs.kooksession.equipement.show  lib/Controller/EquipementController.php:35",
+        "POST /ocs/v2.php/apps/kooksession/api/v1/equipements  ocs.kooksession.equipement.create  lib/Controller/EquipementController.php:41",
+        "PUT /ocs/v2.php/apps/kooksession/api/v1/equipements/{id}  ocs.kooksession.equipement.update  lib/Controller/EquipementController.php:47",
+        "DELETE /ocs/v2.php/apps/kooksession/api/v1/equipements/{id}  ocs.kooksession.equipement.destroy  lib/Controller/EquipementController.php:53",
+        "POST /ocs/v2.php/apps/kooksession/api/v1/equipements/{id}/photos  ocs.kooksession.equipementphoto.ajouter  lib/Controller/EquipementPhotoController.php:31",
+        "DELETE /ocs/v2.php/apps/kooksession/api/v1/equipements/{id}/photos/{fileId}  ocs.kooksession.equipementphoto.supprimer  lib/Controller/EquipementPhotoController.php:37",
+        "GET /ocs/v2.php/apps/kooksession/api/v1/partages  ocs.kooksession.partage.index  lib/Controller/PartageController.php:38",
+        "POST /ocs/v2.php/apps/kooksession/api/v1/partages  ocs.kooksession.partage.create  lib/Controller/PartageController.php:49",
+        "DELETE /ocs/v2.php/apps/kooksession/api/v1/partages/{id}  ocs.kooksession.partage.destroy  lib/Controller/PartageController.php:62",
+        "GET /ocs/v2.php/apps/kooksession/api/v1/utilisateurs  ocs.kooksession.partage.utilisateurs  lib/Controller/PartageController.php:72",
+        "POST /ocs/v2.php/apps/kooksession/api/v1/envois  ocs.kooksession.partage.envoyer  lib/Controller/PartageController.php:79",
+        "GET /ocs/v2.php/apps/kooksession/api/v1/envois  ocs.kooksession.partage.recus  lib/Controller/PartageController.php:90",
+        "POST /ocs/v2.php/apps/kooksession/api/v1/envois/{id}/accepter  ocs.kooksession.partage.accepter  lib/Controller/PartageController.php:97",
+        "DELETE /ocs/v2.php/apps/kooksession/api/v1/envois/{id}  ocs.kooksession.partage.refuser  lib/Controller/PartageController.php:104",
+        "GET /ocs/v2.php/apps/kooksession/api/v1/pratiques  ocs.kooksession.pratique.index  lib/Controller/PratiqueController.php:29",
+        "POST /ocs/v2.php/apps/kooksession/api/v1/pratiques  ocs.kooksession.pratique.create  lib/Controller/PratiqueController.php:35",
+        "PUT /ocs/v2.php/apps/kooksession/api/v1/pratiques/{id}  ocs.kooksession.pratique.update  lib/Controller/PratiqueController.php:41",
+        "DELETE /ocs/v2.php/apps/kooksession/api/v1/pratiques/{id}  ocs.kooksession.pratique.destroy  lib/Controller/PratiqueController.php:47",
+        "GET /ocs/v2.php/apps/kooksession/api/v1/sessions  ocs.kooksession.session.index  lib/Controller/SessionController.php:32",
+        "GET /ocs/v2.php/apps/kooksession/api/v1/sessions/{id}  ocs.kooksession.session.show  lib/Controller/SessionController.php:38",
+        "POST /ocs/v2.php/apps/kooksession/api/v1/sessions  ocs.kooksession.session.create  lib/Controller/SessionController.php:44",
+        "PUT /ocs/v2.php/apps/kooksession/api/v1/sessions/{id}  ocs.kooksession.session.update  lib/Controller/SessionController.php:50",
+        "DELETE /ocs/v2.php/apps/kooksession/api/v1/sessions/{id}  ocs.kooksession.session.destroy  lib/Controller/SessionController.php:56",
+        "POST /ocs/v2.php/apps/kooksession/api/v1/sessions/{id}/{media}  ocs.kooksession.sessionmedia.ajouter  lib/Controller/SessionMediaController.php:37",
+        "POST /ocs/v2.php/apps/kooksession/api/v1/sessions/{id}/trace  ocs.kooksession.sessionmedia.ajoutertrace  lib/Controller/SessionMediaController.php:47",
+        "GET /ocs/v2.php/apps/kooksession/api/v1/sessions/{id}/trace  ocs.kooksession.sessionmedia.trace  lib/Controller/SessionMediaController.php:57",
+        "POST /ocs/v2.php/apps/kooksession/api/v1/traces/analyse  ocs.kooksession.sessionmedia.analyser  lib/Controller/SessionMediaController.php:64",
+        "DELETE /ocs/v2.php/apps/kooksession/api/v1/sessions/{id}/{media}  ocs.kooksession.sessionmedia.supprimer  lib/Controller/SessionMediaController.php:70",
+        "GET /ocs/v2.php/apps/kooksession/api/v1/spots  ocs.kooksession.spot.index  lib/Controller/SpotController.php:29",
+        "GET /ocs/v2.php/apps/kooksession/api/v1/spots/{id}  ocs.kooksession.spot.show  lib/Controller/SpotController.php:35",
+        "POST /ocs/v2.php/apps/kooksession/api/v1/spots  ocs.kooksession.spot.create  lib/Controller/SpotController.php:41",
+        "PUT /ocs/v2.php/apps/kooksession/api/v1/spots/{id}  ocs.kooksession.spot.update  lib/Controller/SpotController.php:47",
+        "DELETE /ocs/v2.php/apps/kooksession/api/v1/spots/{id}  ocs.kooksession.spot.destroy  lib/Controller/SpotController.php:53",
+        "POST /ocs/v2.php/apps/kooksession/api/v1/spots/{id}/photos  ocs.kooksession.spotphoto.ajouter  lib/Controller/SpotPhotoController.php:31",
+        "DELETE /ocs/v2.php/apps/kooksession/api/v1/spots/{id}/photos/{fileId}  ocs.kooksession.spotphoto.supprimer  lib/Controller/SpotPhotoController.php:37",
+        "GET /ocs/v2.php/apps/kooksession/api/v1/stats/spots  ocs.kooksession.stats.spots  lib/Controller/StatsController.php:31",
+        "GET /ocs/v2.php/apps/kooksession/api/v1/stats/mois  ocs.kooksession.stats.mois  lib/Controller/StatsController.php:38",
+        "GET /ocs/v2.php/apps/kooksession/api/v1/stats/satisfaction  ocs.kooksession.stats.satisfaction  lib/Controller/StatsController.php:50",
+        "GET /ocs/v2.php/apps/kooksession/api/v1/stats/temps  ocs.kooksession.stats.temps  lib/Controller/StatsController.php:57",
+        "GET /ocs/v2.php/apps/kooksession/api/v1/stats/materiel  ocs.kooksession.stats.materiel  lib/Controller/StatsController.php:64",
+        "GET /ocs/v2.php/apps/kooksession/api/v1/stats/conditions-ideales  ocs.kooksession.stats.conditionsideales  lib/Controller/StatsController.php:71",
+        "GET /ocs/v2.php/apps/kooksession/api/v1/stats/records  ocs.kooksession.stats.records  lib/Controller/StatsController.php:78",
+        "GET /ocs/v2.php/apps/kooksession/api/v1/valeurs  ocs.kooksession.valeur.index  lib/Controller/ValeurController.php:30",
+        "POST /ocs/v2.php/apps/kooksession/api/v1/valeurs  ocs.kooksession.valeur.create  lib/Controller/ValeurController.php:36",
+        "PUT /ocs/v2.php/apps/kooksession/api/v1/valeurs/{id}  ocs.kooksession.valeur.update  lib/Controller/ValeurController.php:42",
+        "DELETE /ocs/v2.php/apps/kooksession/api/v1/valeurs/{id}  ocs.kooksession.valeur.destroy  lib/Controller/ValeurController.php:48"
+      ],
+      "lines": [
+        "Nothing in the app calls 52 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/kooksession/api/v1/accompagnateurs  ocs.kooksession.accompagnateur.index  lib/Controller/AccompagnateurController.php:29",
+        "  GET /ocs/v2.php/apps/kooksession/api/v1/accompagnateurs/{id}  ocs.kooksession.accompagnateur.show  lib/Controller/AccompagnateurController.php:35",
+        "  POST /ocs/v2.php/apps/kooksession/api/v1/accompagnateurs  ocs.kooksession.accompagnateur.create  lib/Controller/AccompagnateurController.php:41",
+        "  PUT /ocs/v2.php/apps/kooksession/api/v1/accompagnateurs/{id}  ocs.kooksession.accompagnateur.update  lib/Controller/AccompagnateurController.php:47",
+        "  DELETE /ocs/v2.php/apps/kooksession/api/v1/accompagnateurs/{id}  ocs.kooksession.accompagnateur.destroy  lib/Controller/AccompagnateurController.php:53",
+        "  GET /ocs/v2.php/apps/kooksession/api/v1/equipements  ocs.kooksession.equipement.index  lib/Controller/EquipementController.php:29",
+        "  GET /ocs/v2.php/apps/kooksession/api/v1/equipements/{id}  ocs.kooksession.equipement.show  lib/Controller/EquipementController.php:35",
+        "  POST /ocs/v2.php/apps/kooksession/api/v1/equipements  ocs.kooksession.equipement.create  lib/Controller/EquipementController.php:41",
+        "  PUT /ocs/v2.php/apps/kooksession/api/v1/equipements/{id}  ocs.kooksession.equipement.update  lib/Controller/EquipementController.php:47",
+        "  DELETE /ocs/v2.php/apps/kooksession/api/v1/equipements/{id}  ocs.kooksession.equipement.destroy  lib/Controller/EquipementController.php:53",
+        "  POST /ocs/v2.php/apps/kooksession/api/v1/equipements/{id}/photos  ocs.kooksession.equipementphoto.ajouter  lib/Controller/EquipementPhotoController.php:31",
+        "  DELETE /ocs/v2.php/apps/kooksession/api/v1/equipements/{id}/photos/{fileId}  ocs.kooksession.equipementphoto.supprimer  lib/Controller/EquipementPhotoController.php:37",
+        "  GET /ocs/v2.php/apps/kooksession/api/v1/partages  ocs.kooksession.partage.index  lib/Controller/PartageController.php:38",
+        "  POST /ocs/v2.php/apps/kooksession/api/v1/partages  ocs.kooksession.partage.create  lib/Controller/PartageController.php:49",
+        "  DELETE /ocs/v2.php/apps/kooksession/api/v1/partages/{id}  ocs.kooksession.partage.destroy  lib/Controller/PartageController.php:62",
+        "  GET /ocs/v2.php/apps/kooksession/api/v1/utilisateurs  ocs.kooksession.partage.utilisateurs  lib/Controller/PartageController.php:72",
+        "  POST /ocs/v2.php/apps/kooksession/api/v1/envois  ocs.kooksession.partage.envoyer  lib/Controller/PartageController.php:79",
+        "  GET /ocs/v2.php/apps/kooksession/api/v1/envois  ocs.kooksession.partage.recus  lib/Controller/PartageController.php:90",
+        "  POST /ocs/v2.php/apps/kooksession/api/v1/envois/{id}/accepter  ocs.kooksession.partage.accepter  lib/Controller/PartageController.php:97",
+        "  DELETE /ocs/v2.php/apps/kooksession/api/v1/envois/{id}  ocs.kooksession.partage.refuser  lib/Controller/PartageController.php:104",
+        "  GET /ocs/v2.php/apps/kooksession/api/v1/pratiques  ocs.kooksession.pratique.index  lib/Controller/PratiqueController.php:29",
+        "  POST /ocs/v2.php/apps/kooksession/api/v1/pratiques  ocs.kooksession.pratique.create  lib/Controller/PratiqueController.php:35",
+        "  PUT /ocs/v2.php/apps/kooksession/api/v1/pratiques/{id}  ocs.kooksession.pratique.update  lib/Controller/PratiqueController.php:41",
+        "  DELETE /ocs/v2.php/apps/kooksession/api/v1/pratiques/{id}  ocs.kooksession.pratique.destroy  lib/Controller/PratiqueController.php:47",
+        "  GET /ocs/v2.php/apps/kooksession/api/v1/sessions  ocs.kooksession.session.index  lib/Controller/SessionController.php:32",
+        "  GET /ocs/v2.php/apps/kooksession/api/v1/sessions/{id}  ocs.kooksession.session.show  lib/Controller/SessionController.php:38",
+        "  POST /ocs/v2.php/apps/kooksession/api/v1/sessions  ocs.kooksession.session.create  lib/Controller/SessionController.php:44",
+        "  PUT /ocs/v2.php/apps/kooksession/api/v1/sessions/{id}  ocs.kooksession.session.update  lib/Controller/SessionController.php:50",
+        "  DELETE /ocs/v2.php/apps/kooksession/api/v1/sessions/{id}  ocs.kooksession.session.destroy  lib/Controller/SessionController.php:56",
+        "  POST /ocs/v2.php/apps/kooksession/api/v1/sessions/{id}/{media}  ocs.kooksession.sessionmedia.ajouter  lib/Controller/SessionMediaController.php:37",
+        "  POST /ocs/v2.php/apps/kooksession/api/v1/sessions/{id}/trace  ocs.kooksession.sessionmedia.ajoutertrace  lib/Controller/SessionMediaController.php:47",
+        "  GET /ocs/v2.php/apps/kooksession/api/v1/sessions/{id}/trace  ocs.kooksession.sessionmedia.trace  lib/Controller/SessionMediaController.php:57",
+        "  POST /ocs/v2.php/apps/kooksession/api/v1/traces/analyse  ocs.kooksession.sessionmedia.analyser  lib/Controller/SessionMediaController.php:64",
+        "  DELETE /ocs/v2.php/apps/kooksession/api/v1/sessions/{id}/{media}  ocs.kooksession.sessionmedia.supprimer  lib/Controller/SessionMediaController.php:70",
+        "  GET /ocs/v2.php/apps/kooksession/api/v1/spots  ocs.kooksession.spot.index  lib/Controller/SpotController.php:29",
+        "  GET /ocs/v2.php/apps/kooksession/api/v1/spots/{id}  ocs.kooksession.spot.show  lib/Controller/SpotController.php:35",
+        "  POST /ocs/v2.php/apps/kooksession/api/v1/spots  ocs.kooksession.spot.create  lib/Controller/SpotController.php:41",
+        "  PUT /ocs/v2.php/apps/kooksession/api/v1/spots/{id}  ocs.kooksession.spot.update  lib/Controller/SpotController.php:47",
+        "  DELETE /ocs/v2.php/apps/kooksession/api/v1/spots/{id}  ocs.kooksession.spot.destroy  lib/Controller/SpotController.php:53",
+        "  POST /ocs/v2.php/apps/kooksession/api/v1/spots/{id}/photos  ocs.kooksession.spotphoto.ajouter  lib/Controller/SpotPhotoController.php:31",
+        "  DELETE /ocs/v2.php/apps/kooksession/api/v1/spots/{id}/photos/{fileId}  ocs.kooksession.spotphoto.supprimer  lib/Controller/SpotPhotoController.php:37",
+        "  GET /ocs/v2.php/apps/kooksession/api/v1/stats/spots  ocs.kooksession.stats.spots  lib/Controller/StatsController.php:31",
+        "  GET /ocs/v2.php/apps/kooksession/api/v1/stats/mois  ocs.kooksession.stats.mois  lib/Controller/StatsController.php:38",
+        "  GET /ocs/v2.php/apps/kooksession/api/v1/stats/satisfaction  ocs.kooksession.stats.satisfaction  lib/Controller/StatsController.php:50",
+        "  GET /ocs/v2.php/apps/kooksession/api/v1/stats/temps  ocs.kooksession.stats.temps  lib/Controller/StatsController.php:57",
+        "  GET /ocs/v2.php/apps/kooksession/api/v1/stats/materiel  ocs.kooksession.stats.materiel  lib/Controller/StatsController.php:64",
+        "  GET /ocs/v2.php/apps/kooksession/api/v1/stats/conditions-ideales  ocs.kooksession.stats.conditionsideales  lib/Controller/StatsController.php:71",
+        "  GET /ocs/v2.php/apps/kooksession/api/v1/stats/records  ocs.kooksession.stats.records  lib/Controller/StatsController.php:78",
+        "  GET /ocs/v2.php/apps/kooksession/api/v1/valeurs  ocs.kooksession.valeur.index  lib/Controller/ValeurController.php:30",
+        "  POST /ocs/v2.php/apps/kooksession/api/v1/valeurs  ocs.kooksession.valeur.create  lib/Controller/ValeurController.php:36",
+        "  PUT /ocs/v2.php/apps/kooksession/api/v1/valeurs/{id}  ocs.kooksession.valeur.update  lib/Controller/ValeurController.php:42",
+        "  DELETE /ocs/v2.php/apps/kooksession/api/v1/valeurs/{id}  ocs.kooksession.valeur.destroy  lib/Controller/ValeurController.php:48"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 49
+        }
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 52 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 59,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/kooksession/",
+      "target": "OCA\\KookSession\\Controller\\PageController::index",
+      "openapi": [],
+      "source": "lib/Controller/PageController.php:35",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/kooksession/partage/{token}",
+      "target": "OCA\\KookSession\\Controller\\PartagePublicController::page",
+      "openapi": [],
+      "source": "lib/Controller/PartagePublicController.php:68",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/kooksession/partage/{token}/photo/{fileId}",
+      "target": "OCA\\KookSession\\Controller\\PartagePublicController::photo",
+      "openapi": [],
+      "source": "lib/Controller/PartagePublicController.php:94",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/kooksession/partage/{token}/video/{fileId}",
+      "target": "OCA\\KookSession\\Controller\\PartagePublicController::video",
+      "openapi": [],
+      "source": "lib/Controller/PartagePublicController.php:116",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/kooksession/photo/{fileId}",
+      "target": "OCA\\KookSession\\Controller\\PhotoController::afficher",
+      "openapi": [],
+      "source": "lib/Controller/PhotoController.php:54",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/kooksession/video/{fileId}",
+      "target": "OCA\\KookSession\\Controller\\PhotoController::video",
+      "openapi": [],
+      "source": "lib/Controller/PhotoController.php:80",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/kooksession/video/{fileId}/miniature",
+      "target": "OCA\\KookSession\\Controller\\PhotoController::miniatureVideo",
+      "openapi": [],
+      "source": "lib/Controller/PhotoController.php:102",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/accompagnateurs",
+      "target": "OCA\\KookSession\\Controller\\AccompagnateurController::index",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/AccompagnateurController.php:29",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/accompagnateurs",
+      "target": "OCA\\KookSession\\Controller\\AccompagnateurController::create",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/AccompagnateurController.php:41",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/accompagnateurs/{id}",
+      "target": "OCA\\KookSession\\Controller\\AccompagnateurController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/AccompagnateurController.php:53",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/accompagnateurs/{id}",
+      "target": "OCA\\KookSession\\Controller\\AccompagnateurController::show",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/AccompagnateurController.php:35",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/accompagnateurs/{id}",
+      "target": "OCA\\KookSession\\Controller\\AccompagnateurController::update",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/AccompagnateurController.php:47",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/envois",
+      "target": "OCA\\KookSession\\Controller\\PartageController::recus",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/PartageController.php:90",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/envois",
+      "target": "OCA\\KookSession\\Controller\\PartageController::envoyer",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/PartageController.php:79",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/envois/{id}",
+      "target": "OCA\\KookSession\\Controller\\PartageController::refuser",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/PartageController.php:104",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/envois/{id}/accepter",
+      "target": "OCA\\KookSession\\Controller\\PartageController::accepter",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/PartageController.php:97",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/equipements",
+      "target": "OCA\\KookSession\\Controller\\EquipementController::index",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/EquipementController.php:29",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/equipements",
+      "target": "OCA\\KookSession\\Controller\\EquipementController::create",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/EquipementController.php:41",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/equipements/{id}",
+      "target": "OCA\\KookSession\\Controller\\EquipementController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/EquipementController.php:53",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/equipements/{id}",
+      "target": "OCA\\KookSession\\Controller\\EquipementController::show",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/EquipementController.php:35",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/equipements/{id}",
+      "target": "OCA\\KookSession\\Controller\\EquipementController::update",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/EquipementController.php:47",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/equipements/{id}/photos",
+      "target": "OCA\\KookSession\\Controller\\EquipementPhotoController::ajouter",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/EquipementPhotoController.php:31",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/equipements/{id}/photos/{fileId}",
+      "target": "OCA\\KookSession\\Controller\\EquipementPhotoController::supprimer",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/EquipementPhotoController.php:37",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/partages",
+      "target": "OCA\\KookSession\\Controller\\PartageController::index",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/PartageController.php:38",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/partages",
+      "target": "OCA\\KookSession\\Controller\\PartageController::create",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/PartageController.php:49",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/partages/{id}",
+      "target": "OCA\\KookSession\\Controller\\PartageController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/PartageController.php:62",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/pratiques",
+      "target": "OCA\\KookSession\\Controller\\PratiqueController::index",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/PratiqueController.php:29",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/pratiques",
+      "target": "OCA\\KookSession\\Controller\\PratiqueController::create",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/PratiqueController.php:35",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/pratiques/{id}",
+      "target": "OCA\\KookSession\\Controller\\PratiqueController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/PratiqueController.php:47",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/pratiques/{id}",
+      "target": "OCA\\KookSession\\Controller\\PratiqueController::update",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/PratiqueController.php:41",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/sessions",
+      "target": "OCA\\KookSession\\Controller\\SessionController::index",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SessionController.php:32",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/sessions",
+      "target": "OCA\\KookSession\\Controller\\SessionController::create",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SessionController.php:44",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/sessions/{id}",
+      "target": "OCA\\KookSession\\Controller\\SessionController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SessionController.php:56",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/sessions/{id}",
+      "target": "OCA\\KookSession\\Controller\\SessionController::show",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SessionController.php:38",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/sessions/{id}",
+      "target": "OCA\\KookSession\\Controller\\SessionController::update",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SessionController.php:50",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/sessions/{id}/{media}",
+      "target": "OCA\\KookSession\\Controller\\SessionMediaController::supprimer",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SessionMediaController.php:70",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/sessions/{id}/{media}",
+      "target": "OCA\\KookSession\\Controller\\SessionMediaController::ajouter",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SessionMediaController.php:37",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/sessions/{id}/trace",
+      "target": "OCA\\KookSession\\Controller\\SessionMediaController::trace",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SessionMediaController.php:57",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/sessions/{id}/trace",
+      "target": "OCA\\KookSession\\Controller\\SessionMediaController::ajouterTrace",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SessionMediaController.php:47",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/spots",
+      "target": "OCA\\KookSession\\Controller\\SpotController::index",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SpotController.php:29",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/spots",
+      "target": "OCA\\KookSession\\Controller\\SpotController::create",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SpotController.php:41",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/spots/{id}",
+      "target": "OCA\\KookSession\\Controller\\SpotController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SpotController.php:53",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/spots/{id}",
+      "target": "OCA\\KookSession\\Controller\\SpotController::show",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SpotController.php:35",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/spots/{id}",
+      "target": "OCA\\KookSession\\Controller\\SpotController::update",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SpotController.php:47",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/spots/{id}/photos",
+      "target": "OCA\\KookSession\\Controller\\SpotPhotoController::ajouter",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SpotPhotoController.php:31",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/spots/{id}/photos/{fileId}",
+      "target": "OCA\\KookSession\\Controller\\SpotPhotoController::supprimer",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SpotPhotoController.php:37",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/stats/conditions-ideales",
+      "target": "OCA\\KookSession\\Controller\\StatsController::conditionsIdeales",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/StatsController.php:71",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/stats/materiel",
+      "target": "OCA\\KookSession\\Controller\\StatsController::materiel",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/StatsController.php:64",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/stats/mois",
+      "target": "OCA\\KookSession\\Controller\\StatsController::mois",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/StatsController.php:38",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/stats/records",
+      "target": "OCA\\KookSession\\Controller\\StatsController::records",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/StatsController.php:78",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/stats/satisfaction",
+      "target": "OCA\\KookSession\\Controller\\StatsController::satisfaction",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/StatsController.php:50",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/stats/spots",
+      "target": "OCA\\KookSession\\Controller\\StatsController::spots",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/StatsController.php:31",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/stats/temps",
+      "target": "OCA\\KookSession\\Controller\\StatsController::temps",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/StatsController.php:57",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/traces/analyse",
+      "target": "OCA\\KookSession\\Controller\\SessionMediaController::analyser",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SessionMediaController.php:64",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/utilisateurs",
+      "target": "OCA\\KookSession\\Controller\\PartageController::utilisateurs",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/PartageController.php:72",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/valeurs",
+      "target": "OCA\\KookSession\\Controller\\ValeurController::index",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/ValeurController.php:30",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/valeurs",
+      "target": "OCA\\KookSession\\Controller\\ValeurController::create",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/ValeurController.php:36",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/valeurs/{id}",
+      "target": "OCA\\KookSession\\Controller\\ValeurController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/ValeurController.php:48",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/kooksession/api/v1/valeurs/{id}",
+      "target": "OCA\\KookSession\\Controller\\ValeurController::update",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/ValeurController.php:42",
+      "kind": "OCS"
+    }
+  ]
+}

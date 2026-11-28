@@ -1,0 +1,72 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\FilesViewers\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:63 OCP\\Files\\IMimeTypeDetector::getAllMappings(): there since Nextcloud 30, the app declares from 28",
+        "lib/Controller/NotebookController.php:58 OCP\\App\\IAppManager::isEnabledForAnyone(): there since Nextcloud 32, the app declares from 28",
+        "lib/Preview/MuseScorePreviewProvider.php:38 OCP\\IImage::loadFromData(): there since Nextcloud 31, the app declares from 28"
+      ],
+      "lines": [
+        "3 uses in 3 files of the public API that the oldest majors of Nextcloud 28 to 35 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/AppInfo/Application.php:63 OCP\\Files\\IMimeTypeDetector::getAllMappings(): there since Nextcloud 30, the app declares from 28",
+        "  lib/Controller/NotebookController.php:58 OCP\\App\\IAppManager::isEnabledForAnyone(): there since Nextcloud 32, the app declares from 28",
+        "  lib/Preview/MuseScorePreviewProvider.php:38 OCP\\IImage::loadFromData(): there since Nextcloud 31, the app declares from 28"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:53 get()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:53 get()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/files_viewers/notebook  files_viewers.notebook.page  appinfo/routes.php:7 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 route outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 8 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/files_viewers/notebook  files_viewers.notebook.page  appinfo/routes.php:7 routes"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/NotebookController.php:86 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated in Nextcloud 28 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/NotebookController.php:86 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ]
+    }
+  ],
+  "endpoints": 1,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/files_viewers/notebook",
+      "target": "OCA\\FilesViewers\\Controller\\NotebookController::page",
+      "openapi": [],
+      "source": "appinfo/routes.php:7 routes",
+      "kind": "route"
+    }
+  ]
+}

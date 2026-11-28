@@ -1,0 +1,119 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\TwoFactorNextcloudNotification\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version3004Date20220331145316.php:30 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Migration/Version3004Date20220331145316.php:40 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "lines": [
+        "2 uses in 1 file of the public API that is deprecated in Nextcloud 32. The text of the tag names the replacement where it has one.",
+        "  lib/Migration/Version3004Date20220331145316.php:30 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Migration/Version3004Date20220331145316.php:40 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/CleanupTokens.php OCA\\TwoFactorNextcloudNotification\\BackgroundJob\\CleanupTokens"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/CleanupTokens.php OCA\\TwoFactorNextcloudNotification\\BackgroundJob\\CleanupTokens"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/NotificationManager.php:39 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 1 place. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/NotificationManager.php:39 new DateTime()"
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 3 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version4000Date20240802134536.php:31 dropTable() on a table whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version4000Date20240802134536.php:31 dropTable() on a table whose name is no constant"
+      ]
+    }
+  ],
+  "endpoints": 4,
+  "endpointList": [
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/twofactor_nextcloud_notification/settings/state",
+      "target": "OCA\\TwoFactorNextcloudNotification\\Controller\\SettingsController::setState",
+      "openapi": [],
+      "source": "appinfo/routes.php:11 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/twofactor_nextcloud_notification/api/{apiVersion}/attempt/{attemptId}",
+      "target": "OCA\\TwoFactorNextcloudNotification\\Controller\\APIController::disapprove",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:27 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/twofactor_nextcloud_notification/api/{apiVersion}/attempt/{attemptId}",
+      "target": "OCA\\TwoFactorNextcloudNotification\\Controller\\APIController::approve",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:18 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/twofactor_nextcloud_notification/api/{apiVersion}/poll/{token}",
+      "target": "OCA\\TwoFactorNextcloudNotification\\Controller\\APIController::poll",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:36 ocs",
+      "kind": "OCS"
+    }
+  ]
+}

@@ -1,0 +1,326 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\UnifiedPushProvider\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Cron/CheckDatas.php:39 OC\\User\\Manager",
+        "lib/Device/Device.php:448 OC_Util",
+        "lib/Device/SubscriptionInfo.php:145 OC\\Security\\TrustedDomainHelper",
+        "lib/Migration/Installation.php:15 OC\\RedisFactory",
+        "lib/Migration/Migration.php:20 OC\\RedisFactory",
+        "lib/Redis/RedisHelper.php:60 OC\\RedisFactory",
+        "lib/Redis/RedisHelper.php:293 OC\\SystemConfig",
+        "lib/Responses/SyncDeviceResponse.php:29 OC\\AppFramework\\Http",
+        "lib/Settings/AdminSettings.php:17 OC\\RedisFactory",
+        "lib/Utils.php:24 OC\\RedisFactory"
+      ],
+      "lines": [
+        "10 uses of the private API of the server in 9 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Cron/CheckDatas.php:39 OC\\User\\Manager",
+        "  lib/Device/Device.php:448 OC_Util",
+        "  lib/Device/SubscriptionInfo.php:145 OC\\Security\\TrustedDomainHelper",
+        "  lib/Migration/Installation.php:15 OC\\RedisFactory",
+        "  lib/Migration/Migration.php:20 OC\\RedisFactory",
+        "  lib/Redis/RedisHelper.php:60 OC\\RedisFactory",
+        "  lib/Redis/RedisHelper.php:293 OC\\SystemConfig",
+        "  lib/Responses/SyncDeviceResponse.php:29 OC\\AppFramework\\Http",
+        "  lib/Settings/AdminSettings.php:17 OC\\RedisFactory",
+        "  lib/Utils.php:24 OC\\RedisFactory"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/Cron/CheckDatas.php:25 OCP\\BackgroundJob\\TimedJob::setTimeSensitivity(): there since Nextcloud 22, the app declares from 20",
+        "lib/Cron/CheckDatas.php:25 OCP\\BackgroundJob\\IJob::TIME_INSENSITIVE: there since Nextcloud 22, the app declares from 20",
+        "lib/Cron/CheckDatas.php:28 OCP\\BackgroundJob\\Job::setAllowParallelRuns(): there since Nextcloud 27, the app declares from 20",
+        "lib/Migration/Version020205.php:147 OCP\\IDBConnection::executeStatement(): there since Nextcloud 21, the app declares from 20",
+        "lib/Migration/Version020205.php:189 OCP\\IDBConnection::executeStatement(): there since Nextcloud 21, the app declares from 20",
+        "lib/Migration/Version020205.php:198 OCP\\IDBConnection::executeStatement(): there since Nextcloud 21, the app declares from 20"
+      ],
+      "lines": [
+        "6 uses in 2 files of the public API that the oldest majors of Nextcloud 20 to 32 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/Cron/CheckDatas.php:25 OCP\\BackgroundJob\\TimedJob::setTimeSensitivity(): there since Nextcloud 22, the app declares from 20",
+        "  lib/Cron/CheckDatas.php:25 OCP\\BackgroundJob\\IJob::TIME_INSENSITIVE: there since Nextcloud 22, the app declares from 20",
+        "  lib/Cron/CheckDatas.php:28 OCP\\BackgroundJob\\Job::setAllowParallelRuns(): there since Nextcloud 27, the app declares from 20",
+        "  lib/Migration/Version020205.php:147 OCP\\IDBConnection::executeStatement(): there since Nextcloud 21, the app declares from 20",
+        "  lib/Migration/Version020205.php:189 OCP\\IDBConnection::executeStatement(): there since Nextcloud 21, the app declares from 20",
+        "  lib/Migration/Version020205.php:198 OCP\\IDBConnection::executeStatement(): there since Nextcloud 21, the app declares from 20"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "template-inline-script",
+      "level": "warn",
+      "places": [
+        "templates/admin-settings.php:22 onsubmit= attribute"
+      ],
+      "lines": [
+        "1 inline script in templates/. The Content Security Policy of the server runs neither a <script> without a source or the nonce of the response nor an event handler attribute, so the browser does not run them. A script added with OCP\\Util::addScript() or addInitScript() runs.",
+        "  templates/admin-settings.php:22 onsubmit= attribute"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/uppush/  uppush.unifiedpushprovider.check  appinfo/routes.php:5 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 route outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 2 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/uppush/  uppush.unifiedpushprovider.check  appinfo/routes.php:5 routes"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Db/UppushApp.php:50 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "lib/Db/UppushDevice.php:37 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "lib/Migration/Version020205.php:126 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "lib/Migration/Version020205.php:149 OCP\\IDBConnection::executeUpdate(): deprecated since Nextcloud 21; use executeStatement",
+        "lib/Migration/Version020205.php:169 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "lib/Migration/Version020205.php:191 OCP\\IDBConnection::executeUpdate(): deprecated since Nextcloud 21; use executeStatement",
+        "lib/Migration/Version020205.php:200 OCP\\IDBConnection::executeUpdate(): deprecated since Nextcloud 21; use executeStatement"
+      ],
+      "lines": [
+        "7 uses in 3 files of the public API that is deprecated in Nextcloud 20 to 32. The text of the tag names the replacement where it has one.",
+        "  lib/Db/UppushApp.php:50 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "  lib/Db/UppushDevice.php:37 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "  lib/Migration/Version020205.php:126 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "  lib/Migration/Version020205.php:149 OCP\\IDBConnection::executeUpdate(): deprecated since Nextcloud 21; use executeStatement",
+        "  lib/Migration/Version020205.php:169 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "  lib/Migration/Version020205.php:191 OCP\\IDBConnection::executeUpdate(): deprecated since Nextcloud 21; use executeStatement",
+        "  lib/Migration/Version020205.php:200 OCP\\IDBConnection::executeUpdate(): deprecated since Nextcloud 21; use executeStatement"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/admin-settings.php:2 <style> with content",
+        "templates/personal-settings.php:1 <style> with content",
+        "templates/personal-settings.php:16 style= attribute"
+      ],
+      "lines": [
+        "3 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/admin-settings.php:2 <style> with content",
+        "  templates/personal-settings.php:1 <style> with content",
+        "  templates/personal-settings.php:16 style= attribute"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Db/UppushApp.php:50 new DateTimeImmutable()",
+        "lib/Db/UppushDevice.php:37 new DateTimeImmutable()",
+        "lib/Device/Device.php:398 time()",
+        "lib/Device/Device.php:413 time()",
+        "lib/Device/Device.php:427 time()",
+        "lib/Device/Device.php:458 time()",
+        "lib/Device/SubscriptionInfo.php:207 time()",
+        "lib/Migration/Version020205.php:126 new DateTimeImmutable()",
+        "lib/Redis/Lock.php:84 time()",
+        "lib/Redis/Lock.php:97 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 10 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Db/UppushApp.php:50 new DateTimeImmutable()",
+        "  lib/Db/UppushDevice.php:37 new DateTimeImmutable()",
+        "  lib/Device/Device.php:398 time()",
+        "  lib/Device/Device.php:413 time()",
+        "  lib/Device/Device.php:427 time()",
+        "  lib/Device/Device.php:458 time()",
+        "  lib/Device/SubscriptionInfo.php:207 time()",
+        "  lib/Migration/Version020205.php:126 new DateTimeImmutable()",
+        "  lib/Redis/Lock.php:84 time()",
+        "  lib/Redis/Lock.php:97 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "cors-unreferenced",
+      "level": "info",
+      "places": [
+        "DELETE /index.php/apps/uppush/message/{messageId}  uppush.unifiedpushprovider.deletemessage  appinfo/routes.php:30 routes",
+        "POST /index.php/apps/uppush/push/{token}  uppush.unifiedpushprovider.push  appinfo/routes.php:50 routes",
+        "GET /index.php/apps/uppush/push/{token}  uppush.unifiedpushprovider.unifiedpushdiscovery  appinfo/routes.php:55 routes",
+        "GET /index.php/apps/uppush/gateway/matrix  uppush.unifiedpushprovider.gatewaymatrixdiscovery  appinfo/routes.php:60 routes",
+        "POST /index.php/apps/uppush/gateway/matrix  uppush.unifiedpushprovider.gatewaymatrix  appinfo/routes.php:65 routes",
+        "OPTIONS /index.php/apps/uppush/push/{token}  uppush.unifiedpushprovider.preflighted_cors  appinfo/routes.php:70 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 6 routes outside OCS whose method allows requests from other origins (CORS), or that answer the preflight of such a request (OPTIONS). They are there for clients outside the app, so this is no defect in itself.",
+        "  DELETE /index.php/apps/uppush/message/{messageId}  uppush.unifiedpushprovider.deletemessage  appinfo/routes.php:30 routes",
+        "  POST /index.php/apps/uppush/push/{token}  uppush.unifiedpushprovider.push  appinfo/routes.php:50 routes",
+        "  GET /index.php/apps/uppush/push/{token}  uppush.unifiedpushprovider.unifiedpushdiscovery  appinfo/routes.php:55 routes",
+        "  GET /index.php/apps/uppush/gateway/matrix  uppush.unifiedpushprovider.gatewaymatrixdiscovery  appinfo/routes.php:60 routes",
+        "  POST /index.php/apps/uppush/gateway/matrix  uppush.unifiedpushprovider.gatewaymatrix  appinfo/routes.php:65 routes",
+        "  OPTIONS /index.php/apps/uppush/push/{token}  uppush.unifiedpushprovider.preflighted_cors  appinfo/routes.php:70 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    }
+  ],
+  "endpoints": 15,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/uppush/",
+      "target": "OCA\\UnifiedPushProvider\\Controller\\UnifiedPushProviderController::check",
+      "openapi": [],
+      "source": "appinfo/routes.php:5 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/uppush/app/",
+      "target": "OCA\\UnifiedPushProvider\\Controller\\UnifiedPushProviderController::createApp",
+      "openapi": [],
+      "source": "appinfo/routes.php:40 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/uppush/app/{token}",
+      "target": "OCA\\UnifiedPushProvider\\Controller\\UnifiedPushProviderController::deleteApp",
+      "openapi": [],
+      "source": "appinfo/routes.php:45 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/uppush/device/",
+      "target": "OCA\\UnifiedPushProvider\\Controller\\UnifiedPushProviderController::createDevice",
+      "openapi": [],
+      "source": "appinfo/routes.php:20 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/uppush/device/{deviceId}",
+      "target": "OCA\\UnifiedPushProvider\\Controller\\UnifiedPushProviderController::deleteDevice",
+      "openapi": [],
+      "source": "appinfo/routes.php:35 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/uppush/device/{deviceId}",
+      "target": "OCA\\UnifiedPushProvider\\Controller\\UnifiedPushProviderController::syncDevice",
+      "openapi": [],
+      "source": "appinfo/routes.php:25 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/uppush/gateway/matrix",
+      "target": "OCA\\UnifiedPushProvider\\Controller\\UnifiedPushProviderController::gatewayMatrixDiscovery",
+      "openapi": [],
+      "source": "appinfo/routes.php:60 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/uppush/gateway/matrix",
+      "target": "OCA\\UnifiedPushProvider\\Controller\\UnifiedPushProviderController::gatewayMatrix",
+      "openapi": [],
+      "source": "appinfo/routes.php:65 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/uppush/keepalive/",
+      "target": "OCA\\UnifiedPushProvider\\Controller\\UnifiedPushProviderController::setKeepalive",
+      "openapi": [],
+      "source": "appinfo/routes.php:10 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/uppush/max_message_ttl/",
+      "target": "OCA\\UnifiedPushProvider\\Controller\\UnifiedPushProviderController::setMaxMessageTtl",
+      "openapi": [],
+      "source": "appinfo/routes.php:15 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/uppush/message/{messageId}",
+      "target": "OCA\\UnifiedPushProvider\\Controller\\UnifiedPushProviderController::deleteMessage",
+      "openapi": [],
+      "source": "appinfo/routes.php:30 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/uppush/push/{token}",
+      "target": "OCA\\UnifiedPushProvider\\Controller\\UnifiedPushProviderController::unifiedpushDiscovery",
+      "openapi": [],
+      "source": "appinfo/routes.php:55 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/uppush/push/{token}",
+      "target": "OCA\\UnifiedPushProvider\\Controller\\UnifiedPushProviderController::preflightedCors",
+      "openapi": [],
+      "source": "appinfo/routes.php:70 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/uppush/push/{token}",
+      "target": "OCA\\UnifiedPushProvider\\Controller\\UnifiedPushProviderController::push",
+      "openapi": [],
+      "source": "appinfo/routes.php:50 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/capabilities",
+      "target": "OCA\\UnifiedPushProvider\\AppInfo\\Capabilities",
+      "openapi": [],
+      "source": "lib/AppInfo/Application.php:26",
+      "kind": "capability"
+    }
+  ]
+}

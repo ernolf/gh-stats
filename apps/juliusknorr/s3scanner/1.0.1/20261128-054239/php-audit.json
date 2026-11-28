@@ -1,0 +1,133 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\S3Scanner\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:53 OC\\Files\\Filesystem",
+        "lib/AppInfo/Application.php:54 OC\\Files\\Storage\\Storage",
+        "lib/AppInfo/Application.php:55 OC\\Files\\ObjectStore\\HomeObjectStoreStorage",
+        "lib/Controller/ScanController.php:69 OC::$server",
+        "lib/Filesystem/CacheWrapper.php:33 OC\\Files\\Cache\\Wrapper\\CacheWrapper",
+        "lib/Filesystem/CacheWrapper.php:37 OC::$server",
+        "lib/Filesystem/PostponedPropagator.php:35 OC\\Files\\Cache\\HomePropagator",
+        "lib/Filesystem/PostponedPropagator.php:36 OC\\Files\\Storage\\Storage",
+        "lib/Filesystem/PostponedPropagator.php:42 OC::$server",
+        "lib/Filesystem/StorageWrapper.php:31 OC\\Files\\Storage\\Wrapper\\Wrapper",
+        "lib/Filesystem/StorageWrapper.php:45 OC::$server",
+        "lib/Filesystem/Updater.php:30 OC\\Files\\Cache\\Updater",
+        "lib/Filesystem/Updater.php:34 OC::$server",
+        "lib/Scanner.php:97 OC\\User\\NoUserException",
+        "lib/Scanner.php:133 OC\\Files\\Filesystem",
+        "lib/Scanner.php:136 OC\\Files\\Search\\SearchComparison",
+        "lib/Scanner.php:139 OC\\Files\\Search\\SearchBinaryOperator",
+        "lib/Scanner.php:142 OC\\Files\\Search\\SearchQuery",
+        "lib/Scanner.php:143 OC\\Files\\Search\\SearchOrder"
+      ],
+      "lines": [
+        "19 uses of the private API of the server in 7 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/AppInfo/Application.php:53 OC\\Files\\Filesystem",
+        "  lib/AppInfo/Application.php:54 OC\\Files\\Storage\\Storage",
+        "  lib/AppInfo/Application.php:55 OC\\Files\\ObjectStore\\HomeObjectStoreStorage",
+        "  lib/Controller/ScanController.php:69 OC::$server",
+        "  lib/Filesystem/CacheWrapper.php:33 OC\\Files\\Cache\\Wrapper\\CacheWrapper",
+        "  lib/Filesystem/CacheWrapper.php:37 OC::$server",
+        "  lib/Filesystem/PostponedPropagator.php:35 OC\\Files\\Cache\\HomePropagator",
+        "  lib/Filesystem/PostponedPropagator.php:36 OC\\Files\\Storage\\Storage",
+        "  lib/Filesystem/PostponedPropagator.php:42 OC::$server",
+        "  lib/Filesystem/StorageWrapper.php:31 OC\\Files\\Storage\\Wrapper\\Wrapper",
+        "  lib/Filesystem/StorageWrapper.php:45 OC::$server",
+        "  lib/Filesystem/Updater.php:30 OC\\Files\\Cache\\Updater",
+        "  lib/Filesystem/Updater.php:34 OC::$server",
+        "  lib/Scanner.php:97 OC\\User\\NoUserException",
+        "  lib/Scanner.php:133 OC\\Files\\Filesystem",
+        "  lib/Scanner.php:136 OC\\Files\\Search\\SearchComparison",
+        "  lib/Scanner.php:139 OC\\Files\\Search\\SearchBinaryOperator",
+        "  lib/Scanner.php:142 OC\\Files\\Search\\SearchQuery",
+        "  lib/Scanner.php:143 OC\\Files\\Search\\SearchOrder"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 16
+        }
+      ]
+    },
+    {
+      "id": "legacy-hook",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:45 OC_Filesystem::preSetup: the manual names no replacement event"
+      ],
+      "lines": [
+        "1 connection to a legacy hook of the server. A hook the server removed is never emitted, and the listener never runs; the typed events of OCP\\EventDispatcher replace the hooks.",
+        "OCP\\Util::connectHook() is deprecated since Nextcloud 21: use \\OCP\\EventDispatcher\\IEventDispatcher::addListener. ocp-deprecated leaves these calls to this finding.",
+        "  lib/AppInfo/Application.php:45 OC_Filesystem::preSetup: the manual names no replacement event"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Scanner.php:104 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 1 place. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Scanner.php:104 time()"
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "POST /ocs/v2.php/apps/s3scanner/scan/{userId}  ocs.s3scanner.scan.scanall  appinfo/routes.php:4 ocs",
+        "POST /ocs/v2.php/apps/s3scanner/scan/{userId}/{path}  ocs.s3scanner.scan.scan  appinfo/routes.php:5 ocs"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  POST /ocs/v2.php/apps/s3scanner/scan/{userId}  ocs.s3scanner.scan.scanall  appinfo/routes.php:4 ocs",
+        "  POST /ocs/v2.php/apps/s3scanner/scan/{userId}/{path}  ocs.s3scanner.scan.scan  appinfo/routes.php:5 ocs"
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 2 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 2,
+  "endpointList": [
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/s3scanner/scan/{userId}",
+      "target": "OCA\\S3Scanner\\Controller\\ScanController::scanAll",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:4 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/s3scanner/scan/{userId}/{path}",
+      "target": "OCA\\S3Scanner\\Controller\\ScanController::scan",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:5 ocs",
+      "kind": "OCS"
+    }
+  ]
+}

@@ -1,0 +1,646 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\LogCheck\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Repair/EnsureLogCheckSchema.php:63 OC\\DB\\MigrationService",
+        "lib/Repair/EnsureLogCheckSchema.php:65 OC\\DB\\Connection"
+      ],
+      "lines": [
+        "2 uses of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Repair/EnsureLogCheckSchema.php:63 OC\\DB\\MigrationService",
+        "  lib/Repair/EnsureLogCheckSchema.php:65 OC\\DB\\Connection"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/logcheck/settings  logcheck.page.settingsindex  appinfo/routes.php:17 routes",
+        "GET /index.php/apps/logcheck/settings/status  logcheck.page.legacystatus  appinfo/routes.php:19 routes",
+        "GET /index.php/apps/logcheck/settings/channels  logcheck.page.legacychannels  appinfo/routes.php:20 routes",
+        "GET /index.php/apps/logcheck/settings/watch  logcheck.page.legacywatch  appinfo/routes.php:21 routes",
+        "GET /index.php/apps/logcheck/settings/access  logcheck.page.legacyaccess  appinfo/routes.php:22 routes",
+        "GET /index.php/apps/logcheck/settings/privacy  logcheck.page.legacyprivacy  appinfo/routes.php:23 routes",
+        "POST /index.php/apps/logcheck/api/admin/transfer/reconcile  logcheck.transfer_api.reconcile  appinfo/routes.php:36 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 7 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 9 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/logcheck/settings  logcheck.page.settingsindex  appinfo/routes.php:17 routes",
+        "  GET /index.php/apps/logcheck/settings/status  logcheck.page.legacystatus  appinfo/routes.php:19 routes",
+        "  GET /index.php/apps/logcheck/settings/channels  logcheck.page.legacychannels  appinfo/routes.php:20 routes",
+        "  GET /index.php/apps/logcheck/settings/watch  logcheck.page.legacywatch  appinfo/routes.php:21 routes",
+        "  GET /index.php/apps/logcheck/settings/access  logcheck.page.legacyaccess  appinfo/routes.php:22 routes",
+        "  GET /index.php/apps/logcheck/settings/privacy  logcheck.page.legacyprivacy  appinfo/routes.php:23 routes",
+        "  POST /index.php/apps/logcheck/api/admin/transfer/reconcile  logcheck.transfer_api.reconcile  appinfo/routes.php:36 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "openapi-drift",
+      "level": "warn",
+      "places": [
+        "GET /api/status: in openapi.json, and no route provides it",
+        "GET /api/settings: in openapi.json, and no route provides it",
+        "PUT /api/settings: in openapi.json, and no route provides it",
+        "POST /api/turn-on-alerts: in openapi.json, and no route provides it",
+        "POST /api/channels/{}/test: in openapi.json, and no route provides it",
+        "POST /api/channels/{}/reenable: in openapi.json, and no route provides it",
+        "POST /api/run: in openapi.json, and no route provides it",
+        "GET /api/directory/search: in openapi.json, and no route provides it",
+        "GET /api/logs/meta: in openapi.json, and no route provides it",
+        "GET /api/logs/files: in openapi.json, and no route provides it",
+        "GET /api/logs/tail: in openapi.json, and no route provides it",
+        "GET /api/logs/before: in openapi.json, and no route provides it",
+        "POST /api/logs/download: in openapi.json, and no route provides it",
+        "GET /api/logs/search: in openapi.json, and no route provides it",
+        "POST /api/logs/start-fresh: in openapi.json, and no route provides it",
+        "POST /api/logs/delete: in openapi.json, and no route provides it",
+        "POST /api/logs/delete-copy: in openapi.json, and no route provides it"
+      ],
+      "lines": [
+        "The OpenAPI specification and the routes differ in 17 operations. A client generated from the specification then calls what is not there, or lacks what is. This holds the routes against the specification and does not generate it again.",
+        "  GET /api/status: in openapi.json, and no route provides it",
+        "  GET /api/settings: in openapi.json, and no route provides it",
+        "  PUT /api/settings: in openapi.json, and no route provides it",
+        "  POST /api/turn-on-alerts: in openapi.json, and no route provides it",
+        "  POST /api/channels/{}/test: in openapi.json, and no route provides it",
+        "  POST /api/channels/{}/reenable: in openapi.json, and no route provides it",
+        "  POST /api/run: in openapi.json, and no route provides it",
+        "  GET /api/directory/search: in openapi.json, and no route provides it",
+        "  GET /api/logs/meta: in openapi.json, and no route provides it",
+        "  GET /api/logs/files: in openapi.json, and no route provides it",
+        "  GET /api/logs/tail: in openapi.json, and no route provides it",
+        "  GET /api/logs/before: in openapi.json, and no route provides it",
+        "  POST /api/logs/download: in openapi.json, and no route provides it",
+        "  GET /api/logs/search: in openapi.json, and no route provides it",
+        "  POST /api/logs/start-fresh: in openapi.json, and no route provides it",
+        "  POST /api/logs/delete: in openapi.json, and no route provides it",
+        "  POST /api/logs/delete-copy: in openapi.json, and no route provides it"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 14
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/ConfigTransfer/TransferReceiptStore.php:44 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferReceiptStore.php:46 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferReceiptStore.php:55 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferReceiptStore.php:67 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferReceiptStore.php:83 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferReceiptStore.php:91 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferReceiptStore.php:101 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferService.php:1015 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/ConfigTransfer/TransferService.php:1536 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferService.php:1555 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferService.php:1595 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferService.php:1619 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Controller/ApiController.php:416 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "lib/Repair/EnsureLogCheckSchema.php:49 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Repair/UninstallDropTables.php:84 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Repair/UninstallDropTables.php:116 OCP\\IConfig::deleteAppValues(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/Health/JobsHealthProbe.php:51 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/Health/UpdatesHealthProbe.php:66 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:139 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:321 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:532 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:536 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:779 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:783 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:790 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:852 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Support/NavGate.php:53 OCP\\AppFramework\\IAppContainer: deprecated since Nextcloud 25"
+      ],
+      "lines": [
+        "27 uses in 9 files of the public API that is deprecated in Nextcloud 32 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:44 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:46 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:55 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:67 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:83 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:91 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:101 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferService.php:1015 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/ConfigTransfer/TransferService.php:1536 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferService.php:1555 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferService.php:1595 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferService.php:1619 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Controller/ApiController.php:416 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "  lib/Repair/EnsureLogCheckSchema.php:49 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Repair/UninstallDropTables.php:84 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Repair/UninstallDropTables.php:116 OCP\\IConfig::deleteAppValues(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/Health/JobsHealthProbe.php:51 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/Health/UpdatesHealthProbe.php:66 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:139 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:321 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:532 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:536 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:779 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:783 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:790 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:852 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Support/NavGate.php:53 OCP\\AppFramework\\IAppContainer: deprecated since Nextcloud 25"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 24
+        }
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/ConfigTransfer/TransferService.php:392",
+        "lib/ConfigTransfer/TransferService.php:1234",
+        "lib/Service/SettingsService.php:186",
+        "lib/Service/UpgradeBackupService.php:259",
+        "lib/Service/WatchRunner.php:218",
+        "lib/Service/WatchRunner.php:247"
+      ],
+      "lines": [
+        "6 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/ConfigTransfer/TransferService.php:392",
+        "  lib/ConfigTransfer/TransferService.php:1234",
+        "  lib/Service/SettingsService.php:186",
+        "  lib/Service/UpgradeBackupService.php:259",
+        "  lib/Service/WatchRunner.php:218",
+        "  lib/Service/WatchRunner.php:247"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/LogWatchJob.php OCA\\LogCheck\\BackgroundJob\\LogWatchJob"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/LogWatchJob.php OCA\\LogCheck\\BackgroundJob\\LogWatchJob"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/ConfigTransfer/TransferPendingStore.php:47 time()",
+        "lib/ConfigTransfer/TransferPendingStore.php:79 time()",
+        "lib/ConfigTransfer/TransferPendingStore.php:126 time()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:46 time()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:81 time()",
+        "lib/ConfigTransfer/TransferService.php:355 time()",
+        "lib/ConfigTransfer/TransferService.php:1493 time()",
+        "lib/Service/AccumulatorStore.php:47 time()",
+        "lib/Service/AccumulatorStore.php:105 time()",
+        "lib/Service/Channel/NotificationChannel.php:31 new DateTime()",
+        "lib/Service/Channel/NotificationChannel.php:52 new DateTime()",
+        "lib/Service/ChannelStateStore.php:47 time()",
+        "lib/Service/ChannelStateStore.php:57 time()",
+        "lib/Service/CursorStore.php:45 time()",
+        "lib/Service/DeliveryStore.php:25 time()",
+        "lib/Service/DeliveryStore.php:50 time()",
+        "lib/Service/Health/JobsHealthProbe.php:87 time()",
+        "lib/Service/Health/UpdatesHealthProbe.php:79 time()",
+        "lib/Service/LeaseService.php:25 time()",
+        "lib/Service/LeaseService.php:44 time()",
+        "lib/Service/LeaseService.php:77 time()",
+        "lib/Service/LeaseService.php:98 time()",
+        "lib/Service/PendingStore.php:35 time()",
+        "lib/Service/PendingStore.php:66 time()",
+        "lib/Service/PendingStore.php:88 time()",
+        "lib/Service/PendingStore.php:143 time()",
+        "lib/Service/PendingStore.php:161 time()",
+        "lib/Service/PendingStore.php:174 time()",
+        "lib/Service/PendingStore.php:188 time()",
+        "lib/Service/PendingStore.php:192 time()",
+        "lib/Service/PendingStore.php:201 time()",
+        "lib/Service/SettingsService.php:183 time()",
+        "lib/Service/SettingsService.php:241 time()",
+        "lib/Service/SettingsService.php:276 time()",
+        "lib/Service/StatusService.php:50 time()",
+        "lib/Service/UpgradeBackupService.php:131 new DateTimeImmutable()",
+        "lib/Service/WatchRunner.php:54 time()",
+        "lib/Service/WatchRunner.php:66 time()",
+        "lib/Service/WatchRunner.php:77 time()",
+        "lib/Service/WatchRunner.php:92 time()",
+        "lib/Service/WatchRunner.php:103 time()",
+        "lib/Service/WatchRunner.php:155 time()",
+        "lib/Service/WatchRunner.php:169 time()",
+        "lib/Service/WatchRunner.php:190 time()",
+        "lib/Service/WatchRunner.php:200 time()",
+        "lib/Service/WatchRunner.php:268 time()",
+        "lib/Service/WatchRunner.php:288 time()",
+        "lib/Service/WatchRunner.php:298 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 48 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/ConfigTransfer/TransferPendingStore.php:47 time()",
+        "  lib/ConfigTransfer/TransferPendingStore.php:79 time()",
+        "  lib/ConfigTransfer/TransferPendingStore.php:126 time()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:46 time()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:81 time()",
+        "  lib/ConfigTransfer/TransferService.php:355 time()",
+        "  lib/ConfigTransfer/TransferService.php:1493 time()",
+        "  lib/Service/AccumulatorStore.php:47 time()",
+        "  lib/Service/AccumulatorStore.php:105 time()",
+        "  lib/Service/Channel/NotificationChannel.php:31 new DateTime()",
+        "  lib/Service/Channel/NotificationChannel.php:52 new DateTime()",
+        "  lib/Service/ChannelStateStore.php:47 time()",
+        "  lib/Service/ChannelStateStore.php:57 time()",
+        "  lib/Service/CursorStore.php:45 time()",
+        "  lib/Service/DeliveryStore.php:25 time()",
+        "  lib/Service/DeliveryStore.php:50 time()",
+        "  lib/Service/Health/JobsHealthProbe.php:87 time()",
+        "  lib/Service/Health/UpdatesHealthProbe.php:79 time()",
+        "  lib/Service/LeaseService.php:25 time()",
+        "  lib/Service/LeaseService.php:44 time()",
+        "  lib/Service/LeaseService.php:77 time()",
+        "  lib/Service/LeaseService.php:98 time()",
+        "  lib/Service/PendingStore.php:35 time()",
+        "  lib/Service/PendingStore.php:66 time()",
+        "  lib/Service/PendingStore.php:88 time()",
+        "  lib/Service/PendingStore.php:143 time()",
+        "  lib/Service/PendingStore.php:161 time()",
+        "  lib/Service/PendingStore.php:174 time()",
+        "  lib/Service/PendingStore.php:188 time()",
+        "  lib/Service/PendingStore.php:192 time()",
+        "  lib/Service/PendingStore.php:201 time()",
+        "  lib/Service/SettingsService.php:183 time()",
+        "  lib/Service/SettingsService.php:241 time()",
+        "  lib/Service/SettingsService.php:276 time()",
+        "  lib/Service/StatusService.php:50 time()",
+        "  lib/Service/UpgradeBackupService.php:131 new DateTimeImmutable()",
+        "  lib/Service/WatchRunner.php:54 time()",
+        "  lib/Service/WatchRunner.php:66 time()",
+        "  lib/Service/WatchRunner.php:77 time()",
+        "  lib/Service/WatchRunner.php:92 time()",
+        "  lib/Service/WatchRunner.php:103 time()",
+        "  lib/Service/WatchRunner.php:155 time()",
+        "  lib/Service/WatchRunner.php:169 time()",
+        "  lib/Service/WatchRunner.php:190 time()",
+        "  lib/Service/WatchRunner.php:200 time()",
+        "  lib/Service/WatchRunner.php:268 time()",
+        "  lib/Service/WatchRunner.php:288 time()",
+        "  lib/Service/WatchRunner.php:298 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 45
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/ConfigTransfer/TransferReceiptStore.php:44 setAppValue()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:46 setAppValue()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:55 getAppValue()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:67 getAppValue()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:83 setAppValue()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:91 getAppValue()",
+        "lib/ConfigTransfer/TransferService.php:1555 getAppValue()",
+        "lib/ConfigTransfer/TransferService.php:1595 setAppValue()",
+        "lib/ConfigTransfer/TransferService.php:1600 setValueString()",
+        "lib/ConfigTransfer/TransferService.php:1617 setValueString()",
+        "lib/ConfigTransfer/TransferService.php:1620 setValueString()",
+        "lib/Service/Health/JobsHealthProbe.php:49 getValueString()",
+        "lib/Service/Health/JobsHealthProbe.php:50 getValueInt()",
+        "lib/Service/Health/JobsHealthProbe.php:51 getAppValue()",
+        "lib/Service/Health/UpdatesHealthProbe.php:65 getValueInt()",
+        "lib/Service/Health/UpdatesHealthProbe.php:66 getAppValue()",
+        "lib/Service/UpgradeBackupService.php:139 setAppValue()",
+        "lib/Service/UpgradeBackupService.php:321 setAppValue()",
+        "lib/Service/UpgradeBackupService.php:536 getAppValue()",
+        "lib/Service/UpgradeBackupService.php:790 setAppValue()",
+        "lib/Service/UpgradeBackupService.php:852 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 21 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:44 setAppValue()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:46 setAppValue()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:55 getAppValue()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:67 getAppValue()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:83 setAppValue()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:91 getAppValue()",
+        "  lib/ConfigTransfer/TransferService.php:1555 getAppValue()",
+        "  lib/ConfigTransfer/TransferService.php:1595 setAppValue()",
+        "  lib/ConfigTransfer/TransferService.php:1600 setValueString()",
+        "  lib/ConfigTransfer/TransferService.php:1617 setValueString()",
+        "  lib/ConfigTransfer/TransferService.php:1620 setValueString()",
+        "  lib/Service/Health/JobsHealthProbe.php:49 getValueString()",
+        "  lib/Service/Health/JobsHealthProbe.php:50 getValueInt()",
+        "  lib/Service/Health/JobsHealthProbe.php:51 getAppValue()",
+        "  lib/Service/Health/UpdatesHealthProbe.php:65 getValueInt()",
+        "  lib/Service/Health/UpdatesHealthProbe.php:66 getAppValue()",
+        "  lib/Service/UpgradeBackupService.php:139 setAppValue()",
+        "  lib/Service/UpgradeBackupService.php:321 setAppValue()",
+        "  lib/Service/UpgradeBackupService.php:536 getAppValue()",
+        "  lib/Service/UpgradeBackupService.php:790 setAppValue()",
+        "  lib/Service/UpgradeBackupService.php:852 getAppValue()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 18
+        }
+      ]
+    }
+  ],
+  "endpoints": 32,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcheck/",
+      "target": "OCA\\LogCheck\\Controller\\PageController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:14 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/logcheck/api/admin/transfer/apply",
+      "target": "OCA\\LogCheck\\Controller\\TransferApiController::apply",
+      "openapi": [],
+      "source": "appinfo/routes.php:35 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/logcheck/api/admin/transfer/export",
+      "target": "OCA\\LogCheck\\Controller\\TransferApiController::export",
+      "openapi": [],
+      "source": "appinfo/routes.php:33 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/logcheck/api/admin/transfer/preview",
+      "target": "OCA\\LogCheck\\Controller\\TransferApiController::preview",
+      "openapi": [],
+      "source": "appinfo/routes.php:34 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/logcheck/api/admin/transfer/reconcile",
+      "target": "OCA\\LogCheck\\Controller\\TransferApiController::reconcile",
+      "openapi": [],
+      "source": "appinfo/routes.php:36 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcheck/api/admin/transfer/status",
+      "target": "OCA\\LogCheck\\Controller\\TransferApiController::status",
+      "openapi": [],
+      "source": "appinfo/routes.php:32 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/logcheck/api/channels/{channel}/reenable",
+      "target": "OCA\\LogCheck\\Controller\\ApiController::reenableChannel",
+      "openapi": [],
+      "source": "appinfo/routes.php:43 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/logcheck/api/channels/{channel}/test",
+      "target": "OCA\\LogCheck\\Controller\\ApiController::testChannel",
+      "openapi": [],
+      "source": "appinfo/routes.php:42 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcheck/api/directory/search",
+      "target": "OCA\\LogCheck\\Controller\\ApiController::searchDirectory",
+      "openapi": [],
+      "source": "appinfo/routes.php:45 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcheck/api/logs/before",
+      "target": "OCA\\LogCheck\\Controller\\ApiController::getLogBefore",
+      "openapi": [],
+      "source": "appinfo/routes.php:49 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/logcheck/api/logs/delete",
+      "target": "OCA\\LogCheck\\Controller\\ApiController::deleteLog",
+      "openapi": [],
+      "source": "appinfo/routes.php:53 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/logcheck/api/logs/delete-copy",
+      "target": "OCA\\LogCheck\\Controller\\ApiController::deleteLogCopy",
+      "openapi": [],
+      "source": "appinfo/routes.php:54 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/logcheck/api/logs/download",
+      "target": "OCA\\LogCheck\\Controller\\ApiController::downloadLog",
+      "openapi": [],
+      "source": "appinfo/routes.php:50 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcheck/api/logs/files",
+      "target": "OCA\\LogCheck\\Controller\\ApiController::listLogFiles",
+      "openapi": [],
+      "source": "appinfo/routes.php:47 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcheck/api/logs/meta",
+      "target": "OCA\\LogCheck\\Controller\\ApiController::getLogMeta",
+      "openapi": [],
+      "source": "appinfo/routes.php:46 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcheck/api/logs/search",
+      "target": "OCA\\LogCheck\\Controller\\ApiController::searchLog",
+      "openapi": [],
+      "source": "appinfo/routes.php:51 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/logcheck/api/logs/start-fresh",
+      "target": "OCA\\LogCheck\\Controller\\ApiController::startFreshLog",
+      "openapi": [],
+      "source": "appinfo/routes.php:52 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcheck/api/logs/tail",
+      "target": "OCA\\LogCheck\\Controller\\ApiController::getLogTail",
+      "openapi": [],
+      "source": "appinfo/routes.php:48 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/logcheck/api/run",
+      "target": "OCA\\LogCheck\\Controller\\ApiController::runNow",
+      "openapi": [],
+      "source": "appinfo/routes.php:44 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcheck/api/settings",
+      "target": "OCA\\LogCheck\\Controller\\ApiController::getSettings",
+      "openapi": [],
+      "source": "appinfo/routes.php:39 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/logcheck/api/settings",
+      "target": "OCA\\LogCheck\\Controller\\ApiController::saveSettings",
+      "openapi": [],
+      "source": "appinfo/routes.php:40 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcheck/api/status",
+      "target": "OCA\\LogCheck\\Controller\\ApiController::getStatus",
+      "openapi": [],
+      "source": "appinfo/routes.php:38 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/logcheck/api/turn-on-alerts",
+      "target": "OCA\\LogCheck\\Controller\\ApiController::turnOnAlerts",
+      "openapi": [],
+      "source": "appinfo/routes.php:41 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcheck/home",
+      "target": "OCA\\LogCheck\\Controller\\PageController::home",
+      "openapi": [],
+      "source": "appinfo/routes.php:15 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcheck/logs",
+      "target": "OCA\\LogCheck\\Controller\\PageController::logs",
+      "openapi": [],
+      "source": "appinfo/routes.php:16 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcheck/settings",
+      "target": "OCA\\LogCheck\\Controller\\PageController::settingsIndex",
+      "openapi": [],
+      "source": "appinfo/routes.php:17 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcheck/settings/{section}",
+      "target": "OCA\\LogCheck\\Controller\\PageController::settings",
+      "openapi": [],
+      "source": "appinfo/routes.php:24 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcheck/settings/access",
+      "target": "OCA\\LogCheck\\Controller\\PageController::legacyAccess",
+      "openapi": [],
+      "source": "appinfo/routes.php:22 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcheck/settings/channels",
+      "target": "OCA\\LogCheck\\Controller\\PageController::legacyChannels",
+      "openapi": [],
+      "source": "appinfo/routes.php:20 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcheck/settings/privacy",
+      "target": "OCA\\LogCheck\\Controller\\PageController::legacyPrivacy",
+      "openapi": [],
+      "source": "appinfo/routes.php:23 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcheck/settings/status",
+      "target": "OCA\\LogCheck\\Controller\\PageController::legacyStatus",
+      "openapi": [],
+      "source": "appinfo/routes.php:19 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/logcheck/settings/watch",
+      "target": "OCA\\LogCheck\\Controller\\PageController::legacyWatch",
+      "openapi": [],
+      "source": "appinfo/routes.php:21 routes",
+      "kind": "route"
+    }
+  ]
+}

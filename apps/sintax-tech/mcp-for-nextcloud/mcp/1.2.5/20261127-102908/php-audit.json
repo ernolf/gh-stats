@@ -1,0 +1,920 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Mcp\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "namespace-mismatch",
+      "level": "warn",
+      "places": [
+        "lib/Tools/Files/MovePlanner.php:16 OCA\\Mcp\\Tools\\Files\\MovePlan, by its path OCA\\Mcp\\Tools\\Files\\MovePlanner"
+      ],
+      "lines": [
+        "1 class in lib/ whose name does not follow PSR-4 below OCA\\Mcp, the namespace the server derives from <namespace> of info.xml. The loader of the server does not find such a class.",
+        "  lib/Tools/Files/MovePlanner.php:16 OCA\\Mcp\\Tools\\Files\\MovePlan, by its path OCA\\Mcp\\Tools\\Files\\MovePlanner"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Tools/Files/Deletion/DeleteBackendGate.php:61 OC\\Lock\\NoopLockingProvider"
+      ],
+      "lines": [
+        "1 use of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Tools/Files/Deletion/DeleteBackendGate.php:61 OC\\Lock\\NoopLockingProvider"
+      ]
+    },
+    {
+      "id": "display-name-lookup",
+      "level": "warn",
+      "places": [
+        "lib/Service/ConnectionList.php:63",
+        "lib/Tools/Calendar/Scheduling/PlanWarnings.php:336",
+        "lib/Tools/Calendar/SharedGuard.php:44",
+        "lib/Tools/Common/LockAwareWrite.php:344",
+        "lib/Tools/Common/NodeAccessInfo.php:129",
+        "lib/Tools/Deck/CardFormatter.php:161",
+        "lib/Tools/Deck/DeckServiceContext.php:81",
+        "lib/Tools/Deck/DeckToolModule.php:703",
+        "lib/Tools/Files/Sharing/ShareRecipientResolver.php:81",
+        "lib/Tools/Talk/ActorNames.php:25"
+      ],
+      "lines": [
+        "10 places load a user with IUserManager::get() only to ask for the display name. IUserManager::getDisplayName(), there since Nextcloud 25, answers from a cache and loads no user.",
+        "  lib/Service/ConnectionList.php:63",
+        "  lib/Tools/Calendar/Scheduling/PlanWarnings.php:336",
+        "  lib/Tools/Calendar/SharedGuard.php:44",
+        "  lib/Tools/Common/LockAwareWrite.php:344",
+        "  lib/Tools/Common/NodeAccessInfo.php:129",
+        "  lib/Tools/Deck/CardFormatter.php:161",
+        "  lib/Tools/Deck/DeckServiceContext.php:81",
+        "  lib/Tools/Deck/DeckToolModule.php:703",
+        "  lib/Tools/Files/Sharing/ShareRecipientResolver.php:81",
+        "  lib/Tools/Talk/ActorNames.php:25"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/mcp/  mcp.mcp.get  appinfo/routes.php:10 routes",
+        "DELETE /index.php/apps/mcp/  mcp.mcp.delete  appinfo/routes.php:11 routes",
+        "POST /index.php/apps/mcp/api/group-grants/preview  mcp.grants.previewgroup  appinfo/routes.php:34 routes",
+        "GET /index.php/apps/mcp/.well-known/oauth-protected-resource  mcp.metadata.protectedresource  appinfo/routes.php:65 routes",
+        "GET /index.php/apps/mcp/.well-known/openid-configuration  mcp.metadata.authorizationserver  appinfo/routes.php:66 routes",
+        "GET /index.php/apps/mcp/.well-known/oauth-authorization-server  mcp.metadata.oauthserver  appinfo/routes.php:67 routes",
+        "GET /index.php/apps/mcp/.well-known/jwks.json  mcp.metadata.jwks  appinfo/routes.php:68 routes",
+        "GET /index.php/apps/mcp/oauth/authorize  mcp.o_auth.authorize  appinfo/routes.php:69 routes",
+        "POST /index.php/apps/mcp/oauth/token  mcp.o_auth.token  appinfo/routes.php:71 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 9 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 13 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/mcp/  mcp.mcp.get  appinfo/routes.php:10 routes",
+        "  DELETE /index.php/apps/mcp/  mcp.mcp.delete  appinfo/routes.php:11 routes",
+        "  POST /index.php/apps/mcp/api/group-grants/preview  mcp.grants.previewgroup  appinfo/routes.php:34 routes",
+        "  GET /index.php/apps/mcp/.well-known/oauth-protected-resource  mcp.metadata.protectedresource  appinfo/routes.php:65 routes",
+        "  GET /index.php/apps/mcp/.well-known/openid-configuration  mcp.metadata.authorizationserver  appinfo/routes.php:66 routes",
+        "  GET /index.php/apps/mcp/.well-known/oauth-authorization-server  mcp.metadata.oauthserver  appinfo/routes.php:67 routes",
+        "  GET /index.php/apps/mcp/.well-known/jwks.json  mcp.metadata.jwks  appinfo/routes.php:68 routes",
+        "  GET /index.php/apps/mcp/oauth/authorize  mcp.o_auth.authorize  appinfo/routes.php:69 routes",
+        "  POST /index.php/apps/mcp/oauth/token  mcp.o_auth.token  appinfo/routes.php:71 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 6
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:82 OCP\\Group\\Events\\BeforeUserRemovedEvent: deprecated since Nextcloud 20; it can't be guaranteed that this event is triggered in all case (e.g. for LDAP users this isn't possible) - if there is a valid use case please reach out in the issue tracker at https://github.com/nextcloud/server/issues",
+        "lib/Controller/CheckoutLimitController.php:52 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/GrantsController.php:406 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/OAuthController.php:202 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Db/LogsGroupsMapper.php:51 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Listener/UserCauseListener.php:94 OCP\\Group\\Events\\BeforeUserRemovedEvent: deprecated since Nextcloud 20; it can't be guaranteed that this event is triggered in all case (e.g. for LDAP users this isn't possible) - if there is a valid use case please reach out in the issue tracker at https://github.com/nextcloud/server/issues",
+        "lib/Migration/Version001100Date20261016000000.php:69 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/OAuth/ClientMetadataFetcher.php:71 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/OAuth/OAuthClientsService.php:106 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/OAuth/OAuthClientsService.php:113 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/OAuth/OAuthClientsService.php:115 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/FileWritePolicy.php:109 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Service/GrantPolicy.php:166 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/GrantPolicy.php:211 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/Policy/PolicyResolver.php:140 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "lib/Service/Policy/PolicyResolver.php:209 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "lib/Service/Policy/PolicyResolver.php:215 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/Policy/PolicyWriter.php:236 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "lib/Service/Policy/PolicyWriter.php:239 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/Policy/PolicyWriter.php:1076 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "lib/Service/Policy/PolicyWriter.php:1114 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/Policy/PolicyWriter.php:1116 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "lib/Service/Policy/PolicyWriter.php:1132 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/Policy/PolicyWriter.php:1134 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/Policy/PolicyWriter.php:1136 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/UserTimezone.php:28 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/VisibilityGuard.php:93 OCP\\SystemTag\\MapperEvent::EVENT_ASSIGN: deprecated since Nextcloud 22",
+        "lib/Service/VisibilityGuard.php:94 OCP\\SystemTag\\MapperEvent::EVENT_UNASSIGN: deprecated since Nextcloud 22",
+        "lib/Service/VisibilityGuard.php:629 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/VisibilityGuard.php:717 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/PersonalSettings.php:38 OCP\\Util::callRegister(): deprecated since Nextcloud 32; directly use CsrfTokenManager instead",
+        "lib/Tools/Calendar/EmbeddedDavDispatcher.php:164 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Tools/Calendar/TrashPolicy.php:34 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Tools/Common/NodeAccessInfo.php:165 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Tools/Common/NodeAccessInfo.php:166 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Tools/Common/NodeAccessInfo.php:167 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/Tools/Common/NodeAccessInfo.php:168 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead",
+        "lib/Tools/Common/NodeAccessInfo.php:169 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "lib/Tools/Deck/CardLinkPlan.php:46 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Tools/Deck/CardLinkPolicy.php:75 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Tools/Deck/DeckCapabilities.php:41 OCP\\Util::getVersion(): deprecated since Nextcloud 31; Use \\OCP\\ServerVersion::getVersion",
+        "lib/Tools/Deck/Handler/LinkCardFileHandler.php:132 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Tools/Deck/Handler/LinkCardFileHandler.php:150 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Tools/Deck/NativeCardFileLink.php:106 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Tools/Files/BatchStore.php:51 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/Tools/Files/CheckoutService.php:182 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Tools/Files/Deletion/DeleteBackendGate.php:72 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Tools/Files/ImageTools.php:439 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Tools/Files/ImageTools.php:445 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Tools/Files/Sharing/SharePermission.php:43 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Tools/Files/Sharing/SharePermission.php:43 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Tools/Files/Sharing/SharePermission.php:45 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/Tools/Files/Sharing/SharePermission.php:45 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead",
+        "lib/Tools/Files/Sharing/SharePermission.php:59 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Tools/Files/Sharing/SharePermission.php:74 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "lib/Tools/Files/Sharing/SharePermission.php:75 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Tools/Files/Sharing/SharePermission.php:89 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "lib/Tools/Notes/NotesFolderResolver.php:77 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Tools/Notes/NotesFolderResolver.php:81 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Tools/Notes/NotesFolderResolver.php:95 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Tools/People/PeopleModule.php:114 OCP\\Collaboration\\Collaborators\\ISearch::search(): deprecated since Nextcloud 35; Use filteredSearch instead.",
+        "lib/Tools/Talk/FileSharer.php:67 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Tools/Talk/UserFileResolver.php:53 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead"
+      ],
+      "lines": [
+        "63 uses in 33 files of the public API that is deprecated in Nextcloud 32 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/AppInfo/Application.php:82 OCP\\Group\\Events\\BeforeUserRemovedEvent: deprecated since Nextcloud 20; it can't be guaranteed that this event is triggered in all case (e.g. for LDAP users this isn't possible) - if there is a valid use case please reach out in the issue tracker at https://github.com/nextcloud/server/issues",
+        "  lib/Controller/CheckoutLimitController.php:52 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/GrantsController.php:406 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/OAuthController.php:202 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Db/LogsGroupsMapper.php:51 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Listener/UserCauseListener.php:94 OCP\\Group\\Events\\BeforeUserRemovedEvent: deprecated since Nextcloud 20; it can't be guaranteed that this event is triggered in all case (e.g. for LDAP users this isn't possible) - if there is a valid use case please reach out in the issue tracker at https://github.com/nextcloud/server/issues",
+        "  lib/Migration/Version001100Date20261016000000.php:69 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/OAuth/ClientMetadataFetcher.php:71 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/OAuth/OAuthClientsService.php:106 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/OAuth/OAuthClientsService.php:113 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/OAuth/OAuthClientsService.php:115 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/FileWritePolicy.php:109 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Service/GrantPolicy.php:166 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/GrantPolicy.php:211 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/Policy/PolicyResolver.php:140 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "  lib/Service/Policy/PolicyResolver.php:209 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "  lib/Service/Policy/PolicyResolver.php:215 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/Policy/PolicyWriter.php:236 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "  lib/Service/Policy/PolicyWriter.php:239 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/Policy/PolicyWriter.php:1076 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "  lib/Service/Policy/PolicyWriter.php:1114 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/Policy/PolicyWriter.php:1116 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "  lib/Service/Policy/PolicyWriter.php:1132 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/Policy/PolicyWriter.php:1134 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/Policy/PolicyWriter.php:1136 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/UserTimezone.php:28 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/VisibilityGuard.php:93 OCP\\SystemTag\\MapperEvent::EVENT_ASSIGN: deprecated since Nextcloud 22",
+        "  lib/Service/VisibilityGuard.php:94 OCP\\SystemTag\\MapperEvent::EVENT_UNASSIGN: deprecated since Nextcloud 22",
+        "  lib/Service/VisibilityGuard.php:629 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/VisibilityGuard.php:717 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/PersonalSettings.php:38 OCP\\Util::callRegister(): deprecated since Nextcloud 32; directly use CsrfTokenManager instead",
+        "  lib/Tools/Calendar/EmbeddedDavDispatcher.php:164 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Tools/Calendar/TrashPolicy.php:34 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Tools/Common/NodeAccessInfo.php:165 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Tools/Common/NodeAccessInfo.php:166 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Tools/Common/NodeAccessInfo.php:167 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/Tools/Common/NodeAccessInfo.php:168 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead",
+        "  lib/Tools/Common/NodeAccessInfo.php:169 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "  lib/Tools/Deck/CardLinkPlan.php:46 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Tools/Deck/CardLinkPolicy.php:75 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Tools/Deck/DeckCapabilities.php:41 OCP\\Util::getVersion(): deprecated since Nextcloud 31; Use \\OCP\\ServerVersion::getVersion",
+        "  lib/Tools/Deck/Handler/LinkCardFileHandler.php:132 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Tools/Deck/Handler/LinkCardFileHandler.php:150 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Tools/Deck/NativeCardFileLink.php:106 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Tools/Files/BatchStore.php:51 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/Tools/Files/CheckoutService.php:182 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Tools/Files/Deletion/DeleteBackendGate.php:72 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Tools/Files/ImageTools.php:439 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Tools/Files/ImageTools.php:445 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Tools/Files/Sharing/SharePermission.php:43 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Tools/Files/Sharing/SharePermission.php:43 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Tools/Files/Sharing/SharePermission.php:45 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/Tools/Files/Sharing/SharePermission.php:45 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead",
+        "  lib/Tools/Files/Sharing/SharePermission.php:59 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Tools/Files/Sharing/SharePermission.php:74 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "  lib/Tools/Files/Sharing/SharePermission.php:75 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Tools/Files/Sharing/SharePermission.php:89 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "  lib/Tools/Notes/NotesFolderResolver.php:77 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Tools/Notes/NotesFolderResolver.php:81 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Tools/Notes/NotesFolderResolver.php:95 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Tools/People/PeopleModule.php:114 OCP\\Collaboration\\Collaborators\\ISearch::search(): deprecated since Nextcloud 35; Use filteredSearch instead.",
+        "  lib/Tools/Talk/FileSharer.php:67 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Tools/Talk/UserFileResolver.php:53 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 60
+        }
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/admin.php:340 style= attribute",
+        "templates/admin.php:344 style= attribute",
+        "templates/consent.php:14 <style> with content"
+      ],
+      "lines": [
+        "3 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/admin.php:340 style= attribute",
+        "  templates/admin.php:344 style= attribute",
+        "  templates/consent.php:14 <style> with content"
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Service/FileWritePolicy.php:108",
+        "lib/Service/Policy/PolicyWriter.php:1324"
+      ],
+      "lines": [
+        "2 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Service/FileWritePolicy.php:108",
+        "  lib/Service/Policy/PolicyWriter.php:1324"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Tools/Forms/Editing/EditState.php:30 time()",
+        "lib/Tools/Forms/Editing/EditWriter.php:44 time()",
+        "lib/Tools/Forms/Editing/EditWriter.php:53 time()",
+        "lib/Tools/Mail/MailMessageTools.php:127 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 4 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Tools/Forms/Editing/EditState.php:30 time()",
+        "  lib/Tools/Forms/Editing/EditWriter.php:44 time()",
+        "  lib/Tools/Forms/Editing/EditWriter.php:53 time()",
+        "  lib/Tools/Mail/MailMessageTools.php:127 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Controller/CheckoutLimitController.php:52 setAppValue()",
+        "lib/Controller/GrantsController.php:406 getAppValue()",
+        "lib/Db/LogsGroupsMapper.php:30 getValueString()",
+        "lib/Db/LogsGroupsMapper.php:50 hasKey()",
+        "lib/Migration/Version001100Date20261016000000.php:69 getAppValue()",
+        "lib/Migration/Version001100Date20261016000000.php:74 getValueString()",
+        "lib/OAuth/ClientMetadataFetcher.php:71 getAppValue()",
+        "lib/OAuth/OAuthClientsService.php:106 getAppValue()",
+        "lib/OAuth/OAuthClientsService.php:115 setAppValue()",
+        "lib/Service/BackupSettingsWriter.php:51 setValueString()",
+        "lib/Service/FileWritePolicy.php:43 hasKey()",
+        "lib/Service/FileWritePolicy.php:46 getValueString()",
+        "lib/Service/FileWritePolicy.php:80 setValueString()",
+        "lib/Service/FileWritePolicy.php:110 setValueString()",
+        "lib/Service/FileWritePolicy.php:111 getValueString()",
+        "lib/Service/GrantPolicy.php:166 getAppValue()",
+        "lib/Service/LogFileNames.php:32 getValueBool()",
+        "lib/Service/LogFileNames.php:40 setValueBool()",
+        "lib/Service/Policy/CauseProcessor.php:114 getValueString()",
+        "lib/Service/Policy/CauseProcessor.php:119 setValueString()",
+        "lib/Service/Policy/GroupLifecycle.php:134 getValueString()",
+        "lib/Service/Policy/GroupLifecycle.php:139 setValueString()",
+        "lib/Service/Policy/PolicyResolver.php:215 getAppValue()",
+        "lib/Service/Policy/PolicyWriter.php:239 getAppValue()",
+        "lib/Service/Policy/PolicyWriter.php:1114 hasKey()",
+        "lib/Service/Policy/PolicyWriter.php:1114 getAppValue()",
+        "lib/Service/Policy/PolicyWriter.php:1132 setAppValue()",
+        "lib/Service/Policy/ScopeCleanup.php:98 getValueString()",
+        "lib/Service/Policy/ScopeCleanup.php:103 setValueString()",
+        "lib/Service/VisibilityGuard.php:629 getAppValue()",
+        "lib/Service/VisibilityGuard.php:717 setAppValue()",
+        "lib/Tools/Calendar/EmbeddedCalDavServerFactory.php:72 getValueString()",
+        "lib/Tools/Calendar/EmbeddedDavDispatcher.php:164 getAppValue()",
+        "lib/Tools/Calendar/Scheduling.php:43 getValueString()",
+        "lib/Tools/Calendar/TrashPolicy.php:34 getAppValue()",
+        "lib/Tools/Contacts/EmbeddedCardDavDispatcher.php:125 getValueInt()",
+        "lib/Tools/Contacts/SystemContacts.php:281 getValueString()",
+        "lib/Tools/Deck/CardLinkPolicy.php:75 getAppValue()",
+        "lib/Tools/Files/CheckoutService.php:182 getAppValue()",
+        "lib/Tools/Files/Deletion/DeleteBackendGate.php:74 getValueString()",
+        "lib/Tools/Files/ImageTools.php:439 getAppValue()",
+        "lib/Tools/Files/ImageTools.php:445 getAppValue()",
+        "lib/Tools/Notes/NotesFolderResolver.php:95 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 43 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Controller/CheckoutLimitController.php:52 setAppValue()",
+        "  lib/Controller/GrantsController.php:406 getAppValue()",
+        "  lib/Db/LogsGroupsMapper.php:30 getValueString()",
+        "  lib/Db/LogsGroupsMapper.php:50 hasKey()",
+        "  lib/Migration/Version001100Date20261016000000.php:69 getAppValue()",
+        "  lib/Migration/Version001100Date20261016000000.php:74 getValueString()",
+        "  lib/OAuth/ClientMetadataFetcher.php:71 getAppValue()",
+        "  lib/OAuth/OAuthClientsService.php:106 getAppValue()",
+        "  lib/OAuth/OAuthClientsService.php:115 setAppValue()",
+        "  lib/Service/BackupSettingsWriter.php:51 setValueString()",
+        "  lib/Service/FileWritePolicy.php:43 hasKey()",
+        "  lib/Service/FileWritePolicy.php:46 getValueString()",
+        "  lib/Service/FileWritePolicy.php:80 setValueString()",
+        "  lib/Service/FileWritePolicy.php:110 setValueString()",
+        "  lib/Service/FileWritePolicy.php:111 getValueString()",
+        "  lib/Service/GrantPolicy.php:166 getAppValue()",
+        "  lib/Service/LogFileNames.php:32 getValueBool()",
+        "  lib/Service/LogFileNames.php:40 setValueBool()",
+        "  lib/Service/Policy/CauseProcessor.php:114 getValueString()",
+        "  lib/Service/Policy/CauseProcessor.php:119 setValueString()",
+        "  lib/Service/Policy/GroupLifecycle.php:134 getValueString()",
+        "  lib/Service/Policy/GroupLifecycle.php:139 setValueString()",
+        "  lib/Service/Policy/PolicyResolver.php:215 getAppValue()",
+        "  lib/Service/Policy/PolicyWriter.php:239 getAppValue()",
+        "  lib/Service/Policy/PolicyWriter.php:1114 hasKey()",
+        "  lib/Service/Policy/PolicyWriter.php:1114 getAppValue()",
+        "  lib/Service/Policy/PolicyWriter.php:1132 setAppValue()",
+        "  lib/Service/Policy/ScopeCleanup.php:98 getValueString()",
+        "  lib/Service/Policy/ScopeCleanup.php:103 setValueString()",
+        "  lib/Service/VisibilityGuard.php:629 getAppValue()",
+        "  lib/Service/VisibilityGuard.php:717 setAppValue()",
+        "  lib/Tools/Calendar/EmbeddedCalDavServerFactory.php:72 getValueString()",
+        "  lib/Tools/Calendar/EmbeddedDavDispatcher.php:164 getAppValue()",
+        "  lib/Tools/Calendar/Scheduling.php:43 getValueString()",
+        "  lib/Tools/Calendar/TrashPolicy.php:34 getAppValue()",
+        "  lib/Tools/Contacts/EmbeddedCardDavDispatcher.php:125 getValueInt()",
+        "  lib/Tools/Contacts/SystemContacts.php:281 getValueString()",
+        "  lib/Tools/Deck/CardLinkPolicy.php:75 getAppValue()",
+        "  lib/Tools/Files/CheckoutService.php:182 getAppValue()",
+        "  lib/Tools/Files/Deletion/DeleteBackendGate.php:74 getValueString()",
+        "  lib/Tools/Files/ImageTools.php:439 getAppValue()",
+        "  lib/Tools/Files/ImageTools.php:445 getAppValue()",
+        "  lib/Tools/Notes/NotesFolderResolver.php:95 getAppValue()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 40
+        }
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version001100Date20261015000000.php:28 createTable() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015000000.php:29 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015000000.php:31 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015000000.php:33 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:40 createTable() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:41 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:42 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:44 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:45 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:46 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:50 createTable() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:51 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:52 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:53 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:54 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:55 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:56 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:57 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:58 addIndex() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:62 createTable() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:63 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:64 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:65 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:66 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:67 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:68 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:69 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:70 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:74 createTable() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:75 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:76 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:77 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:78 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:79 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:80 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:88 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:89 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:92 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015010000.php:93 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015020000.php:33 createTable() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015020000.php:34 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015020000.php:35 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015020000.php:36 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015020000.php:38 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015020000.php:39 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015020000.php:43 createTable() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015020000.php:44 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015020000.php:45 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015020000.php:46 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015020000.php:47 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261015020000.php:48 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261016000000.php:45 createTable() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261016000000.php:46 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261016000000.php:47 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261016000000.php:48 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261016000000.php:49 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261016000000.php:51 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261016000000.php:53 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261016000000.php:54 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version001100Date20261016000000.php:55 setPrimaryKey() on a table whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version001100Date20261015000000.php:28 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015000000.php:29 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015000000.php:31 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015000000.php:33 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:40 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:41 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:42 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:44 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:45 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:46 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:50 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:51 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:52 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:53 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:54 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:55 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:56 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:57 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:58 addIndex() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:62 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:63 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:64 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:65 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:66 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:67 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:68 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:69 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:70 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:74 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:75 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:76 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:77 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:78 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:79 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:80 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:88 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:89 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:92 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015010000.php:93 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015020000.php:33 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015020000.php:34 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015020000.php:35 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015020000.php:36 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015020000.php:38 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015020000.php:39 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015020000.php:43 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015020000.php:44 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015020000.php:45 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015020000.php:46 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015020000.php:47 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261015020000.php:48 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261016000000.php:45 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261016000000.php:46 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261016000000.php:47 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261016000000.php:48 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261016000000.php:49 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261016000000.php:51 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261016000000.php:53 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261016000000.php:54 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001100Date20261016000000.php:55 setPrimaryKey() on a table whose name is no constant"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 57
+        }
+      ]
+    }
+  ],
+  "endpoints": 54,
+  "endpointList": [
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/mcp/",
+      "target": "OCA\\Mcp\\Controller\\McpController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/",
+      "target": "OCA\\Mcp\\Controller\\McpController::get",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/mcp/",
+      "target": "OCA\\Mcp\\Controller\\McpController::post",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/.well-known/jwks.json",
+      "target": "OCA\\Mcp\\Controller\\MetadataController::jwks",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/.well-known/oauth-authorization-server",
+      "target": "OCA\\Mcp\\Controller\\MetadataController::oauthServer",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/.well-known/oauth-protected-resource",
+      "target": "OCA\\Mcp\\Controller\\MetadataController::protectedResource",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/.well-known/openid-configuration",
+      "target": "OCA\\Mcp\\Controller\\MetadataController::authorizationServer",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/api/admin/tags",
+      "target": "OCA\\Mcp\\Controller\\TagsController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/mcp/api/admin/tags",
+      "target": "OCA\\Mcp\\Controller\\TagsController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/api/backup-settings",
+      "target": "OCA\\Mcp\\Controller\\BackupSettingsController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/mcp/api/backup-settings",
+      "target": "OCA\\Mcp\\Controller\\BackupSettingsController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/api/checkout-limit",
+      "target": "OCA\\Mcp\\Controller\\CheckoutLimitController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/mcp/api/checkout-limit",
+      "target": "OCA\\Mcp\\Controller\\CheckoutLimitController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/api/connections",
+      "target": "OCA\\Mcp\\Controller\\ConnectionsController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/mcp/api/connections/{id}",
+      "target": "OCA\\Mcp\\Controller\\ConnectionsController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/mcp/api/connections/users/{uid}",
+      "target": "OCA\\Mcp\\Controller\\ConnectionsController::revokeUser",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/api/file-write-policy",
+      "target": "OCA\\Mcp\\Controller\\FileWritePolicyController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/mcp/api/file-write-policy",
+      "target": "OCA\\Mcp\\Controller\\FileWritePolicyController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/api/grants",
+      "target": "OCA\\Mcp\\Controller\\GrantsController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/mcp/api/grants/{uid}",
+      "target": "OCA\\Mcp\\Controller\\GrantsController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/mcp/api/grants/bulk",
+      "target": "OCA\\Mcp\\Controller\\GrantsController::bulk",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/mcp/api/grants/commands",
+      "target": "OCA\\Mcp\\Controller\\GrantsController::commands",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/mcp/api/grants/commands/preview",
+      "target": "OCA\\Mcp\\Controller\\OverridePreviewController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/mcp/api/grants/undo",
+      "target": "OCA\\Mcp\\Controller\\GrantsController::undo",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/api/group-directory",
+      "target": "OCA\\Mcp\\Controller\\GroupDirectoryController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/api/group-directory/detail",
+      "target": "OCA\\Mcp\\Controller\\GroupDirectoryController::detail",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/api/group-grants",
+      "target": "OCA\\Mcp\\Controller\\GrantsController::group",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/mcp/api/group-grants",
+      "target": "OCA\\Mcp\\Controller\\GrantsController::saveGroup",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/mcp/api/group-grants/preview",
+      "target": "OCA\\Mcp\\Controller\\GrantsController::previewGroup",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/mcp/api/group-grants/unknown",
+      "target": "OCA\\Mcp\\Controller\\UnknownGroupGrantsController::clear",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/api/group-grants/unknown",
+      "target": "OCA\\Mcp\\Controller\\UnknownGroupGrantsController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/api/inspector/access",
+      "target": "OCA\\Mcp\\Controller\\InspectorController::access",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/api/inspector/calendar",
+      "target": "OCA\\Mcp\\Controller\\InspectorController::calendar",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/api/inspector/path",
+      "target": "OCA\\Mcp\\Controller\\InspectorController::path",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/api/logs-access",
+      "target": "OCA\\Mcp\\Controller\\GrantsController::logsAccess",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/mcp/api/logs-access",
+      "target": "OCA\\Mcp\\Controller\\GrantsController::updateLogsAccess",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/api/logs-privacy",
+      "target": "OCA\\Mcp\\Controller\\LogsPrivacyController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/mcp/api/logs-privacy",
+      "target": "OCA\\Mcp\\Controller\\LogsPrivacyController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/api/my/connections",
+      "target": "OCA\\Mcp\\Controller\\MyConnectionsController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/mcp/api/my/connections/{id}",
+      "target": "OCA\\Mcp\\Controller\\MyConnectionsController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/api/my/scope",
+      "target": "OCA\\Mcp\\Controller\\MyScopeController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/api/oauth-clients",
+      "target": "OCA\\Mcp\\Controller\\GrantsController::oauthClients",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/mcp/api/oauth-clients",
+      "target": "OCA\\Mcp\\Controller\\GrantsController::updateOauthClients",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/api/scope/{uid}/{module}",
+      "target": "OCA\\Mcp\\Controller\\ScopeController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/mcp/api/scope/{uid}/{module}",
+      "target": "OCA\\Mcp\\Controller\\ScopeController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/api/scope/{uid}/{module}/candidates",
+      "target": "OCA\\Mcp\\Controller\\ScopeController::candidates",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/mcp/api/service",
+      "target": "OCA\\Mcp\\Controller\\GrantsController::service",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/checkout/{token}",
+      "target": "OCA\\Mcp\\Controller\\CheckoutController::download",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/mcp/checkout/{token}",
+      "target": "OCA\\Mcp\\Controller\\CheckoutController::uploadPost",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/mcp/checkout/{token}",
+      "target": "OCA\\Mcp\\Controller\\CheckoutController::upload",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/mcp/oauth/authorize",
+      "target": "OCA\\Mcp\\Controller\\OAuthController::authorize",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/mcp/oauth/authorize",
+      "target": "OCA\\Mcp\\Controller\\OAuthController::consent",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/mcp/oauth/token",
+      "target": "OCA\\Mcp\\Controller\\OAuthController::token",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/mcp/settings/personal",
+      "target": "OCA\\Mcp\\Controller\\SettingsController::personal",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

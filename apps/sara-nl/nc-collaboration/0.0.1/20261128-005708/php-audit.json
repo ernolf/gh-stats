@@ -1,0 +1,364 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Collaboration\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "brick/math 0.9.3, in 3rdparty/ of Nextcloud 29 to 30",
+        "ramsey/collection 1.3.0, in 3rdparty/ of Nextcloud 29",
+        "ramsey/uuid 4.2.3, in 3rdparty/ of Nextcloud 29",
+        "symfony/polyfill-ctype v1.31.0, in 3rdparty/ of Nextcloud 29 to 30",
+        "symfony/polyfill-php80 v1.31.0, in 3rdparty/ of Nextcloud 29 to 30"
+      ],
+      "lines": [
+        "vendor/ ships 5 packages that the server ships itself in a major of Nextcloud 29 to 30. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  brick/math 0.9.3, in 3rdparty/ of Nextcloud 29 to 30",
+        "  ramsey/collection 1.3.0, in 3rdparty/ of Nextcloud 29",
+        "  ramsey/uuid 4.2.3, in 3rdparty/ of Nextcloud 29",
+        "  symfony/polyfill-ctype v1.31.0, in 3rdparty/ of Nextcloud 29 to 30",
+        "  symfony/polyfill-php80 v1.31.0, in 3rdparty/ of Nextcloud 29 to 30"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/CollaborationServiceProviderController.php:223 OC::$server"
+      ],
+      "lines": [
+        "1 use of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/CollaborationServiceProviderController.php:223 OC::$server"
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/Controller/CollaborationServiceProviderController.php:455 OCP\\Template\\ITemplate::assign(): there since Nextcloud 32, the app declares from 29",
+        "lib/Controller/CollaborationServiceProviderController.php:456 OCP\\Template\\ITemplate::assign(): there since Nextcloud 32, the app declares from 29",
+        "lib/Controller/CollaborationServiceProviderController.php:457 OCP\\Template\\ITemplate::assign(): there since Nextcloud 32, the app declares from 29",
+        "lib/Controller/CollaborationServiceProviderController.php:458 OCP\\Template\\ITemplate::assign(): there since Nextcloud 32, the app declares from 29",
+        "lib/Controller/CollaborationServiceProviderController.php:459 OCP\\Template\\ITemplate::fetchPage(): there since Nextcloud 32, the app declares from 29"
+      ],
+      "lines": [
+        "5 uses in 1 file of the public API that the oldest majors of Nextcloud 29 to 30 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/Controller/CollaborationServiceProviderController.php:455 OCP\\Template\\ITemplate::assign(): there since Nextcloud 32, the app declares from 29",
+        "  lib/Controller/CollaborationServiceProviderController.php:456 OCP\\Template\\ITemplate::assign(): there since Nextcloud 32, the app declares from 29",
+        "  lib/Controller/CollaborationServiceProviderController.php:457 OCP\\Template\\ITemplate::assign(): there since Nextcloud 32, the app declares from 29",
+        "  lib/Controller/CollaborationServiceProviderController.php:458 OCP\\Template\\ITemplate::assign(): there since Nextcloud 32, the app declares from 29",
+        "  lib/Controller/CollaborationServiceProviderController.php:459 OCP\\Template\\ITemplate::fetchPage(): there since Nextcloud 32, the app declares from 29"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:55 get()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:55 get()"
+      ]
+    },
+    {
+      "id": "route-target-missing",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/collaboration/provider/handle-invite  collaboration.collaboration_service_provider.handle_invite  appinfo/routes.php:32 routes: OCA\\Collaboration\\Controller\\CollaborationServiceProviderController has no method handleInvite()",
+        "GET /index.php/apps/collaboration/mesh-registry/forward-invite/error  collaboration.mesh_registry.wayferror  appinfo/routes.php:38 routes: OCA\\Collaboration\\Controller\\MeshRegistryController has no method wayfError()"
+      ],
+      "lines": [
+        "2 routes name a controller class or a method that does not exist, or a method that is not public. A request to such a route ends in an error.",
+        "  GET /index.php/apps/collaboration/provider/handle-invite  collaboration.collaboration_service_provider.handle_invite  appinfo/routes.php:32 routes: OCA\\Collaboration\\Controller\\CollaborationServiceProviderController has no method handleInvite()",
+        "  GET /index.php/apps/collaboration/mesh-registry/forward-invite/error  collaboration.mesh_registry.wayferror  appinfo/routes.php:38 routes: OCA\\Collaboration\\Controller\\MeshRegistryController has no method wayfError()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/collaboration/provider  collaboration.collaboration_service_provider.provider  appinfo/routes.php:29 routes",
+        "GET /index.php/apps/collaboration/provider/services  collaboration.collaboration_service_provider.services  appinfo/routes.php:30 routes",
+        "POST /index.php/apps/collaboration/provider/create-invite  collaboration.collaboration_service_provider.create_invite  appinfo/routes.php:31 routes",
+        "GET /index.php/apps/collaboration/provider/accept-invite/{token}  collaboration.collaboration_service_provider.accept_invite  appinfo/routes.php:33 routes",
+        "GET /index.php/apps/collaboration/mesh-registry/providers  collaboration.mesh_registry.providers  appinfo/routes.php:36 routes",
+        "GET /index.php/apps/collaboration/mesh-registry/forward-invite  collaboration.mesh_registry.forwardinvite  appinfo/routes.php:37 routes",
+        "GET /index.php/apps/collaboration/invitations  collaboration.invitation.find  appinfo/routes.php:41 routes",
+        "POST /index.php/apps/collaboration/invitations  collaboration.invitation.new_invitation  appinfo/routes.php:42 routes",
+        "GET /index.php/apps/collaboration/invitations/{token}  collaboration.invitation.get_by_token  appinfo/routes.php:43 routes",
+        "PATCH /index.php/apps/collaboration/invitations/{token}  collaboration.invitation.update  appinfo/routes.php:44 routes",
+        "POST /index.php/apps/collaboration/ocm/invite-accepted  collaboration.ocm.invite_accepted  appinfo/routes.php:47 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 11 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/collaboration/provider  collaboration.collaboration_service_provider.provider  appinfo/routes.php:29 routes",
+        "  GET /index.php/apps/collaboration/provider/services  collaboration.collaboration_service_provider.services  appinfo/routes.php:30 routes",
+        "  POST /index.php/apps/collaboration/provider/create-invite  collaboration.collaboration_service_provider.create_invite  appinfo/routes.php:31 routes",
+        "  GET /index.php/apps/collaboration/provider/accept-invite/{token}  collaboration.collaboration_service_provider.accept_invite  appinfo/routes.php:33 routes",
+        "  GET /index.php/apps/collaboration/mesh-registry/providers  collaboration.mesh_registry.providers  appinfo/routes.php:36 routes",
+        "  GET /index.php/apps/collaboration/mesh-registry/forward-invite  collaboration.mesh_registry.forwardinvite  appinfo/routes.php:37 routes",
+        "  GET /index.php/apps/collaboration/invitations  collaboration.invitation.find  appinfo/routes.php:41 routes",
+        "  POST /index.php/apps/collaboration/invitations  collaboration.invitation.new_invitation  appinfo/routes.php:42 routes",
+        "  GET /index.php/apps/collaboration/invitations/{token}  collaboration.invitation.get_by_token  appinfo/routes.php:43 routes",
+        "  PATCH /index.php/apps/collaboration/invitations/{token}  collaboration.invitation.update  appinfo/routes.php:44 routes",
+        "  POST /index.php/apps/collaboration/ocm/invite-accepted  collaboration.ocm.invite_accepted  appinfo/routes.php:47 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 8
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "psalm/phar, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/mail/html.php:16 style= attribute",
+        "templates/mail/html.php:28 style= attribute",
+        "templates/mail/html.php:60 style= attribute",
+        "templates/mail/html.php:90 style= attribute"
+      ],
+      "lines": [
+        "4 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/mail/html.php:16 style= attribute",
+        "  templates/mail/html.php:28 style= attribute",
+        "  templates/mail/html.php:60 style= attribute",
+        "  templates/mail/html.php:90 style= attribute"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/CollaborationServiceProviderController.php:219 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 1 place. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/CollaborationServiceProviderController.php:219 time()"
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/PageController.php:27 OCA\\Collaboration\\Controller\\PageController::index()"
+      ],
+      "lines": [
+        "1 public method of a controller is reached by no route.",
+        "  lib/Controller/PageController.php:27 OCA\\Collaboration\\Controller\\PageController::index()"
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version20231130102037.php:47 createTable() on a table whose name is no constant",
+        "lib/Migration/Version20231130102037.php:48 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version20231130102037.php:55 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version20231130102037.php:61 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version20231130102037.php:67 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version20231130102037.php:73 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version20231130102037.php:78 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version20231130102037.php:79 addUniqueIndex() on a table whose name is no constant",
+        "lib/Migration/Version20231130102037.php:80 addUniqueIndex() on a table whose name is no constant",
+        "lib/Migration/Version20240209130007.php:58 createTable() on a table whose name is no constant",
+        "lib/Migration/Version20240209130007.php:59 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version20240209130007.php:65 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version20240209130007.php:70 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version20240209130007.php:75 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version20240209130007.php:80 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version20240209130007.php:85 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version20240209130007.php:90 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version20240209130007.php:95 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version20240209130007.php:100 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version20240209130007.php:105 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version20240209130007.php:110 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version20240209130007.php:115 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version20240209130007.php:120 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version20240209130007.php:125 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version20240209130007.php:130 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version20240209130007.php:135 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version20240209130007.php:136 addUniqueIndex() on a table whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version20231130102037.php:47 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version20231130102037.php:48 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version20231130102037.php:55 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version20231130102037.php:61 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version20231130102037.php:67 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version20231130102037.php:73 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version20231130102037.php:78 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version20231130102037.php:79 addUniqueIndex() on a table whose name is no constant",
+        "  lib/Migration/Version20231130102037.php:80 addUniqueIndex() on a table whose name is no constant",
+        "  lib/Migration/Version20240209130007.php:58 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version20240209130007.php:59 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version20240209130007.php:65 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version20240209130007.php:70 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version20240209130007.php:75 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version20240209130007.php:80 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version20240209130007.php:85 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version20240209130007.php:90 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version20240209130007.php:95 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version20240209130007.php:100 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version20240209130007.php:105 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version20240209130007.php:110 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version20240209130007.php:115 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version20240209130007.php:120 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version20240209130007.php:125 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version20240209130007.php:130 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version20240209130007.php:135 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version20240209130007.php:136 addUniqueIndex() on a table whose name is no constant"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 24
+        }
+      ]
+    }
+  ],
+  "endpoints": 13,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/collaboration/invitations",
+      "target": "OCA\\Collaboration\\Controller\\InvitationController::find",
+      "openapi": [],
+      "source": "appinfo/routes.php:41 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/collaboration/invitations",
+      "target": "OCA\\Collaboration\\Controller\\InvitationController::newInvitation",
+      "openapi": [],
+      "source": "appinfo/routes.php:42 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/collaboration/invitations/{token}",
+      "target": "OCA\\Collaboration\\Controller\\InvitationController::getByToken",
+      "openapi": [],
+      "source": "appinfo/routes.php:43 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/index.php/apps/collaboration/invitations/{token}",
+      "target": "OCA\\Collaboration\\Controller\\InvitationController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:44 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/collaboration/mesh-registry/forward-invite",
+      "target": "OCA\\Collaboration\\Controller\\MeshRegistryController::forwardInvite",
+      "openapi": [],
+      "source": "appinfo/routes.php:37 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/collaboration/mesh-registry/forward-invite/error",
+      "target": "OCA\\Collaboration\\Controller\\MeshRegistryController::wayfError",
+      "openapi": [],
+      "source": "appinfo/routes.php:38 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/collaboration/mesh-registry/providers",
+      "target": "OCA\\Collaboration\\Controller\\MeshRegistryController::providers",
+      "openapi": [],
+      "source": "appinfo/routes.php:36 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/collaboration/ocm/invite-accepted",
+      "target": "OCA\\Collaboration\\Controller\\OcmController::inviteAccepted",
+      "openapi": [],
+      "source": "appinfo/routes.php:47 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/collaboration/provider",
+      "target": "OCA\\Collaboration\\Controller\\CollaborationServiceProviderController::provider",
+      "openapi": [],
+      "source": "appinfo/routes.php:29 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/collaboration/provider/accept-invite/{token}",
+      "target": "OCA\\Collaboration\\Controller\\CollaborationServiceProviderController::acceptInvite",
+      "openapi": [],
+      "source": "appinfo/routes.php:33 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/collaboration/provider/create-invite",
+      "target": "OCA\\Collaboration\\Controller\\CollaborationServiceProviderController::createInvite",
+      "openapi": [],
+      "source": "appinfo/routes.php:31 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/collaboration/provider/handle-invite",
+      "target": "OCA\\Collaboration\\Controller\\CollaborationServiceProviderController::handleInvite",
+      "openapi": [],
+      "source": "appinfo/routes.php:32 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/collaboration/provider/services",
+      "target": "OCA\\Collaboration\\Controller\\CollaborationServiceProviderController::services",
+      "openapi": [],
+      "source": "appinfo/routes.php:30 routes",
+      "kind": "route"
+    }
+  ]
+}

@@ -1,0 +1,139 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\PointCloudViewer\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/ApiController.php:41 OC::$server",
+        "lib/Controller/ApiController.php:45 OC::$server",
+        "lib/Controller/ApiController.php:51 OC::$server",
+        "lib/Controller/ApiController.php:62 OC::$server",
+        "lib/Controller/ApiController.php:73 OC::$server",
+        "lib/Controller/ApiController.php:86 OC::$server",
+        "lib/Controller/ApiController.php:89 OC::$server",
+        "lib/Controller/ApiController.php:131 OC::$server",
+        "templates/error.php:9 OC::$server",
+        "templates/viewer.php:7 OC::$server"
+      ],
+      "lines": [
+        "10 uses of the private API of the server in 3 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/ApiController.php:41 OC::$server",
+        "  lib/Controller/ApiController.php:45 OC::$server",
+        "  lib/Controller/ApiController.php:51 OC::$server",
+        "  lib/Controller/ApiController.php:62 OC::$server",
+        "  lib/Controller/ApiController.php:73 OC::$server",
+        "  lib/Controller/ApiController.php:86 OC::$server",
+        "  lib/Controller/ApiController.php:89 OC::$server",
+        "  lib/Controller/ApiController.php:131 OC::$server",
+        "  templates/error.php:9 OC::$server",
+        "  templates/viewer.php:7 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "template-inline-script",
+      "level": "warn",
+      "places": [
+        "templates/viewer.php:10 <script> with content",
+        "templates/viewer.php:19 onload= attribute",
+        "templates/viewer.php:47 <script> with content"
+      ],
+      "lines": [
+        "3 inline scripts in templates/. The Content Security Policy of the server runs neither a <script> without a source or the nonce of the response nor an event handler attribute, so the browser does not run them. A script added with OCP\\Util::addScript() or addInitScript() runs.",
+        "  templates/viewer.php:10 <script> with content",
+        "  templates/viewer.php:19 onload= attribute",
+        "  templates/viewer.php:47 <script> with content"
+      ]
+    },
+    {
+      "id": "info-xml-class-missing",
+      "level": "warn",
+      "places": [
+        "OCA\\PointCloudViewer\\Settings\\Admin, admin settings in <settings><admin>",
+        "OCA\\PointCloudViewer\\Settings\\AdminSection, admin section in <settings><admin-section>",
+        "OCA\\PointCloudViewer\\Migration\\InstallStep, repair step in <repair-steps><post-migration><step>"
+      ],
+      "lines": [
+        "appinfo/info.xml names 3 classes that appinfo/ and lib/ do not have. The server fails when it comes to load one.",
+        "  OCA\\PointCloudViewer\\Settings\\Admin, admin settings in <settings><admin>",
+        "  OCA\\PointCloudViewer\\Settings\\AdminSection, admin section in <settings><admin-section>",
+        "  OCA\\PointCloudViewer\\Migration\\InstallStep, repair step in <repair-steps><post-migration><step>"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/pointcloudviewer/  pointcloudviewer.page.index  appinfo/routes.php:6 routes",
+        "GET /index.php/apps/pointcloudviewer/viewer/{fileId}  pointcloudviewer.page.viewer  appinfo/routes.php:7 routes",
+        "GET /index.php/apps/pointcloudviewer/api/info/{fileId}  pointcloudviewer.api.getfileinfo  appinfo/routes.php:11 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 3 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 4 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/pointcloudviewer/  pointcloudviewer.page.index  appinfo/routes.php:6 routes",
+        "  GET /index.php/apps/pointcloudviewer/viewer/{fileId}  pointcloudviewer.page.viewer  appinfo/routes.php:7 routes",
+        "  GET /index.php/apps/pointcloudviewer/api/info/{fileId}  pointcloudviewer.api.getfileinfo  appinfo/routes.php:11 routes"
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/ViewerController.php:29 OCA\\PointCloudViewer\\Controller\\ViewerController::getFileData()"
+      ],
+      "lines": [
+        "1 public method of a controller is reached by no route.",
+        "  lib/Controller/ViewerController.php:29 OCA\\PointCloudViewer\\Controller\\ViewerController::getFileData()"
+      ]
+    }
+  ],
+  "endpoints": 4,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/pointcloudviewer/",
+      "target": "OCA\\PointCloudViewer\\Controller\\PageController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:6 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/pointcloudviewer/api/file/{fileId}",
+      "target": "OCA\\PointCloudViewer\\Controller\\ApiController::getFile",
+      "openapi": [],
+      "source": "appinfo/routes.php:10 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/pointcloudviewer/api/info/{fileId}",
+      "target": "OCA\\PointCloudViewer\\Controller\\ApiController::getFileInfo",
+      "openapi": [],
+      "source": "appinfo/routes.php:11 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/pointcloudviewer/viewer/{fileId}",
+      "target": "OCA\\PointCloudViewer\\Controller\\PageController::viewer",
+      "openapi": [],
+      "source": "appinfo/routes.php:7 routes",
+      "kind": "route"
+    }
+  ]
+}

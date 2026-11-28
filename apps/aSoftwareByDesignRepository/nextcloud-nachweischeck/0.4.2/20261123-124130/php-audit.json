@@ -1,0 +1,1299 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-not-optimized",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "composer/autoload.php is there, but composer.json does not set config.optimize-autoloader, so no class map is dumped at release time and every class is looked up in the file system."
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "doctrine/lexer 3.0.3, in 3rdparty/ of Nextcloud 32 to 35",
+        "symfony/deprecation-contracts v3.8.1, in 3rdparty/ of Nextcloud 32 to 35",
+        "symfony/polyfill-php83 v1.43.0, in 3rdparty/ of Nextcloud 32 to 34",
+        "symfony/process v7.4.22, in 3rdparty/ of Nextcloud 32 to 35",
+        "symfony/translation-contracts v3.8.1, in 3rdparty/ of Nextcloud 32 to 35"
+      ],
+      "lines": [
+        "vendor/ ships 5 packages that the server ships itself in a major of Nextcloud 32 to 35. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  doctrine/lexer 3.0.3, in 3rdparty/ of Nextcloud 32 to 35",
+        "  symfony/deprecation-contracts v3.8.1, in 3rdparty/ of Nextcloud 32 to 35",
+        "  symfony/polyfill-php83 v1.43.0, in 3rdparty/ of Nextcloud 32 to 34",
+        "  symfony/process v7.4.22, in 3rdparty/ of Nextcloud 32 to 35",
+        "  symfony/translation-contracts v3.8.1, in 3rdparty/ of Nextcloud 32 to 35"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Repair/EnsureNachweisCheckSchema.php:54 OC\\DB\\MigrationService",
+        "lib/Repair/EnsureNachweisCheckSchema.php:56 OC\\DB\\Connection"
+      ],
+      "lines": [
+        "2 uses of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Repair/EnsureNachweisCheckSchema.php:54 OC\\DB\\MigrationService",
+        "  lib/Repair/EnsureNachweisCheckSchema.php:56 OC\\DB\\Connection"
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:178 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "lib/AppInfo/Application.php:182 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "lib/Support/NavGate.php:61 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "lib/Support/NavGate.php:65 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "lib/Support/NavGate.php:74 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "lib/Support/NavGate.php:91 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "lib/Support/NavGate.php:104 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32"
+      ],
+      "lines": [
+        "7 uses in 2 files of the public API that the oldest majors of Nextcloud 32 to 35 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/AppInfo/Application.php:178 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "  lib/AppInfo/Application.php:182 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "  lib/Support/NavGate.php:61 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "  lib/Support/NavGate.php:65 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "  lib/Support/NavGate.php:74 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "  lib/Support/NavGate.php:91 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "  lib/Support/NavGate.php:104 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "display-name-lookup",
+      "level": "warn",
+      "places": [
+        "lib/Controller/AdminApiController.php:70",
+        "lib/Controller/PageController.php:176"
+      ],
+      "lines": [
+        "2 places load a user with IUserManager::get() only to ask for the display name. IUserManager::getDisplayName(), there since Nextcloud 25, answers from a cache and loads no user.",
+        "  lib/Controller/AdminApiController.php:70",
+        "  lib/Controller/PageController.php:176"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:178 get()",
+        "lib/AppInfo/Application.php:182 get()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 2 places. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:178 get()",
+        "  lib/AppInfo/Application.php:182 get()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/nachweischeck/api/v1/projects  nachweischeck.projectapi.index  appinfo/routes.php:12 routes",
+        "POST /index.php/apps/nachweischeck/api/v1/projects  nachweischeck.projectapi.create  appinfo/routes.php:12 routes",
+        "GET /index.php/apps/nachweischeck/api/v1/templates  nachweischeck.adminapi.templates  appinfo/routes.php:12 routes",
+        "GET /index.php/apps/nachweischeck/api/v1/settings/access  nachweischeck.adminapi.accessconfig  appinfo/routes.php:12 routes",
+        "PUT /index.php/apps/nachweischeck/api/v1/settings/access  nachweischeck.adminapi.saveaccessconfig  appinfo/routes.php:12 routes",
+        "GET /index.php/apps/nachweischeck/api/v1/license  nachweischeck.licenseapi.show  appinfo/routes.php:12 routes",
+        "POST /index.php/apps/nachweischeck/api/v1/settings/seats  nachweischeck.adminapi.assignseat  appinfo/routes.php:12 routes",
+        "GET /index.php/apps/nachweischeck/api/v1/directory/groups  nachweischeck.adminapi.directorygroups  appinfo/routes.php:12 routes",
+        "GET /index.php/apps/nachweischeck/api/v1/settings/notify  nachweischeck.adminapi.notifypref  appinfo/routes.php:12 routes",
+        "PUT /index.php/apps/nachweischeck/api/v1/settings/notify  nachweischeck.adminapi.savenotifypref  appinfo/routes.php:12 routes",
+        "POST /index.php/apps/nachweischeck/api/v1/templates/install  nachweischeck.adminapi.installtemplate  appinfo/routes.php:12 routes",
+        "POST /index.php/apps/nachweischeck/api/admin/transfer/reconcile  nachweischeck.transfer_api.reconcile  appinfo/routes.php:12 routes",
+        "GET /index.php/apps/nachweischeck/api/v1/auditor/projects  nachweischeck.auditorapi.myprojects  appinfo/routes.php:12 routes",
+        "GET /index.php/apps/nachweischeck/api/v1/mobile/status  nachweischeck.mobileapi.status  appinfo/routes.php:12 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 14 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 12 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/nachweischeck/api/v1/projects  nachweischeck.projectapi.index  appinfo/routes.php:12 routes",
+        "  POST /index.php/apps/nachweischeck/api/v1/projects  nachweischeck.projectapi.create  appinfo/routes.php:12 routes",
+        "  GET /index.php/apps/nachweischeck/api/v1/templates  nachweischeck.adminapi.templates  appinfo/routes.php:12 routes",
+        "  GET /index.php/apps/nachweischeck/api/v1/settings/access  nachweischeck.adminapi.accessconfig  appinfo/routes.php:12 routes",
+        "  PUT /index.php/apps/nachweischeck/api/v1/settings/access  nachweischeck.adminapi.saveaccessconfig  appinfo/routes.php:12 routes",
+        "  GET /index.php/apps/nachweischeck/api/v1/license  nachweischeck.licenseapi.show  appinfo/routes.php:12 routes",
+        "  POST /index.php/apps/nachweischeck/api/v1/settings/seats  nachweischeck.adminapi.assignseat  appinfo/routes.php:12 routes",
+        "  GET /index.php/apps/nachweischeck/api/v1/directory/groups  nachweischeck.adminapi.directorygroups  appinfo/routes.php:12 routes",
+        "  GET /index.php/apps/nachweischeck/api/v1/settings/notify  nachweischeck.adminapi.notifypref  appinfo/routes.php:12 routes",
+        "  PUT /index.php/apps/nachweischeck/api/v1/settings/notify  nachweischeck.adminapi.savenotifypref  appinfo/routes.php:12 routes",
+        "  POST /index.php/apps/nachweischeck/api/v1/templates/install  nachweischeck.adminapi.installtemplate  appinfo/routes.php:12 routes",
+        "  POST /index.php/apps/nachweischeck/api/admin/transfer/reconcile  nachweischeck.transfer_api.reconcile  appinfo/routes.php:12 routes",
+        "  GET /index.php/apps/nachweischeck/api/v1/auditor/projects  nachweischeck.auditorapi.myprojects  appinfo/routes.php:12 routes",
+        "  GET /index.php/apps/nachweischeck/api/v1/mobile/status  nachweischeck.mobileapi.status  appinfo/routes.php:12 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 11
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:177 OCP\\AppFramework\\IAppContainer: deprecated since Nextcloud 25",
+        "lib/BackgroundJob/DeadlineReminderJob.php:50 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/BackgroundJob/GapReminderJob.php:65 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/ConfigTransfer/TransferReceiptStore.php:44 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferReceiptStore.php:46 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferReceiptStore.php:55 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferReceiptStore.php:70 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferReceiptStore.php:86 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferReceiptStore.php:94 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferReceiptStore.php:104 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferService.php:1038 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/ConfigTransfer/TransferService.php:1573 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferService.php:1594 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferService.php:1634 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferService.php:1658 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Controller/AdminApiController.php:306 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/AdminApiController.php:316 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/AdminApiController.php:387 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "lib/Controller/PageController.php:182 OCP\\Util::callRegister(): deprecated since Nextcloud 32; directly use CsrfTokenManager instead",
+        "lib/Repair/EnsureNachweisCheckSchema.php:40 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Repair/UninstallDropTables.php:105 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Repair/UninstallDropTables.php:137 OCP\\IConfig::deleteAppValues(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:139 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:332 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:524 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:528 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:773 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:777 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:784 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:846 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Support/NavGate.php:53 OCP\\AppFramework\\IAppContainer: deprecated since Nextcloud 25",
+        "templates/parts/settings/license.php:81 OCP\\Util::callRegister(): deprecated since Nextcloud 32; directly use CsrfTokenManager instead"
+      ],
+      "lines": [
+        "32 uses in 12 files of the public API that is deprecated in Nextcloud 32 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/AppInfo/Application.php:177 OCP\\AppFramework\\IAppContainer: deprecated since Nextcloud 25",
+        "  lib/BackgroundJob/DeadlineReminderJob.php:50 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/BackgroundJob/GapReminderJob.php:65 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:44 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:46 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:55 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:70 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:86 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:94 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:104 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferService.php:1038 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/ConfigTransfer/TransferService.php:1573 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferService.php:1594 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferService.php:1634 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferService.php:1658 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Controller/AdminApiController.php:306 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/AdminApiController.php:316 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/AdminApiController.php:387 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "  lib/Controller/PageController.php:182 OCP\\Util::callRegister(): deprecated since Nextcloud 32; directly use CsrfTokenManager instead",
+        "  lib/Repair/EnsureNachweisCheckSchema.php:40 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Repair/UninstallDropTables.php:105 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Repair/UninstallDropTables.php:137 OCP\\IConfig::deleteAppValues(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:139 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:332 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:524 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:528 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:773 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:777 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:784 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:846 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Support/NavGate.php:53 OCP\\AppFramework\\IAppContainer: deprecated since Nextcloud 25",
+        "  templates/parts/settings/license.php:81 OCP\\Util::callRegister(): deprecated since Nextcloud 32; directly use CsrfTokenManager instead"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 29
+        }
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/common/license-page.php:357 style= attribute",
+        "templates/common/license-page.php:377 style= attribute"
+      ],
+      "lines": [
+        "2 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/common/license-page.php:357 style= attribute",
+        "  templates/common/license-page.php:377 style= attribute"
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/ConfigTransfer/TransferService.php:399",
+        "lib/ConfigTransfer/TransferService.php:1263",
+        "lib/Service/FinplanService.php:175",
+        "lib/Service/FinplanService.php:229",
+        "lib/Service/LicenseService.php:216",
+        "lib/Service/LicenseService.php:247",
+        "lib/Service/ReceiptService.php:67",
+        "lib/Service/ReceiptService.php:173",
+        "lib/Service/ReceiptService.php:198",
+        "lib/Service/UpgradeBackupService.php:270",
+        "lib/Service/WorkPackageService.php:123"
+      ],
+      "lines": [
+        "11 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/ConfigTransfer/TransferService.php:399",
+        "  lib/ConfigTransfer/TransferService.php:1263",
+        "  lib/Service/FinplanService.php:175",
+        "  lib/Service/FinplanService.php:229",
+        "  lib/Service/LicenseService.php:216",
+        "  lib/Service/LicenseService.php:247",
+        "  lib/Service/ReceiptService.php:67",
+        "  lib/Service/ReceiptService.php:173",
+        "  lib/Service/ReceiptService.php:198",
+        "  lib/Service/UpgradeBackupService.php:270",
+        "  lib/Service/WorkPackageService.php:123"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 8
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/DeadlineReminderJob.php OCA\\NachweisCheck\\BackgroundJob\\DeadlineReminderJob",
+        "lib/BackgroundJob/GapReminderJob.php OCA\\NachweisCheck\\BackgroundJob\\GapReminderJob"
+      ],
+      "lines": [
+        "2 timed jobs do not say whether they are time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/DeadlineReminderJob.php OCA\\NachweisCheck\\BackgroundJob\\DeadlineReminderJob",
+        "  lib/BackgroundJob/GapReminderJob.php OCA\\NachweisCheck\\BackgroundJob\\GapReminderJob"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/DeadlineReminderJob.php:56 new DateTime()",
+        "lib/BackgroundJob/GapReminderJob.php:71 new DateTime()",
+        "lib/ConfigTransfer/TransferPendingStore.php:47 time()",
+        "lib/ConfigTransfer/TransferPendingStore.php:79 time()",
+        "lib/ConfigTransfer/TransferPendingStore.php:126 time()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:46 time()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:84 time()",
+        "lib/ConfigTransfer/TransferService.php:362 time()",
+        "lib/ConfigTransfer/TransferService.php:1528 time()",
+        "lib/Controller/AdminApiController.php:101 new DateTime()",
+        "lib/Controller/FinanceApiController.php:275 new DateTime()",
+        "lib/Service/AuditorReadLogger.php:34 new DateTime()",
+        "lib/Service/AuditorService.php:66 new DateTime()",
+        "lib/Service/AuditorService.php:78 new DateTime()",
+        "lib/Service/AuditService.php:50 new DateTime()",
+        "lib/Service/CarryoverService.php:54 new DateTime()",
+        "lib/Service/ClaimService.php:111 new DateTime()",
+        "lib/Service/CofunderService.php:59 new DateTime()",
+        "lib/Service/CsvImportService.php:256 new DateTime()",
+        "lib/Service/DeadlineService.php:67 new DateTime()",
+        "lib/Service/DeadlineService.php:103 new DateTime()",
+        "lib/Service/DeviationService.php:56 new DateTime()",
+        "lib/Service/DrawdownService.php:81 new DateTime()",
+        "lib/Service/FinplanService.php:95 new DateTime()",
+        "lib/Service/FinplanService.php:236 new DateTime()",
+        "lib/Service/IncomingPaymentService.php:55 new DateTime()",
+        "lib/Service/MobileSeatService.php:107 new DateTime()",
+        "lib/Service/NachweisService.php:326 new DateTime()",
+        "lib/Service/ProjectService.php:105 new DateTime()",
+        "lib/Service/ProjectService.php:169 new DateTime()",
+        "lib/Service/ProjectService.php:213 new DateTime()",
+        "lib/Service/ProjectService.php:233 new DateTime()",
+        "lib/Service/RateService.php:64 new DateTime()",
+        "lib/Service/ReallocationService.php:73 new DateTime()",
+        "lib/Service/ReallocationService.php:123 new DateTime()",
+        "lib/Service/ReallocationService.php:147 new DateTime()",
+        "lib/Service/ReceiptService.php:87 new DateTime()",
+        "lib/Service/ReceiptService.php:161 new DateTime()",
+        "lib/Service/ReceiptService.php:177 new DateTime()",
+        "lib/Service/TemplateService.php:197 new DateTime()",
+        "lib/Service/TimeEntryService.php:74 new DateTime()",
+        "lib/Service/TimeEntryService.php:107 new DateTime()",
+        "lib/Service/TimesheetService.php:73 new DateTime()",
+        "lib/Service/TimesheetService.php:103 new DateTime()",
+        "lib/Service/TimesheetService.php:104 new DateTime()",
+        "lib/Service/TimesheetService.php:121 new DateTime()",
+        "lib/Service/TimesheetService.php:122 new DateTime()",
+        "lib/Service/TimesheetService.php:141 new DateTime()",
+        "lib/Service/UpgradeBackupService.php:131 new DateTimeImmutable()",
+        "lib/Service/WorkPackageService.php:82 new DateTime()",
+        "lib/Service/WorkReportService.php:48 new DateTime()",
+        "lib/Service/WorkReportService.php:85 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 52 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/BackgroundJob/DeadlineReminderJob.php:56 new DateTime()",
+        "  lib/BackgroundJob/GapReminderJob.php:71 new DateTime()",
+        "  lib/ConfigTransfer/TransferPendingStore.php:47 time()",
+        "  lib/ConfigTransfer/TransferPendingStore.php:79 time()",
+        "  lib/ConfigTransfer/TransferPendingStore.php:126 time()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:46 time()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:84 time()",
+        "  lib/ConfigTransfer/TransferService.php:362 time()",
+        "  lib/ConfigTransfer/TransferService.php:1528 time()",
+        "  lib/Controller/AdminApiController.php:101 new DateTime()",
+        "  lib/Controller/FinanceApiController.php:275 new DateTime()",
+        "  lib/Service/AuditorReadLogger.php:34 new DateTime()",
+        "  lib/Service/AuditorService.php:66 new DateTime()",
+        "  lib/Service/AuditorService.php:78 new DateTime()",
+        "  lib/Service/AuditService.php:50 new DateTime()",
+        "  lib/Service/CarryoverService.php:54 new DateTime()",
+        "  lib/Service/ClaimService.php:111 new DateTime()",
+        "  lib/Service/CofunderService.php:59 new DateTime()",
+        "  lib/Service/CsvImportService.php:256 new DateTime()",
+        "  lib/Service/DeadlineService.php:67 new DateTime()",
+        "  lib/Service/DeadlineService.php:103 new DateTime()",
+        "  lib/Service/DeviationService.php:56 new DateTime()",
+        "  lib/Service/DrawdownService.php:81 new DateTime()",
+        "  lib/Service/FinplanService.php:95 new DateTime()",
+        "  lib/Service/FinplanService.php:236 new DateTime()",
+        "  lib/Service/IncomingPaymentService.php:55 new DateTime()",
+        "  lib/Service/MobileSeatService.php:107 new DateTime()",
+        "  lib/Service/NachweisService.php:326 new DateTime()",
+        "  lib/Service/ProjectService.php:105 new DateTime()",
+        "  lib/Service/ProjectService.php:169 new DateTime()",
+        "  lib/Service/ProjectService.php:213 new DateTime()",
+        "  lib/Service/ProjectService.php:233 new DateTime()",
+        "  lib/Service/RateService.php:64 new DateTime()",
+        "  lib/Service/ReallocationService.php:73 new DateTime()",
+        "  lib/Service/ReallocationService.php:123 new DateTime()",
+        "  lib/Service/ReallocationService.php:147 new DateTime()",
+        "  lib/Service/ReceiptService.php:87 new DateTime()",
+        "  lib/Service/ReceiptService.php:161 new DateTime()",
+        "  lib/Service/ReceiptService.php:177 new DateTime()",
+        "  lib/Service/TemplateService.php:197 new DateTime()",
+        "  lib/Service/TimeEntryService.php:74 new DateTime()",
+        "  lib/Service/TimeEntryService.php:107 new DateTime()",
+        "  lib/Service/TimesheetService.php:73 new DateTime()",
+        "  lib/Service/TimesheetService.php:103 new DateTime()",
+        "  lib/Service/TimesheetService.php:104 new DateTime()",
+        "  lib/Service/TimesheetService.php:121 new DateTime()",
+        "  lib/Service/TimesheetService.php:122 new DateTime()",
+        "  lib/Service/TimesheetService.php:141 new DateTime()",
+        "  lib/Service/UpgradeBackupService.php:131 new DateTimeImmutable()",
+        "  lib/Service/WorkPackageService.php:82 new DateTime()",
+        "  lib/Service/WorkReportService.php:48 new DateTime()",
+        "  lib/Service/WorkReportService.php:85 new DateTime()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 49
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/GapReminderJob.php:52 getValueString()",
+        "lib/BackgroundJob/GapReminderJob.php:58 setValueString()",
+        "lib/BackgroundJob/GapReminderJob.php:79 setValueString()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:44 setAppValue()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:46 setAppValue()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:55 getAppValue()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:70 getAppValue()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:86 setAppValue()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:94 getAppValue()",
+        "lib/ConfigTransfer/TransferService.php:1594 getAppValue()",
+        "lib/ConfigTransfer/TransferService.php:1634 setAppValue()",
+        "lib/ConfigTransfer/TransferService.php:1639 setValueString()",
+        "lib/ConfigTransfer/TransferService.php:1656 setValueString()",
+        "lib/ConfigTransfer/TransferService.php:1659 setValueString()",
+        "lib/Service/AccessDoorService.php:85 getValueString()",
+        "lib/Service/AccessDoorService.php:127 setValueString()",
+        "lib/Service/AccessDoorService.php:128 setValueString()",
+        "lib/Service/AccessDoorService.php:129 setValueString()",
+        "lib/Service/AccessDoorService.php:162 getValueString()",
+        "lib/Service/LicenseService.php:62 getValueString()",
+        "lib/Service/LicenseService.php:141 getValueString()",
+        "lib/Service/UpgradeBackupService.php:139 setAppValue()",
+        "lib/Service/UpgradeBackupService.php:332 setAppValue()",
+        "lib/Service/UpgradeBackupService.php:528 getAppValue()",
+        "lib/Service/UpgradeBackupService.php:784 setAppValue()",
+        "lib/Service/UpgradeBackupService.php:846 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 26 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/BackgroundJob/GapReminderJob.php:52 getValueString()",
+        "  lib/BackgroundJob/GapReminderJob.php:58 setValueString()",
+        "  lib/BackgroundJob/GapReminderJob.php:79 setValueString()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:44 setAppValue()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:46 setAppValue()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:55 getAppValue()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:70 getAppValue()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:86 setAppValue()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:94 getAppValue()",
+        "  lib/ConfigTransfer/TransferService.php:1594 getAppValue()",
+        "  lib/ConfigTransfer/TransferService.php:1634 setAppValue()",
+        "  lib/ConfigTransfer/TransferService.php:1639 setValueString()",
+        "  lib/ConfigTransfer/TransferService.php:1656 setValueString()",
+        "  lib/ConfigTransfer/TransferService.php:1659 setValueString()",
+        "  lib/Service/AccessDoorService.php:85 getValueString()",
+        "  lib/Service/AccessDoorService.php:127 setValueString()",
+        "  lib/Service/AccessDoorService.php:128 setValueString()",
+        "  lib/Service/AccessDoorService.php:129 setValueString()",
+        "  lib/Service/AccessDoorService.php:162 getValueString()",
+        "  lib/Service/LicenseService.php:62 getValueString()",
+        "  lib/Service/LicenseService.php:141 getValueString()",
+        "  lib/Service/UpgradeBackupService.php:139 setAppValue()",
+        "  lib/Service/UpgradeBackupService.php:332 setAppValue()",
+        "  lib/Service/UpgradeBackupService.php:528 getAppValue()",
+        "  lib/Service/UpgradeBackupService.php:784 setAppValue()",
+        "  lib/Service/UpgradeBackupService.php:846 getAppValue()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 23
+        }
+      ]
+    }
+  ],
+  "endpoints": 116,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/",
+      "target": "OCA\\NachweisCheck\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/admin/transfer/apply",
+      "target": "OCA\\NachweisCheck\\Controller\\TransferApiController::apply",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/admin/transfer/export",
+      "target": "OCA\\NachweisCheck\\Controller\\TransferApiController::export",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/admin/transfer/preview",
+      "target": "OCA\\NachweisCheck\\Controller\\TransferApiController::preview",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/admin/transfer/reconcile",
+      "target": "OCA\\NachweisCheck\\Controller\\TransferApiController::reconcile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/admin/transfer/status",
+      "target": "OCA\\NachweisCheck\\Controller\\TransferApiController::status",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/auditor/projects",
+      "target": "OCA\\NachweisCheck\\Controller\\AuditorApiController::myProjects",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/auditor/projects/{projectId}",
+      "target": "OCA\\NachweisCheck\\Controller\\AuditorApiController::project",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/auditor/projects/{projectId}/belege",
+      "target": "OCA\\NachweisCheck\\Controller\\AuditorApiController::belege",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/auditor/projects/{projectId}/nachweise",
+      "target": "OCA\\NachweisCheck\\Controller\\AuditorApiController::nachweise",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/auditor/projects/{projectId}/soll-ist",
+      "target": "OCA\\NachweisCheck\\Controller\\AuditorApiController::sollIst",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/directory/groups",
+      "target": "OCA\\NachweisCheck\\Controller\\AdminApiController::directoryGroups",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/directory/users",
+      "target": "OCA\\NachweisCheck\\Controller\\AdminApiController::directoryUsers",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/nachweischeck/api/v1/license",
+      "target": "OCA\\NachweisCheck\\Controller\\LicenseApiController::remove",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/license",
+      "target": "OCA\\NachweisCheck\\Controller\\LicenseApiController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/license",
+      "target": "OCA\\NachweisCheck\\Controller\\LicenseApiController::apply",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/mobile/projects/{projectId}/entries",
+      "target": "OCA\\NachweisCheck\\Controller\\MobileApiController::myEntries",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/mobile/projects/{projectId}/entries",
+      "target": "OCA\\NachweisCheck\\Controller\\MobileApiController::book",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/mobile/projects/{projectId}/positions",
+      "target": "OCA\\NachweisCheck\\Controller\\MobileApiController::positions",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/mobile/projects/{projectId}/receipts",
+      "target": "OCA\\NachweisCheck\\Controller\\MobileApiController::receipts",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/mobile/projects/{projectId}/receipts",
+      "target": "OCA\\NachweisCheck\\Controller\\MobileApiController::bookReceipt",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/mobile/projects/{projectId}/timesheets",
+      "target": "OCA\\NachweisCheck\\Controller\\MobileApiController::timesheets",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/mobile/status",
+      "target": "OCA\\NachweisCheck\\Controller\\MobileApiController::status",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects",
+      "target": "OCA\\NachweisCheck\\Controller\\ProjectApiController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects",
+      "target": "OCA\\NachweisCheck\\Controller\\ProjectApiController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}",
+      "target": "OCA\\NachweisCheck\\Controller\\ProjectApiController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}",
+      "target": "OCA\\NachweisCheck\\Controller\\ProjectApiController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}",
+      "target": "OCA\\NachweisCheck\\Controller\\ProjectApiController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/activate",
+      "target": "OCA\\NachweisCheck\\Controller\\ProjectApiController::activate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/antrag",
+      "target": "OCA\\NachweisCheck\\Controller\\ProjectApiController::antrag",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/carryovers",
+      "target": "OCA\\NachweisCheck\\Controller\\FinanceApiController::carryovers",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/carryovers",
+      "target": "OCA\\NachweisCheck\\Controller\\FinanceApiController::addCarryover",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/claims",
+      "target": "OCA\\NachweisCheck\\Controller\\FinanceApiController::claims",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/claims",
+      "target": "OCA\\NachweisCheck\\Controller\\FinanceApiController::addClaim",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/claims/{id}/settle",
+      "target": "OCA\\NachweisCheck\\Controller\\FinanceApiController::settleClaim",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/claims/unspent-interest",
+      "target": "OCA\\NachweisCheck\\Controller\\FinanceApiController::unspentInterest",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/cofunders",
+      "target": "OCA\\NachweisCheck\\Controller\\FinanceApiController::cofunders",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/cofunders",
+      "target": "OCA\\NachweisCheck\\Controller\\FinanceApiController::addCofunder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/cofunders/{id}",
+      "target": "OCA\\NachweisCheck\\Controller\\FinanceApiController::deleteCofunder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/dashboard",
+      "target": "OCA\\NachweisCheck\\Controller\\DashboardApiController::project",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/deviations",
+      "target": "OCA\\NachweisCheck\\Controller\\DeviationApiController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/deviations",
+      "target": "OCA\\NachweisCheck\\Controller\\DeviationApiController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/drawdowns",
+      "target": "OCA\\NachweisCheck\\Controller\\FinanceApiController::drawdowns",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/drawdowns",
+      "target": "OCA\\NachweisCheck\\Controller\\FinanceApiController::addDrawdown",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/drawdowns/{id}/decide",
+      "target": "OCA\\NachweisCheck\\Controller\\FinanceApiController::decideDrawdown",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/export/datev",
+      "target": "OCA\\NachweisCheck\\Controller\\NachweisApiController::datev",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/files/resolve",
+      "target": "OCA\\NachweisCheck\\Controller\\ReceiptApiController::resolveFile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/finplan/draft",
+      "target": "OCA\\NachweisCheck\\Controller\\FinplanApiController::newDraft",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/finplan/versions",
+      "target": "OCA\\NachweisCheck\\Controller\\FinplanApiController::versions",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/finplan/versions/{versionId}/activate",
+      "target": "OCA\\NachweisCheck\\Controller\\FinplanApiController::activate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/finplan/versions/{versionId}/positions",
+      "target": "OCA\\NachweisCheck\\Controller\\FinplanApiController::positions",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/finplan/versions/{versionId}/positions",
+      "target": "OCA\\NachweisCheck\\Controller\\FinplanApiController::replacePositions",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/forecast",
+      "target": "OCA\\NachweisCheck\\Controller\\FinanceApiController::forecast",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/grants",
+      "target": "OCA\\NachweisCheck\\Controller\\AdminApiController::grants",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/grants",
+      "target": "OCA\\NachweisCheck\\Controller\\AdminApiController::createGrant",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/grants/{grantId}/reads",
+      "target": "OCA\\NachweisCheck\\Controller\\AdminApiController::grantReads",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/grants/{grantId}/revoke",
+      "target": "OCA\\NachweisCheck\\Controller\\AdminApiController::revokeGrant",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/ics-feed",
+      "target": "OCA\\NachweisCheck\\Controller\\CalendarApiController::feed",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/ics-feed/rotate",
+      "target": "OCA\\NachweisCheck\\Controller\\CalendarApiController::rotateFeed",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/import/receipts",
+      "target": "OCA\\NachweisCheck\\Controller\\ImportApiController::receipts",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/import/times",
+      "target": "OCA\\NachweisCheck\\Controller\\ImportApiController::times",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/members",
+      "target": "OCA\\NachweisCheck\\Controller\\AdminApiController::members",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/members",
+      "target": "OCA\\NachweisCheck\\Controller\\AdminApiController::addMember",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/members/{uid}",
+      "target": "OCA\\NachweisCheck\\Controller\\AdminApiController::removeMember",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/members/{uid}",
+      "target": "OCA\\NachweisCheck\\Controller\\AdminApiController::updateMemberRole",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/nachweise",
+      "target": "OCA\\NachweisCheck\\Controller\\NachweisApiController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/nachweise",
+      "target": "OCA\\NachweisCheck\\Controller\\NachweisApiController::generate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/nachweise/{id}",
+      "target": "OCA\\NachweisCheck\\Controller\\NachweisApiController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/nachweise/{id}/download/{section}",
+      "target": "OCA\\NachweisCheck\\Controller\\NachweisApiController::download",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/nachweise/preview",
+      "target": "OCA\\NachweisCheck\\Controller\\NachweisApiController::preview",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/payments",
+      "target": "OCA\\NachweisCheck\\Controller\\FinanceApiController::payments",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/payments",
+      "target": "OCA\\NachweisCheck\\Controller\\FinanceApiController::addPayment",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/payments/{id}",
+      "target": "OCA\\NachweisCheck\\Controller\\FinanceApiController::deletePayment",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/rates",
+      "target": "OCA\\NachweisCheck\\Controller\\FinanceApiController::addRate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/rates/{uid}",
+      "target": "OCA\\NachweisCheck\\Controller\\FinanceApiController::rates",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/readiness",
+      "target": "OCA\\NachweisCheck\\Controller\\NachweisApiController::readiness",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/reallocations",
+      "target": "OCA\\NachweisCheck\\Controller\\FinanceApiController::reallocations",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/reallocations",
+      "target": "OCA\\NachweisCheck\\Controller\\FinanceApiController::requestReallocation",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/reallocations/{id}/decide",
+      "target": "OCA\\NachweisCheck\\Controller\\FinanceApiController::decideReallocation",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/receipts",
+      "target": "OCA\\NachweisCheck\\Controller\\ReceiptApiController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/receipts",
+      "target": "OCA\\NachweisCheck\\Controller\\ReceiptApiController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/receipts/{id}",
+      "target": "OCA\\NachweisCheck\\Controller\\ReceiptApiController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/receipts/{id}",
+      "target": "OCA\\NachweisCheck\\Controller\\ReceiptApiController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/receipts/{id}/splits",
+      "target": "OCA\\NachweisCheck\\Controller\\ReceiptApiController::replaceSplits",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/receipts/parse-einvoice",
+      "target": "OCA\\NachweisCheck\\Controller\\ReceiptApiController::parseEinvoice",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/reports",
+      "target": "OCA\\NachweisCheck\\Controller\\ReportApiController::createReport",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/reports/{id}/state/{target}",
+      "target": "OCA\\NachweisCheck\\Controller\\ReportApiController::transitionReport",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/sachbericht-suggestions",
+      "target": "OCA\\NachweisCheck\\Controller\\NachweisApiController::sachberichtSuggestions",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/state/{target}",
+      "target": "OCA\\NachweisCheck\\Controller\\ProjectApiController::transition",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/time-entries",
+      "target": "OCA\\NachweisCheck\\Controller\\TimeEntryApiController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/time-entries",
+      "target": "OCA\\NachweisCheck\\Controller\\TimeEntryApiController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/time-entries/{id}",
+      "target": "OCA\\NachweisCheck\\Controller\\TimeEntryApiController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/time-entries/{id}",
+      "target": "OCA\\NachweisCheck\\Controller\\TimeEntryApiController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/timesheets",
+      "target": "OCA\\NachweisCheck\\Controller\\ReportApiController::timesheets",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/timesheets",
+      "target": "OCA\\NachweisCheck\\Controller\\ReportApiController::generateTimesheet",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/timesheets/{id}/reject",
+      "target": "OCA\\NachweisCheck\\Controller\\ReportApiController::rejectTimesheet",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/timesheets/{id}/sign",
+      "target": "OCA\\NachweisCheck\\Controller\\ReportApiController::signTimesheet",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/timesheets/{id}/submit",
+      "target": "OCA\\NachweisCheck\\Controller\\ReportApiController::submitTimesheet",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/workpackages",
+      "target": "OCA\\NachweisCheck\\Controller\\WorkPackageApiController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/workpackages",
+      "target": "OCA\\NachweisCheck\\Controller\\WorkPackageApiController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/workpackages/{apId}/close",
+      "target": "OCA\\NachweisCheck\\Controller\\WorkPackageApiController::close",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/workpackages/{apId}/positions",
+      "target": "OCA\\NachweisCheck\\Controller\\WorkPackageApiController::setPositions",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/projects/{projectId}/workpackages/{apId}/reports",
+      "target": "OCA\\NachweisCheck\\Controller\\ReportApiController::reports",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/settings/access",
+      "target": "OCA\\NachweisCheck\\Controller\\AdminApiController::accessConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/nachweischeck/api/v1/settings/access",
+      "target": "OCA\\NachweisCheck\\Controller\\AdminApiController::saveAccessConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/settings/notify",
+      "target": "OCA\\NachweisCheck\\Controller\\AdminApiController::notifyPref",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/nachweischeck/api/v1/settings/notify",
+      "target": "OCA\\NachweisCheck\\Controller\\AdminApiController::saveNotifyPref",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/settings/seats",
+      "target": "OCA\\NachweisCheck\\Controller\\AdminApiController::seats",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/settings/seats",
+      "target": "OCA\\NachweisCheck\\Controller\\AdminApiController::assignSeat",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/nachweischeck/api/v1/settings/seats/{uid}",
+      "target": "OCA\\NachweisCheck\\Controller\\AdminApiController::freeSeat",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/settings/seats/remove",
+      "target": "OCA\\NachweisCheck\\Controller\\AdminApiController::freeSeatPost",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/api/v1/templates",
+      "target": "OCA\\NachweisCheck\\Controller\\AdminApiController::templates",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nachweischeck/api/v1/templates/install",
+      "target": "OCA\\NachweisCheck\\Controller\\AdminApiController::installTemplate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/projects/{projectId}/calendar.ics",
+      "target": "OCA\\NachweisCheck\\Controller\\CalendarApiController::ics",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/settings",
+      "target": "OCA\\NachweisCheck\\Controller\\PageController::settings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nachweischeck/settings/{section}",
+      "target": "OCA\\NachweisCheck\\Controller\\PageController::settingsSection",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

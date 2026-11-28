@@ -1,0 +1,425 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\TimeGuardian\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/PageController.php:102 OC\\Security\\CSRF\\CsrfTokenManager",
+        "lib/Settings/Form.php:51 OC\\Security\\CSRF\\CsrfTokenManager",
+        "lib/Settings/Form.php:51 OC::$server"
+      ],
+      "lines": [
+        "3 uses of the private API of the server in 2 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/PageController.php:102 OC\\Security\\CSRF\\CsrfTokenManager",
+        "  lib/Settings/Form.php:51 OC\\Security\\CSRF\\CsrfTokenManager",
+        "  lib/Settings/Form.php:51 OC::$server"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/timeguardian/api/admin/config  timeguardian.admin.getconfig  appinfo/routes.php:65 routes",
+        "POST /index.php/apps/timeguardian/api/admin/config  timeguardian.admin.setconfig  appinfo/routes.php:66 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 20 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/timeguardian/api/admin/config  timeguardian.admin.getconfig  appinfo/routes.php:65 routes",
+        "  POST /index.php/apps/timeguardian/api/admin/config  timeguardian.admin.setconfig  appinfo/routes.php:66 routes"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Service/AccessService.php:135 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "lib/Settings/Form.php:49 OCP\\Util::callRegister(): deprecated since Nextcloud 32; directly use CsrfTokenManager instead"
+      ],
+      "lines": [
+        "2 uses in 2 files of the public API that is deprecated in Nextcloud 31 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Service/AccessService.php:135 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "  lib/Settings/Form.php:49 OCP\\Util::callRegister(): deprecated since Nextcloud 32; directly use CsrfTokenManager instead"
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Service/PunchService.php:82"
+      ],
+      "lines": [
+        "1 transaction is opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Service/PunchService.php:82"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Integration/NotificationService.php:41 new DateTime()",
+        "lib/Integration/TalkService.php:40 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 2 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Integration/NotificationService.php:41 new DateTime()",
+        "  lib/Integration/TalkService.php:40 new DateTime()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/ConfigService.php:30 getValueString()",
+        "lib/Service/ConfigService.php:34 setValueString()",
+        "lib/Service/ConfigService.php:39 hasKey()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 3 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/ConfigService.php:30 getValueString()",
+        "  lib/Service/ConfigService.php:34 setValueString()",
+        "  lib/Service/ConfigService.php:39 hasKey()"
+      ]
+    }
+  ],
+  "endpoints": 47,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/",
+      "target": "OCA\\TimeGuardian\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/api/absences",
+      "target": "OCA\\TimeGuardian\\Controller\\AbsenceController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/timeguardian/api/absences",
+      "target": "OCA\\TimeGuardian\\Controller\\AbsenceController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/timeguardian/api/absences/{id}",
+      "target": "OCA\\TimeGuardian\\Controller\\AbsenceController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/timeguardian/api/absences/{id}/decide",
+      "target": "OCA\\TimeGuardian\\Controller\\AbsenceController::decide",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/api/account",
+      "target": "OCA\\TimeGuardian\\Controller\\ReportController::account",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/api/admin/config",
+      "target": "OCA\\TimeGuardian\\Controller\\AdminController::getConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/timeguardian/api/admin/config",
+      "target": "OCA\\TimeGuardian\\Controller\\AdminController::setConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/api/audit",
+      "target": "OCA\\TimeGuardian\\Controller\\TeamController::audit",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/api/config",
+      "target": "OCA\\TimeGuardian\\Controller\\ConfigController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/timeguardian/api/config",
+      "target": "OCA\\TimeGuardian\\Controller\\ConfigController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/api/corrections",
+      "target": "OCA\\TimeGuardian\\Controller\\CorrectionController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/timeguardian/api/corrections",
+      "target": "OCA\\TimeGuardian\\Controller\\CorrectionController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/timeguardian/api/corrections/{id}/decide",
+      "target": "OCA\\TimeGuardian\\Controller\\CorrectionController::decide",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/api/devices",
+      "target": "OCA\\TimeGuardian\\Controller\\DeviceController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/timeguardian/api/devices/{id}",
+      "target": "OCA\\TimeGuardian\\Controller\\DeviceController::revoke",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/api/entries",
+      "target": "OCA\\TimeGuardian\\Controller\\EntryController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/timeguardian/api/entries",
+      "target": "OCA\\TimeGuardian\\Controller\\EntryController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/timeguardian/api/entries/{id}",
+      "target": "OCA\\TimeGuardian\\Controller\\EntryController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/timeguardian/api/entries/{id}",
+      "target": "OCA\\TimeGuardian\\Controller\\EntryController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/api/export.csv",
+      "target": "OCA\\TimeGuardian\\Controller\\ExportController::csv",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/api/export.json",
+      "target": "OCA\\TimeGuardian\\Controller\\ExportController::json",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/api/kiosk/code",
+      "target": "OCA\\TimeGuardian\\Controller\\KioskController::code",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/api/me",
+      "target": "OCA\\TimeGuardian\\Controller\\MeController::me",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/api/month",
+      "target": "OCA\\TimeGuardian\\Controller\\ReportController::month",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/timeguardian/api/pair",
+      "target": "OCA\\TimeGuardian\\Controller\\DeviceController::pair",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/timeguardian/api/pair/redeem",
+      "target": "OCA\\TimeGuardian\\Controller\\DeviceController::redeem",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/timeguardian/api/punch",
+      "target": "OCA\\TimeGuardian\\Controller\\PunchController::punch",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/api/settings",
+      "target": "OCA\\TimeGuardian\\Controller\\MeController::settings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/timeguardian/api/settings",
+      "target": "OCA\\TimeGuardian\\Controller\\MeController::updateSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/api/setup",
+      "target": "OCA\\TimeGuardian\\Controller\\SetupController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/api/status",
+      "target": "OCA\\TimeGuardian\\Controller\\PunchController::status",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/api/team/export.csv",
+      "target": "OCA\\TimeGuardian\\Controller\\TeamController::export",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/api/team/overview",
+      "target": "OCA\\TimeGuardian\\Controller\\TeamController::overview",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/api/team/person/{uid}",
+      "target": "OCA\\TimeGuardian\\Controller\\TeamController::person",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/timeguardian/api/team/person/{uid}/target",
+      "target": "OCA\\TimeGuardian\\Controller\\TeamController::setTarget",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/api/violations",
+      "target": "OCA\\TimeGuardian\\Controller\\ReportController::violations",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/api/week",
+      "target": "OCA\\TimeGuardian\\Controller\\ReportController::week",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/go",
+      "target": "OCA\\TimeGuardian\\Controller\\PageController::go",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/kiosk",
+      "target": "OCA\\TimeGuardian\\Controller\\PageController::kiosk",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/manifest",
+      "target": "OCA\\TimeGuardian\\Controller\\PageController::manifest",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/pair/{token}",
+      "target": "OCA\\TimeGuardian\\Controller\\PageController::pair",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/s/{code}",
+      "target": "OCA\\TimeGuardian\\Controller\\PageController::scan",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/timeguardian/settings/admin",
+      "target": "OCA\\TimeGuardian\\Controller\\SettingsFormController::saveAdmin",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/timeguardian/settings/device/{id}/revoke",
+      "target": "OCA\\TimeGuardian\\Controller\\SettingsFormController::revokeDevice",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/timeguardian/settings/personal",
+      "target": "OCA\\TimeGuardian\\Controller\\SettingsFormController::savePersonal",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timeguardian/sw.js",
+      "target": "OCA\\TimeGuardian\\Controller\\PageController::serviceWorker",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

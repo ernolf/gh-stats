@@ -1,0 +1,496 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\ShiftsNext\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "brick/math 0.14.8, in 3rdparty/ of Nextcloud 31 to 33",
+        "symfony/polyfill-php84 v1.33.0, in 3rdparty/ of Nextcloud 32 to 33"
+      ],
+      "lines": [
+        "vendor/ ships 2 packages that the server ships itself in a major of Nextcloud 31 to 33. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  brick/math 0.14.8, in 3rdparty/ of Nextcloud 31 to 33",
+        "  symfony/polyfill-php84 v1.33.0, in 3rdparty/ of Nextcloud 32 to 33"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/GroupShiftAdminRelationController.php:82 OC\\DB\\Exceptions\\DbalException",
+        "lib/Service/AbstractService.php:13 OC::$server"
+      ],
+      "lines": [
+        "2 uses of the private API of the server in 2 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/GroupShiftAdminRelationController.php:82 OC\\DB\\Exceptions\\DbalException",
+        "  lib/Service/AbstractService.php:13 OC::$server"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version2000Date20240901090943.php:45 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version2000Date20240901090943.php:50 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Service/ConfigService.php:169 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ConfigService.php:186 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ConfigService.php:234 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ConfigService.php:253 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ConfigService.php:272 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/UserService.php:68 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead"
+      ],
+      "lines": [
+        "8 uses in 3 files of the public API that is deprecated in Nextcloud 31 to 33. The text of the tag names the replacement where it has one.",
+        "  lib/Migration/Version2000Date20240901090943.php:45 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version2000Date20240901090943.php:50 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Service/ConfigService.php:169 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ConfigService.php:186 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ConfigService.php:234 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ConfigService.php:253 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ConfigService.php:272 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/UserService.php:68 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/ShiftService.php:88 new DateTimeImmutable()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 1 place. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/ShiftService.php:88 new DateTimeImmutable()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/ConfigService.php:44 getValueString()",
+        "lib/Service/ConfigService.php:56 setValueInt()",
+        "lib/Service/ConfigService.php:65 getValueInt()",
+        "lib/Service/ConfigService.php:76 setValueInt()",
+        "lib/Service/ConfigService.php:85 getValueInt()",
+        "lib/Service/ConfigService.php:96 setValueBool()",
+        "lib/Service/ConfigService.php:105 getValueBool()",
+        "lib/Service/ConfigService.php:117 setValueBool()",
+        "lib/Service/ConfigService.php:126 getValueBool()",
+        "lib/Service/ConfigService.php:138 setValueString()",
+        "lib/Service/ConfigService.php:147 getValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 11 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/ConfigService.php:44 getValueString()",
+        "  lib/Service/ConfigService.php:56 setValueInt()",
+        "  lib/Service/ConfigService.php:65 getValueInt()",
+        "  lib/Service/ConfigService.php:76 setValueInt()",
+        "  lib/Service/ConfigService.php:85 getValueInt()",
+        "  lib/Service/ConfigService.php:96 setValueBool()",
+        "  lib/Service/ConfigService.php:105 getValueBool()",
+        "  lib/Service/ConfigService.php:117 setValueBool()",
+        "  lib/Service/ConfigService.php:126 getValueBool()",
+        "  lib/Service/ConfigService.php:138 setValueString()",
+        "  lib/Service/ConfigService.php:147 getValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 8
+        }
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version2000Date20240901090943.php:24 createTable() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:25 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:26 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:27 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:28 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:29 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:30 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:34 createTable() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:35 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:36 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:37 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:38 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:39 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:40 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:45 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:50 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:51 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:55 createTable() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:56 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:57 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:58 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:59 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:60 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:61 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:62 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:63 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:64 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:65 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:66 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:70 createTable() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:71 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:72 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:73 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:74 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:78 createTable() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:79 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:80 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:81 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:82 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:83 addUniqueIndex() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:87 createTable() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:88 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:89 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:90 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:91 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:92 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:102 addForeignKeyConstraint() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:104 addForeignKeyConstraint() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:105 addForeignKeyConstraint() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:106 addForeignKeyConstraint() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:107 addForeignKeyConstraint() on a table whose name is no constant",
+        "lib/Migration/Version2000Date20240901090943.php:108 addForeignKeyConstraint() on a table whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version2000Date20240901090943.php:24 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:25 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:26 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:27 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:28 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:29 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:30 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:34 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:35 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:36 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:37 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:38 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:39 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:40 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:45 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:50 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:51 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:55 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:56 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:57 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:58 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:59 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:60 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:61 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:62 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:63 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:64 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:65 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:66 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:70 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:71 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:72 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:73 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:74 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:78 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:79 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:80 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:81 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:82 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:83 addUniqueIndex() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:87 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:88 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:89 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:90 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:91 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:92 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:102 addForeignKeyConstraint() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:104 addForeignKeyConstraint() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:105 addForeignKeyConstraint() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:106 addForeignKeyConstraint() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:107 addForeignKeyConstraint() on a table whose name is no constant",
+        "  lib/Migration/Version2000Date20240901090943.php:108 addForeignKeyConstraint() on a table whose name is no constant"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 49
+        }
+      ]
+    }
+  ],
+  "endpoints": 32,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shiftsnext/",
+      "target": "OCA\\ShiftsNext\\Controller\\PageController::index",
+      "openapi": [],
+      "source": "lib/Controller/PageController.php:30",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shiftsnext/{page}",
+      "target": "OCA\\ShiftsNext\\Controller\\PageController::page",
+      "openapi": [],
+      "source": "lib/Controller/PageController.php:40",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/shiftsnext/api/calendars/synchronize-by-groups",
+      "target": "OCA\\ShiftsNext\\Controller\\CalendarController::synchronizeByGroups",
+      "openapi": [],
+      "source": "lib/Controller/CalendarController.php:35",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/shiftsnext/api/calendars/synchronize-by-shifts",
+      "target": "OCA\\ShiftsNext\\Controller\\CalendarController::synchronizeByShifts",
+      "openapi": [],
+      "source": "lib/Controller/CalendarController.php:57",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/shiftsnext/api/config/app",
+      "target": "OCA\\ShiftsNext\\Controller\\ConfigController::app",
+      "openapi": [],
+      "source": "lib/Controller/ConfigController.php:34",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/shiftsnext/api/config/user",
+      "target": "OCA\\ShiftsNext\\Controller\\ConfigController::user",
+      "openapi": [],
+      "source": "lib/Controller/ConfigController.php:47",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/shiftsnext/api/config/user/default-groups",
+      "target": "OCA\\ShiftsNext\\Controller\\ConfigController::defaultGroups",
+      "openapi": [],
+      "source": "lib/Controller/ConfigController.php:60",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shiftsnext/api/group-shift-admin-relations",
+      "target": "OCA\\ShiftsNext\\Controller\\GroupShiftAdminRelationController::index",
+      "openapi": [],
+      "source": "lib/Controller/GroupShiftAdminRelationController.php:37",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/shiftsnext/api/group-shift-admin-relations",
+      "target": "OCA\\ShiftsNext\\Controller\\GroupShiftAdminRelationController::create",
+      "openapi": [],
+      "source": "lib/Controller/GroupShiftAdminRelationController.php:71",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/shiftsnext/api/group-shift-admin-relations/{id}",
+      "target": "OCA\\ShiftsNext\\Controller\\GroupShiftAdminRelationController::destroy",
+      "openapi": [],
+      "source": "lib/Controller/GroupShiftAdminRelationController.php:125",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shiftsnext/api/group-shift-admin-relations/{id}",
+      "target": "OCA\\ShiftsNext\\Controller\\GroupShiftAdminRelationController::show",
+      "openapi": [],
+      "source": "lib/Controller/GroupShiftAdminRelationController.php:57",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shiftsnext/api/group-shift-admin-relations/grouped-by-group",
+      "target": "OCA\\ShiftsNext\\Controller\\GroupShiftAdminRelationController::indexGroupedByGroup",
+      "openapi": [],
+      "source": "lib/Controller/GroupShiftAdminRelationController.php:47",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/shiftsnext/api/group-shift-admin-relations/grouped-by-group",
+      "target": "OCA\\ShiftsNext\\Controller\\GroupShiftAdminRelationController::updateAllOfGroup",
+      "openapi": [],
+      "source": "lib/Controller/GroupShiftAdminRelationController.php:112",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shiftsnext/api/group-user-relations",
+      "target": "OCA\\ShiftsNext\\Controller\\GroupUserRelationController::index",
+      "openapi": [],
+      "source": "lib/Controller/GroupUserRelationController.php:24",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shiftsnext/api/group-user-relations/grouped-by-group",
+      "target": "OCA\\ShiftsNext\\Controller\\GroupUserRelationController::indexGroupedByGroup",
+      "openapi": [],
+      "source": "lib/Controller/GroupUserRelationController.php:34",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shiftsnext/api/groups",
+      "target": "OCA\\ShiftsNext\\Controller\\GroupController::index",
+      "openapi": [],
+      "source": "lib/Controller/GroupController.php:31",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shiftsnext/api/shift-exchanges",
+      "target": "OCA\\ShiftsNext\\Controller\\ShiftExchangeController::index",
+      "openapi": [],
+      "source": "lib/Controller/ShiftExchangeController.php:62",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/shiftsnext/api/shift-exchanges",
+      "target": "OCA\\ShiftsNext\\Controller\\ShiftExchangeController::create",
+      "openapi": [],
+      "source": "lib/Controller/ShiftExchangeController.php:126",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/shiftsnext/api/shift-exchanges/{id}",
+      "target": "OCA\\ShiftsNext\\Controller\\ShiftExchangeController::destroy",
+      "openapi": [],
+      "source": "lib/Controller/ShiftExchangeController.php:614",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shiftsnext/api/shift-exchanges/{id}",
+      "target": "OCA\\ShiftsNext\\Controller\\ShiftExchangeController::show",
+      "openapi": [],
+      "source": "lib/Controller/ShiftExchangeController.php:93",
+      "kind": "route"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/index.php/apps/shiftsnext/api/shift-exchanges/{id}",
+      "target": "OCA\\ShiftsNext\\Controller\\ShiftExchangeController::update",
+      "openapi": [],
+      "source": "lib/Controller/ShiftExchangeController.php:437",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shiftsnext/api/shift-types",
+      "target": "OCA\\ShiftsNext\\Controller\\ShiftTypeController::index",
+      "openapi": [],
+      "source": "lib/Controller/ShiftTypeController.php:53",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/shiftsnext/api/shift-types",
+      "target": "OCA\\ShiftsNext\\Controller\\ShiftTypeController::create",
+      "openapi": [],
+      "source": "lib/Controller/ShiftTypeController.php:96",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/shiftsnext/api/shift-types/{id}",
+      "target": "OCA\\ShiftsNext\\Controller\\ShiftTypeController::destroy",
+      "openapi": [],
+      "source": "lib/Controller/ShiftTypeController.php:179",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shiftsnext/api/shift-types/{id}",
+      "target": "OCA\\ShiftsNext\\Controller\\ShiftTypeController::show",
+      "openapi": [],
+      "source": "lib/Controller/ShiftTypeController.php:77",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/shiftsnext/api/shift-types/{id}",
+      "target": "OCA\\ShiftsNext\\Controller\\ShiftTypeController::update",
+      "openapi": [],
+      "source": "lib/Controller/ShiftTypeController.php:136",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shiftsnext/api/shifts",
+      "target": "OCA\\ShiftsNext\\Controller\\ShiftController::index",
+      "openapi": [],
+      "source": "lib/Controller/ShiftController.php:57",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/shiftsnext/api/shifts",
+      "target": "OCA\\ShiftsNext\\Controller\\ShiftController::create",
+      "openapi": [],
+      "source": "lib/Controller/ShiftController.php:115",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/shiftsnext/api/shifts/{id}",
+      "target": "OCA\\ShiftsNext\\Controller\\ShiftController::destroy",
+      "openapi": [],
+      "source": "lib/Controller/ShiftController.php:310",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shiftsnext/api/shifts/{id}",
+      "target": "OCA\\ShiftsNext\\Controller\\ShiftController::show",
+      "openapi": [],
+      "source": "lib/Controller/ShiftController.php:94",
+      "kind": "route"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/index.php/apps/shiftsnext/api/shifts/{id}",
+      "target": "OCA\\ShiftsNext\\Controller\\ShiftController::update",
+      "openapi": [],
+      "source": "lib/Controller/ShiftController.php:206",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shiftsnext/api/users",
+      "target": "OCA\\ShiftsNext\\Controller\\UserController::index",
+      "openapi": [],
+      "source": "lib/Controller/UserController.php:34",
+      "kind": "route"
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+<?xml version="1.0"?>
+<!--
+  - SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	  xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>music_radio</id>
+	<name>Music Radio</name>
+	<summary>Synchronized radio channels built from your own music</summary>
+	<description><![CDATA[
+Music Radio turns your Nextcloud files into radio stations.
+
+Create a **channel**, fill it with audio files from your Files app, and hit play. Everyone tuned in
+hears the same track at the same moment — the channel owner is the DJ, listeners just listen.
+
+- **Synchronized playback.** A server-authoritative timeline keeps every listener in sync, without
+  needing a streaming server.
+- **Contributors, not co-DJs.** Share a channel and grant "add tracks" separately from playback
+  control, so people can queue up music without hijacking what is playing.
+- **Share it your way.** Users, groups, teams, or a public link with an optional password and
+  expiry date.
+	]]></description>
+	<version>0.16.0</version>
+	<licence>agpl</licence>
+	<author>Jochen Roth</author>
+	<namespace>MusicRadio</namespace>
+	<category>multimedia</category>
+	<category>social</category>
+	<bugs>https://github.com/rothjochen/music_radio/issues</bugs>
+	<dependencies>
+		<nextcloud min-version="33" max-version="34"/>
+	</dependencies>
+	<!--
+	  Deliberately not declared as <command> dependencies. YouTube import needs yt-dlp and
+	  ffmpeg, but declaring them here would stop the app being enabled at all on a server
+	  that only wants to play its own files. They are detected at runtime instead, and
+	  reported through the admin Overview page.
+	-->
+	<commands>
+		<command>OCA\MusicRadio\Command\YtDlpInstall</command>
+		<command>OCA\MusicRadio\Command\YtDlpStatus</command>
+		<command>OCA\MusicRadio\Command\BroadcastBuild</command>
+		<command>OCA\MusicRadio\Command\RemoteStatus</command>
+	</commands>
+	<!--
+	  Only the timed job belongs here. ImportYoutubeAudioJob is a QueuedJob added by the
+	  request that asks for an import; listing it would have Nextcloud run it on a schedule
+	  with no argument.
+	-->
+	<!--
+	  Run on install and on every upgrade. The theming app caches a rendered favicon per
+	  app and never notices when the icon changes; see the class for why that is ours to
+	  clean up rather than the administrator's.
+	-->
+	<repair-steps>
+		<post-migration>
+			<step>OCA\MusicRadio\Migration\ClearThemingIconCache</step>
+		</post-migration>
+	</repair-steps>
+	<background-jobs>
+		<job>OCA\MusicRadio\BackgroundJob\ReapStaleImportsJob</job>
+		<job>OCA\MusicRadio\BackgroundJob\SweepVotesJob</job>
+	</background-jobs>
+	<!--
+	  The same section class in both lists: it is one "Music Radio" heading as far as
+	  anyone reading it is concerned, and which form appears inside it is decided by that
+	  form's own section_type. The forms themselves are registered in Application::register.
+	-->
+	<settings>
+		<admin>OCA\MusicRadio\Settings\AdminSettings</admin>
+		<admin-section>OCA\MusicRadio\Settings\Section</admin-section>
+		<personal>OCA\MusicRadio\Settings\PersonalSettings</personal>
+		<personal-section>OCA\MusicRadio\Settings\Section</personal-section>
+	</settings>
+	<navigations>
+		<navigation>
+			<id>music_radio</id>
+			<name>Music Radio</name>
+			<route>music_radio.page.index</route>
+			<icon>app.svg</icon>
+			<order>10</order>
+		</navigation>
+	</navigations>
+</info>

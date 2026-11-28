@@ -1,0 +1,483 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\QuickNotes\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "DELETE /index.php/apps/quicknotes/notes/trash  quicknotes.note.emptytrash  appinfo/routes.php:23 routes",
+        "DELETE /index.php/apps/quicknotes/notes/{noteId}/shares/self  quicknotes.share.leave  appinfo/routes.php:59 routes",
+        "POST /index.php/apps/quicknotes/notes/{id}/archive  quicknotes.note.archive  appinfo/routes.php:103 routes",
+        "POST /index.php/apps/quicknotes/notes/{id}/trash  quicknotes.note.trash  appinfo/routes.php:114 routes",
+        "POST /index.php/apps/quicknotes/notes/{id}/unarchive  quicknotes.note.unarchive  appinfo/routes.php:125 routes",
+        "POST /index.php/apps/quicknotes/notes/{id}/restore  quicknotes.note.restore  appinfo/routes.php:136 routes",
+        "PUT /index.php/apps/quicknotes/notes/{id}/reminder  quicknotes.note.reminder  appinfo/routes.php:148 routes",
+        "POST /index.php/apps/quicknotes/api/v1/attachments  quicknotes.attachmentapi.upload  appinfo/routes.php:159 routes",
+        "GET /index.php/apps/quicknotes/api/v1/attachments/info  quicknotes.attachmentapi.info  appinfo/routes.php:165 routes",
+        "POST /index.php/apps/quicknotes/setuservalue  quicknotes.settings.setuservalue  appinfo/routes.php:184 routes",
+        "GET /index.php/apps/quicknotes/getuservalue  quicknotes.settings.getuservalue  appinfo/routes.php:189 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 11 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 10 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  DELETE /index.php/apps/quicknotes/notes/trash  quicknotes.note.emptytrash  appinfo/routes.php:23 routes",
+        "  DELETE /index.php/apps/quicknotes/notes/{noteId}/shares/self  quicknotes.share.leave  appinfo/routes.php:59 routes",
+        "  POST /index.php/apps/quicknotes/notes/{id}/archive  quicknotes.note.archive  appinfo/routes.php:103 routes",
+        "  POST /index.php/apps/quicknotes/notes/{id}/trash  quicknotes.note.trash  appinfo/routes.php:114 routes",
+        "  POST /index.php/apps/quicknotes/notes/{id}/unarchive  quicknotes.note.unarchive  appinfo/routes.php:125 routes",
+        "  POST /index.php/apps/quicknotes/notes/{id}/restore  quicknotes.note.restore  appinfo/routes.php:136 routes",
+        "  PUT /index.php/apps/quicknotes/notes/{id}/reminder  quicknotes.note.reminder  appinfo/routes.php:148 routes",
+        "  POST /index.php/apps/quicknotes/api/v1/attachments  quicknotes.attachmentapi.upload  appinfo/routes.php:159 routes",
+        "  GET /index.php/apps/quicknotes/api/v1/attachments/info  quicknotes.attachmentapi.info  appinfo/routes.php:165 routes",
+        "  POST /index.php/apps/quicknotes/setuservalue  quicknotes.settings.setuservalue  appinfo/routes.php:184 routes",
+        "  GET /index.php/apps/quicknotes/getuservalue  quicknotes.settings.getuservalue  appinfo/routes.php:189 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 8
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "psalm/phar is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Calendar/NotesCalendar.php:101 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Service/ShareService.php:562 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/ShareService.php:609 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "lines": [
+        "3 uses in 2 files of the public API that is deprecated in Nextcloud 34. The text of the tag names the replacement where it has one.",
+        "  lib/Calendar/NotesCalendar.php:101 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Service/ShareService.php:562 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/ShareService.php:609 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/NoteApiController.php:64 new DateTime()",
+        "lib/Controller/NoteController.php:61 new DateTime()",
+        "lib/Migration/Version00901Date20260816120000.php:179 time()",
+        "lib/Service/FileService.php:241 new DateTime()",
+        "lib/Service/NoteService.php:237 time()",
+        "lib/Service/NoteService.php:256 time()",
+        "lib/Service/NoteService.php:361 time()",
+        "lib/Service/NoteService.php:397 new DateTime()",
+        "lib/Service/NoteService.php:422 new DateTime()",
+        "lib/Service/NoteService.php:662 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 10 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/NoteApiController.php:64 new DateTime()",
+        "  lib/Controller/NoteController.php:61 new DateTime()",
+        "  lib/Migration/Version00901Date20260816120000.php:179 time()",
+        "  lib/Service/FileService.php:241 new DateTime()",
+        "  lib/Service/NoteService.php:237 time()",
+        "  lib/Service/NoteService.php:256 time()",
+        "  lib/Service/NoteService.php:361 time()",
+        "  lib/Service/NoteService.php:397 new DateTime()",
+        "  lib/Service/NoteService.php:422 new DateTime()",
+        "  lib/Service/NoteService.php:662 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/ShareService.php:562 getAppValue()",
+        "lib/Service/ShareService.php:609 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 2 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/ShareService.php:562 getAppValue()",
+        "  lib/Service/ShareService.php:609 getAppValue()"
+      ]
+    },
+    {
+      "id": "cors-unreferenced",
+      "level": "info",
+      "places": [
+        "DELETE /index.php/apps/quicknotes/api/v1/notes/trash  quicknotes.noteapi.emptytrash  appinfo/routes.php:28 routes",
+        "GET /index.php/apps/quicknotes/api/v1/notes/{noteId}/shares  quicknotes.shareapi.index  appinfo/routes.php:42 routes",
+        "POST /index.php/apps/quicknotes/api/v1/notes/{noteId}/shares  quicknotes.shareapi.create  appinfo/routes.php:52 routes",
+        "DELETE /index.php/apps/quicknotes/api/v1/notes/{noteId}/shares/self  quicknotes.shareapi.leave  appinfo/routes.php:64 routes",
+        "PUT /index.php/apps/quicknotes/api/v1/shares/{shareId}  quicknotes.shareapi.update  appinfo/routes.php:74 routes",
+        "DELETE /index.php/apps/quicknotes/api/v1/shares/{shareId}  quicknotes.shareapi.destroy  appinfo/routes.php:84 routes",
+        "GET /index.php/apps/quicknotes/api/v1/notes/{noteId}/sharees  quicknotes.shareapi.sharees  appinfo/routes.php:97 routes",
+        "POST /index.php/apps/quicknotes/api/v1/notes/{id}/archive  quicknotes.noteapi.archive  appinfo/routes.php:108 routes",
+        "POST /index.php/apps/quicknotes/api/v1/notes/{id}/trash  quicknotes.noteapi.trash  appinfo/routes.php:119 routes",
+        "POST /index.php/apps/quicknotes/api/v1/notes/{id}/unarchive  quicknotes.noteapi.unarchive  appinfo/routes.php:130 routes",
+        "POST /index.php/apps/quicknotes/api/v1/notes/{id}/restore  quicknotes.noteapi.restore  appinfo/routes.php:141 routes",
+        "PUT /index.php/apps/quicknotes/api/v1/notes/{id}/reminder  quicknotes.noteapi.reminder  appinfo/routes.php:153 routes",
+        "OPTIONS /index.php/apps/quicknotes/api/v1/{path}  quicknotes.noteapi.preflighted_cors  appinfo/routes.php:194 routes",
+        "GET /index.php/apps/quicknotes/api/v1/notes  quicknotes.noteapi.index  appinfo/routes.php:5 resources",
+        "GET /index.php/apps/quicknotes/api/v1/notes/{id}  quicknotes.noteapi.show  appinfo/routes.php:5 resources",
+        "POST /index.php/apps/quicknotes/api/v1/notes  quicknotes.noteapi.create  appinfo/routes.php:5 resources",
+        "PUT /index.php/apps/quicknotes/api/v1/notes/{id}  quicknotes.noteapi.update  appinfo/routes.php:5 resources",
+        "DELETE /index.php/apps/quicknotes/api/v1/notes/{id}  quicknotes.noteapi.destroy  appinfo/routes.php:5 resources"
+      ],
+      "lines": [
+        "Nothing in the app calls 18 routes outside OCS whose method allows requests from other origins (CORS), or that answer the preflight of such a request (OPTIONS). They are there for clients outside the app, so this is no defect in itself.",
+        "  DELETE /index.php/apps/quicknotes/api/v1/notes/trash  quicknotes.noteapi.emptytrash  appinfo/routes.php:28 routes",
+        "  GET /index.php/apps/quicknotes/api/v1/notes/{noteId}/shares  quicknotes.shareapi.index  appinfo/routes.php:42 routes",
+        "  POST /index.php/apps/quicknotes/api/v1/notes/{noteId}/shares  quicknotes.shareapi.create  appinfo/routes.php:52 routes",
+        "  DELETE /index.php/apps/quicknotes/api/v1/notes/{noteId}/shares/self  quicknotes.shareapi.leave  appinfo/routes.php:64 routes",
+        "  PUT /index.php/apps/quicknotes/api/v1/shares/{shareId}  quicknotes.shareapi.update  appinfo/routes.php:74 routes",
+        "  DELETE /index.php/apps/quicknotes/api/v1/shares/{shareId}  quicknotes.shareapi.destroy  appinfo/routes.php:84 routes",
+        "  GET /index.php/apps/quicknotes/api/v1/notes/{noteId}/sharees  quicknotes.shareapi.sharees  appinfo/routes.php:97 routes",
+        "  POST /index.php/apps/quicknotes/api/v1/notes/{id}/archive  quicknotes.noteapi.archive  appinfo/routes.php:108 routes",
+        "  POST /index.php/apps/quicknotes/api/v1/notes/{id}/trash  quicknotes.noteapi.trash  appinfo/routes.php:119 routes",
+        "  POST /index.php/apps/quicknotes/api/v1/notes/{id}/unarchive  quicknotes.noteapi.unarchive  appinfo/routes.php:130 routes",
+        "  POST /index.php/apps/quicknotes/api/v1/notes/{id}/restore  quicknotes.noteapi.restore  appinfo/routes.php:141 routes",
+        "  PUT /index.php/apps/quicknotes/api/v1/notes/{id}/reminder  quicknotes.noteapi.reminder  appinfo/routes.php:153 routes",
+        "  OPTIONS /index.php/apps/quicknotes/api/v1/{path}  quicknotes.noteapi.preflighted_cors  appinfo/routes.php:194 routes",
+        "  GET /index.php/apps/quicknotes/api/v1/notes  quicknotes.noteapi.index  appinfo/routes.php:5 resources",
+        "  GET /index.php/apps/quicknotes/api/v1/notes/{id}  quicknotes.noteapi.show  appinfo/routes.php:5 resources",
+        "  POST /index.php/apps/quicknotes/api/v1/notes  quicknotes.noteapi.create  appinfo/routes.php:5 resources",
+        "  PUT /index.php/apps/quicknotes/api/v1/notes/{id}  quicknotes.noteapi.update  appinfo/routes.php:5 resources",
+        "  DELETE /index.php/apps/quicknotes/api/v1/notes/{id}  quicknotes.noteapi.destroy  appinfo/routes.php:5 resources"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 15
+        }
+      ]
+    }
+  ],
+  "endpoints": 44,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/quicknotes/",
+      "target": "OCA\\QuickNotes\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/quicknotes/api/v1/{path}",
+      "target": "OCA\\QuickNotes\\Controller\\NoteApiController::preflightedCors",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/quicknotes/api/v1/attachments",
+      "target": "OCA\\QuickNotes\\Controller\\AttachmentApiController::upload",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/quicknotes/api/v1/attachments/info",
+      "target": "OCA\\QuickNotes\\Controller\\AttachmentApiController::info",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/quicknotes/api/v1/notes",
+      "target": "OCA\\QuickNotes\\Controller\\NoteApiController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/quicknotes/api/v1/notes",
+      "target": "OCA\\QuickNotes\\Controller\\NoteApiController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/quicknotes/api/v1/notes/{id}",
+      "target": "OCA\\QuickNotes\\Controller\\NoteApiController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/quicknotes/api/v1/notes/{id}",
+      "target": "OCA\\QuickNotes\\Controller\\NoteApiController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/quicknotes/api/v1/notes/{id}",
+      "target": "OCA\\QuickNotes\\Controller\\NoteApiController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/quicknotes/api/v1/notes/{id}/archive",
+      "target": "OCA\\QuickNotes\\Controller\\NoteApiController::archive",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/quicknotes/api/v1/notes/{id}/reminder",
+      "target": "OCA\\QuickNotes\\Controller\\NoteApiController::reminder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/quicknotes/api/v1/notes/{id}/restore",
+      "target": "OCA\\QuickNotes\\Controller\\NoteApiController::restore",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/quicknotes/api/v1/notes/{id}/trash",
+      "target": "OCA\\QuickNotes\\Controller\\NoteApiController::trash",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/quicknotes/api/v1/notes/{id}/unarchive",
+      "target": "OCA\\QuickNotes\\Controller\\NoteApiController::unarchive",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/quicknotes/api/v1/notes/{noteId}/attachments/{fileId}/download",
+      "target": "OCA\\QuickNotes\\Controller\\AttachmentApiController::download",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/quicknotes/api/v1/notes/{noteId}/attachments/{fileId}/preview",
+      "target": "OCA\\QuickNotes\\Controller\\AttachmentApiController::preview",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/quicknotes/api/v1/notes/{noteId}/sharees",
+      "target": "OCA\\QuickNotes\\Controller\\ShareApiController::sharees",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/quicknotes/api/v1/notes/{noteId}/shares",
+      "target": "OCA\\QuickNotes\\Controller\\ShareApiController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/quicknotes/api/v1/notes/{noteId}/shares",
+      "target": "OCA\\QuickNotes\\Controller\\ShareApiController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/quicknotes/api/v1/notes/{noteId}/shares/self",
+      "target": "OCA\\QuickNotes\\Controller\\ShareApiController::leave",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/quicknotes/api/v1/notes/trash",
+      "target": "OCA\\QuickNotes\\Controller\\NoteApiController::emptyTrash",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/quicknotes/api/v1/shares/{shareId}",
+      "target": "OCA\\QuickNotes\\Controller\\ShareApiController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/quicknotes/api/v1/shares/{shareId}",
+      "target": "OCA\\QuickNotes\\Controller\\ShareApiController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/quicknotes/getuservalue",
+      "target": "OCA\\QuickNotes\\Controller\\SettingsController::getUserValue",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/quicknotes/notes",
+      "target": "OCA\\QuickNotes\\Controller\\NoteController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/quicknotes/notes",
+      "target": "OCA\\QuickNotes\\Controller\\NoteController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/quicknotes/notes/{id}",
+      "target": "OCA\\QuickNotes\\Controller\\NoteController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/quicknotes/notes/{id}",
+      "target": "OCA\\QuickNotes\\Controller\\NoteController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/quicknotes/notes/{id}",
+      "target": "OCA\\QuickNotes\\Controller\\NoteController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/quicknotes/notes/{id}/archive",
+      "target": "OCA\\QuickNotes\\Controller\\NoteController::archive",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/quicknotes/notes/{id}/reminder",
+      "target": "OCA\\QuickNotes\\Controller\\NoteController::reminder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/quicknotes/notes/{id}/restore",
+      "target": "OCA\\QuickNotes\\Controller\\NoteController::restore",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/quicknotes/notes/{id}/trash",
+      "target": "OCA\\QuickNotes\\Controller\\NoteController::trash",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/quicknotes/notes/{id}/unarchive",
+      "target": "OCA\\QuickNotes\\Controller\\NoteController::unarchive",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/quicknotes/notes/{noteId}/sharees",
+      "target": "OCA\\QuickNotes\\Controller\\ShareController::sharees",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/quicknotes/notes/{noteId}/shares",
+      "target": "OCA\\QuickNotes\\Controller\\ShareController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/quicknotes/notes/{noteId}/shares",
+      "target": "OCA\\QuickNotes\\Controller\\ShareController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/quicknotes/notes/{noteId}/shares/self",
+      "target": "OCA\\QuickNotes\\Controller\\ShareController::leave",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/quicknotes/notes/dashboard",
+      "target": "OCA\\QuickNotes\\Controller\\NoteController::dashboard",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/quicknotes/notes/trash",
+      "target": "OCA\\QuickNotes\\Controller\\NoteController::emptyTrash",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/quicknotes/setuservalue",
+      "target": "OCA\\QuickNotes\\Controller\\SettingsController::setUserValue",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/quicknotes/shares/{shareId}",
+      "target": "OCA\\QuickNotes\\Controller\\ShareController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/quicknotes/shares/{shareId}",
+      "target": "OCA\\QuickNotes\\Controller\\ShareController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/capabilities",
+      "target": "OCA\\QuickNotes\\AppInfo\\Capabilities",
+      "openapi": [],
+      "kind": "capability"
+    }
+  ]
+}

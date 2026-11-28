@@ -1,0 +1,187 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\MemoriesFacetag\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/memories_facetag/api/file/{fileId}  memories_facetag.api.file  appinfo/routes.php:7 routes",
+        "POST /index.php/apps/memories_facetag/api/file/{fileId}/locate  memories_facetag.api.locate  appinfo/routes.php:8 routes",
+        "POST /index.php/apps/memories_facetag/api/file/{fileId}/tags  memories_facetag.api.addtag  appinfo/routes.php:9 routes",
+        "GET /index.php/apps/memories_facetag/api/detection/{id}/suggest  memories_facetag.api.suggestfordetection  appinfo/routes.php:10 routes",
+        "PUT /index.php/apps/memories_facetag/api/detection/{id}  memories_facetag.api.assign  appinfo/routes.php:11 routes",
+        "DELETE /index.php/apps/memories_facetag/api/detection/{id}  memories_facetag.api.remove  appinfo/routes.php:12 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 6 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 1 file of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/memories_facetag/api/file/{fileId}  memories_facetag.api.file  appinfo/routes.php:7 routes",
+        "  POST /index.php/apps/memories_facetag/api/file/{fileId}/locate  memories_facetag.api.locate  appinfo/routes.php:8 routes",
+        "  POST /index.php/apps/memories_facetag/api/file/{fileId}/tags  memories_facetag.api.addtag  appinfo/routes.php:9 routes",
+        "  GET /index.php/apps/memories_facetag/api/detection/{id}/suggest  memories_facetag.api.suggestfordetection  appinfo/routes.php:10 routes",
+        "  PUT /index.php/apps/memories_facetag/api/detection/{id}  memories_facetag.api.assign  appinfo/routes.php:11 routes",
+        "  DELETE /index.php/apps/memories_facetag/api/detection/{id}  memories_facetag.api.remove  appinfo/routes.php:12 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Service/NodeRuntime.php:19 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated in Nextcloud 34 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Service/NodeRuntime.php:19 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Service/FaceStore.php:155",
+        "lib/Service/FaceStore.php:232"
+      ],
+      "lines": [
+        "2 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Service/FaceStore.php:155",
+        "  lib/Service/FaceStore.php:232"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/ScanJob.php:47 time()",
+        "lib/BackgroundJob/ScanJob.php:57 time()",
+        "lib/BackgroundJob/ScanJob.php:60 time()",
+        "lib/Command/Scan.php:67 time()",
+        "lib/Service/FaceStore.php:183 time()",
+        "lib/Service/Scanner.php:131 time()",
+        "lib/Service/Scanner.php:133 time()",
+        "lib/Service/Scanner.php:160 time()",
+        "lib/Service/Scanner.php:177 time()",
+        "lib/Service/Scanner.php:179 time()",
+        "lib/Service/Scanner.php:282 time()",
+        "lib/Service/Scanner.php:283 time()",
+        "lib/Service/Scanner.php:315 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 13 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/BackgroundJob/ScanJob.php:47 time()",
+        "  lib/BackgroundJob/ScanJob.php:57 time()",
+        "  lib/BackgroundJob/ScanJob.php:60 time()",
+        "  lib/Command/Scan.php:67 time()",
+        "  lib/Service/FaceStore.php:183 time()",
+        "  lib/Service/Scanner.php:131 time()",
+        "  lib/Service/Scanner.php:133 time()",
+        "  lib/Service/Scanner.php:160 time()",
+        "  lib/Service/Scanner.php:177 time()",
+        "  lib/Service/Scanner.php:179 time()",
+        "  lib/Service/Scanner.php:282 time()",
+        "  lib/Service/Scanner.php:283 time()",
+        "  lib/Service/Scanner.php:315 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 10
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/ScanJob.php:43 getValueString()",
+        "lib/BackgroundJob/ScanJob.php:46 getValueInt()",
+        "lib/BackgroundJob/ScanJob.php:53 getValueString()",
+        "lib/BackgroundJob/ScanJob.php:56 getValueInt()",
+        "lib/BackgroundJob/ScanJob.php:60 setValueInt()",
+        "lib/BackgroundJob/ScanJob.php:62 setValueString()",
+        "lib/Service/Compatibility.php:68 getValueString()",
+        "lib/Service/NodeRuntime.php:19 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 8 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/BackgroundJob/ScanJob.php:43 getValueString()",
+        "  lib/BackgroundJob/ScanJob.php:46 getValueInt()",
+        "  lib/BackgroundJob/ScanJob.php:53 getValueString()",
+        "  lib/BackgroundJob/ScanJob.php:56 getValueInt()",
+        "  lib/BackgroundJob/ScanJob.php:60 setValueInt()",
+        "  lib/BackgroundJob/ScanJob.php:62 setValueString()",
+        "  lib/Service/Compatibility.php:68 getValueString()",
+        "  lib/Service/NodeRuntime.php:19 getAppValue()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 5
+        }
+      ]
+    }
+  ],
+  "endpoints": 6,
+  "endpointList": [
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/memories_facetag/api/detection/{id}",
+      "target": "OCA\\MemoriesFacetag\\Controller\\ApiController::remove",
+      "openapi": [],
+      "source": "appinfo/routes.php:12 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/memories_facetag/api/detection/{id}",
+      "target": "OCA\\MemoriesFacetag\\Controller\\ApiController::assign",
+      "openapi": [],
+      "source": "appinfo/routes.php:11 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/memories_facetag/api/detection/{id}/suggest",
+      "target": "OCA\\MemoriesFacetag\\Controller\\ApiController::suggestForDetection",
+      "openapi": [],
+      "source": "appinfo/routes.php:10 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/memories_facetag/api/file/{fileId}",
+      "target": "OCA\\MemoriesFacetag\\Controller\\ApiController::file",
+      "openapi": [],
+      "source": "appinfo/routes.php:7 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/memories_facetag/api/file/{fileId}/locate",
+      "target": "OCA\\MemoriesFacetag\\Controller\\ApiController::locate",
+      "openapi": [],
+      "source": "appinfo/routes.php:8 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/memories_facetag/api/file/{fileId}/tags",
+      "target": "OCA\\MemoriesFacetag\\Controller\\ApiController::addTag",
+      "openapi": [],
+      "source": "appinfo/routes.php:9 routes",
+      "kind": "route"
+    }
+  ]
+}

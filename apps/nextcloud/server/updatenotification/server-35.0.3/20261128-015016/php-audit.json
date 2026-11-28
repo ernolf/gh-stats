@@ -1,0 +1,188 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer/composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer/composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/BackgroundJob/UpdateAvailableNotifications.php:44 OC\\Installer",
+        "lib/BackgroundJob/UpdateAvailableNotifications.php:45 OC\\Updater\\VersionCheck",
+        "lib/BackgroundJob/UpdateAvailableNotifications.php:60 OC",
+        "lib/Command/Check.php:22 OC\\App\\AppManager",
+        "lib/Command/Check.php:24 OC\\Installer",
+        "lib/Controller/APIController.php:54 OC\\App\\AppStore\\Fetcher\\AppFetcher",
+        "lib/UpdateChecker.php:19 OC\\Updater\\VersionCheck"
+      ],
+      "lines": [
+        "7 uses of the private API of the server in 4 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/BackgroundJob/UpdateAvailableNotifications.php:44 OC\\Installer",
+        "  lib/BackgroundJob/UpdateAvailableNotifications.php:45 OC\\Updater\\VersionCheck",
+        "  lib/BackgroundJob/UpdateAvailableNotifications.php:60 OC",
+        "  lib/Command/Check.php:22 OC\\App\\AppManager",
+        "  lib/Command/Check.php:24 OC\\Installer",
+        "  lib/Controller/APIController.php:54 OC\\App\\AppStore\\Fetcher\\AppFetcher",
+        "  lib/UpdateChecker.php:19 OC\\Updater\\VersionCheck"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:51 injectFn()",
+        "lib/AppInfo/Application.php:72 get()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 2 places. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:51 injectFn()",
+        "  lib/AppInfo/Application.php:72 get()"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/ResetToken.php:63 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated in Nextcloud 35. The text of the tag names the replacement where it has one.",
+        "  lib/BackgroundJob/ResetToken.php:63 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/ResetToken.php OCA\\UpdateNotification\\BackgroundJob\\ResetToken"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/ResetToken.php OCA\\UpdateNotification\\BackgroundJob\\ResetToken"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/UpdateAvailableNotifications.php:116 new DateTime()",
+        "lib/BackgroundJob/UpdateAvailableNotifications.php:179 new DateTime()",
+        "lib/Listener/AppUpdateEventListener.php:52 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 3 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/BackgroundJob/UpdateAvailableNotifications.php:116 new DateTime()",
+        "  lib/BackgroundJob/UpdateAvailableNotifications.php:179 new DateTime()",
+        "  lib/Listener/AppUpdateEventListener.php:52 time()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/AppUpdatedNotifications.php:87 getAppValueBool()",
+        "lib/BackgroundJob/ResetToken.php:48 getValueInt()",
+        "lib/BackgroundJob/UpdateAvailableNotifications.php:90 getAppValueInt()",
+        "lib/BackgroundJob/UpdateAvailableNotifications.php:91 setAppValueInt()",
+        "lib/BackgroundJob/UpdateAvailableNotifications.php:97 setAppValueInt()",
+        "lib/BackgroundJob/UpdateAvailableNotifications.php:165 getAppValueString()",
+        "lib/BackgroundJob/UpdateAvailableNotifications.php:196 setAppValueString()",
+        "lib/BackgroundJob/UpdateAvailableNotifications.php:207 getAppValueArray()",
+        "lib/Controller/AdminController.php:49 setValueInt()",
+        "lib/Controller/AdminController.php:67 setValueInt()",
+        "lib/Listener/AppUpdateEventListener.php:39 getValueBool()",
+        "lib/Listener/BeforeTemplateRenderedEventListener.php:39 getValueBool()",
+        "lib/Notification/Notifier.php:89 getAppValueInt()",
+        "lib/Settings/Admin.php:45 getValueInt()",
+        "lib/Settings/Admin.php:61 getValueArray()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 15 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/BackgroundJob/AppUpdatedNotifications.php:87 getAppValueBool()",
+        "  lib/BackgroundJob/ResetToken.php:48 getValueInt()",
+        "  lib/BackgroundJob/UpdateAvailableNotifications.php:90 getAppValueInt()",
+        "  lib/BackgroundJob/UpdateAvailableNotifications.php:91 setAppValueInt()",
+        "  lib/BackgroundJob/UpdateAvailableNotifications.php:97 setAppValueInt()",
+        "  lib/BackgroundJob/UpdateAvailableNotifications.php:165 getAppValueString()",
+        "  lib/BackgroundJob/UpdateAvailableNotifications.php:196 setAppValueString()",
+        "  lib/BackgroundJob/UpdateAvailableNotifications.php:207 getAppValueArray()",
+        "  lib/Controller/AdminController.php:49 setValueInt()",
+        "  lib/Controller/AdminController.php:67 setValueInt()",
+        "  lib/Listener/AppUpdateEventListener.php:39 getValueBool()",
+        "  lib/Listener/BeforeTemplateRenderedEventListener.php:39 getValueBool()",
+        "  lib/Notification/Notifier.php:89 getAppValueInt()",
+        "  lib/Settings/Admin.php:45 getValueInt()",
+        "  lib/Settings/Admin.php:61 getValueArray()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 12
+        }
+      ]
+    }
+  ],
+  "endpoints": 5,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/updatenotification/changelog/{app}",
+      "target": "OCA\\UpdateNotification\\Controller\\ChangelogController::showChangelog",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:14 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/updatenotification/channel",
+      "target": "OCA\\UpdateNotification\\Controller\\AdminController::setChannel",
+      "openapi": [],
+      "source": "appinfo/routes.php:12 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/updatenotification/credentials",
+      "target": "OCA\\UpdateNotification\\Controller\\AdminController::createCredentials",
+      "openapi": [],
+      "source": "appinfo/routes.php:11 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/updatenotification/api/{apiVersion}/applist/{newVersion}",
+      "target": "OCA\\UpdateNotification\\Controller\\APIController::getAppList",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:17 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/updatenotification/api/{apiVersion}/changelog/{appId}",
+      "target": "OCA\\UpdateNotification\\Controller\\APIController::getAppChangelogEntry",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:18 ocs",
+      "kind": "OCS"
+    }
+  ]
+}

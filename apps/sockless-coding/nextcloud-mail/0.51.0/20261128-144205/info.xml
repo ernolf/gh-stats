@@ -1,0 +1,98 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>sockless_mail</id>
+	<name>Sockless Mail</name>
+	<summary>Webmail client for Nextcloud with multiple IMAP/SMTP accounts per user</summary>
+	<description><![CDATA[Sockless Mail is a webmail client for Nextcloud. Each user can connect any number of IMAP/SMTP accounts, with a password or by signing in with Google or Microsoft.
+
+- **Mail**: unified inbox and folders across accounts, conversations, search, push for new mail, tags, rules, send later, and rich text with inline images
+- **Nextcloud**: attach from and save to Files, address book suggestions from Contacts, invitations in Calendar, tasks in Tasks, and Assistant summaries, translations and writing help
+- **Security**: sanitized HTML in a sandbox, remote images only on request, look-alike and new sender domains flagged, deceptive links marked, OpenPGP and S/MIME
+
+It runs as an External App (AppAPI), so it needs a deploy daemon, preferably HaRP. Before installing, open **Advanced deploy options** and set `SOCKLESS_MAIL_ENCRYPTION_KEY` to a long random value (at least 32 characters, e.g. from `openssl rand -base64 48`), and keep a copy of it: it protects the stored mail passwords and can only be set during installation.
+
+For the address `/apps/socklessmail/` and installing the page as a browser app, also install the companion app (id `socklessmail`).]]></description>
+	<!-- Keep <version> and <image-tag> equal: AppAPI deploys <image-tag>, app:update compares <version>. -->
+	<version>0.51.0</version>
+	<licence>MIT</licence>
+	<author>Jimmy Everling</author>
+	<namespace>SocklessMail</namespace>
+	<documentation>
+		<admin>https://github.com/sockless-coding/nextcloud-mail#installation</admin>
+	</documentation>
+	<category>social</category>
+	<category>office</category>
+	<website>https://github.com/sockless-coding/nextcloud-mail</website>
+	<bugs>https://github.com/sockless-coding/nextcloud-mail/issues</bugs>
+	<repository type="git">https://github.com/sockless-coding/nextcloud-mail.git</repository>
+	<!-- Made by tests/e2e/screenshots.mjs from demo mail. -->
+	<screenshot>https://raw.githubusercontent.com/sockless-coding/nextcloud-mail/main/docs/screenshots/1-all-accounts.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/sockless-coding/nextcloud-mail/main/docs/screenshots/2-conversation.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/sockless-coding/nextcloud-mail/main/docs/screenshots/3-composer.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/sockless-coding/nextcloud-mail/main/docs/screenshots/4-dark-newsletter.png</screenshot>
+	<dependencies>
+		<nextcloud min-version="32" max-version="36"/>
+	</dependencies>
+	<external-app>
+		<docker-install>
+			<!-- Published by .github/workflows/release.yml on a v<version> tag. The dev stack
+			     maps this registry to "local", so it deploys images built by dev/dev.sh instead. -->
+			<registry>ghcr.io</registry>
+			<image>sockless-coding/sockless_mail</image>
+			<image-tag>0.51.0</image-tag>
+		</docker-install>
+		<routes>
+			<!-- Bundles and icons; no secrets. The top-menu icon is fetched without user context. -->
+			<route>
+				<url>^/(js|css|img)/.*$</url>
+				<verb>GET</verb>
+				<access_level>PUBLIC</access_level>
+			</route>
+			<!-- The OAuth2 provider redirects the browser here, possibly without a Nextcloud
+			     session; the flow's random state identifies it (OAuthEndpoints.cs). -->
+			<route>
+				<url>^/oauth/callback$</url>
+				<verb>GET</verb>
+				<access_level>PUBLIC</access_level>
+			</route>
+			<!-- The Files app's "Send by email" handler (FilesEndpoints.cs); posted without our CSRF header. -->
+			<route>
+				<url>^/files-action/send$</url>
+				<verb>POST</verb>
+				<access_level>USER</access_level>
+			</route>
+			<!-- Before the general /api route: AppAPI and HaRP apply the first route that matches. -->
+			<route>
+				<url>^/api/admin(/.*)?$</url>
+				<verb>GET,PUT</verb>
+				<access_level>ADMIN</access_level>
+			</route>
+			<!-- No PATCH: AppAPI's PHP proxy only forwards GET, HEAD, POST, PUT and DELETE. -->
+			<route>
+				<url>^/api(/.*)?$</url>
+				<verb>GET,POST,PUT,DELETE</verb>
+				<access_level>USER</access_level>
+			</route>
+		</routes>
+		<environment-variables>
+			<!-- No <default>: an empty default element reaches the container as the string "Array". -->
+			<variable>
+				<name>SOCKLESS_MAIL_ENCRYPTION_KEY</name>
+				<display-name>Credential encryption key</display-name>
+				<description>Protects the key ring that encrypts stored mail account passwords. At least 32 characters. Keep it outside backups of the app's data volume. See the README, "Security model".</description>
+			</variable>
+			<variable>
+				<name>SOCKLESS_MAIL_ALLOW_LOCAL_SERVERS</name>
+				<display-name>Allow mail servers on local networks</display-name>
+				<description>"true" lets users connect to mail servers on private, loopback or carrier-grade NAT addresses (for an internal mail server). Off by default, so users cannot probe the network the app runs in.</description>
+				<default>false</default>
+			</variable>
+			<variable>
+				<name>SOCKLESS_MAIL_BIMI_AUTHSERV_IDS</name>
+				<display-name>Trusted Authentication-Results servers (BIMI)</display-name>
+				<description>Comma-separated host names (authserv-ids) whose Authentication-Results headers decide whether a message may show its sender's logo, e.g. "mx.example.com". Unset: the topmost header counts. Set it if your mail server does not add Authentication-Results itself. See the README, "Sender logos (BIMI)".</description>
+			</variable>
+		</environment-variables>
+	</external-app>
+</info>

@@ -1,0 +1,966 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\EbookReader\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Migration/RegisterMimeTypes.php:113 OC"
+      ],
+      "lines": [
+        "1 use of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Migration/RegisterMimeTypes.php:113 OC"
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/Service/Compat.php:25 OCP\\App\\IAppManager::isEnabledForAnyone(): there since Nextcloud 32, the app declares from 31",
+        "lib/Service/Compat.php:38 OCP\\Files\\IFilenameValidator::sanitizeFilename(): there since Nextcloud 32, the app declares from 31",
+        "lib/Service/Compat.php:49 OCP\\Share\\IShare::canSeeContent(): there since Nextcloud 32, the app declares from 31"
+      ],
+      "lines": [
+        "3 uses in 1 file of the public API that the oldest majors of Nextcloud 31 to 35 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/Service/Compat.php:25 OCP\\App\\IAppManager::isEnabledForAnyone(): there since Nextcloud 32, the app declares from 31",
+        "  lib/Service/Compat.php:38 OCP\\Files\\IFilenameValidator::sanitizeFilename(): there since Nextcloud 32, the app declares from 31",
+        "  lib/Service/Compat.php:49 OCP\\Share\\IShare::canSeeContent(): there since Nextcloud 32, the app declares from 31"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/ebookreader/opds/recent  ebookreader.opds.recent  lib/Controller/OpdsController.php:115",
+        "GET /index.php/apps/ebookreader/opds/reading  ebookreader.opds.reading  lib/Controller/OpdsController.php:126",
+        "GET /index.php/apps/ebookreader/opds/all  ebookreader.opds.all  lib/Controller/OpdsController.php:137",
+        "GET /index.php/apps/ebookreader/opds/books  ebookreader.opds.books  lib/Controller/OpdsController.php:151",
+        "GET /index.php/apps/ebookreader/opds/authors  ebookreader.opds.authors  lib/Controller/OpdsController.php:162",
+        "GET /index.php/apps/ebookreader/opds/series  ebookreader.opds.series  lib/Controller/OpdsController.php:173",
+        "GET /index.php/apps/ebookreader/opds/genres  ebookreader.opds.genres  lib/Controller/OpdsController.php:184",
+        "GET /index.php/apps/ebookreader/opds/tags  ebookreader.opds.tags  lib/Controller/OpdsController.php:195",
+        "GET /index.php/apps/ebookreader/opds/shelves  ebookreader.opds.shelves  lib/Controller/OpdsController.php:206",
+        "GET /index.php/apps/ebookreader/opds/search  ebookreader.opds.search  lib/Controller/OpdsController.php:218",
+        "GET /index.php/apps/ebookreader/opds/opensearch.xml  ebookreader.opds.opensearch  lib/Controller/OpdsController.php:230"
+      ],
+      "lines": [
+        "Nothing in the app calls 11 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 130 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/ebookreader/opds/recent  ebookreader.opds.recent  lib/Controller/OpdsController.php:115",
+        "  GET /index.php/apps/ebookreader/opds/reading  ebookreader.opds.reading  lib/Controller/OpdsController.php:126",
+        "  GET /index.php/apps/ebookreader/opds/all  ebookreader.opds.all  lib/Controller/OpdsController.php:137",
+        "  GET /index.php/apps/ebookreader/opds/books  ebookreader.opds.books  lib/Controller/OpdsController.php:151",
+        "  GET /index.php/apps/ebookreader/opds/authors  ebookreader.opds.authors  lib/Controller/OpdsController.php:162",
+        "  GET /index.php/apps/ebookreader/opds/series  ebookreader.opds.series  lib/Controller/OpdsController.php:173",
+        "  GET /index.php/apps/ebookreader/opds/genres  ebookreader.opds.genres  lib/Controller/OpdsController.php:184",
+        "  GET /index.php/apps/ebookreader/opds/tags  ebookreader.opds.tags  lib/Controller/OpdsController.php:195",
+        "  GET /index.php/apps/ebookreader/opds/shelves  ebookreader.opds.shelves  lib/Controller/OpdsController.php:206",
+        "  GET /index.php/apps/ebookreader/opds/search  ebookreader.opds.search  lib/Controller/OpdsController.php:218",
+        "  GET /index.php/apps/ebookreader/opds/opensearch.xml  ebookreader.opds.opensearch  lib/Controller/OpdsController.php:230"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 8
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "vimeo/psalm, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Listener/CspListener.php:49 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Service/Compat.php:27 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Service/OpdsSettings.php:42 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OpdsSettings.php:46 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/SettingsService.php:69 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/SettingsService.php:77 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/SettingsService.php:119 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ShareService.php:652 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "lib/Service/ShareService.php:704 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ShareService.php:708 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ShareService.php:1029 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Service/ShareService.php:1187 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead"
+      ],
+      "lines": [
+        "12 uses in 5 files of the public API that is deprecated in Nextcloud 31 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Listener/CspListener.php:49 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Service/Compat.php:27 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Service/OpdsSettings.php:42 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OpdsSettings.php:46 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/SettingsService.php:69 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/SettingsService.php:77 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/SettingsService.php:119 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ShareService.php:652 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "  lib/Service/ShareService.php:704 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ShareService.php:708 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ShareService.php:1029 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Service/ShareService.php:1187 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 9
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/SyncSharedShelvesJob.php OCA\\EbookReader\\BackgroundJob\\SyncSharedShelvesJob"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/SyncSharedShelvesJob.php OCA\\EbookReader\\BackgroundJob\\SyncSharedShelvesJob"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/ArchiveCache.php:273 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 1 place. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/ArchiveCache.php:273 time()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/RescanJob.php:43 getValueString()",
+        "lib/BackgroundJob/RescanJob.php:50 setValueString()",
+        "lib/Service/ArchiveCache.php:257 getValueInt()",
+        "lib/Service/EditorService.php:1205 getValueInt()",
+        "lib/Service/OpdsSettings.php:33 getValueBool()",
+        "lib/Service/OpdsSettings.php:37 setValueBool()",
+        "lib/Service/TaskService.php:221 getValueBool()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 7 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/BackgroundJob/RescanJob.php:43 getValueString()",
+        "  lib/BackgroundJob/RescanJob.php:50 setValueString()",
+        "  lib/Service/ArchiveCache.php:257 getValueInt()",
+        "  lib/Service/EditorService.php:1205 getValueInt()",
+        "  lib/Service/OpdsSettings.php:33 getValueBool()",
+        "  lib/Service/OpdsSettings.php:37 setValueBool()",
+        "  lib/Service/TaskService.php:221 getValueBool()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/annotations  ocs.ebookreader.annotations.index  lib/Controller/AnnotationsController.php:53",
+        "POST /ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/annotations  ocs.ebookreader.annotations.create  lib/Controller/AnnotationsController.php:85",
+        "GET /ocs/v2.php/apps/ebookreader/api/v1/books  ocs.ebookreader.books.index  lib/Controller/BooksController.php:82",
+        "POST /ocs/v2.php/apps/ebookreader/api/v1/books/delete  ocs.ebookreader.books.destroymany  lib/Controller/BooksController.php:176",
+        "PATCH /ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/app-data  ocs.ebookreader.books.patchappdata  lib/Controller/BooksController.php:231",
+        "PATCH /ocs/v2.php/apps/ebookreader/api/v1/books/app-data  ocs.ebookreader.books.patchappdatamany  lib/Controller/BooksController.php:282",
+        "GET /ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/next  ocs.ebookreader.books.next  lib/Controller/BooksController.php:337",
+        "GET /ocs/v2.php/apps/ebookreader/api/v1/convert/capabilities  ocs.ebookreader.convert.capabilities  lib/Controller/ConvertController.php:63",
+        "GET /ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/convert  ocs.ebookreader.convert.targets  lib/Controller/ConvertController.php:80",
+        "POST /ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/convert  ocs.ebookreader.convert.convertbook  lib/Controller/ConvertController.php:111",
+        "GET /ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/structure  ocs.ebookreader.editor.structure  lib/Controller/EditorController.php:72",
+        "PUT /ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/structure  ocs.ebookreader.editor.save  lib/Controller/EditorController.php:109",
+        "PATCH /ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/metadata  ocs.ebookreader.editor.metadata  lib/Controller/EditorController.php:147",
+        "POST /ocs/v2.php/apps/ebookreader/api/v1/books/bulk-tags  ocs.ebookreader.editor.bulktags  lib/Controller/EditorController.php:223",
+        "POST /ocs/v2.php/apps/ebookreader/api/v1/books/bulk-metadata  ocs.ebookreader.editor.bulkmetadata  lib/Controller/EditorController.php:255",
+        "DELETE /ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/overrides  ocs.ebookreader.editor.resetoverrides  lib/Controller/EditorController.php:292",
+        "POST /ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/rename  ocs.ebookreader.editor.rename  lib/Controller/EditorController.php:322",
+        "GET /ocs/v2.php/apps/ebookreader/api/v1/facets  ocs.ebookreader.facets.index  lib/Controller/FacetsController.php:42",
+        "GET /ocs/v2.php/apps/ebookreader/api/v1/folders  ocs.ebookreader.folders.index  lib/Controller/FoldersController.php:44",
+        "POST /ocs/v2.php/apps/ebookreader/api/v1/organize/preview  ocs.ebookreader.organize.preview  lib/Controller/OrganizeController.php:50",
+        "POST /ocs/v2.php/apps/ebookreader/api/v1/organize/apply  ocs.ebookreader.organize.apply  lib/Controller/OrganizeController.php:75",
+        "GET /ocs/v2.php/apps/ebookreader/api/v1/progress/recent  ocs.ebookreader.progress.recent  lib/Controller/ProgressController.php:69",
+        "POST /ocs/v2.php/apps/ebookreader/api/v1/progress/batch  ocs.ebookreader.progress.batch  lib/Controller/ProgressController.php:181",
+        "POST /ocs/v2.php/apps/ebookreader/api/v1/scan  ocs.ebookreader.scan.scan  lib/Controller/ScanController.php:43",
+        "GET /ocs/v2.php/apps/ebookreader/api/v1/series  ocs.ebookreader.series.index  lib/Controller/SeriesController.php:59",
+        "GET /ocs/v2.php/apps/ebookreader/api/v1/settings  ocs.ebookreader.settings.get  lib/Controller/SettingsController.php:52",
+        "PUT /ocs/v2.php/apps/ebookreader/api/v1/settings  ocs.ebookreader.settings.put  lib/Controller/SettingsController.php:77",
+        "GET /ocs/v2.php/apps/ebookreader/api/v1/shares  ocs.ebookreader.share.index  lib/Controller/ShareController.php:52",
+        "POST /ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/shares  ocs.ebookreader.share.sharebook  lib/Controller/ShareController.php:80",
+        "DELETE /ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/shares  ocs.ebookreader.share.unsharebook  lib/Controller/ShareController.php:107",
+        "POST /ocs/v2.php/apps/ebookreader/api/v1/shelves/{id}/shares  ocs.ebookreader.share.shareshelf  lib/Controller/ShareController.php:138",
+        "DELETE /ocs/v2.php/apps/ebookreader/api/v1/shelves/{id}/shares  ocs.ebookreader.share.unshareshelf  lib/Controller/ShareController.php:164",
+        "POST /ocs/v2.php/apps/ebookreader/api/v1/series/shares  ocs.ebookreader.share.shareseries  lib/Controller/ShareController.php:196",
+        "DELETE /ocs/v2.php/apps/ebookreader/api/v1/series/shares  ocs.ebookreader.share.unshareseries  lib/Controller/ShareController.php:221",
+        "POST /ocs/v2.php/apps/ebookreader/api/v1/folders/shares  ocs.ebookreader.share.sharefolder  lib/Controller/ShareController.php:250",
+        "DELETE /ocs/v2.php/apps/ebookreader/api/v1/folders/shares  ocs.ebookreader.share.unsharefolder  lib/Controller/ShareController.php:276",
+        "GET /ocs/v2.php/apps/ebookreader/api/v1/shelves  ocs.ebookreader.shelf.index  lib/Controller/ShelfController.php:52",
+        "POST /ocs/v2.php/apps/ebookreader/api/v1/shelves  ocs.ebookreader.shelf.create  lib/Controller/ShelfController.php:78",
+        "POST /ocs/v2.php/apps/ebookreader/api/v1/shelves/{id}/books  ocs.ebookreader.shelf.addbooks  lib/Controller/ShelfController.php:152",
+        "DELETE /ocs/v2.php/apps/ebookreader/api/v1/shelves/{id}/books  ocs.ebookreader.shelf.removebooks  lib/Controller/ShelfController.php:177",
+        "GET /ocs/v2.php/apps/ebookreader/api/v1/sync  ocs.ebookreader.sync.sync  lib/Controller/SyncController.php:60",
+        "GET /ocs/v2.php/apps/ebookreader/api/v1/tasks  ocs.ebookreader.task.index  lib/Controller/TaskController.php:68"
+      ],
+      "lines": [
+        "Nothing in the app calls 42 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/annotations  ocs.ebookreader.annotations.index  lib/Controller/AnnotationsController.php:53",
+        "  POST /ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/annotations  ocs.ebookreader.annotations.create  lib/Controller/AnnotationsController.php:85",
+        "  GET /ocs/v2.php/apps/ebookreader/api/v1/books  ocs.ebookreader.books.index  lib/Controller/BooksController.php:82",
+        "  POST /ocs/v2.php/apps/ebookreader/api/v1/books/delete  ocs.ebookreader.books.destroymany  lib/Controller/BooksController.php:176",
+        "  PATCH /ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/app-data  ocs.ebookreader.books.patchappdata  lib/Controller/BooksController.php:231",
+        "  PATCH /ocs/v2.php/apps/ebookreader/api/v1/books/app-data  ocs.ebookreader.books.patchappdatamany  lib/Controller/BooksController.php:282",
+        "  GET /ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/next  ocs.ebookreader.books.next  lib/Controller/BooksController.php:337",
+        "  GET /ocs/v2.php/apps/ebookreader/api/v1/convert/capabilities  ocs.ebookreader.convert.capabilities  lib/Controller/ConvertController.php:63",
+        "  GET /ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/convert  ocs.ebookreader.convert.targets  lib/Controller/ConvertController.php:80",
+        "  POST /ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/convert  ocs.ebookreader.convert.convertbook  lib/Controller/ConvertController.php:111",
+        "  GET /ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/structure  ocs.ebookreader.editor.structure  lib/Controller/EditorController.php:72",
+        "  PUT /ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/structure  ocs.ebookreader.editor.save  lib/Controller/EditorController.php:109",
+        "  PATCH /ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/metadata  ocs.ebookreader.editor.metadata  lib/Controller/EditorController.php:147",
+        "  POST /ocs/v2.php/apps/ebookreader/api/v1/books/bulk-tags  ocs.ebookreader.editor.bulktags  lib/Controller/EditorController.php:223",
+        "  POST /ocs/v2.php/apps/ebookreader/api/v1/books/bulk-metadata  ocs.ebookreader.editor.bulkmetadata  lib/Controller/EditorController.php:255",
+        "  DELETE /ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/overrides  ocs.ebookreader.editor.resetoverrides  lib/Controller/EditorController.php:292",
+        "  POST /ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/rename  ocs.ebookreader.editor.rename  lib/Controller/EditorController.php:322",
+        "  GET /ocs/v2.php/apps/ebookreader/api/v1/facets  ocs.ebookreader.facets.index  lib/Controller/FacetsController.php:42",
+        "  GET /ocs/v2.php/apps/ebookreader/api/v1/folders  ocs.ebookreader.folders.index  lib/Controller/FoldersController.php:44",
+        "  POST /ocs/v2.php/apps/ebookreader/api/v1/organize/preview  ocs.ebookreader.organize.preview  lib/Controller/OrganizeController.php:50",
+        "  POST /ocs/v2.php/apps/ebookreader/api/v1/organize/apply  ocs.ebookreader.organize.apply  lib/Controller/OrganizeController.php:75",
+        "  GET /ocs/v2.php/apps/ebookreader/api/v1/progress/recent  ocs.ebookreader.progress.recent  lib/Controller/ProgressController.php:69",
+        "  POST /ocs/v2.php/apps/ebookreader/api/v1/progress/batch  ocs.ebookreader.progress.batch  lib/Controller/ProgressController.php:181",
+        "  POST /ocs/v2.php/apps/ebookreader/api/v1/scan  ocs.ebookreader.scan.scan  lib/Controller/ScanController.php:43",
+        "  GET /ocs/v2.php/apps/ebookreader/api/v1/series  ocs.ebookreader.series.index  lib/Controller/SeriesController.php:59",
+        "  GET /ocs/v2.php/apps/ebookreader/api/v1/settings  ocs.ebookreader.settings.get  lib/Controller/SettingsController.php:52",
+        "  PUT /ocs/v2.php/apps/ebookreader/api/v1/settings  ocs.ebookreader.settings.put  lib/Controller/SettingsController.php:77",
+        "  GET /ocs/v2.php/apps/ebookreader/api/v1/shares  ocs.ebookreader.share.index  lib/Controller/ShareController.php:52",
+        "  POST /ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/shares  ocs.ebookreader.share.sharebook  lib/Controller/ShareController.php:80",
+        "  DELETE /ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/shares  ocs.ebookreader.share.unsharebook  lib/Controller/ShareController.php:107",
+        "  POST /ocs/v2.php/apps/ebookreader/api/v1/shelves/{id}/shares  ocs.ebookreader.share.shareshelf  lib/Controller/ShareController.php:138",
+        "  DELETE /ocs/v2.php/apps/ebookreader/api/v1/shelves/{id}/shares  ocs.ebookreader.share.unshareshelf  lib/Controller/ShareController.php:164",
+        "  POST /ocs/v2.php/apps/ebookreader/api/v1/series/shares  ocs.ebookreader.share.shareseries  lib/Controller/ShareController.php:196",
+        "  DELETE /ocs/v2.php/apps/ebookreader/api/v1/series/shares  ocs.ebookreader.share.unshareseries  lib/Controller/ShareController.php:221",
+        "  POST /ocs/v2.php/apps/ebookreader/api/v1/folders/shares  ocs.ebookreader.share.sharefolder  lib/Controller/ShareController.php:250",
+        "  DELETE /ocs/v2.php/apps/ebookreader/api/v1/folders/shares  ocs.ebookreader.share.unsharefolder  lib/Controller/ShareController.php:276",
+        "  GET /ocs/v2.php/apps/ebookreader/api/v1/shelves  ocs.ebookreader.shelf.index  lib/Controller/ShelfController.php:52",
+        "  POST /ocs/v2.php/apps/ebookreader/api/v1/shelves  ocs.ebookreader.shelf.create  lib/Controller/ShelfController.php:78",
+        "  POST /ocs/v2.php/apps/ebookreader/api/v1/shelves/{id}/books  ocs.ebookreader.shelf.addbooks  lib/Controller/ShelfController.php:152",
+        "  DELETE /ocs/v2.php/apps/ebookreader/api/v1/shelves/{id}/books  ocs.ebookreader.shelf.removebooks  lib/Controller/ShelfController.php:177",
+        "  GET /ocs/v2.php/apps/ebookreader/api/v1/sync  ocs.ebookreader.sync.sync  lib/Controller/SyncController.php:60",
+        "  GET /ocs/v2.php/apps/ebookreader/api/v1/tasks  ocs.ebookreader.task.index  lib/Controller/TaskController.php:68"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 39
+        }
+      ]
+    }
+  ],
+  "endpoints": 82,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ebookreader/",
+      "target": "OCA\\EbookReader\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ebookreader/archive/{fileId}/entries",
+      "target": "OCA\\EbookReader\\Controller\\ArchiveController::entries",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ebookreader/comic/{fileId}/page/{index}",
+      "target": "OCA\\EbookReader\\Controller\\ComicController::page",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ebookreader/comic/{fileId}/pages",
+      "target": "OCA\\EbookReader\\Controller\\ComicController::pages",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ebookreader/cover/{fileId}",
+      "target": "OCA\\EbookReader\\Controller\\CoverController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ebookreader/cover/{fileId}",
+      "target": "OCA\\EbookReader\\Controller\\CoverController::upload",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ebookreader/edit/{fileId}",
+      "target": "OCA\\EbookReader\\Controller\\PageController::edit",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ebookreader/item/{fileId}",
+      "target": "OCA\\EbookReader\\Controller\\ItemController::item",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ebookreader/opds",
+      "target": "OCA\\EbookReader\\Controller\\OpdsController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ebookreader/opds/all",
+      "target": "OCA\\EbookReader\\Controller\\OpdsController::all",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ebookreader/opds/authors",
+      "target": "OCA\\EbookReader\\Controller\\OpdsController::authors",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ebookreader/opds/books",
+      "target": "OCA\\EbookReader\\Controller\\OpdsController::books",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ebookreader/opds/cover/{fileId}",
+      "target": "OCA\\EbookReader\\Controller\\OpdsController::cover",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ebookreader/opds/download/{fileId}",
+      "target": "OCA\\EbookReader\\Controller\\OpdsController::download",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ebookreader/opds/genres",
+      "target": "OCA\\EbookReader\\Controller\\OpdsController::genres",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ebookreader/opds/opensearch.xml",
+      "target": "OCA\\EbookReader\\Controller\\OpdsController::opensearch",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ebookreader/opds/reading",
+      "target": "OCA\\EbookReader\\Controller\\OpdsController::reading",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ebookreader/opds/recent",
+      "target": "OCA\\EbookReader\\Controller\\OpdsController::recent",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ebookreader/opds/search",
+      "target": "OCA\\EbookReader\\Controller\\OpdsController::search",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ebookreader/opds/series",
+      "target": "OCA\\EbookReader\\Controller\\OpdsController::series",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ebookreader/opds/shelves",
+      "target": "OCA\\EbookReader\\Controller\\OpdsController::shelves",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ebookreader/opds/tags",
+      "target": "OCA\\EbookReader\\Controller\\OpdsController::tags",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ebookreader/read/{fileId}",
+      "target": "OCA\\EbookReader\\Controller\\PageController::read",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/annotations/{uuid}",
+      "target": "OCA\\EbookReader\\Controller\\AnnotationsController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/annotations/{uuid}",
+      "target": "OCA\\EbookReader\\Controller\\AnnotationsController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/books",
+      "target": "OCA\\EbookReader\\Controller\\BooksController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}",
+      "target": "OCA\\EbookReader\\Controller\\BooksController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}",
+      "target": "OCA\\EbookReader\\Controller\\BooksController::show",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/annotations",
+      "target": "OCA\\EbookReader\\Controller\\AnnotationsController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/annotations",
+      "target": "OCA\\EbookReader\\Controller\\AnnotationsController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/app-data",
+      "target": "OCA\\EbookReader\\Controller\\BooksController::patchAppData",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/convert",
+      "target": "OCA\\EbookReader\\Controller\\ConvertController::targets",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/convert",
+      "target": "OCA\\EbookReader\\Controller\\ConvertController::convertBook",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/convert/adopt",
+      "target": "OCA\\EbookReader\\Controller\\ConvertController::adopt",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/convert/estimate",
+      "target": "OCA\\EbookReader\\Controller\\ConvertController::estimate",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/metadata",
+      "target": "OCA\\EbookReader\\Controller\\EditorController::metadata",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/metadata/embed",
+      "target": "OCA\\EbookReader\\Controller\\EditorController::embedMetadata",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/next",
+      "target": "OCA\\EbookReader\\Controller\\BooksController::next",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/overrides",
+      "target": "OCA\\EbookReader\\Controller\\EditorController::resetOverrides",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/rename",
+      "target": "OCA\\EbookReader\\Controller\\EditorController::rename",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/shares",
+      "target": "OCA\\EbookReader\\Controller\\ShareController::unshareBook",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/shares",
+      "target": "OCA\\EbookReader\\Controller\\ShareController::shareBook",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/structure",
+      "target": "OCA\\EbookReader\\Controller\\EditorController::structure",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/books/{fileId}/structure",
+      "target": "OCA\\EbookReader\\Controller\\EditorController::save",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/books/app-data",
+      "target": "OCA\\EbookReader\\Controller\\BooksController::patchAppDataMany",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/books/bulk-metadata",
+      "target": "OCA\\EbookReader\\Controller\\EditorController::bulkMetadata",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/books/bulk-tags",
+      "target": "OCA\\EbookReader\\Controller\\EditorController::bulkTags",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/books/delete",
+      "target": "OCA\\EbookReader\\Controller\\BooksController::destroyMany",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/convert/capabilities",
+      "target": "OCA\\EbookReader\\Controller\\ConvertController::capabilities",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/convert/optimize",
+      "target": "OCA\\EbookReader\\Controller\\ConvertController::optimizeBooks",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/facets",
+      "target": "OCA\\EbookReader\\Controller\\FacetsController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/folders",
+      "target": "OCA\\EbookReader\\Controller\\FoldersController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/folders/shares",
+      "target": "OCA\\EbookReader\\Controller\\ShareController::unshareFolder",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/folders/shares",
+      "target": "OCA\\EbookReader\\Controller\\ShareController::shareFolder",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/opds",
+      "target": "OCA\\EbookReader\\Controller\\OpdsSettingsController::get",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/opds",
+      "target": "OCA\\EbookReader\\Controller\\OpdsSettingsController::put",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/organize/apply",
+      "target": "OCA\\EbookReader\\Controller\\OrganizeController::apply",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/organize/preview",
+      "target": "OCA\\EbookReader\\Controller\\OrganizeController::preview",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/progress/{fileId}",
+      "target": "OCA\\EbookReader\\Controller\\ProgressController::show",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/progress/{fileId}",
+      "target": "OCA\\EbookReader\\Controller\\ProgressController::put",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/progress/batch",
+      "target": "OCA\\EbookReader\\Controller\\ProgressController::batch",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/progress/recent",
+      "target": "OCA\\EbookReader\\Controller\\ProgressController::recent",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/scan",
+      "target": "OCA\\EbookReader\\Controller\\ScanController::scan",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/series",
+      "target": "OCA\\EbookReader\\Controller\\SeriesController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/series/shares",
+      "target": "OCA\\EbookReader\\Controller\\ShareController::unshareSeries",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/series/shares",
+      "target": "OCA\\EbookReader\\Controller\\ShareController::shareSeries",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/settings",
+      "target": "OCA\\EbookReader\\Controller\\SettingsController::get",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/settings",
+      "target": "OCA\\EbookReader\\Controller\\SettingsController::put",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/shares",
+      "target": "OCA\\EbookReader\\Controller\\ShareController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/shelves",
+      "target": "OCA\\EbookReader\\Controller\\ShelfController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/shelves",
+      "target": "OCA\\EbookReader\\Controller\\ShelfController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/shelves/{id}",
+      "target": "OCA\\EbookReader\\Controller\\ShelfController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/shelves/{id}",
+      "target": "OCA\\EbookReader\\Controller\\ShelfController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/shelves/{id}/books",
+      "target": "OCA\\EbookReader\\Controller\\ShelfController::removeBooks",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/shelves/{id}/books",
+      "target": "OCA\\EbookReader\\Controller\\ShelfController::addBooks",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/shelves/{id}/books/order",
+      "target": "OCA\\EbookReader\\Controller\\ShelfController::reorder",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/shelves/{id}/shares",
+      "target": "OCA\\EbookReader\\Controller\\ShareController::unshareShelf",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/shelves/{id}/shares",
+      "target": "OCA\\EbookReader\\Controller\\ShareController::shareShelf",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/sync",
+      "target": "OCA\\EbookReader\\Controller\\SyncController::sync",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/tasks",
+      "target": "OCA\\EbookReader\\Controller\\TaskController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/ebookreader/api/v1/tasks/{taskId}",
+      "target": "OCA\\EbookReader\\Controller\\TaskController::show",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/capabilities",
+      "target": "OCA\\EbookReader\\Capabilities",
+      "openapi": [],
+      "kind": "capability"
+    }
+  ]
+}

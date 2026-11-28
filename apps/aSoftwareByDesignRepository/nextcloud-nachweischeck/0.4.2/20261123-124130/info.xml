@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+<!--
+  - SPDX-FileCopyrightText: 2026 Software by Design
+  - SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>nachweischeck</id>
+	<name>NachweisCheck</name>
+	<summary>Verwendungsnachweise for publicly funded projects — position-level time and receipt capture with audit-proof export</summary>
+	<description><![CDATA[
+		NachweisCheck turns data captured along the way into the Verwendungsnachweis a funder expects:
+		versioned Finanzierungsplan, Arbeitspakete mapped to Einzelansätze, dated-rate time capture,
+		receipts with position splits, mandatory-reason deviations, the 20-% Einzelansatz rule per
+		funder template, incoming payments, carryover, a deadline engine, and an immutable
+		Nachweis package (zahlenmäßiger Nachweis, Belegliste, Sachbericht skeleton, gaps report)
+		with manifest hash. Fully standalone — no other app required.
+	]]></description>
+	<version>0.4.2</version>
+	<licence>agpl</licence>
+	<author>Software by Design</author>
+	<namespace>NachweisCheck</namespace>
+	<category>organization</category>
+	<website>https://software-by-design.de</website>
+	<bugs>https://github.com/aSoftwareByDesignRepository/nextcloud-nachweischeck/issues</bugs>
+	<repository>https://github.com/aSoftwareByDesignRepository/nextcloud-nachweischeck</repository>
+	<dependencies>
+		<php min-version="8.2" max-version="8.5"/>
+		<nextcloud min-version="32" max-version="35"/>
+		<database>mysql</database>
+		<database>pgsql</database>
+	</dependencies>
+	<commands>
+		<command>OCA\NachweisCheck\Command\UpgradeBackupCommand</command>
+		<command>OCA\NachweisCheck\Command\ConfigExportCommand</command>
+		<command>OCA\NachweisCheck\Command\ConfigImportCommand</command>
+		<command>OCA\NachweisCheck\Command\ConfigReconcileCommand</command>
+	</commands>
+
+	<activity>
+		<providers>
+			<provider>OCA\NachweisCheck\Activity\Provider</provider>
+		</providers>
+	</activity>
+	<repair-steps>
+		<install>
+			<step>OCA\NachweisCheck\Repair\EnsureNachweisCheckSchema</step>
+		</install>
+		<pre-migration>
+			<step>OCA\NachweisCheck\Repair\BackupBeforeUpdate</step>
+		</pre-migration>
+
+		<post-migration>
+			<step>OCA\NachweisCheck\Repair\EnsureNachweisCheckSchema</step>
+		</post-migration>
+		<uninstall>
+			<step>OCA\NachweisCheck\Repair\UninstallDropTables</step>
+		</uninstall>
+	</repair-steps>
+	<background-jobs>
+		<job>OCA\NachweisCheck\BackgroundJob\DeadlineReminderJob</job>
+		<job>OCA\NachweisCheck\BackgroundJob\GapReminderJob</job>
+	</background-jobs>
+</info>

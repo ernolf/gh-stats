@@ -1,0 +1,1008 @@
+{
+  "findings": [
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "paragonie/constant_time_encoding v3.1.3, in 3rdparty/ of Nextcloud 35",
+        "phpseclib/phpseclib 3.0.57, in 3rdparty/ of Nextcloud 35",
+        "psr/event-dispatcher 1.0.0, in 3rdparty/ of Nextcloud 35",
+        "symfony/deprecation-contracts v3.7.1, in 3rdparty/ of Nextcloud 35"
+      ],
+      "lines": [
+        "vendor/ ships 4 packages that the server ships itself in a major of Nextcloud 35. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  paragonie/constant_time_encoding v3.1.3, in 3rdparty/ of Nextcloud 35",
+        "  phpseclib/phpseclib 3.0.57, in 3rdparty/ of Nextcloud 35",
+        "  psr/event-dispatcher 1.0.0, in 3rdparty/ of Nextcloud 35",
+        "  symfony/deprecation-contracts v3.7.1, in 3rdparty/ of Nextcloud 35"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:143 OC\\Files\\Filesystem",
+        "lib/AppInfo/Application.php:153 OC",
+        "lib/Command/ConvertToBigInt.php:22 OC\\DB\\Connection",
+        "lib/Command/ConvertToBigInt.php:42 OC\\DB\\SchemaWrapper",
+        "lib/Controller/DocumentController.php:357 OC\\User\\NoUserException",
+        "lib/Controller/TargetController.php:76 OC\\User\\NoUserException",
+        "lib/Controller/TemplatesController.php:128 OC\\Files\\Filesystem",
+        "lib/Controller/WopiController.php:423 OC_User",
+        "lib/Notification/Notifier.php:69 OC\\User\\NoUserException",
+        "lib/PermissionManager.php:42 OC_User",
+        "lib/Service/FederationService.php:257 OC\\Files\\Storage\\Wrapper\\Wrapper",
+        "lib/Service/UserScopeService.php:50 OC_Util",
+        "lib/Storage/SecureViewWrapper.php:22 OC\\Files\\Storage\\Wrapper\\Wrapper"
+      ],
+      "lines": [
+        "13 uses of the private API of the server in 11 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/AppInfo/Application.php:143 OC\\Files\\Filesystem",
+        "  lib/AppInfo/Application.php:153 OC",
+        "  lib/Command/ConvertToBigInt.php:22 OC\\DB\\Connection",
+        "  lib/Command/ConvertToBigInt.php:42 OC\\DB\\SchemaWrapper",
+        "  lib/Controller/DocumentController.php:357 OC\\User\\NoUserException",
+        "  lib/Controller/TargetController.php:76 OC\\User\\NoUserException",
+        "  lib/Controller/TemplatesController.php:128 OC\\Files\\Filesystem",
+        "  lib/Controller/WopiController.php:423 OC_User",
+        "  lib/Notification/Notifier.php:69 OC\\User\\NoUserException",
+        "  lib/PermissionManager.php:42 OC_User",
+        "  lib/Service/FederationService.php:257 OC\\Files\\Storage\\Wrapper\\Wrapper",
+        "  lib/Service/UserScopeService.php:50 OC_Util",
+        "  lib/Storage/SecureViewWrapper.php:22 OC\\Files\\Storage\\Wrapper\\Wrapper"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 10
+        }
+      ]
+    },
+    {
+      "id": "legacy-hook",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:84 OC_Filesystem::preSetup: the manual names no replacement event"
+      ],
+      "lines": [
+        "1 connection to a legacy hook of the server. A hook the server removed is never emitted, and the listener never runs; the typed events of OCP\\EventDispatcher replace the hooks.",
+        "OCP\\Util::connectHook() is deprecated since Nextcloud 21: use \\OCP\\EventDispatcher\\IEventDispatcher::addListener. ocp-deprecated leaves these calls to this finding.",
+        "  lib/AppInfo/Application.php:84 OC_Filesystem::preSetup: the manual names no replacement event"
+      ]
+    },
+    {
+      "id": "dav-without-preload",
+      "level": "warn",
+      "places": [
+        "lib/DAV/SecureViewPlugin.php:39 OCA\\Richdocuments\\DAV\\SecureViewPlugin"
+      ],
+      "lines": [
+        "1 DAV plugin listens to propFind and not to preloadCollection, which the server emits from Nextcloud 32 on before it reads the children of a collection. Without that listener a PROPFIND with Depth above 0 runs the queries of the plugin once per child.",
+        "  lib/DAV/SecureViewPlugin.php:39 OCA\\Richdocuments\\DAV\\SecureViewPlugin"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/richdocuments/remote  richdocuments.document.remote  appinfo/routes.php:14 routes",
+        "POST /index.php/apps/richdocuments/remote  richdocuments.document.remotepost  appinfo/routes.php:15 routes",
+        "POST /index.php/apps/richdocuments/ajax/extapp/data/{fileId}  richdocuments.document.extappgetdata  appinfo/routes.php:25 routes",
+        "POST /index.php/apps/richdocuments/ajax/personal.php  richdocuments.settings.setpersonalsettings  appinfo/routes.php:28 routes",
+        "POST /index.php/apps/richdocuments/ajax/admin.php  richdocuments.settings.setsettings  appinfo/routes.php:29 routes",
+        "GET /index.php/apps/richdocuments/ajax/settings.php  richdocuments.settings.getsettings  appinfo/routes.php:30 routes",
+        "POST /index.php/apps/richdocuments/wopi/settings/upload  richdocuments.wopi.uploadsettingsfile  lib/Controller/WopiController.php:521",
+        "GET /index.php/apps/richdocuments/wopi/template/{fileId}  richdocuments.wopi.gettemplate  lib/Controller/WopiController.php:1034"
+      ],
+      "lines": [
+        "Nothing in the app calls 8 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 55 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/richdocuments/remote  richdocuments.document.remote  appinfo/routes.php:14 routes",
+        "  POST /index.php/apps/richdocuments/remote  richdocuments.document.remotepost  appinfo/routes.php:15 routes",
+        "  POST /index.php/apps/richdocuments/ajax/extapp/data/{fileId}  richdocuments.document.extappgetdata  appinfo/routes.php:25 routes",
+        "  POST /index.php/apps/richdocuments/ajax/personal.php  richdocuments.settings.setpersonalsettings  appinfo/routes.php:28 routes",
+        "  POST /index.php/apps/richdocuments/ajax/admin.php  richdocuments.settings.setsettings  appinfo/routes.php:29 routes",
+        "  GET /index.php/apps/richdocuments/ajax/settings.php  richdocuments.settings.getsettings  appinfo/routes.php:30 routes",
+        "  POST /index.php/apps/richdocuments/wopi/settings/upload  richdocuments.wopi.uploadsettingsfile  lib/Controller/WopiController.php:521",
+        "  GET /index.php/apps/richdocuments/wopi/template/{fileId}  richdocuments.wopi.gettemplate  lib/Controller/WopiController.php:1034"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "psalm/phar, friendsofphp/php-cs-fixer, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/AppConfig.php:91 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/AppConfig.php:99 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/AppConfig.php:113 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/AppConfig.php:122 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/AppConfig.php:129 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/AppConfig.php:155 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/AppConfig.php:159 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/AppConfig.php:163 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/AppConfig.php:167 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/AppConfig.php:171 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/AppConfig.php:175 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/AppConfig.php:184 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/AppConfig.php:193 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/AppConfig.php:204 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/AppConfig.php:213 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/DocumentAPIController.php:78 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/Controller/DocumentController.php:254 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Controller/DocumentController.php:275 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Controller/DocumentController.php:474 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Controller/FederationController.php:49 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/MentionController.php:48 OCP\\Collaboration\\Collaborators\\ISearch::search(): deprecated since Nextcloud 35; Use filteredSearch instead.",
+        "lib/Controller/OCSController.php:170 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Controller/OCSController.php:221 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Controller/SettingsController.php:282 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/SettingsController.php:290 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/SettingsController.php:299 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/SettingsController.php:307 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/SettingsController.php:315 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/TemplateFieldController.php:75 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Controller/WopiController.php:237 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/WopiController.php:239 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/WopiController.php:242 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/WopiController.php:244 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/WopiController.php:246 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/WopiController.php:248 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/WopiController.php:251 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/WopiController.php:252 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/WopiController.php:253 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/WopiController.php:995 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Controller/WopiController.php:1068 OCP\\AppFramework\\QueryException: deprecated since Nextcloud 20; catch \\Psr\\Container\\ContainerExceptionInterface",
+        "lib/DirectEditing/AbstractOfficeCreator.php:91 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Listener/RegisterTemplateFileCreatorListener.php:50 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Middleware/WOPIMiddleware.php:166 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Middleware/WOPIMiddleware.php:187 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Migration/InstallDefaultFonts.php:29 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/PermissionManager.php:175 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/PermissionManager.php:187 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/PermissionManager.php:188 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/PermissionManager.php:195 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/PermissionManager.php:198 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/PermissionManager.php:201 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/PermissionManager.php:205 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/PermissionManager.php:217 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/PermissionManager.php:226 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/PermissionManager.php:230 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/PermissionManager.php:234 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/PermissionManager.php:240 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/PermissionManager.php:248 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/CapabilitiesService.php:104 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/CapabilitiesService.php:126 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/DiscoveryService.php:68 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/FontService.php:108 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/InitialStateService.php:126 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/InitialStateService.php:154 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/InitialStateService.php:162 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/InitialStateService.php:166 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/SlideDeckService.php:82 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:49 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:50 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:51 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:52 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:53 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:54 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:55 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:62 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:63 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:64 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Personal.php:42 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Settings/Personal.php:44 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Settings/Personal.php:45 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Settings/Personal.php:46 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Settings/Personal.php:49 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/TaskProcessing/SlideDeckGenerationProvider.php:17 OCP\\TaskProcessing\\ISynchronousWatermarkingProvider: deprecated since Nextcloud 35; Use ISynchronousOptionsProvider instead",
+        "lib/TaskProcessing/TextToDocumentProvider.php:20 OCP\\TaskProcessing\\ISynchronousWatermarkingProvider: deprecated since Nextcloud 35; Use ISynchronousOptionsProvider instead",
+        "lib/TemplateManager.php:126 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/TemplateManager.php:226 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/TemplateManager.php:383 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/TemplateManager.php:429 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/TemplateManager.php:458 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/TokenManager.php:59 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/TokenManager.php:64 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/TokenManager.php:188 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead"
+      ],
+      "lines": [
+        "92 uses in 25 files of the public API that is deprecated in Nextcloud 35. The text of the tag names the replacement where it has one.",
+        "  lib/AppConfig.php:91 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/AppConfig.php:99 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/AppConfig.php:113 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/AppConfig.php:122 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/AppConfig.php:129 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/AppConfig.php:155 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/AppConfig.php:159 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/AppConfig.php:163 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/AppConfig.php:167 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/AppConfig.php:171 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/AppConfig.php:175 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/AppConfig.php:184 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/AppConfig.php:193 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/AppConfig.php:204 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/AppConfig.php:213 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/DocumentAPIController.php:78 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/Controller/DocumentController.php:254 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Controller/DocumentController.php:275 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Controller/DocumentController.php:474 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Controller/FederationController.php:49 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/MentionController.php:48 OCP\\Collaboration\\Collaborators\\ISearch::search(): deprecated since Nextcloud 35; Use filteredSearch instead.",
+        "  lib/Controller/OCSController.php:170 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Controller/OCSController.php:221 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Controller/SettingsController.php:282 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/SettingsController.php:290 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/SettingsController.php:299 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/SettingsController.php:307 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/SettingsController.php:315 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/TemplateFieldController.php:75 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Controller/WopiController.php:237 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/WopiController.php:239 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/WopiController.php:242 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/WopiController.php:244 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/WopiController.php:246 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/WopiController.php:248 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/WopiController.php:251 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/WopiController.php:252 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/WopiController.php:253 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/WopiController.php:995 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Controller/WopiController.php:1068 OCP\\AppFramework\\QueryException: deprecated since Nextcloud 20; catch \\Psr\\Container\\ContainerExceptionInterface",
+        "  lib/DirectEditing/AbstractOfficeCreator.php:91 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Listener/RegisterTemplateFileCreatorListener.php:50 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Middleware/WOPIMiddleware.php:166 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Middleware/WOPIMiddleware.php:187 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Migration/InstallDefaultFonts.php:29 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/PermissionManager.php:175 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/PermissionManager.php:187 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/PermissionManager.php:188 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/PermissionManager.php:195 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/PermissionManager.php:198 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/PermissionManager.php:201 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/PermissionManager.php:205 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/PermissionManager.php:217 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/PermissionManager.php:226 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/PermissionManager.php:230 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/PermissionManager.php:234 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/PermissionManager.php:240 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/PermissionManager.php:248 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/CapabilitiesService.php:104 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/CapabilitiesService.php:126 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/DiscoveryService.php:68 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/FontService.php:108 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/InitialStateService.php:126 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/InitialStateService.php:154 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/InitialStateService.php:162 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/InitialStateService.php:166 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/SlideDeckService.php:82 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:49 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:50 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:51 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:52 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:53 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:54 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:55 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:62 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:63 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:64 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Personal.php:42 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Settings/Personal.php:44 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Settings/Personal.php:45 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Settings/Personal.php:46 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Settings/Personal.php:49 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/TaskProcessing/SlideDeckGenerationProvider.php:17 OCP\\TaskProcessing\\ISynchronousWatermarkingProvider: deprecated since Nextcloud 35; Use ISynchronousOptionsProvider instead",
+        "  lib/TaskProcessing/TextToDocumentProvider.php:20 OCP\\TaskProcessing\\ISynchronousWatermarkingProvider: deprecated since Nextcloud 35; Use ISynchronousOptionsProvider instead",
+        "  lib/TemplateManager.php:126 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/TemplateManager.php:226 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/TemplateManager.php:383 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/TemplateManager.php:429 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/TemplateManager.php:458 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/TokenManager.php:59 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/TokenManager.php:64 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/TokenManager.php:188 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 89
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/Backgroundjobs/Cleanup.php OCA\\Richdocuments\\Backgroundjobs\\Cleanup",
+        "lib/Backgroundjobs/ObtainCapabilities.php OCA\\Richdocuments\\Backgroundjobs\\ObtainCapabilities"
+      ],
+      "lines": [
+        "2 timed jobs do not say whether they are time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/Backgroundjobs/Cleanup.php OCA\\Richdocuments\\Backgroundjobs\\Cleanup",
+        "  lib/Backgroundjobs/ObtainCapabilities.php OCA\\Richdocuments\\Backgroundjobs\\ObtainCapabilities"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Backgroundjobs/Cleanup.php:32 time()",
+        "lib/Backgroundjobs/Cleanup.php:42 time()",
+        "lib/Controller/WopiController.php:285 new DateTime()",
+        "lib/Db/WopiMapper.php:183 time()",
+        "lib/Service/ProofKeyService.php:62 new DateTime()",
+        "lib/Service/ProofKeyService.php:65 new DateTimeImmutable()",
+        "lib/TemplateManager.php:534 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 7 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Backgroundjobs/Cleanup.php:32 time()",
+        "  lib/Backgroundjobs/Cleanup.php:42 time()",
+        "  lib/Controller/WopiController.php:285 new DateTime()",
+        "  lib/Db/WopiMapper.php:183 time()",
+        "  lib/Service/ProofKeyService.php:62 new DateTime()",
+        "  lib/Service/ProofKeyService.php:65 new DateTimeImmutable()",
+        "  lib/TemplateManager.php:534 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/AppConfig.php:91 getAppValue()",
+        "lib/AppConfig.php:99 getAppValue()",
+        "lib/AppConfig.php:113 setAppValue()",
+        "lib/AppConfig.php:155 getAppValue()",
+        "lib/AppConfig.php:159 getAppValue()",
+        "lib/AppConfig.php:163 getAppValue()",
+        "lib/AppConfig.php:167 getAppValue()",
+        "lib/AppConfig.php:171 getAppValue()",
+        "lib/AppConfig.php:175 getAppValue()",
+        "lib/AppConfig.php:184 getAppValue()",
+        "lib/AppConfig.php:193 getAppValue()",
+        "lib/AppConfig.php:204 getAppValue()",
+        "lib/AppConfig.php:213 getAppValue()",
+        "lib/AppConfig.php:255 getAppValueBool()",
+        "lib/AppInfo/Application.php:139 getValueString()",
+        "lib/Controller/FederationController.php:49 getAppValue()",
+        "lib/Controller/WopiController.php:237 getAppValue()",
+        "lib/Controller/WopiController.php:242 getAppValue()",
+        "lib/Controller/WopiController.php:251 getAppValue()",
+        "lib/Controller/WopiController.php:252 getAppValue()",
+        "lib/Controller/WopiController.php:253 getAppValue()",
+        "lib/DirectEditing/AbstractOfficeCreator.php:91 getAppValue()",
+        "lib/Listener/RegisterTemplateFileCreatorListener.php:50 getAppValue()",
+        "lib/Middleware/WOPIMiddleware.php:166 getAppValue()",
+        "lib/Middleware/WOPIMiddleware.php:187 getAppValue()",
+        "lib/Migration/InstallDefaultFonts.php:29 getAppValue()",
+        "lib/PermissionManager.php:175 getAppValue()",
+        "lib/PermissionManager.php:195 getAppValue()",
+        "lib/PermissionManager.php:198 getAppValue()",
+        "lib/PermissionManager.php:201 getAppValue()",
+        "lib/PermissionManager.php:205 getAppValue()",
+        "lib/PermissionManager.php:217 getAppValue()",
+        "lib/PermissionManager.php:226 getAppValue()",
+        "lib/PermissionManager.php:230 getAppValue()",
+        "lib/PermissionManager.php:234 getAppValue()",
+        "lib/PermissionManager.php:240 getAppValue()",
+        "lib/PermissionManager.php:248 getAppValue()",
+        "lib/Service/CachedRequestService.php:95 getValueString()",
+        "lib/Service/CachedRequestService.php:123 getValueString()",
+        "lib/Service/CachedRequestService.php:138 getValueString()",
+        "lib/Service/CapabilitiesService.php:104 getAppValue()",
+        "lib/Service/CapabilitiesService.php:126 getAppValue()",
+        "lib/Service/DiscoveryService.php:68 getAppValue()",
+        "lib/Service/FontService.php:108 getAppValue()",
+        "lib/Service/InitialStateService.php:126 getAppValue()",
+        "lib/Service/InitialStateService.php:154 getAppValue()",
+        "lib/Service/InitialStateService.php:162 getAppValue()",
+        "lib/Service/InitialStateService.php:166 getAppValue()",
+        "lib/Service/RemoteOptionsService.php:24 getValueString()",
+        "lib/Service/SecureViewService.php:28 getValueString()",
+        "lib/Service/SlideDeckService.php:82 getAppValue()",
+        "lib/Settings/Admin.php:49 getAppValue()",
+        "lib/Settings/Admin.php:50 getAppValue()",
+        "lib/Settings/Admin.php:51 getAppValue()",
+        "lib/Settings/Admin.php:52 getAppValue()",
+        "lib/Settings/Admin.php:53 getAppValue()",
+        "lib/Settings/Admin.php:54 getAppValue()",
+        "lib/Settings/Admin.php:55 getAppValue()",
+        "lib/Settings/Admin.php:62 getAppValue()",
+        "lib/Settings/Admin.php:63 getAppValue()",
+        "lib/Settings/Admin.php:64 getAppValue()",
+        "lib/TemplateManager.php:126 getAppValue()",
+        "lib/TemplateManager.php:226 getAppValue()",
+        "lib/TemplateManager.php:429 getAppValue()",
+        "lib/TemplateManager.php:458 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 65 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/AppConfig.php:91 getAppValue()",
+        "  lib/AppConfig.php:99 getAppValue()",
+        "  lib/AppConfig.php:113 setAppValue()",
+        "  lib/AppConfig.php:155 getAppValue()",
+        "  lib/AppConfig.php:159 getAppValue()",
+        "  lib/AppConfig.php:163 getAppValue()",
+        "  lib/AppConfig.php:167 getAppValue()",
+        "  lib/AppConfig.php:171 getAppValue()",
+        "  lib/AppConfig.php:175 getAppValue()",
+        "  lib/AppConfig.php:184 getAppValue()",
+        "  lib/AppConfig.php:193 getAppValue()",
+        "  lib/AppConfig.php:204 getAppValue()",
+        "  lib/AppConfig.php:213 getAppValue()",
+        "  lib/AppConfig.php:255 getAppValueBool()",
+        "  lib/AppInfo/Application.php:139 getValueString()",
+        "  lib/Controller/FederationController.php:49 getAppValue()",
+        "  lib/Controller/WopiController.php:237 getAppValue()",
+        "  lib/Controller/WopiController.php:242 getAppValue()",
+        "  lib/Controller/WopiController.php:251 getAppValue()",
+        "  lib/Controller/WopiController.php:252 getAppValue()",
+        "  lib/Controller/WopiController.php:253 getAppValue()",
+        "  lib/DirectEditing/AbstractOfficeCreator.php:91 getAppValue()",
+        "  lib/Listener/RegisterTemplateFileCreatorListener.php:50 getAppValue()",
+        "  lib/Middleware/WOPIMiddleware.php:166 getAppValue()",
+        "  lib/Middleware/WOPIMiddleware.php:187 getAppValue()",
+        "  lib/Migration/InstallDefaultFonts.php:29 getAppValue()",
+        "  lib/PermissionManager.php:175 getAppValue()",
+        "  lib/PermissionManager.php:195 getAppValue()",
+        "  lib/PermissionManager.php:198 getAppValue()",
+        "  lib/PermissionManager.php:201 getAppValue()",
+        "  lib/PermissionManager.php:205 getAppValue()",
+        "  lib/PermissionManager.php:217 getAppValue()",
+        "  lib/PermissionManager.php:226 getAppValue()",
+        "  lib/PermissionManager.php:230 getAppValue()",
+        "  lib/PermissionManager.php:234 getAppValue()",
+        "  lib/PermissionManager.php:240 getAppValue()",
+        "  lib/PermissionManager.php:248 getAppValue()",
+        "  lib/Service/CachedRequestService.php:95 getValueString()",
+        "  lib/Service/CachedRequestService.php:123 getValueString()",
+        "  lib/Service/CachedRequestService.php:138 getValueString()",
+        "  lib/Service/CapabilitiesService.php:104 getAppValue()",
+        "  lib/Service/CapabilitiesService.php:126 getAppValue()",
+        "  lib/Service/DiscoveryService.php:68 getAppValue()",
+        "  lib/Service/FontService.php:108 getAppValue()",
+        "  lib/Service/InitialStateService.php:126 getAppValue()",
+        "  lib/Service/InitialStateService.php:154 getAppValue()",
+        "  lib/Service/InitialStateService.php:162 getAppValue()",
+        "  lib/Service/InitialStateService.php:166 getAppValue()",
+        "  lib/Service/RemoteOptionsService.php:24 getValueString()",
+        "  lib/Service/SecureViewService.php:28 getValueString()",
+        "  lib/Service/SlideDeckService.php:82 getAppValue()",
+        "  lib/Settings/Admin.php:49 getAppValue()",
+        "  lib/Settings/Admin.php:50 getAppValue()",
+        "  lib/Settings/Admin.php:51 getAppValue()",
+        "  lib/Settings/Admin.php:52 getAppValue()",
+        "  lib/Settings/Admin.php:53 getAppValue()",
+        "  lib/Settings/Admin.php:54 getAppValue()",
+        "  lib/Settings/Admin.php:55 getAppValue()",
+        "  lib/Settings/Admin.php:62 getAppValue()",
+        "  lib/Settings/Admin.php:63 getAppValue()",
+        "  lib/Settings/Admin.php:64 getAppValue()",
+        "  lib/TemplateManager.php:126 getAppValue()",
+        "  lib/TemplateManager.php:226 getAppValue()",
+        "  lib/TemplateManager.php:429 getAppValue()",
+        "  lib/TemplateManager.php:458 getAppValue()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 62
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "POST /ocs/v2.php/apps/richdocuments/api/v1/file  ocs.richdocuments.documentapi.create  appinfo/routes.php:67 ocs",
+        "POST /ocs/v2.php/apps/richdocuments/api/v1/document  ocs.richdocuments.ocs.createdirect  appinfo/routes.php:71 ocs",
+        "POST /ocs/v2.php/apps/richdocuments/api/v1/share  ocs.richdocuments.ocs.createpublic  appinfo/routes.php:72 ocs",
+        "POST /ocs/v2.php/apps/richdocuments/api/v1/direct/share/initiator  ocs.richdocuments.ocs.createpublicfrominitiator  appinfo/routes.php:73 ocs",
+        "POST /ocs/v2.php/apps/richdocuments/api/v1/templates/new  ocs.richdocuments.ocs.createfromtemplate  appinfo/routes.php:74 ocs",
+        "GET /ocs/v2.php/apps/richdocuments/api/v1/templates/{type}  ocs.richdocuments.ocs.gettemplates  appinfo/routes.php:75 ocs",
+        "POST /ocs/v2.php/apps/richdocuments/api/v1/wopi/guestname  ocs.richdocuments.ocs.updateguestname  appinfo/routes.php:77 ocs",
+        "GET /ocs/v2.php/apps/richdocuments/api/v1/federation  ocs.richdocuments.federation.index  appinfo/routes.php:79 ocs",
+        "POST /ocs/v2.php/apps/richdocuments/api/v1/federation  ocs.richdocuments.federation.remotewopitoken  appinfo/routes.php:80 ocs",
+        "POST /ocs/v2.php/apps/richdocuments/api/v1/federation/user  ocs.richdocuments.federation.initiatoruser  appinfo/routes.php:81 ocs",
+        "GET /ocs/v2.php/apps/richdocuments/api/v1/template/fields/extract/{fileId}  ocs.richdocuments.templatefield.extractfields  appinfo/routes.php:86 ocs",
+        "POST /ocs/v2.php/apps/richdocuments/api/v1/template/fields/fill/{fileId}  ocs.richdocuments.templatefield.fillfields  appinfo/routes.php:87 ocs"
+      ],
+      "lines": [
+        "Nothing in the app calls 12 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  POST /ocs/v2.php/apps/richdocuments/api/v1/file  ocs.richdocuments.documentapi.create  appinfo/routes.php:67 ocs",
+        "  POST /ocs/v2.php/apps/richdocuments/api/v1/document  ocs.richdocuments.ocs.createdirect  appinfo/routes.php:71 ocs",
+        "  POST /ocs/v2.php/apps/richdocuments/api/v1/share  ocs.richdocuments.ocs.createpublic  appinfo/routes.php:72 ocs",
+        "  POST /ocs/v2.php/apps/richdocuments/api/v1/direct/share/initiator  ocs.richdocuments.ocs.createpublicfrominitiator  appinfo/routes.php:73 ocs",
+        "  POST /ocs/v2.php/apps/richdocuments/api/v1/templates/new  ocs.richdocuments.ocs.createfromtemplate  appinfo/routes.php:74 ocs",
+        "  GET /ocs/v2.php/apps/richdocuments/api/v1/templates/{type}  ocs.richdocuments.ocs.gettemplates  appinfo/routes.php:75 ocs",
+        "  POST /ocs/v2.php/apps/richdocuments/api/v1/wopi/guestname  ocs.richdocuments.ocs.updateguestname  appinfo/routes.php:77 ocs",
+        "  GET /ocs/v2.php/apps/richdocuments/api/v1/federation  ocs.richdocuments.federation.index  appinfo/routes.php:79 ocs",
+        "  POST /ocs/v2.php/apps/richdocuments/api/v1/federation  ocs.richdocuments.federation.remotewopitoken  appinfo/routes.php:80 ocs",
+        "  POST /ocs/v2.php/apps/richdocuments/api/v1/federation/user  ocs.richdocuments.federation.initiatoruser  appinfo/routes.php:81 ocs",
+        "  GET /ocs/v2.php/apps/richdocuments/api/v1/template/fields/extract/{fileId}  ocs.richdocuments.templatefield.extractfields  appinfo/routes.php:86 ocs",
+        "  POST /ocs/v2.php/apps/richdocuments/api/v1/template/fields/fill/{fileId}  ocs.richdocuments.templatefield.fillfields  appinfo/routes.php:87 ocs"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 9
+        }
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/DirectViewController.php:107 OCA\\Richdocuments\\Controller\\DirectViewController::showPublicShare()"
+      ],
+      "lines": [
+        "1 public method of a controller is reached by no route.",
+        "  lib/Controller/DirectViewController.php:107 OCA\\Richdocuments\\Controller\\DirectViewController::showPublicShare()"
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 16 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 57,
+  "endpointList": [
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/richdocuments/ajax/admin.php",
+      "target": "OCA\\Richdocuments\\Controller\\SettingsController::setSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/richdocuments/ajax/extapp/data/{fileId}",
+      "target": "OCA\\Richdocuments\\Controller\\DocumentController::extAppGetData",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/richdocuments/ajax/personal.php",
+      "target": "OCA\\Richdocuments\\Controller\\SettingsController::setPersonalSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/richdocuments/ajax/settings.php",
+      "target": "OCA\\Richdocuments\\Controller\\SettingsController::getSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/richdocuments/assets",
+      "target": "OCA\\Richdocuments\\Controller\\AssetsController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/richdocuments/assets/{token}",
+      "target": "OCA\\Richdocuments\\Controller\\AssetsController::get",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/richdocuments/assets/tasks",
+      "target": "OCA\\Richdocuments\\Controller\\AssetsController::createFromTask",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/richdocuments/autosetup",
+      "target": "OCA\\Richdocuments\\Controller\\SettingsController::setupCode",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/richdocuments/direct/{token}",
+      "target": "OCA\\Richdocuments\\Controller\\DirectViewController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/richdocuments/editonline",
+      "target": "OCA\\Richdocuments\\Controller\\DocumentController::editOnline",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/richdocuments/editonline/{fileId}/{target}",
+      "target": "OCA\\Richdocuments\\Controller\\DocumentController::editOnlineTarget",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/richdocuments/heartbeat",
+      "target": "OCA\\Richdocuments\\Controller\\DocumentController::heartbeat",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/richdocuments/index",
+      "target": "OCA\\Richdocuments\\Controller\\DocumentController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/richdocuments/indexTemplate",
+      "target": "OCA\\Richdocuments\\Controller\\DocumentController::createFromTemplate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/richdocuments/public",
+      "target": "OCA\\Richdocuments\\Controller\\DocumentController::publicPage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/richdocuments/remote",
+      "target": "OCA\\Richdocuments\\Controller\\DocumentController::remote",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/richdocuments/remote",
+      "target": "OCA\\Richdocuments\\Controller\\DocumentController::remotePost",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/richdocuments/settings/{type}/{token}/{category}/{name}",
+      "target": "OCA\\Richdocuments\\Controller\\SettingsController::getSettingsFile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/richdocuments/settings/check",
+      "target": "OCA\\Richdocuments\\Controller\\SettingsController::checkSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/richdocuments/settings/demo",
+      "target": "OCA\\Richdocuments\\Controller\\SettingsController::demoServers",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/richdocuments/settings/fonts",
+      "target": "OCA\\Richdocuments\\Controller\\SettingsController::getFontNames",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/richdocuments/settings/fonts",
+      "target": "OCA\\Richdocuments\\Controller\\SettingsController::uploadFontFile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/richdocuments/settings/fonts.json",
+      "target": "OCA\\Richdocuments\\Controller\\SettingsController::getJsonFontList",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/richdocuments/settings/fonts/{name}",
+      "target": "OCA\\Richdocuments\\Controller\\SettingsController::deleteFontFile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/richdocuments/settings/fonts/{name}",
+      "target": "OCA\\Richdocuments\\Controller\\SettingsController::getFontFile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/richdocuments/settings/fonts/{name}/overview",
+      "target": "OCA\\Richdocuments\\Controller\\SettingsController::getFontFileOverview",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/richdocuments/settings/generateToken/{type}",
+      "target": "OCA\\Richdocuments\\Controller\\SettingsController::generateIframeToken",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/richdocuments/settings/watermark",
+      "target": "OCA\\Richdocuments\\Controller\\SettingsController::updateWatermarkSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/richdocuments/template",
+      "target": "OCA\\Richdocuments\\Controller\\TemplatesController::add",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/richdocuments/template/{fileId}",
+      "target": "OCA\\Richdocuments\\Controller\\TemplatesController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/richdocuments/template/preview/{fileId}",
+      "target": "OCA\\Richdocuments\\Controller\\TemplatesController::getPreview",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/richdocuments/token",
+      "target": "OCA\\Richdocuments\\Controller\\DocumentController::token",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/richdocuments/wopi/files/{fileId}",
+      "target": "OCA\\Richdocuments\\Controller\\WopiController::checkFileInfo",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/richdocuments/wopi/files/{fileId}",
+      "target": "OCA\\Richdocuments\\Controller\\WopiController::postFile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/richdocuments/wopi/files/{fileId}/contents",
+      "target": "OCA\\Richdocuments\\Controller\\WopiController::getFile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/richdocuments/wopi/files/{fileId}/contents",
+      "target": "OCA\\Richdocuments\\Controller\\WopiController::putFile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/richdocuments/wopi/settings",
+      "target": "OCA\\Richdocuments\\Controller\\WopiController::deleteSettingsFile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/richdocuments/wopi/settings",
+      "target": "OCA\\Richdocuments\\Controller\\WopiController::getSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/richdocuments/wopi/settings/upload",
+      "target": "OCA\\Richdocuments\\Controller\\WopiController::uploadSettingsFile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/richdocuments/wopi/template/{fileId}",
+      "target": "OCA\\Richdocuments\\Controller\\WopiController::getTemplate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/richdocuments/api/v1/direct/share/initiator",
+      "target": "OCA\\Richdocuments\\Controller\\OCSController::createPublicFromInitiator",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/richdocuments/api/v1/document",
+      "target": "OCA\\Richdocuments\\Controller\\OCSController::createDirect",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/richdocuments/api/v1/federation",
+      "target": "OCA\\Richdocuments\\Controller\\FederationController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/richdocuments/api/v1/federation",
+      "target": "OCA\\Richdocuments\\Controller\\FederationController::remoteWopiToken",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/richdocuments/api/v1/federation/user",
+      "target": "OCA\\Richdocuments\\Controller\\FederationController::initiatorUser",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/richdocuments/api/v1/file",
+      "target": "OCA\\Richdocuments\\Controller\\DocumentAPIController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/richdocuments/api/v1/local",
+      "target": "OCA\\Richdocuments\\Controller\\DocumentAPIController::openLocal",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/richdocuments/api/v1/mention/{fileId}",
+      "target": "OCA\\Richdocuments\\Controller\\MentionController::mention",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/richdocuments/api/v1/share",
+      "target": "OCA\\Richdocuments\\Controller\\OCSController::createPublic",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/richdocuments/api/v1/targets",
+      "target": "OCA\\Richdocuments\\Controller\\TargetController::getTargets",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/richdocuments/api/v1/targets/preview",
+      "target": "OCA\\Richdocuments\\Controller\\TargetController::getPreview",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/richdocuments/api/v1/template/fields/extract/{fileId}",
+      "target": "OCA\\Richdocuments\\Controller\\TemplateFieldController::extractFields",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/richdocuments/api/v1/template/fields/fill/{fileId}",
+      "target": "OCA\\Richdocuments\\Controller\\TemplateFieldController::fillFields",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/richdocuments/api/v1/templates/{type}",
+      "target": "OCA\\Richdocuments\\Controller\\OCSController::getTemplates",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/richdocuments/api/v1/templates/new",
+      "target": "OCA\\Richdocuments\\Controller\\OCSController::createFromTemplate",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/richdocuments/api/v1/wopi/guestname",
+      "target": "OCA\\Richdocuments\\Controller\\OCSController::updateGuestName",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/capabilities",
+      "target": "OCA\\Richdocuments\\Capabilities",
+      "openapi": [],
+      "kind": "capability"
+    }
+  ]
+}

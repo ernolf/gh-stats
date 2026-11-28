@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>files_sharding</id>
+	<name>Files Sharding</name>
+	<summary>Distribute users across a cluster of Nextcloud silos</summary>
+	<description>Manages a master + silo architecture: the master authenticates users and redirects them to their home silo. Each silo runs a full Nextcloud installation and can operate independently. Cross-silo sharing uses Nextcloud federation with stable user@master identities.</description>
+	<version>1.0.31</version>
+	<licence>agpl</licence>
+	<author mail="fror@dtu.dk">Frederik Orellana, DTU</author>
+	<namespace>FilesSharding</namespace>
+	<types>
+		<!-- Load in the 'authentication' group so the X509 auth backend is
+		     registered before the login/WebDAV auth phase runs (otherwise it
+		     registers too late for remote.php on cold FPM workers). -->
+		<authentication/>
+	</types>
+	<category>files</category>
+	<dependencies>
+		<nextcloud min-version="28" max-version="35"/>
+		<php min-version="8.2"/>
+		<app>dav</app>
+	</dependencies>
+	<commands>
+		<command>OCA\FilesSharding\Command\AddServer</command>
+		<command>OCA\FilesSharding\Command\DeleteServer</command>
+		<command>OCA\FilesSharding\Command\ListServers</command>
+		<command>OCA\FilesSharding\Command\SshKeys</command>
+		<command>OCA\FilesSharding\Command\ListUsers</command>
+		<command>OCA\FilesSharding\Command\AssignUser</command>
+		<command>OCA\FilesSharding\Command\AutoAssignUser</command>
+		<command>OCA\FilesSharding\Command\PrepareUser</command>
+		<command>OCA\FilesSharding\Command\Check</command>
+		<command>OCA\FilesSharding\Command\MigrateUsers</command>
+		<command>OCA\FilesSharding\Command\MigrateShares</command>
+		<command>OCA\FilesSharding\Command\MigratePlacement</command>
+	</commands>
+	<background-jobs>
+		<job>OCA\FilesSharding\Job\ReportFreeSpaceJob</job>
+		<job>OCA\FilesSharding\Job\SyncSiloTrustJob</job>
+		<job>OCA\FilesSharding\Job\ShareAuthorityReconcileJob</job>
+	</background-jobs>
+	<repair-steps>
+		<post-migration>
+			<step>OCA\FilesSharding\Migration\SeedAccountPolicy</step>
+		</post-migration>
+	</repair-steps>
+	<collaboration>
+		<plugins>
+			<plugin type="collaborator-search" share-type="SHARE_TYPE_REMOTE">OCA\FilesSharding\Collaboration\MasterUserSearch</plugin>
+			<plugin type="collaborator-search" share-type="SHARE_TYPE_REMOTE">OCA\FilesSharding\Collaboration\RemoteClusterDedupeFilter</plugin>
+			<plugin type="collaborator-search" share-type="SHARE_TYPE_USER">OCA\FilesSharding\Collaboration\ResidentUserFilter</plugin>
+		</plugins>
+	</collaboration>
+	<settings>
+		<admin>OCA\FilesSharding\Settings\AdminSettings</admin>
+		<admin-section>OCA\FilesSharding\Settings\AdminSection</admin-section>
+		<personal>OCA\FilesSharding\Settings\PersonalSettings</personal>
+		<personal-section>OCA\FilesSharding\Settings\PersonalSection</personal-section>
+	</settings>
+	<remote>
+		<sharingin>appinfo/remote.php</sharingin>
+		<sharingout>appinfo/remote.php</sharingout>
+		<public>appinfo/public.php</public>
+		<getkey>appinfo/getkey.php</getkey>
+		<getcert>appinfo/getcert.php</getcert>
+	</remote>
+</info>

@@ -1,0 +1,567 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Astrolabe\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "doctrine/deprecations 1.1.6, in 3rdparty/ of Nextcloud 33 to 35",
+        "psr/clock 1.0.0, in 3rdparty/ of Nextcloud 33 to 35",
+        "psr/container 2.0.2, in 3rdparty/ of Nextcloud 33 to 35",
+        "psr/event-dispatcher 1.0.0, in 3rdparty/ of Nextcloud 33 to 35",
+        "psr/http-client 1.0.3, in 3rdparty/ of Nextcloud 33 to 35",
+        "psr/http-factory 1.1.0, in 3rdparty/ of Nextcloud 33 to 35",
+        "psr/http-message 2.0, in 3rdparty/ of Nextcloud 33 to 35",
+        "psr/log 3.0.2, in 3rdparty/ of Nextcloud 33 to 35",
+        "symfony/deprecation-contracts v3.7.1, in 3rdparty/ of Nextcloud 33 to 35",
+        "symfony/polyfill-uuid v1.37.0, in 3rdparty/ of Nextcloud 33 to 35",
+        "symfony/uid v6.4.48, in 3rdparty/ of Nextcloud 33 to 35"
+      ],
+      "lines": [
+        "vendor/ ships 11 packages that the server ships itself in a major of Nextcloud 33 to 35. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  doctrine/deprecations 1.1.6, in 3rdparty/ of Nextcloud 33 to 35",
+        "  psr/clock 1.0.0, in 3rdparty/ of Nextcloud 33 to 35",
+        "  psr/container 2.0.2, in 3rdparty/ of Nextcloud 33 to 35",
+        "  psr/event-dispatcher 1.0.0, in 3rdparty/ of Nextcloud 33 to 35",
+        "  psr/http-client 1.0.3, in 3rdparty/ of Nextcloud 33 to 35",
+        "  psr/http-factory 1.1.0, in 3rdparty/ of Nextcloud 33 to 35",
+        "  psr/http-message 2.0, in 3rdparty/ of Nextcloud 33 to 35",
+        "  psr/log 3.0.2, in 3rdparty/ of Nextcloud 33 to 35",
+        "  symfony/deprecation-contracts v3.7.1, in 3rdparty/ of Nextcloud 33 to 35",
+        "  symfony/polyfill-uuid v1.37.0, in 3rdparty/ of Nextcloud 33 to 35",
+        "  symfony/uid v6.4.48, in 3rdparty/ of Nextcloud 33 to 35"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 8
+        }
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Service/AppPasswordProvisioningService.php:35 OC\\Authentication\\Token\\IProvider"
+      ],
+      "lines": [
+        "1 use of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Service/AppPasswordProvisioningService.php:35 OC\\Authentication\\Token\\IProvider"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:140 injectFn()",
+        "lib/AppInfo/Application.php:157 addServiceListener()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 2 places. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:140 injectFn()",
+        "  lib/AppInfo/Application.php:157 addServiceListener()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "POST /index.php/apps/astrolabe/api/v1/test/pact-provider-state  astrolabe.pact_provider_state.handle  appinfo/routes.php:42 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 route outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 21 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  POST /index.php/apps/astrolabe/api/v1/test/pact-provider-state  astrolabe.pact_provider_state.handle  appinfo/routes.php:42 routes"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/ApiController.php:603 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ApiController.php:609 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ApiController.php:612 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ApiController.php:615 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ApiController.php:784 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/PactProviderStateController.php:96 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Controller/PactProviderStateController.php:97 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/PactProviderStateController.php:111 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Controller/PactProviderStateController.php:120 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/PactProviderStateController.php:127 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/PageController.php:89 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Search/SemanticSearchProvider.php:134 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Search/SemanticSearchProvider.php:153 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Search/SemanticSearchProvider.php:158 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Search/SemanticSearchProvider.php:163 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/BackgroundSyncCredentialStorage.php:38 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/BackgroundSyncCredentialStorage.php:39 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/BackgroundSyncCredentialStorage.php:40 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/BackgroundSyncCredentialStorage.php:53 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/BackgroundSyncCredentialStorage.php:68 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/BackgroundSyncCredentialStorage.php:69 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/BackgroundSyncCredentialStorage.php:70 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/BackgroundSyncCredentialStorage.php:85 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/SearchSources.php:97 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "lines": [
+        "24 uses in 6 files of the public API that is deprecated in Nextcloud 33 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/ApiController.php:603 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ApiController.php:609 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ApiController.php:612 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ApiController.php:615 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ApiController.php:784 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/PactProviderStateController.php:96 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Controller/PactProviderStateController.php:97 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/PactProviderStateController.php:111 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Controller/PactProviderStateController.php:120 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/PactProviderStateController.php:127 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/PageController.php:89 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Search/SemanticSearchProvider.php:134 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Search/SemanticSearchProvider.php:153 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Search/SemanticSearchProvider.php:158 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Search/SemanticSearchProvider.php:163 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/BackgroundSyncCredentialStorage.php:38 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/BackgroundSyncCredentialStorage.php:39 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/BackgroundSyncCredentialStorage.php:40 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/BackgroundSyncCredentialStorage.php:53 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/BackgroundSyncCredentialStorage.php:68 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/BackgroundSyncCredentialStorage.php:69 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/BackgroundSyncCredentialStorage.php:70 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/BackgroundSyncCredentialStorage.php:85 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/SearchSources.php:97 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 21
+        }
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/settings/personal-basic.php:32 style= attribute",
+        "templates/settings/personal-basic.php:46 style= attribute",
+        "templates/settings/personal-basic.php:48 style= attribute"
+      ],
+      "lines": [
+        "3 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/settings/personal-basic.php:32 style= attribute",
+        "  templates/settings/personal-basic.php:46 style= attribute",
+        "  templates/settings/personal-basic.php:48 style= attribute"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/ExpireAgentConversationsJob.php OCA\\Astrolabe\\BackgroundJob\\ExpireAgentConversationsJob",
+        "lib/BackgroundJob/SweepSummaryScratchJob.php OCA\\Astrolabe\\BackgroundJob\\SweepSummaryScratchJob"
+      ],
+      "lines": [
+        "2 timed jobs do not say whether they are time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/ExpireAgentConversationsJob.php OCA\\Astrolabe\\BackgroundJob\\ExpireAgentConversationsJob",
+        "  lib/BackgroundJob/SweepSummaryScratchJob.php OCA\\Astrolabe\\BackgroundJob\\SweepSummaryScratchJob"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Db/AgentConversationMapper.php:65 time()",
+        "lib/Db/AgentConversationMapper.php:90 time()",
+        "lib/Db/AgentConversationMapper.php:163 time()",
+        "lib/Listener/SyncEventListener.php:82 time()",
+        "lib/Service/Assistant/AgentLoop.php:264 time()",
+        "lib/Service/Assistant/AgentLoop.php:275 time()",
+        "lib/Service/Assistant/ScratchImageStore.php:126 time()",
+        "lib/Service/BackgroundSyncCredentialStorage.php:40 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 8 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Db/AgentConversationMapper.php:65 time()",
+        "  lib/Db/AgentConversationMapper.php:90 time()",
+        "  lib/Db/AgentConversationMapper.php:163 time()",
+        "  lib/Listener/SyncEventListener.php:82 time()",
+        "  lib/Service/Assistant/AgentLoop.php:264 time()",
+        "  lib/Service/Assistant/AgentLoop.php:275 time()",
+        "  lib/Service/Assistant/ScratchImageStore.php:126 time()",
+        "  lib/Service/BackgroundSyncCredentialStorage.php:40 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:105 getValueBool()",
+        "lib/AppInfo/Application.php:141 getValueBool()",
+        "lib/AppInfo/Application.php:146 getValueString()",
+        "lib/Controller/ApiController.php:334 getValueBool()",
+        "lib/Controller/ApiController.php:378 getValueString()",
+        "lib/Controller/ApiController.php:603 setAppValue()",
+        "lib/Controller/ApiController.php:609 setAppValue()",
+        "lib/Controller/ApiController.php:612 setAppValue()",
+        "lib/Controller/ApiController.php:615 setAppValue()",
+        "lib/Controller/ApiController.php:620 setValueBool()",
+        "lib/Controller/ApiController.php:714 setValueString()",
+        "lib/Controller/ApiController.php:890 getValueString()",
+        "lib/Controller/ApiController.php:902 setValueString()",
+        "lib/Controller/CredentialsController.php:64 getValueBool()",
+        "lib/Controller/CredentialsController.php:481 setValueBool()",
+        "lib/Controller/PactProviderStateController.php:105 setValueString()",
+        "lib/Controller/PageController.php:48 getValueBool()",
+        "lib/Listener/AstrolabeAdminSettingsListener.php:85 getValueBool()",
+        "lib/Listener/AstrolabeAdminSettingsListener.php:86 getValueInt()",
+        "lib/Listener/AstrolabeAdminSettingsListener.php:87 getValueString()",
+        "lib/Listener/AstrolabeAdminSettingsListener.php:96 setValueBool()",
+        "lib/Listener/AstrolabeAdminSettingsListener.php:101 setValueInt()",
+        "lib/Listener/AstrolabeAdminSettingsListener.php:102 setValueString()",
+        "lib/Listener/SyncEventListener.php:54 getValueBool()",
+        "lib/Listener/SyncEventListener.php:123 getValueString()",
+        "lib/Search/SemanticSearchProvider.php:134 getAppValue()",
+        "lib/Search/SemanticSearchProvider.php:153 getAppValue()",
+        "lib/Search/SemanticSearchProvider.php:158 getAppValue()",
+        "lib/Search/SemanticSearchProvider.php:163 getAppValue()",
+        "lib/Service/Assistant/AgentLoop.php:660 getValueString()",
+        "lib/Service/Assistant/AgentLoop.php:668 getValueInt()",
+        "lib/Service/Assistant/AgentLoop.php:676 getValueInt()",
+        "lib/Service/Assistant/AssistantCapabilities.php:81 getValueBool()",
+        "lib/Service/SearchSources.php:147 getValueString()",
+        "lib/Settings/Admin.php:131 getValueString()",
+        "lib/Settings/Admin.php:136 getValueString()",
+        "lib/Settings/Admin.php:141 getValueInt()",
+        "lib/Settings/Admin.php:146 getValueInt()",
+        "lib/Settings/Admin.php:151 getValueBool()",
+        "lib/Settings/Admin.php:158 getValueBool()",
+        "lib/Settings/Admin.php:167 getValueBool()",
+        "lib/Settings/Personal.php:63 getValueBool()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 42 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/AppInfo/Application.php:105 getValueBool()",
+        "  lib/AppInfo/Application.php:141 getValueBool()",
+        "  lib/AppInfo/Application.php:146 getValueString()",
+        "  lib/Controller/ApiController.php:334 getValueBool()",
+        "  lib/Controller/ApiController.php:378 getValueString()",
+        "  lib/Controller/ApiController.php:603 setAppValue()",
+        "  lib/Controller/ApiController.php:609 setAppValue()",
+        "  lib/Controller/ApiController.php:612 setAppValue()",
+        "  lib/Controller/ApiController.php:615 setAppValue()",
+        "  lib/Controller/ApiController.php:620 setValueBool()",
+        "  lib/Controller/ApiController.php:714 setValueString()",
+        "  lib/Controller/ApiController.php:890 getValueString()",
+        "  lib/Controller/ApiController.php:902 setValueString()",
+        "  lib/Controller/CredentialsController.php:64 getValueBool()",
+        "  lib/Controller/CredentialsController.php:481 setValueBool()",
+        "  lib/Controller/PactProviderStateController.php:105 setValueString()",
+        "  lib/Controller/PageController.php:48 getValueBool()",
+        "  lib/Listener/AstrolabeAdminSettingsListener.php:85 getValueBool()",
+        "  lib/Listener/AstrolabeAdminSettingsListener.php:86 getValueInt()",
+        "  lib/Listener/AstrolabeAdminSettingsListener.php:87 getValueString()",
+        "  lib/Listener/AstrolabeAdminSettingsListener.php:96 setValueBool()",
+        "  lib/Listener/AstrolabeAdminSettingsListener.php:101 setValueInt()",
+        "  lib/Listener/AstrolabeAdminSettingsListener.php:102 setValueString()",
+        "  lib/Listener/SyncEventListener.php:54 getValueBool()",
+        "  lib/Listener/SyncEventListener.php:123 getValueString()",
+        "  lib/Search/SemanticSearchProvider.php:134 getAppValue()",
+        "  lib/Search/SemanticSearchProvider.php:153 getAppValue()",
+        "  lib/Search/SemanticSearchProvider.php:158 getAppValue()",
+        "  lib/Search/SemanticSearchProvider.php:163 getAppValue()",
+        "  lib/Service/Assistant/AgentLoop.php:660 getValueString()",
+        "  lib/Service/Assistant/AgentLoop.php:668 getValueInt()",
+        "  lib/Service/Assistant/AgentLoop.php:676 getValueInt()",
+        "  lib/Service/Assistant/AssistantCapabilities.php:81 getValueBool()",
+        "  lib/Service/SearchSources.php:147 getValueString()",
+        "  lib/Settings/Admin.php:131 getValueString()",
+        "  lib/Settings/Admin.php:136 getValueString()",
+        "  lib/Settings/Admin.php:141 getValueInt()",
+        "  lib/Settings/Admin.php:146 getValueInt()",
+        "  lib/Settings/Admin.php:151 getValueBool()",
+        "  lib/Settings/Admin.php:158 getValueBool()",
+        "  lib/Settings/Admin.php:167 getValueBool()",
+        "  lib/Settings/Personal.php:63 getValueBool()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 39
+        }
+      ]
+    }
+  ],
+  "endpoints": 34,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/astrolabe/",
+      "target": "OCA\\Astrolabe\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/astrolabe/api/admin/connection-settings",
+      "target": "OCA\\Astrolabe\\Controller\\ApiController::saveConnectionSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/astrolabe/api/admin/search-settings",
+      "target": "OCA\\Astrolabe\\Controller\\ApiController::saveSearchSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/astrolabe/api/admin/search-sources",
+      "target": "OCA\\Astrolabe\\Controller\\ApiController::saveSearchSources",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/astrolabe/api/admin/server-status",
+      "target": "OCA\\Astrolabe\\Controller\\ApiController::serverStatus",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/astrolabe/api/admin/vector-status",
+      "target": "OCA\\Astrolabe\\Controller\\ApiController::adminVectorStatus",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/astrolabe/api/admin/webhooks/presets",
+      "target": "OCA\\Astrolabe\\Controller\\ApiController::getWebhookPresets",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/astrolabe/api/admin/webhooks/presets/{presetId}/disable",
+      "target": "OCA\\Astrolabe\\Controller\\ApiController::disableWebhookPreset",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/astrolabe/api/admin/webhooks/presets/{presetId}/enable",
+      "target": "OCA\\Astrolabe\\Controller\\ApiController::enableWebhookPreset",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/astrolabe/api/chunk-context",
+      "target": "OCA\\Astrolabe\\Controller\\ApiController::chunkContext",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/astrolabe/api/search",
+      "target": "OCA\\Astrolabe\\Controller\\ApiController::search",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/astrolabe/api/user/search-sources",
+      "target": "OCA\\Astrolabe\\Controller\\ApiController::saveUserSearchSources",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/astrolabe/api/v1/background-sync/admin/self-provision",
+      "target": "OCA\\Astrolabe\\Controller\\CredentialsController::adminSetSelfProvision",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/astrolabe/api/v1/background-sync/admin/users",
+      "target": "OCA\\Astrolabe\\Controller\\CredentialsController::adminListProvisioning",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/astrolabe/api/v1/background-sync/admin/users/{userId}",
+      "target": "OCA\\Astrolabe\\Controller\\CredentialsController::adminDeprovisionUser",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/astrolabe/api/v1/background-sync/admin/users/{userId}",
+      "target": "OCA\\Astrolabe\\Controller\\CredentialsController::adminProvisionUser",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/astrolabe/api/v1/background-sync/credentials",
+      "target": "OCA\\Astrolabe\\Controller\\CredentialsController::storeAppPassword",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/astrolabe/api/v1/background-sync/credentials/{userId}",
+      "target": "OCA\\Astrolabe\\Controller\\CredentialsController::getCredentials",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/astrolabe/api/v1/background-sync/credentials/revoke",
+      "target": "OCA\\Astrolabe\\Controller\\CredentialsController::deleteCredentials",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/astrolabe/api/v1/background-sync/status",
+      "target": "OCA\\Astrolabe\\Controller\\CredentialsController::getStatus",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/astrolabe/api/v1/mcp-app/message",
+      "target": "OCA\\Astrolabe\\Controller\\McpAppController::message",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/astrolabe/api/v1/mcp-app/model-context",
+      "target": "OCA\\Astrolabe\\Controller\\McpAppController::modelContext",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/astrolabe/api/v1/mcp-app/tools/call",
+      "target": "OCA\\Astrolabe\\Controller\\McpAppController::callTool",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/astrolabe/api/v1/sar/cases",
+      "target": "OCA\\Astrolabe\\Controller\\ApiController::sarList",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/astrolabe/api/v1/sar/cases",
+      "target": "OCA\\Astrolabe\\Controller\\ApiController::sarCreate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/astrolabe/api/v1/sar/cases/{id}",
+      "target": "OCA\\Astrolabe\\Controller\\ApiController::sarGet",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/index.php/apps/astrolabe/api/v1/sar/cases/{id}",
+      "target": "OCA\\Astrolabe\\Controller\\ApiController::sarUpdate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/astrolabe/api/v1/sar/cases/{id}/exports",
+      "target": "OCA\\Astrolabe\\Controller\\ApiController::sarExport",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/astrolabe/api/v1/sar/cases/{id}/items",
+      "target": "OCA\\Astrolabe\\Controller\\ApiController::sarItems",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/astrolabe/api/v1/summary",
+      "target": "OCA\\Astrolabe\\Controller\\AssistantController::summarize",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/astrolabe/api/v1/test/pact-provider-state",
+      "target": "OCA\\Astrolabe\\Controller\\PactProviderStateController::handle",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/astrolabe/api/vector-status",
+      "target": "OCA\\Astrolabe\\Controller\\ApiController::vectorStatus",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/astrolabe/mcp-app/view",
+      "target": "OCA\\Astrolabe\\Controller\\McpAppController::view",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/capabilities",
+      "target": "OCA\\Astrolabe\\Capabilities",
+      "openapi": [],
+      "kind": "capability"
+    }
+  ]
+}

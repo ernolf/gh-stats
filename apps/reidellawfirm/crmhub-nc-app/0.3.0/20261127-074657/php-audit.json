@@ -1,0 +1,788 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\ReidelCrm\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:161 OC::$server",
+        "lib/Command/SyncGroundhogg.php:13 OC\\Core\\Command\\Base",
+        "lib/Controller/DiagnosticController.php:47 OC",
+        "lib/Controller/DiagnosticController.php:56 OC_Util"
+      ],
+      "lines": [
+        "4 uses of the private API of the server in 3 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/AppInfo/Application.php:161 OC::$server",
+        "  lib/Command/SyncGroundhogg.php:13 OC\\Core\\Command\\Base",
+        "  lib/Controller/DiagnosticController.php:47 OC",
+        "  lib/Controller/DiagnosticController.php:56 OC_Util"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "ocp-removed-soon",
+      "level": "warn",
+      "places": [
+        "lib/BackgroundJob/MailPollingJob.php:48 OCP\\IServerContainer: deprecated since Nextcloud 25, Nextcloud 35 is the last major to have it",
+        "lib/Service/CalendarService.php:32 OCP\\IServerContainer: deprecated since Nextcloud 25, Nextcloud 35 is the last major to have it",
+        "lib/Service/ContactCacheService.php:30 OCP\\IServerContainer: deprecated since Nextcloud 25, Nextcloud 35 is the last major to have it",
+        "lib/Service/ProjectService.php:30 OCP\\IServerContainer: deprecated since Nextcloud 25, Nextcloud 35 is the last major to have it"
+      ],
+      "lines": [
+        "4 uses in 4 files of the public API that is deprecated and that Nextcloud 36 no longer has: the app fails on the first major without it, once it declares that one.",
+        "  lib/BackgroundJob/MailPollingJob.php:48 OCP\\IServerContainer: deprecated since Nextcloud 25, Nextcloud 35 is the last major to have it",
+        "  lib/Service/CalendarService.php:32 OCP\\IServerContainer: deprecated since Nextcloud 25, Nextcloud 35 is the last major to have it",
+        "  lib/Service/ContactCacheService.php:30 OCP\\IServerContainer: deprecated since Nextcloud 25, Nextcloud 35 is the last major to have it",
+        "  lib/Service/ProjectService.php:30 OCP\\IServerContainer: deprecated since Nextcloud 25, Nextcloud 35 is the last major to have it"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:157 addListener()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:157 addListener()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/crmhub_nc_app/api/debug/contacts-integration  crmhub_nc_app.diagnostic.contactsintegration  appinfo/routes.php:8 routes",
+        "POST /index.php/apps/crmhub_nc_app/config/rotate-token  crmhub_nc_app.config.rotatetoken  appinfo/routes.php:17 routes",
+        "POST /index.php/apps/crmhub_nc_app/api/integrations/email/match  crmhub_nc_app.integrations.emailmatch  appinfo/routes.php:75 routes",
+        "POST /index.php/apps/crmhub_nc_app/api/integrations/email/archive  crmhub_nc_app.integrations.emailarchive  appinfo/routes.php:76 routes",
+        "POST /index.php/apps/crmhub_nc_app/api/integrations/funnel/event  crmhub_nc_app.integrations.funnelevent  appinfo/routes.php:77 routes",
+        "POST /index.php/apps/crmhub_nc_app/api/sync/groundhogg  crmhub_nc_app.sync.runincremental  appinfo/routes.php:80 routes",
+        "POST /index.php/apps/crmhub_nc_app/api/sync/groundhogg/full  crmhub_nc_app.sync.runfull  appinfo/routes.php:81 routes",
+        "GET /index.php/apps/crmhub_nc_app/api/sync/log  crmhub_nc_app.sync.log  appinfo/routes.php:82 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 8 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 34 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/crmhub_nc_app/api/debug/contacts-integration  crmhub_nc_app.diagnostic.contactsintegration  appinfo/routes.php:8 routes",
+        "  POST /index.php/apps/crmhub_nc_app/config/rotate-token  crmhub_nc_app.config.rotatetoken  appinfo/routes.php:17 routes",
+        "  POST /index.php/apps/crmhub_nc_app/api/integrations/email/match  crmhub_nc_app.integrations.emailmatch  appinfo/routes.php:75 routes",
+        "  POST /index.php/apps/crmhub_nc_app/api/integrations/email/archive  crmhub_nc_app.integrations.emailarchive  appinfo/routes.php:76 routes",
+        "  POST /index.php/apps/crmhub_nc_app/api/integrations/funnel/event  crmhub_nc_app.integrations.funnelevent  appinfo/routes.php:77 routes",
+        "  POST /index.php/apps/crmhub_nc_app/api/sync/groundhogg  crmhub_nc_app.sync.runincremental  appinfo/routes.php:80 routes",
+        "  POST /index.php/apps/crmhub_nc_app/api/sync/groundhogg/full  crmhub_nc_app.sync.runfull  appinfo/routes.php:81 routes",
+        "  GET /index.php/apps/crmhub_nc_app/api/sync/log  crmhub_nc_app.sync.log  appinfo/routes.php:82 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Controller/RecordOpsController.php:59",
+        "lib/Service/ProjectService.php:191"
+      ],
+      "lines": [
+        "2 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Controller/RecordOpsController.php:59",
+        "  lib/Service/ProjectService.php:191"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/ActivityLogPruningJob.php:50 time()",
+        "lib/BackgroundJob/MailPollingJob.php:76 time()",
+        "lib/BackgroundJob/MailPollingJob.php:178 time()",
+        "lib/BackgroundJob/OverdueProjectJob.php:62 time()",
+        "lib/BackgroundJob/PurgeSyncLogJob.php:28 time()",
+        "lib/BackgroundJob/SyncGroundhoggJob.php:27 new DateTimeImmutable()",
+        "lib/Command/SyncGroundhogg.php:28 new DateTimeImmutable()",
+        "lib/Controller/AnalyticsApiController.php:51 time()",
+        "lib/Controller/AnalyticsApiController.php:73 time()",
+        "lib/Controller/AnalyticsApiController.php:118 time()",
+        "lib/Controller/AnalyticsApiController.php:137 time()",
+        "lib/Controller/AnalyticsApiController.php:166 time()",
+        "lib/Controller/AnalyticsApiController.php:190 time()",
+        "lib/Controller/ConfigController.php:31 time()",
+        "lib/Controller/ConfigController.php:67 time()",
+        "lib/Controller/ContactsApiController.php:394 time()",
+        "lib/Controller/ContactsApiController.php:450 time()",
+        "lib/Controller/ContactsApiController.php:461 time()",
+        "lib/Controller/ContactsApiController.php:489 time()",
+        "lib/Controller/ContactsApiController.php:543 time()",
+        "lib/Controller/RecordOpsController.php:106 time()",
+        "lib/Controller/RecordOpsController.php:107 time()",
+        "lib/Controller/SyncController.php:25 new DateTimeImmutable()",
+        "lib/Controller/WebhookApiController.php:78 time()",
+        "lib/Db/ActivityMapper.php:127 time()",
+        "lib/Db/ProjectMapper.php:201 time()",
+        "lib/Db/TaskMapper.php:44 time()",
+        "lib/Listener/DeckCardDeletedListener.php:48 time()",
+        "lib/Middleware/WindmillAuthMiddleware.php:59 time()",
+        "lib/Service/ActivityService.php:77 time()",
+        "lib/Service/AutomationEngine.php:171 time()",
+        "lib/Service/CalendarService.php:71 time()",
+        "lib/Service/CalendarService.php:98 time()",
+        "lib/Service/CalendarService.php:131 time()",
+        "lib/Service/ContactCacheService.php:51 time()",
+        "lib/Service/ContactCacheService.php:65 time()",
+        "lib/Service/ContactCacheService.php:133 time()",
+        "lib/Service/ContactCacheService.php:134 time()",
+        "lib/Service/ContactCacheService.php:205 time()",
+        "lib/Service/GroundhoggSyncService.php:89 time()",
+        "lib/Service/GroundhoggSyncService.php:106 new DateTime()",
+        "lib/Service/GroundhoggSyncService.php:129 time()",
+        "lib/Service/GroundhoggSyncService.php:160 time()",
+        "lib/Service/GroundhoggSyncService.php:174 time()",
+        "lib/Service/NoteService.php:33 time()",
+        "lib/Service/NotificationService.php:41 new DateTime()",
+        "lib/Service/NotificationService.php:69 new DateTime()",
+        "lib/Service/ProjectService.php:79 time()",
+        "lib/Service/ProjectService.php:145 time()",
+        "lib/Service/ProjectService.php:232 time()",
+        "lib/Service/ProjectService.php:298 time()",
+        "lib/Service/ProjectService.php:312 time()",
+        "lib/Service/ProjectService.php:404 time()",
+        "lib/Service/WebhookService.php:59 time()",
+        "lib/Service/WebhookService.php:92 time()",
+        "lib/Service/WebhookService.php:100 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 56 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/BackgroundJob/ActivityLogPruningJob.php:50 time()",
+        "  lib/BackgroundJob/MailPollingJob.php:76 time()",
+        "  lib/BackgroundJob/MailPollingJob.php:178 time()",
+        "  lib/BackgroundJob/OverdueProjectJob.php:62 time()",
+        "  lib/BackgroundJob/PurgeSyncLogJob.php:28 time()",
+        "  lib/BackgroundJob/SyncGroundhoggJob.php:27 new DateTimeImmutable()",
+        "  lib/Command/SyncGroundhogg.php:28 new DateTimeImmutable()",
+        "  lib/Controller/AnalyticsApiController.php:51 time()",
+        "  lib/Controller/AnalyticsApiController.php:73 time()",
+        "  lib/Controller/AnalyticsApiController.php:118 time()",
+        "  lib/Controller/AnalyticsApiController.php:137 time()",
+        "  lib/Controller/AnalyticsApiController.php:166 time()",
+        "  lib/Controller/AnalyticsApiController.php:190 time()",
+        "  lib/Controller/ConfigController.php:31 time()",
+        "  lib/Controller/ConfigController.php:67 time()",
+        "  lib/Controller/ContactsApiController.php:394 time()",
+        "  lib/Controller/ContactsApiController.php:450 time()",
+        "  lib/Controller/ContactsApiController.php:461 time()",
+        "  lib/Controller/ContactsApiController.php:489 time()",
+        "  lib/Controller/ContactsApiController.php:543 time()",
+        "  lib/Controller/RecordOpsController.php:106 time()",
+        "  lib/Controller/RecordOpsController.php:107 time()",
+        "  lib/Controller/SyncController.php:25 new DateTimeImmutable()",
+        "  lib/Controller/WebhookApiController.php:78 time()",
+        "  lib/Db/ActivityMapper.php:127 time()",
+        "  lib/Db/ProjectMapper.php:201 time()",
+        "  lib/Db/TaskMapper.php:44 time()",
+        "  lib/Listener/DeckCardDeletedListener.php:48 time()",
+        "  lib/Middleware/WindmillAuthMiddleware.php:59 time()",
+        "  lib/Service/ActivityService.php:77 time()",
+        "  lib/Service/AutomationEngine.php:171 time()",
+        "  lib/Service/CalendarService.php:71 time()",
+        "  lib/Service/CalendarService.php:98 time()",
+        "  lib/Service/CalendarService.php:131 time()",
+        "  lib/Service/ContactCacheService.php:51 time()",
+        "  lib/Service/ContactCacheService.php:65 time()",
+        "  lib/Service/ContactCacheService.php:133 time()",
+        "  lib/Service/ContactCacheService.php:134 time()",
+        "  lib/Service/ContactCacheService.php:205 time()",
+        "  lib/Service/GroundhoggSyncService.php:89 time()",
+        "  lib/Service/GroundhoggSyncService.php:106 new DateTime()",
+        "  lib/Service/GroundhoggSyncService.php:129 time()",
+        "  lib/Service/GroundhoggSyncService.php:160 time()",
+        "  lib/Service/GroundhoggSyncService.php:174 time()",
+        "  lib/Service/NoteService.php:33 time()",
+        "  lib/Service/NotificationService.php:41 new DateTime()",
+        "  lib/Service/NotificationService.php:69 new DateTime()",
+        "  lib/Service/ProjectService.php:79 time()",
+        "  lib/Service/ProjectService.php:145 time()",
+        "  lib/Service/ProjectService.php:232 time()",
+        "  lib/Service/ProjectService.php:298 time()",
+        "  lib/Service/ProjectService.php:312 time()",
+        "  lib/Service/ProjectService.php:404 time()",
+        "  lib/Service/WebhookService.php:59 time()",
+        "  lib/Service/WebhookService.php:92 time()",
+        "  lib/Service/WebhookService.php:100 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 53
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/ActivityLogPruningJob.php:42 getValueString()",
+        "lib/BackgroundJob/CalendarSyncJob.php:48 getValueString()",
+        "lib/BackgroundJob/OverdueProjectJob.php:56 getValueString()",
+        "lib/Controller/ConfigController.php:27 getValueString()",
+        "lib/Controller/ConfigController.php:29 getValueString()",
+        "lib/Controller/ConfigController.php:32 getValueString()",
+        "lib/Controller/ConfigController.php:33 getValueString()",
+        "lib/Controller/ConfigController.php:34 getValueString()",
+        "lib/Controller/ConfigController.php:35 getValueString()",
+        "lib/Controller/ConfigController.php:36 getValueString()",
+        "lib/Controller/ConfigController.php:37 getValueString()",
+        "lib/Controller/ConfigController.php:38 getValueString()",
+        "lib/Controller/ConfigController.php:39 getValueString()",
+        "lib/Controller/ConfigController.php:40 getValueString()",
+        "lib/Controller/ConfigController.php:42 getValueString()",
+        "lib/Controller/ConfigController.php:43 getValueString()",
+        "lib/Controller/ConfigController.php:44 getValueString()",
+        "lib/Controller/ConfigController.php:46 getValueString()",
+        "lib/Controller/ConfigController.php:47 getValueString()",
+        "lib/Controller/ConfigController.php:49 getValueString()",
+        "lib/Controller/ConfigController.php:50 getValueString()",
+        "lib/Controller/ConfigController.php:64 setValueString()",
+        "lib/Controller/ConfigController.php:68 setValueString()",
+        "lib/Controller/ConfigController.php:83 setValueString()",
+        "lib/Controller/ConfigController.php:86 setValueString()",
+        "lib/Controller/ConfigController.php:89 setValueString()",
+        "lib/Controller/ConfigController.php:92 setValueString()",
+        "lib/Controller/ConfigController.php:98 setValueString()",
+        "lib/Controller/ConfigController.php:102 setValueString()",
+        "lib/Controller/ConfigController.php:106 setValueString()",
+        "lib/Controller/ConfigController.php:110 setValueString()",
+        "lib/Controller/ConfigController.php:114 setValueString()",
+        "lib/Controller/ConfigController.php:118 setValueString()",
+        "lib/Controller/ConfigController.php:125 setValueString()",
+        "lib/Controller/ConfigController.php:129 setValueString()",
+        "lib/Controller/ConfigController.php:135 setValueString()",
+        "lib/Controller/ConfigController.php:139 setValueString()",
+        "lib/Controller/IntegrationsController.php:105 getValueString()",
+        "lib/Listener/DeckCardCreatedListener.php:54 getValueString()",
+        "lib/Listener/DeckCardCreatedListener.php:59 getValueString()",
+        "lib/Listener/NodeWrittenListener.php:70 getValueString()",
+        "lib/Middleware/WindmillAuthMiddleware.php:42 getValueString()",
+        "lib/Middleware/WindmillAuthMiddleware.php:58 getValueString()",
+        "lib/Service/CalendarService.php:88 getValueString()",
+        "lib/Service/CalendarService.php:89 setValueString()",
+        "lib/Service/CalendarService.php:90 setValueString()",
+        "lib/Service/CalendarService.php:91 setValueString()",
+        "lib/Service/CalendarService.php:95 getValueString()",
+        "lib/Service/CalendarService.php:96 setValueString()",
+        "lib/Service/CalendarService.php:97 setValueString()",
+        "lib/Service/CalendarService.php:98 setValueString()",
+        "lib/Service/GroundhoggClient.php:71 getValueString()",
+        "lib/Service/GroundhoggClient.php:75 getValueString()",
+        "lib/Service/OnboardingService.php:44 getValueString()",
+        "lib/Service/OnboardingService.php:53 getValueString()",
+        "lib/Service/OnboardingService.php:59 getValueString()",
+        "lib/Service/OnboardingService.php:62 getValueString()",
+        "lib/Service/OnboardingService.php:65 getValueString()",
+        "lib/Service/ProjectService.php:93 getValueString()",
+        "lib/Service/ProjectService.php:380 getValueString()",
+        "lib/Settings/Admin.php:23 getValueString()",
+        "lib/Settings/Admin.php:24 getValueString()",
+        "lib/Settings/Admin.php:25 getValueString()",
+        "lib/Settings/Admin.php:26 getValueString()",
+        "lib/Settings/Admin.php:27 getValueString()",
+        "lib/Settings/Admin.php:28 getValueString()",
+        "lib/Settings/Admin.php:29 getValueString()",
+        "lib/Settings/Admin.php:30 getValueString()",
+        "lib/Settings/Admin.php:31 getValueString()",
+        "lib/Settings/Admin.php:32 getValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 70 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/BackgroundJob/ActivityLogPruningJob.php:42 getValueString()",
+        "  lib/BackgroundJob/CalendarSyncJob.php:48 getValueString()",
+        "  lib/BackgroundJob/OverdueProjectJob.php:56 getValueString()",
+        "  lib/Controller/ConfigController.php:27 getValueString()",
+        "  lib/Controller/ConfigController.php:29 getValueString()",
+        "  lib/Controller/ConfigController.php:32 getValueString()",
+        "  lib/Controller/ConfigController.php:33 getValueString()",
+        "  lib/Controller/ConfigController.php:34 getValueString()",
+        "  lib/Controller/ConfigController.php:35 getValueString()",
+        "  lib/Controller/ConfigController.php:36 getValueString()",
+        "  lib/Controller/ConfigController.php:37 getValueString()",
+        "  lib/Controller/ConfigController.php:38 getValueString()",
+        "  lib/Controller/ConfigController.php:39 getValueString()",
+        "  lib/Controller/ConfigController.php:40 getValueString()",
+        "  lib/Controller/ConfigController.php:42 getValueString()",
+        "  lib/Controller/ConfigController.php:43 getValueString()",
+        "  lib/Controller/ConfigController.php:44 getValueString()",
+        "  lib/Controller/ConfigController.php:46 getValueString()",
+        "  lib/Controller/ConfigController.php:47 getValueString()",
+        "  lib/Controller/ConfigController.php:49 getValueString()",
+        "  lib/Controller/ConfigController.php:50 getValueString()",
+        "  lib/Controller/ConfigController.php:64 setValueString()",
+        "  lib/Controller/ConfigController.php:68 setValueString()",
+        "  lib/Controller/ConfigController.php:83 setValueString()",
+        "  lib/Controller/ConfigController.php:86 setValueString()",
+        "  lib/Controller/ConfigController.php:89 setValueString()",
+        "  lib/Controller/ConfigController.php:92 setValueString()",
+        "  lib/Controller/ConfigController.php:98 setValueString()",
+        "  lib/Controller/ConfigController.php:102 setValueString()",
+        "  lib/Controller/ConfigController.php:106 setValueString()",
+        "  lib/Controller/ConfigController.php:110 setValueString()",
+        "  lib/Controller/ConfigController.php:114 setValueString()",
+        "  lib/Controller/ConfigController.php:118 setValueString()",
+        "  lib/Controller/ConfigController.php:125 setValueString()",
+        "  lib/Controller/ConfigController.php:129 setValueString()",
+        "  lib/Controller/ConfigController.php:135 setValueString()",
+        "  lib/Controller/ConfigController.php:139 setValueString()",
+        "  lib/Controller/IntegrationsController.php:105 getValueString()",
+        "  lib/Listener/DeckCardCreatedListener.php:54 getValueString()",
+        "  lib/Listener/DeckCardCreatedListener.php:59 getValueString()",
+        "  lib/Listener/NodeWrittenListener.php:70 getValueString()",
+        "  lib/Middleware/WindmillAuthMiddleware.php:42 getValueString()",
+        "  lib/Middleware/WindmillAuthMiddleware.php:58 getValueString()",
+        "  lib/Service/CalendarService.php:88 getValueString()",
+        "  lib/Service/CalendarService.php:89 setValueString()",
+        "  lib/Service/CalendarService.php:90 setValueString()",
+        "  lib/Service/CalendarService.php:91 setValueString()",
+        "  lib/Service/CalendarService.php:95 getValueString()",
+        "  lib/Service/CalendarService.php:96 setValueString()",
+        "  lib/Service/CalendarService.php:97 setValueString()",
+        "  lib/Service/CalendarService.php:98 setValueString()",
+        "  lib/Service/GroundhoggClient.php:71 getValueString()",
+        "  lib/Service/GroundhoggClient.php:75 getValueString()",
+        "  lib/Service/OnboardingService.php:44 getValueString()",
+        "  lib/Service/OnboardingService.php:53 getValueString()",
+        "  lib/Service/OnboardingService.php:59 getValueString()",
+        "  lib/Service/OnboardingService.php:62 getValueString()",
+        "  lib/Service/OnboardingService.php:65 getValueString()",
+        "  lib/Service/ProjectService.php:93 getValueString()",
+        "  lib/Service/ProjectService.php:380 getValueString()",
+        "  lib/Settings/Admin.php:23 getValueString()",
+        "  lib/Settings/Admin.php:24 getValueString()",
+        "  lib/Settings/Admin.php:25 getValueString()",
+        "  lib/Settings/Admin.php:26 getValueString()",
+        "  lib/Settings/Admin.php:27 getValueString()",
+        "  lib/Settings/Admin.php:28 getValueString()",
+        "  lib/Settings/Admin.php:29 getValueString()",
+        "  lib/Settings/Admin.php:30 getValueString()",
+        "  lib/Settings/Admin.php:31 getValueString()",
+        "  lib/Settings/Admin.php:32 getValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 67
+        }
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/ConfigController.php:26 OCA\\ReidelCrm\\Controller\\ConfigController::getConfig()"
+      ],
+      "lines": [
+        "1 public method of a controller is reached by no route.",
+        "  lib/Controller/ConfigController.php:26 OCA\\ReidelCrm\\Controller\\ConfigController::getConfig()"
+      ]
+    }
+  ],
+  "endpoints": 54,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/",
+      "target": "OCA\\ReidelCrm\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/activity",
+      "target": "OCA\\ReidelCrm\\Controller\\ContactsApiController::recent",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/analytics/activity-by-type",
+      "target": "OCA\\ReidelCrm\\Controller\\AnalyticsApiController::activityByType",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/analytics/contact-growth",
+      "target": "OCA\\ReidelCrm\\Controller\\AnalyticsApiController::contactGrowth",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/analytics/project-health",
+      "target": "OCA\\ReidelCrm\\Controller\\AnalyticsApiController::projectHealth",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/analytics/trends",
+      "target": "OCA\\ReidelCrm\\Controller\\AnalyticsApiController::trends",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/contacts",
+      "target": "OCA\\ReidelCrm\\Controller\\ContactsApiController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/crmhub_nc_app/api/contacts",
+      "target": "OCA\\ReidelCrm\\Controller\\ContactsApiController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/contacts-integration/summary",
+      "target": "OCA\\ReidelCrm\\Controller\\ContactsApiController::contactsIntegration",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/contacts/{contactId}/notes",
+      "target": "OCA\\ReidelCrm\\Controller\\NotesApiController::forContact",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/contacts/{contactId}/projects",
+      "target": "OCA\\ReidelCrm\\Controller\\ProjectsApiController::forContact",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/crmhub_nc_app/api/contacts/{contactId}/projects",
+      "target": "OCA\\ReidelCrm\\Controller\\ProjectsApiController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/crmhub_nc_app/api/contacts/{id}",
+      "target": "OCA\\ReidelCrm\\Controller\\ContactsApiController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/contacts/{id}",
+      "target": "OCA\\ReidelCrm\\Controller\\ContactsApiController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/crmhub_nc_app/api/contacts/{id}",
+      "target": "OCA\\ReidelCrm\\Controller\\ContactsApiController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/contacts/{id}/activity",
+      "target": "OCA\\ReidelCrm\\Controller\\ContactsApiController::activity",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/crmhub_nc_app/api/contacts/{id}/activity",
+      "target": "OCA\\ReidelCrm\\Controller\\ContactsApiController::createActivity",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/crmhub_nc_app/api/contacts/{id}/move-stage",
+      "target": "OCA\\ReidelCrm\\Controller\\ContactsApiController::moveStage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/contacts/{id}/summary",
+      "target": "OCA\\ReidelCrm\\Controller\\ContactsApiController::summary",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/contacts/{id}/tasks",
+      "target": "OCA\\ReidelCrm\\Controller\\ContactsApiController::getTasks",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/crmhub_nc_app/api/contacts/{id}/tasks",
+      "target": "OCA\\ReidelCrm\\Controller\\ContactsApiController::createTask",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/contacts/by-email",
+      "target": "OCA\\ReidelCrm\\Controller\\ContactsApiController::findByEmail",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/contacts/by-vcard",
+      "target": "OCA\\ReidelCrm\\Controller\\ContactsApiController::findByVcardUid",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/crmhub_nc_app/api/contacts/link-vcard",
+      "target": "OCA\\ReidelCrm\\Controller\\ContactsApiController::linkVcard",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/contacts/vcards",
+      "target": "OCA\\ReidelCrm\\Controller\\ContactsApiController::listVcards",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/dashboard/summary",
+      "target": "OCA\\ReidelCrm\\Controller\\DashboardApiController::summary",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/debug/contacts-integration",
+      "target": "OCA\\ReidelCrm\\Controller\\DiagnosticController::contactsIntegration",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/export/activities",
+      "target": "OCA\\ReidelCrm\\Controller\\ExportApiController::exportActivities",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/export/contacts",
+      "target": "OCA\\ReidelCrm\\Controller\\ExportApiController::exportContacts",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/export/projects",
+      "target": "OCA\\ReidelCrm\\Controller\\ExportApiController::exportProjects",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/crmhub_nc_app/api/integrations/email/archive",
+      "target": "OCA\\ReidelCrm\\Controller\\IntegrationsController::emailArchive",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/crmhub_nc_app/api/integrations/email/match",
+      "target": "OCA\\ReidelCrm\\Controller\\IntegrationsController::emailMatch",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/crmhub_nc_app/api/integrations/funnel/event",
+      "target": "OCA\\ReidelCrm\\Controller\\IntegrationsController::funnelEvent",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/crmhub_nc_app/api/notes",
+      "target": "OCA\\ReidelCrm\\Controller\\NotesApiController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/crmhub_nc_app/api/notes/{id}",
+      "target": "OCA\\ReidelCrm\\Controller\\NotesApiController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/projects",
+      "target": "OCA\\ReidelCrm\\Controller\\ProjectsApiController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/crmhub_nc_app/api/projects/{id}",
+      "target": "OCA\\ReidelCrm\\Controller\\ProjectsApiController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/projects/{id}",
+      "target": "OCA\\ReidelCrm\\Controller\\ProjectsApiController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/crmhub_nc_app/api/projects/{id}",
+      "target": "OCA\\ReidelCrm\\Controller\\ProjectsApiController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/projects/{id}/activity",
+      "target": "OCA\\ReidelCrm\\Controller\\ProjectsApiController::projectActivity",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/projects/{projectId}/notes",
+      "target": "OCA\\ReidelCrm\\Controller\\NotesApiController::forProject",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/crmhub_nc_app/api/records/{id}/duplicate",
+      "target": "OCA\\ReidelCrm\\Controller\\RecordOpsController::duplicate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/crmhub_nc_app/api/records/merge",
+      "target": "OCA\\ReidelCrm\\Controller\\RecordOpsController::merge",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/relations",
+      "target": "OCA\\ReidelCrm\\Controller\\RelationsApiController::lookup",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/crmhub_nc_app/api/sync/groundhogg",
+      "target": "OCA\\ReidelCrm\\Controller\\SyncController::runIncremental",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/crmhub_nc_app/api/sync/groundhogg/full",
+      "target": "OCA\\ReidelCrm\\Controller\\SyncController::runFull",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/sync/log",
+      "target": "OCA\\ReidelCrm\\Controller\\SyncController::log",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/crmhub_nc_app/api/tasks/{id}",
+      "target": "OCA\\ReidelCrm\\Controller\\ContactsApiController::updateTask",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/crmhub_nc_app/api/webhooks",
+      "target": "OCA\\ReidelCrm\\Controller\\WebhookApiController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/crmhub_nc_app/api/webhooks",
+      "target": "OCA\\ReidelCrm\\Controller\\WebhookApiController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/crmhub_nc_app/api/webhooks/{id}",
+      "target": "OCA\\ReidelCrm\\Controller\\WebhookApiController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/crmhub_nc_app/api/webhooks/{id}",
+      "target": "OCA\\ReidelCrm\\Controller\\WebhookApiController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/crmhub_nc_app/config",
+      "target": "OCA\\ReidelCrm\\Controller\\ConfigController::setConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/crmhub_nc_app/config/rotate-token",
+      "target": "OCA\\ReidelCrm\\Controller\\ConfigController::rotateToken",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

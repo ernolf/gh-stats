@@ -1,0 +1,173 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\ProfileFields\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:58 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:58 injectFn()"
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Service/DataImportService.php:54"
+      ],
+      "lines": [
+        "1 transaction is opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Service/DataImportService.php:54"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/FieldDefinitionService.php:39 new DateTime()",
+        "lib/Service/FieldDefinitionService.php:87 new DateTime()",
+        "lib/Service/FieldValueService.php:494 new DateTime()",
+        "lib/Workflow/NotifyAdminsOrGroupsProfileFieldChangeOperation.php:103 new DateTime()",
+        "lib/Workflow/SendWebhookProfileFieldChangeOperation.php:81 new DateTimeImmutable()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 5 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/FieldDefinitionService.php:39 new DateTime()",
+        "  lib/Service/FieldDefinitionService.php:87 new DateTime()",
+        "  lib/Service/FieldValueService.php:494 new DateTime()",
+        "  lib/Workflow/NotifyAdminsOrGroupsProfileFieldChangeOperation.php:103 new DateTime()",
+        "  lib/Workflow/SendWebhookProfileFieldChangeOperation.php:81 new DateTimeImmutable()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    }
+  ],
+  "endpoints": 11,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/profile_fields/api/v1/definitions",
+      "target": "OCA\\ProfileFields\\Controller\\FieldDefinitionApiController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/profile_fields/api/v1/definitions",
+      "target": "OCA\\ProfileFields\\Controller\\FieldDefinitionApiController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/profile_fields/api/v1/definitions/{id}",
+      "target": "OCA\\ProfileFields\\Controller\\FieldDefinitionApiController::delete",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/profile_fields/api/v1/definitions/{id}",
+      "target": "OCA\\ProfileFields\\Controller\\FieldDefinitionApiController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/profile_fields/api/v1/me/values",
+      "target": "OCA\\ProfileFields\\Controller\\FieldValueApiController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/profile_fields/api/v1/me/values/{fieldDefinitionId}",
+      "target": "OCA\\ProfileFields\\Controller\\FieldValueApiController::upsert",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/profile_fields/api/v1/me/values/{fieldDefinitionId}/visibility",
+      "target": "OCA\\ProfileFields\\Controller\\FieldValueApiController::updateVisibility",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/profile_fields/api/v1/users/{userUid}/values",
+      "target": "OCA\\ProfileFields\\Controller\\FieldValueAdminApiController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/profile_fields/api/v1/users/{userUid}/values/{fieldDefinitionId}",
+      "target": "OCA\\ProfileFields\\Controller\\FieldValueAdminApiController::upsert",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/profile_fields/api/v1/users/lookup",
+      "target": "OCA\\ProfileFields\\Controller\\FieldValueAdminApiController::lookup",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/profile_fields/api/v1/users/search",
+      "target": "OCA\\ProfileFields\\Controller\\FieldValueAdminApiController::search",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

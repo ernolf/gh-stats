@@ -1,0 +1,232 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\FileSubscription\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/MailController.php:95 OC\\AppFramework\\Http",
+        "lib/Controller/MailController.php:184 OC_Defaults",
+        "lib/Controller/MailController.php:233 OC::$server",
+        "lib/Controller/SubscribeController.php:58 OC::$server",
+        "lib/Controller/SubscribeController.php:69 OC::$server",
+        "lib/Controller/SubscribeController.php:72 OC\\Files\\Filesystem",
+        "lib/Controller/SubscribeController.php:143 OC::$server",
+        "lib/Controller/SubscribeController.php:155 OC::$server",
+        "lib/Manager.php:38 OC::$server",
+        "lib/Manager.php:161 OC::$server",
+        "lib/Manager.php:193 OC::$server",
+        "lib/ShareHooks.php:24 OC::$server",
+        "lib/ShareHooks.php:39 OC::$server",
+        "lib/ShareHooks.php:61 OC::$server",
+        "lib/ShareHooks.php:68 OC::$server"
+      ],
+      "lines": [
+        "15 uses of the private API of the server in 4 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/MailController.php:95 OC\\AppFramework\\Http",
+        "  lib/Controller/MailController.php:184 OC_Defaults",
+        "  lib/Controller/MailController.php:233 OC::$server",
+        "  lib/Controller/SubscribeController.php:58 OC::$server",
+        "  lib/Controller/SubscribeController.php:69 OC::$server",
+        "  lib/Controller/SubscribeController.php:72 OC\\Files\\Filesystem",
+        "  lib/Controller/SubscribeController.php:143 OC::$server",
+        "  lib/Controller/SubscribeController.php:155 OC::$server",
+        "  lib/Manager.php:38 OC::$server",
+        "  lib/Manager.php:161 OC::$server",
+        "  lib/Manager.php:193 OC::$server",
+        "  lib/ShareHooks.php:24 OC::$server",
+        "  lib/ShareHooks.php:39 OC::$server",
+        "  lib/ShareHooks.php:61 OC::$server",
+        "  lib/ShareHooks.php:68 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 12
+        }
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/Controller/ApiController.php:65 OCP\\AppFramework\\Http\\TextPlainResponse: there since Nextcloud 22, the app declares from 20",
+        "lib/Listener/BeforeDeleteListener.php:33 OCP\\HintException: there since Nextcloud 23, the app declares from 20"
+      ],
+      "lines": [
+        "2 uses in 2 files of the public API that the oldest majors of Nextcloud 20 to 26 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/Controller/ApiController.php:65 OCP\\AppFramework\\Http\\TextPlainResponse: there since Nextcloud 22, the app declares from 20",
+        "  lib/Listener/BeforeDeleteListener.php:33 OCP\\HintException: there since Nextcloud 23, the app declares from 20"
+      ]
+    },
+    {
+      "id": "route-target-missing",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/filesubscription/subscribe/{shareId}  filesubscription.subscribe.getsubscription  appinfo/routes.php:10 routes: OCA\\FileSubscription\\Controller\\SubscribeController has no method getSubscription()"
+      ],
+      "lines": [
+        "1 route names a controller class or a method that does not exist, or a method that is not public. A request to such a route ends in an error.",
+        "  GET /index.php/apps/filesubscription/subscribe/{shareId}  filesubscription.subscribe.getsubscription  appinfo/routes.php:10 routes: OCA\\FileSubscription\\Controller\\SubscribeController has no method getSubscription()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/filesubscription/subscribe/state/{token}  filesubscription.subscribe.getstate  appinfo/routes.php:13 routes",
+        "GET /index.php/apps/filesubscription/status  filesubscription.api.statusall  appinfo/routes.php:20 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 3 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/filesubscription/subscribe/state/{token}  filesubscription.subscribe.getstate  appinfo/routes.php:13 routes",
+        "  GET /index.php/apps/filesubscription/status  filesubscription.api.statusall  appinfo/routes.php:20 routes"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/ApiController.php:166 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 1 place. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/ApiController.php:166 new DateTime()"
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/MailController.php:138 OCA\\FileSubscription\\Controller\\MailController::cancelMail()"
+      ],
+      "lines": [
+        "1 public method of a controller is reached by no route.",
+        "  lib/Controller/MailController.php:138 OCA\\FileSubscription\\Controller\\MailController::cancelMail()"
+      ]
+    }
+  ],
+  "endpoints": 14,
+  "endpointList": [
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/filesubscription/",
+      "target": "OCA\\FileSubscription\\Controller\\SubscribeController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:6 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/filesubscription/apicode/{token}",
+      "target": "OCA\\FileSubscription\\Controller\\ApiController::getCode",
+      "openapi": [],
+      "source": "appinfo/routes.php:21 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/filesubscription/cancel",
+      "target": "OCA\\FileSubscription\\Controller\\SubscribeController::cancel",
+      "openapi": [],
+      "source": "appinfo/routes.php:8 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/filesubscription/log/{shareId}",
+      "target": "OCA\\FileSubscription\\Controller\\LogController::deleteAll",
+      "openapi": [],
+      "source": "appinfo/routes.php:17 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/filesubscription/log/{shareId}",
+      "target": "OCA\\FileSubscription\\Controller\\LogController::getLog",
+      "openapi": [],
+      "source": "appinfo/routes.php:15 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/filesubscription/log/download/{subscrId}",
+      "target": "OCA\\FileSubscription\\Controller\\LogController::downloadFile",
+      "openapi": [],
+      "source": "appinfo/routes.php:16 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/filesubscription/mail/update",
+      "target": "OCA\\FileSubscription\\Controller\\MailController::updateMail",
+      "openapi": [],
+      "source": "appinfo/routes.php:5 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/filesubscription/status",
+      "target": "OCA\\FileSubscription\\Controller\\ApiController::statusAll",
+      "openapi": [],
+      "source": "appinfo/routes.php:20 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/filesubscription/status/{token}",
+      "target": "OCA\\FileSubscription\\Controller\\ApiController::status",
+      "openapi": [],
+      "source": "appinfo/routes.php:19 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/filesubscription/subscribe",
+      "target": "OCA\\FileSubscription\\Controller\\SubscribeController::removeSubscriber",
+      "openapi": [],
+      "source": "appinfo/routes.php:12 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/filesubscription/subscribe",
+      "target": "OCA\\FileSubscription\\Controller\\SubscribeController::addSubscriber",
+      "openapi": [],
+      "source": "appinfo/routes.php:11 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/filesubscription/subscribe/{shareId}",
+      "target": "OCA\\FileSubscription\\Controller\\SubscribeController::getSubscription",
+      "openapi": [],
+      "source": "appinfo/routes.php:10 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/filesubscription/subscribe/state/{token}",
+      "target": "OCA\\FileSubscription\\Controller\\SubscribeController::getState",
+      "openapi": [],
+      "source": "appinfo/routes.php:13 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/filesubscription/update/{id}",
+      "target": "OCA\\FileSubscription\\Controller\\SubscribeController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:7 routes",
+      "kind": "route"
+    }
+  ]
+}

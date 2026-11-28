@@ -1,0 +1,241 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\FolderProtection\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "namespace-mismatch",
+      "level": "warn",
+      "places": [
+        "lib/DAV/ProtectionPlugin.php:20 OCA\\FolderProtection\\DAV\\FolderLocked, by its path OCA\\FolderProtection\\DAV\\ProtectionPlugin",
+        "lib/DAV/ProtectionPlugin.php:35 OCA\\FolderProtection\\DAV\\FolderProtected, by its path OCA\\FolderProtection\\DAV\\ProtectionPlugin"
+      ],
+      "lines": [
+        "2 classes in lib/ whose name does not follow PSR-4 below OCA\\FolderProtection, the namespace the server derives from <namespace> of info.xml. The loader of the server does not find such a class.",
+        "  lib/DAV/ProtectionPlugin.php:20 OCA\\FolderProtection\\DAV\\FolderLocked, by its path OCA\\FolderProtection\\DAV\\ProtectionPlugin",
+        "  lib/DAV/ProtectionPlugin.php:35 OCA\\FolderProtection\\DAV\\FolderProtected, by its path OCA\\FolderProtection\\DAV\\ProtectionPlugin"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:225 OC\\Files\\Filesystem",
+        "lib/AppInfo/Application.php:249 OC",
+        "lib/StorageWrapper.php:10 OC\\Files\\Storage\\Wrapper\\Wrapper"
+      ],
+      "lines": [
+        "3 uses of the private API of the server in 2 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/AppInfo/Application.php:225 OC\\Files\\Filesystem",
+        "  lib/AppInfo/Application.php:249 OC",
+        "  lib/StorageWrapper.php:10 OC\\Files\\Storage\\Wrapper\\Wrapper"
+      ]
+    },
+    {
+      "id": "legacy-hook",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:188 OC_Filesystem::preSetup: the manual names no replacement event"
+      ],
+      "lines": [
+        "1 connection to a legacy hook of the server. A hook the server removed is never emitted, and the listener never runs; the typed events of OCP\\EventDispatcher replace the hooks.",
+        "OCP\\Util::connectHook() is deprecated since Nextcloud 21: use \\OCP\\EventDispatcher\\IEventDispatcher::addListener. ocp-deprecated leaves these calls to this finding.",
+        "  lib/AppInfo/Application.php:188 OC_Filesystem::preSetup: the manual names no replacement event"
+      ]
+    },
+    {
+      "id": "dav-without-preload",
+      "level": "warn",
+      "places": [
+        "lib/DAV/LockPlugin.php:52 OCA\\FolderProtection\\DAV\\LockPlugin",
+        "lib/DAV/ProtectionPropertyPlugin.php:49 OCA\\FolderProtection\\DAV\\ProtectionPropertyPlugin"
+      ],
+      "lines": [
+        "2 DAV plugins listen to propFind and not to preloadCollection, which the server emits from Nextcloud 32 on before it reads the children of a collection. Without that listener a PROPFIND with Depth above 0 runs the queries of the plugin once per child.",
+        "  lib/DAV/LockPlugin.php:52 OCA\\FolderProtection\\DAV\\LockPlugin",
+        "  lib/DAV/ProtectionPropertyPlugin.php:49 OCA\\FolderProtection\\DAV\\ProtectionPropertyPlugin"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:199 get()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:199 get()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/folder_protection/api/check  folder_protection.admin.check  appinfo/routes.php:7 routes",
+        "POST /index.php/apps/folder_protection/api/cache/clear  folder_protection.admin.clearcache  appinfo/routes.php:8 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 6 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/folder_protection/api/check  folder_protection.admin.check  appinfo/routes.php:7 routes",
+        "  POST /index.php/apps/folder_protection/api/cache/clear  folder_protection.admin.clearcache  appinfo/routes.php:8 routes"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/AdminController.php:92 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Controller/AdminController.php:270 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Controller/AdminController.php:547 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/StorageWrapper.php:197 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead"
+      ],
+      "lines": [
+        "4 uses in 2 files of the public API that is deprecated in Nextcloud 33 to 34. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/AdminController.php:92 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Controller/AdminController.php:270 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Controller/AdminController.php:547 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/StorageWrapper.php:197 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Command/Protect.php:56 time()",
+        "lib/Controller/AdminController.php:150 time()",
+        "lib/DAV/ProtectionPlugin.php:556 time()",
+        "lib/DAV/ProtectionPlugin.php:557 time()",
+        "lib/DAV/ProtectionPlugin.php:563 time()",
+        "lib/DAV/ProtectionPlugin.php:565 time()",
+        "lib/Service/NotificationService.php:37 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 7 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Command/Protect.php:56 time()",
+        "  lib/Controller/AdminController.php:150 time()",
+        "  lib/DAV/ProtectionPlugin.php:556 time()",
+        "  lib/DAV/ProtectionPlugin.php:557 time()",
+        "  lib/DAV/ProtectionPlugin.php:563 time()",
+        "  lib/DAV/ProtectionPlugin.php:565 time()",
+        "  lib/Service/NotificationService.php:37 new DateTime()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    }
+  ],
+  "endpoints": 11,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/folder_protection/api/browse",
+      "target": "OCA\\FolderProtection\\Controller\\AdminController::browse",
+      "openapi": [],
+      "source": "appinfo/routes.php:13 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/folder_protection/api/cache/clear",
+      "target": "OCA\\FolderProtection\\Controller\\AdminController::clearCache",
+      "openapi": [],
+      "source": "appinfo/routes.php:8 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/folder_protection/api/check",
+      "target": "OCA\\FolderProtection\\Controller\\AdminController::check",
+      "openapi": [],
+      "source": "appinfo/routes.php:7 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/folder_protection/api/exists",
+      "target": "OCA\\FolderProtection\\Controller\\AdminController::checkExists",
+      "openapi": [],
+      "source": "appinfo/routes.php:10 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/folder_protection/api/groupfolders",
+      "target": "OCA\\FolderProtection\\Controller\\AdminController::listGroupFolders",
+      "openapi": [],
+      "source": "appinfo/routes.php:11 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/folder_protection/api/list",
+      "target": "OCA\\FolderProtection\\Controller\\AdminController::list",
+      "openapi": [],
+      "source": "appinfo/routes.php:4 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/folder_protection/api/protect",
+      "target": "OCA\\FolderProtection\\Controller\\AdminController::protect",
+      "openapi": [],
+      "source": "appinfo/routes.php:5 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/folder_protection/api/status",
+      "target": "OCA\\FolderProtection\\Controller\\AdminController::getFolderStatuses",
+      "openapi": [],
+      "source": "appinfo/routes.php:9 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/folder_protection/api/unprotect",
+      "target": "OCA\\FolderProtection\\Controller\\AdminController::unprotect",
+      "openapi": [],
+      "source": "appinfo/routes.php:6 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/folder_protection/api/update-reason",
+      "target": "OCA\\FolderProtection\\Controller\\AdminController::updateReason",
+      "openapi": [],
+      "source": "appinfo/routes.php:12 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/folder_protection/api/widget/data",
+      "target": "OCA\\FolderProtection\\Controller\\WidgetController::getData",
+      "openapi": [],
+      "source": "appinfo/routes.php:14 routes",
+      "kind": "route"
+    }
+  ]
+}

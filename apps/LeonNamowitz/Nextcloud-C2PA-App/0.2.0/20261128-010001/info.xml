@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<!--
+  - SPDX-FileCopyrightText: 2026 Leon Namowitz
+  - SPDX-License-Identifier: MIT
+-->
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>contentcredentials</id>
+	<name>Content Credentials</name>
+	<summary>Detect and inspect C2PA Content Credentials in PDFs, images, audio and video</summary>
+	<description><![CDATA[
+Checks files for embedded **C2PA Content Credentials** (the provenance manifests produced by Adobe, OpenAI, camera vendors and others) and shows the result right in the Files app:
+
+* a badge next to the file name (valid, invalid or remote manifest)
+* a **Credentials** sidebar tab with signer, signing time, creating app, AI-generation hints, edit history, ingredients and the raw manifest
+
+Supported formats include PDF, JPEG, PNG, WebP, GIF, TIFF, HEIC/HEIF, AVIF, JPEG XL, DNG, SVG, MP4/MOV, MP3, WAV, FLAC and Office/OpenDocument files.
+
+Existing files are scanned in the background after installation; new uploads are scanned automatically.
+
+Verification is done offline with the official c2pa-rs SDK (bundled `c2pa-scan` binary). Remote manifests are only downloaded when a user clicks *Fetch remote manifest* in the sidebar (admins can turn that off). No trust list is configured, so correctly signed credentials are reported as *valid* (cryptographically intact) rather than *trusted*.
+	]]></description>
+	<version>0.2.0</version>
+	<licence>MIT</licence>
+	<author>Leon Namowitz</author>
+	<namespace>ContentCredentials</namespace>
+	<category>files</category>
+	<category>security</category>
+	<dependencies>
+		<php min-version="8.2"/>
+		<nextcloud min-version="33" max-version="35"/>
+	</dependencies>
+	<background-jobs>
+		<job>OCA\ContentCredentials\BackgroundJob\InitialScanJob</job>
+	</background-jobs>
+	<repair-steps>
+		<install>
+			<step>OCA\ContentCredentials\Migration\InitMetadataKeys</step>
+			<step>OCA\ContentCredentials\Migration\QueueInitialScan</step>
+		</install>
+		<post-migration>
+			<step>OCA\ContentCredentials\Migration\InitMetadataKeys</step>
+			<step>OCA\ContentCredentials\Migration\QueueInitialScan</step>
+		</post-migration>
+	</repair-steps>
+</info>

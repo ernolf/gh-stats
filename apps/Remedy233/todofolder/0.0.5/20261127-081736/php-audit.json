@@ -1,0 +1,307 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\TodoFolder\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Service/DeckBridge.php:563 OC_User",
+        "lib/Service/DeckBridge.php:568 OC_Util"
+      ],
+      "lines": [
+        "2 uses of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Service/DeckBridge.php:563 OC_User",
+        "  lib/Service/DeckBridge.php:568 OC_Util"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/todofolder/api/whoami  todofolder.page.whoami  lib/Controller/PageController.php:87"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 route outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 5 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/todofolder/api/whoami  todofolder.page.whoami  lib/Controller/PageController.php:87"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "vimeo/psalm, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Service/AnalysisService.php:88 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/DeckBridge.php:366 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead"
+      ],
+      "lines": [
+        "2 uses in 2 files of the public API that is deprecated in Nextcloud 33 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Service/AnalysisService.php:88 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/DeckBridge.php:366 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/QueueWorker.php OCA\\TodoFolder\\BackgroundJob\\QueueWorker"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/QueueWorker.php OCA\\TodoFolder\\BackgroundJob\\QueueWorker"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/QueueWorker.php:44 time()",
+        "lib/Command/ScanCommand.php:53 time()",
+        "lib/Controller/TaskController.php:178 time()",
+        "lib/Service/AiClient.php:166 time()",
+        "lib/Service/AnalysisService.php:107 time()",
+        "lib/Service/AnalysisService.php:135 time()",
+        "lib/Service/AnalysisService.php:136 time()",
+        "lib/Service/AnalysisService.php:147 time()",
+        "lib/Service/AnalysisService.php:157 time()",
+        "lib/Service/AnalysisService.php:179 time()",
+        "lib/Service/AnalysisService.php:185 time()",
+        "lib/Service/DeckBridge.php:276 time()",
+        "lib/Service/Scanner.php:46 time()",
+        "lib/Service/WorkspaceService.php:153 time()",
+        "lib/Service/WorkspaceService.php:203 time()",
+        "lib/Service/WorkspaceService.php:214 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 16 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/BackgroundJob/QueueWorker.php:44 time()",
+        "  lib/Command/ScanCommand.php:53 time()",
+        "  lib/Controller/TaskController.php:178 time()",
+        "  lib/Service/AiClient.php:166 time()",
+        "  lib/Service/AnalysisService.php:107 time()",
+        "  lib/Service/AnalysisService.php:135 time()",
+        "  lib/Service/AnalysisService.php:136 time()",
+        "  lib/Service/AnalysisService.php:147 time()",
+        "  lib/Service/AnalysisService.php:157 time()",
+        "  lib/Service/AnalysisService.php:179 time()",
+        "  lib/Service/AnalysisService.php:185 time()",
+        "  lib/Service/DeckBridge.php:276 time()",
+        "  lib/Service/Scanner.php:46 time()",
+        "  lib/Service/WorkspaceService.php:153 time()",
+        "  lib/Service/WorkspaceService.php:203 time()",
+        "  lib/Service/WorkspaceService.php:214 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 13
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/ConfigService.php:45 getValueString()",
+        "lib/Service/ConfigService.php:49 getValueString()",
+        "lib/Service/ConfigService.php:53 getValueString()",
+        "lib/Service/ConfigService.php:57 getValueInt()",
+        "lib/Service/ConfigService.php:61 getValueInt()",
+        "lib/Service/ConfigService.php:65 getValueInt()",
+        "lib/Service/ConfigService.php:69 getValueInt()",
+        "lib/Service/ConfigService.php:73 getValueBool()",
+        "lib/Service/ConfigService.php:80 getValueBool()",
+        "lib/Service/ConfigService.php:87 getValueBool()",
+        "lib/Service/ConfigService.php:94 getValueBool()",
+        "lib/Service/ConfigService.php:101 getValueBool()",
+        "lib/Service/ConfigService.php:108 getValueBool()",
+        "lib/Service/ConfigService.php:112 getValueInt()",
+        "lib/Service/ConfigService.php:123 setValueString()",
+        "lib/Service/ConfigService.php:127 setValueString()",
+        "lib/Service/ConfigService.php:131 setValueString()",
+        "lib/Service/ConfigService.php:135 setValueInt()",
+        "lib/Service/ConfigService.php:139 setValueBool()",
+        "lib/Service/ConfigService.php:143 setValueInt()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 20 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/ConfigService.php:45 getValueString()",
+        "  lib/Service/ConfigService.php:49 getValueString()",
+        "  lib/Service/ConfigService.php:53 getValueString()",
+        "  lib/Service/ConfigService.php:57 getValueInt()",
+        "  lib/Service/ConfigService.php:61 getValueInt()",
+        "  lib/Service/ConfigService.php:65 getValueInt()",
+        "  lib/Service/ConfigService.php:69 getValueInt()",
+        "  lib/Service/ConfigService.php:73 getValueBool()",
+        "  lib/Service/ConfigService.php:80 getValueBool()",
+        "  lib/Service/ConfigService.php:87 getValueBool()",
+        "  lib/Service/ConfigService.php:94 getValueBool()",
+        "  lib/Service/ConfigService.php:101 getValueBool()",
+        "  lib/Service/ConfigService.php:108 getValueBool()",
+        "  lib/Service/ConfigService.php:112 getValueInt()",
+        "  lib/Service/ConfigService.php:123 setValueString()",
+        "  lib/Service/ConfigService.php:127 setValueString()",
+        "  lib/Service/ConfigService.php:131 setValueString()",
+        "  lib/Service/ConfigService.php:135 setValueInt()",
+        "  lib/Service/ConfigService.php:139 setValueBool()",
+        "  lib/Service/ConfigService.php:143 setValueInt()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 17
+        }
+      ]
+    }
+  ],
+  "endpoints": 19,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/todofolder/",
+      "target": "OCA\\TodoFolder\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/todofolder/api/deck/boards",
+      "target": "OCA\\TodoFolder\\Controller\\TaskController::boards",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/todofolder/api/deck/boards/{boardId}/stacks",
+      "target": "OCA\\TodoFolder\\Controller\\TaskController::stacks",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/todofolder/api/fs",
+      "target": "OCA\\TodoFolder\\Controller\\WorkspaceController::browse",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/todofolder/api/settings",
+      "target": "OCA\\TodoFolder\\Controller\\SettingsController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/todofolder/api/settings",
+      "target": "OCA\\TodoFolder\\Controller\\SettingsController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/todofolder/api/settings/test",
+      "target": "OCA\\TodoFolder\\Controller\\SettingsController::test",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/todofolder/api/tasks/{id}",
+      "target": "OCA\\TodoFolder\\Controller\\TaskController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/todofolder/api/tasks/{id}/analyze",
+      "target": "OCA\\TodoFolder\\Controller\\TaskController::analyze",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/todofolder/api/tasks/{id}/deck",
+      "target": "OCA\\TodoFolder\\Controller\\TaskController::deck",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/todofolder/api/whoami",
+      "target": "OCA\\TodoFolder\\Controller\\PageController::whoami",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/todofolder/api/workspaces",
+      "target": "OCA\\TodoFolder\\Controller\\WorkspaceController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/todofolder/api/workspaces",
+      "target": "OCA\\TodoFolder\\Controller\\WorkspaceController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/todofolder/api/workspaces/{id}",
+      "target": "OCA\\TodoFolder\\Controller\\WorkspaceController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/todofolder/api/workspaces/{id}",
+      "target": "OCA\\TodoFolder\\Controller\\WorkspaceController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/todofolder/api/workspaces/{id}/analyze-pending",
+      "target": "OCA\\TodoFolder\\Controller\\TaskController::analyzePending",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/todofolder/api/workspaces/{id}/decksetup",
+      "target": "OCA\\TodoFolder\\Controller\\TaskController::deckSetup",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/todofolder/api/workspaces/{id}/scan",
+      "target": "OCA\\TodoFolder\\Controller\\TaskController::scan",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/todofolder/api/workspaces/{id}/tasks",
+      "target": "OCA\\TodoFolder\\Controller\\TaskController::index",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

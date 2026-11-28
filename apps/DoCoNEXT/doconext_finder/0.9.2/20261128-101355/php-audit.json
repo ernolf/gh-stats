@@ -1,0 +1,412 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\DcnFinder\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Search/CoreSearch.php:46 OC\\Files\\Search\\SearchQuery",
+        "lib/Search/CoreSearch.php:51 OC\\Files\\Search\\SearchOrder",
+        "lib/Search/CoreSearch.php:56 OC\\Files\\Search\\SearchComparison",
+        "lib/Search/CoreSearch.php:64 OC\\Files\\Search\\SearchBinaryOperator"
+      ],
+      "lines": [
+        "4 uses of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Search/CoreSearch.php:46 OC\\Files\\Search\\SearchQuery",
+        "  lib/Search/CoreSearch.php:51 OC\\Files\\Search\\SearchOrder",
+        "  lib/Search/CoreSearch.php:56 OC\\Files\\Search\\SearchComparison",
+        "  lib/Search/CoreSearch.php:64 OC\\Files\\Search\\SearchBinaryOperator"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "display-name-lookup",
+      "level": "warn",
+      "places": [
+        "lib/Service/FileAuthorService.php:64"
+      ],
+      "lines": [
+        "1 place loads a user with IUserManager::get() only to ask for the display name. IUserManager::getDisplayName(), there since Nextcloud 25, answers from a cache and loads no user.",
+        "  lib/Service/FileAuthorService.php:64"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:58 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:58 injectFn()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/doconext_finder/api/ai/status  doconext_finder.ai.status  lib/Controller/AiController.php:53",
+        "POST /index.php/apps/doconext_finder/api/ai/distil  doconext_finder.ai.distil  lib/Controller/AiController.php:71",
+        "GET /index.php/apps/doconext_finder/api/preferences  doconext_finder.preferences.show  lib/Controller/PreferencesController.php:33",
+        "PUT /index.php/apps/doconext_finder/api/preferences  doconext_finder.preferences.update  lib/Controller/PreferencesController.php:53",
+        "GET /index.php/apps/doconext_finder/api/search/fields  doconext_finder.search.fields  lib/Controller/SearchController.php:54",
+        "GET /index.php/apps/doconext_finder/api/principals  doconext_finder.search.principals  lib/Controller/SearchController.php:82",
+        "GET /index.php/apps/doconext_finder/api/scope  doconext_finder.search.scope  lib/Controller/SearchController.php:115",
+        "GET /index.php/apps/doconext_finder/api/scope/entities  doconext_finder.search.scopeentities  lib/Controller/SearchController.php:136",
+        "GET /index.php/apps/doconext_finder/api/scope/entity-for-file  doconext_finder.search.entityforfile  lib/Controller/SearchController.php:160",
+        "POST /index.php/apps/doconext_finder/api/search  doconext_finder.search.search  lib/Controller/SearchController.php:175",
+        "GET /index.php/apps/doconext_finder/api/searches  doconext_finder.searchhistory.index  lib/Controller/SearchHistoryController.php:39",
+        "POST /index.php/apps/doconext_finder/api/searches/recent  doconext_finder.searchhistory.recordrecent  lib/Controller/SearchHistoryController.php:59",
+        "DELETE /index.php/apps/doconext_finder/api/searches/recent  doconext_finder.searchhistory.clearrecents  lib/Controller/SearchHistoryController.php:76",
+        "POST /index.php/apps/doconext_finder/api/searches  doconext_finder.searchhistory.create  lib/Controller/SearchHistoryController.php:90",
+        "PUT /index.php/apps/doconext_finder/api/searches/{id}/query  doconext_finder.searchhistory.replacequery  lib/Controller/SearchHistoryController.php:116",
+        "POST /index.php/apps/doconext_finder/api/searches/{id}/run  doconext_finder.searchhistory.touch  lib/Controller/SearchHistoryController.php:148"
+      ],
+      "lines": [
+        "Nothing in the app calls 16 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 51 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/doconext_finder/api/ai/status  doconext_finder.ai.status  lib/Controller/AiController.php:53",
+        "  POST /index.php/apps/doconext_finder/api/ai/distil  doconext_finder.ai.distil  lib/Controller/AiController.php:71",
+        "  GET /index.php/apps/doconext_finder/api/preferences  doconext_finder.preferences.show  lib/Controller/PreferencesController.php:33",
+        "  PUT /index.php/apps/doconext_finder/api/preferences  doconext_finder.preferences.update  lib/Controller/PreferencesController.php:53",
+        "  GET /index.php/apps/doconext_finder/api/search/fields  doconext_finder.search.fields  lib/Controller/SearchController.php:54",
+        "  GET /index.php/apps/doconext_finder/api/principals  doconext_finder.search.principals  lib/Controller/SearchController.php:82",
+        "  GET /index.php/apps/doconext_finder/api/scope  doconext_finder.search.scope  lib/Controller/SearchController.php:115",
+        "  GET /index.php/apps/doconext_finder/api/scope/entities  doconext_finder.search.scopeentities  lib/Controller/SearchController.php:136",
+        "  GET /index.php/apps/doconext_finder/api/scope/entity-for-file  doconext_finder.search.entityforfile  lib/Controller/SearchController.php:160",
+        "  POST /index.php/apps/doconext_finder/api/search  doconext_finder.search.search  lib/Controller/SearchController.php:175",
+        "  GET /index.php/apps/doconext_finder/api/searches  doconext_finder.searchhistory.index  lib/Controller/SearchHistoryController.php:39",
+        "  POST /index.php/apps/doconext_finder/api/searches/recent  doconext_finder.searchhistory.recordrecent  lib/Controller/SearchHistoryController.php:59",
+        "  DELETE /index.php/apps/doconext_finder/api/searches/recent  doconext_finder.searchhistory.clearrecents  lib/Controller/SearchHistoryController.php:76",
+        "  POST /index.php/apps/doconext_finder/api/searches  doconext_finder.searchhistory.create  lib/Controller/SearchHistoryController.php:90",
+        "  PUT /index.php/apps/doconext_finder/api/searches/{id}/query  doconext_finder.searchhistory.replacequery  lib/Controller/SearchHistoryController.php:116",
+        "  POST /index.php/apps/doconext_finder/api/searches/{id}/run  doconext_finder.searchhistory.touch  lib/Controller/SearchHistoryController.php:148"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 13
+        }
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/PageController.php:74 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated in Nextcloud 33 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/PageController.php:74 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/SearchHistoryService.php:85 time()",
+        "lib/Service/SearchHistoryService.php:95 time()",
+        "lib/Service/SearchHistoryService.php:106 time()",
+        "lib/Service/SearchHistoryService.php:135 time()",
+        "lib/Service/SearchHistoryService.php:188 time()",
+        "lib/Service/SearchHistoryService.php:214 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 6 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/SearchHistoryService.php:85 time()",
+        "  lib/Service/SearchHistoryService.php:95 time()",
+        "  lib/Service/SearchHistoryService.php:106 time()",
+        "  lib/Service/SearchHistoryService.php:135 time()",
+        "  lib/Service/SearchHistoryService.php:188 time()",
+        "  lib/Service/SearchHistoryService.php:214 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:64 getValueString()",
+        "lib/Service/BridgeSettings.php:38 getValueString()",
+        "lib/Service/BridgeSettings.php:54 setValueString()",
+        "lib/Service/FileTypeFilterSettings.php:36 getValueString()",
+        "lib/Service/FileTypeFilterSettings.php:76 setValueString()",
+        "lib/Service/InitialStateProvider.php:38 getValueString()",
+        "lib/Settings/AdminSection.php:34 getValueString()",
+        "lib/Settings/PersonalSection.php:30 getValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 8 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/AppInfo/Application.php:64 getValueString()",
+        "  lib/Service/BridgeSettings.php:38 getValueString()",
+        "  lib/Service/BridgeSettings.php:54 setValueString()",
+        "  lib/Service/FileTypeFilterSettings.php:36 getValueString()",
+        "  lib/Service/FileTypeFilterSettings.php:76 setValueString()",
+        "  lib/Service/InitialStateProvider.php:38 getValueString()",
+        "  lib/Settings/AdminSection.php:34 getValueString()",
+        "  lib/Settings/PersonalSection.php:30 getValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version000200Date20260902120000.php:43 dropTable() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20260902120000.php:47 createTable() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20260902120000.php:48 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20260902120000.php:49 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20260902120000.php:51 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20260902120000.php:52 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20260902120000.php:53 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20260902120000.php:55 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20260902120000.php:57 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20260902120000.php:58 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20260902120000.php:60 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20260902120000.php:62 addIndex() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20260902120000.php:63 addIndex() on a table whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version000200Date20260902120000.php:43 dropTable() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20260902120000.php:47 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20260902120000.php:48 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20260902120000.php:49 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20260902120000.php:51 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20260902120000.php:52 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20260902120000.php:53 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20260902120000.php:55 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20260902120000.php:57 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20260902120000.php:58 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20260902120000.php:60 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20260902120000.php:62 addIndex() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20260902120000.php:63 addIndex() on a table whose name is no constant"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 10
+        }
+      ]
+    }
+  ],
+  "endpoints": 24,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/doconext_finder/",
+      "target": "OCA\\DcnFinder\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:42",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/doconext_finder/api/admin/bridge-extensions",
+      "target": "OCA\\DcnFinder\\Controller\\AdminController::setBridgeExtensions",
+      "openapi": [],
+      "source": "lib/Controller/AdminController.php:36",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/doconext_finder/api/admin/file-type-filters",
+      "target": "OCA\\DcnFinder\\Controller\\AdminController::setFileTypeFilters",
+      "openapi": [],
+      "source": "lib/Controller/AdminController.php:46",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/doconext_finder/api/ai/distil",
+      "target": "OCA\\DcnFinder\\Controller\\AiController::distil",
+      "openapi": [],
+      "source": "lib/Controller/AiController.php:71",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/doconext_finder/api/ai/distil/{taskId}",
+      "target": "OCA\\DcnFinder\\Controller\\AiController::distilResult",
+      "openapi": [],
+      "source": "lib/Controller/AiController.php:91",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/doconext_finder/api/ai/status",
+      "target": "OCA\\DcnFinder\\Controller\\AiController::status",
+      "openapi": [],
+      "source": "lib/Controller/AiController.php:53",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/doconext_finder/api/files/{fileId}/favorite",
+      "target": "OCA\\DcnFinder\\Controller\\FavoriteController::remove",
+      "openapi": [],
+      "source": "lib/Controller/FavoriteController.php:45",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/doconext_finder/api/files/{fileId}/favorite",
+      "target": "OCA\\DcnFinder\\Controller\\FavoriteController::add",
+      "openapi": [],
+      "source": "lib/Controller/FavoriteController.php:38",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/doconext_finder/api/preferences",
+      "target": "OCA\\DcnFinder\\Controller\\PreferencesController::show",
+      "openapi": [],
+      "source": "lib/Controller/PreferencesController.php:33",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/doconext_finder/api/preferences",
+      "target": "OCA\\DcnFinder\\Controller\\PreferencesController::update",
+      "openapi": [],
+      "source": "lib/Controller/PreferencesController.php:53",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/doconext_finder/api/principals",
+      "target": "OCA\\DcnFinder\\Controller\\SearchController::principals",
+      "openapi": [],
+      "source": "lib/Controller/SearchController.php:82",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/doconext_finder/api/scope",
+      "target": "OCA\\DcnFinder\\Controller\\SearchController::scope",
+      "openapi": [],
+      "source": "lib/Controller/SearchController.php:115",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/doconext_finder/api/scope/entities",
+      "target": "OCA\\DcnFinder\\Controller\\SearchController::scopeEntities",
+      "openapi": [],
+      "source": "lib/Controller/SearchController.php:136",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/doconext_finder/api/scope/entity-for-file",
+      "target": "OCA\\DcnFinder\\Controller\\SearchController::entityForFile",
+      "openapi": [],
+      "source": "lib/Controller/SearchController.php:160",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/doconext_finder/api/search",
+      "target": "OCA\\DcnFinder\\Controller\\SearchController::search",
+      "openapi": [],
+      "source": "lib/Controller/SearchController.php:175",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/doconext_finder/api/search/fields",
+      "target": "OCA\\DcnFinder\\Controller\\SearchController::fields",
+      "openapi": [],
+      "source": "lib/Controller/SearchController.php:54",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/doconext_finder/api/searches",
+      "target": "OCA\\DcnFinder\\Controller\\SearchHistoryController::index",
+      "openapi": [],
+      "source": "lib/Controller/SearchHistoryController.php:39",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/doconext_finder/api/searches",
+      "target": "OCA\\DcnFinder\\Controller\\SearchHistoryController::create",
+      "openapi": [],
+      "source": "lib/Controller/SearchHistoryController.php:90",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/doconext_finder/api/searches/{id}",
+      "target": "OCA\\DcnFinder\\Controller\\SearchHistoryController::destroy",
+      "openapi": [],
+      "source": "lib/Controller/SearchHistoryController.php:163",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/doconext_finder/api/searches/{id}",
+      "target": "OCA\\DcnFinder\\Controller\\SearchHistoryController::rename",
+      "openapi": [],
+      "source": "lib/Controller/SearchHistoryController.php:135",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/doconext_finder/api/searches/{id}/query",
+      "target": "OCA\\DcnFinder\\Controller\\SearchHistoryController::replaceQuery",
+      "openapi": [],
+      "source": "lib/Controller/SearchHistoryController.php:116",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/doconext_finder/api/searches/{id}/run",
+      "target": "OCA\\DcnFinder\\Controller\\SearchHistoryController::touch",
+      "openapi": [],
+      "source": "lib/Controller/SearchHistoryController.php:148",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/doconext_finder/api/searches/recent",
+      "target": "OCA\\DcnFinder\\Controller\\SearchHistoryController::clearRecents",
+      "openapi": [],
+      "source": "lib/Controller/SearchHistoryController.php:76",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/doconext_finder/api/searches/recent",
+      "target": "OCA\\DcnFinder\\Controller\\SearchHistoryController::recordRecent",
+      "openapi": [],
+      "source": "lib/Controller/SearchHistoryController.php:59",
+      "kind": "route"
+    }
+  ]
+}

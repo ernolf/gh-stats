@@ -1,0 +1,217 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Approval\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/ConfigController.php:61 OC::$server",
+        "lib/Dav/ApprovalPlugin.php:42 OC::$server",
+        "lib/Service/ApprovalService.php:128 OC::$server",
+        "lib/Service/ApprovalService.php:622 OC::$server",
+        "lib/Service/UtilsService.php:93 OC::$server"
+      ],
+      "lines": [
+        "5 uses of the private API of the server in 4 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/ConfigController.php:61 OC::$server",
+        "  lib/Dav/ApprovalPlugin.php:42 OC::$server",
+        "  lib/Service/ApprovalService.php:128 OC::$server",
+        "  lib/Service/ApprovalService.php:622 OC::$server",
+        "  lib/Service/UtilsService.php:93 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "dav-without-preload",
+      "level": "warn",
+      "places": [
+        "lib/Dav/ApprovalPlugin.php:32 OCA\\Approval\\Dav\\ApprovalPlugin"
+      ],
+      "lines": [
+        "1 DAV plugin listens to propFind and not to preloadCollection, which the server emits from Nextcloud 32 on before it reads the children of a collection. Without that listener a PROPFIND with Depth above 0 runs the queries of the plugin once per child.",
+        "  lib/Dav/ApprovalPlugin.php:32 OCA\\Approval\\Dav\\ApprovalPlugin"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:80 get()",
+        "lib/AppInfo/Application.php:81 addListener()",
+        "lib/AppInfo/Application.php:86 get()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 3 places. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:80 get()",
+        "  lib/AppInfo/Application.php:81 addListener()",
+        "  lib/AppInfo/Application.php:86 get()"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "psalm/phar, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Service/UtilsService.php:56 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated in Nextcloud 33. The text of the tag names the replacement where it has one.",
+        "  lib/Service/UtilsService.php:56 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Activity/ActivityManager.php:157 time()",
+        "lib/Service/ApprovalService.php:604 new DateTime()",
+        "lib/Service/ApprovalService.php:797 new DateTime()",
+        "lib/Service/RuleService.php:459 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 4 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Activity/ActivityManager.php:157 time()",
+        "  lib/Service/ApprovalService.php:604 new DateTime()",
+        "  lib/Service/ApprovalService.php:797 new DateTime()",
+        "  lib/Service/RuleService.php:459 new DateTime()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 6 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 11,
+  "endpointList": [
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/approval/rule",
+      "target": "OCA\\Approval\\Controller\\ConfigController::createRule",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/approval/rule/{id}",
+      "target": "OCA\\Approval\\Controller\\ConfigController::deleteRule",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/approval/rule/{id}",
+      "target": "OCA\\Approval\\Controller\\ConfigController::saveRule",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/approval/rules",
+      "target": "OCA\\Approval\\Controller\\ConfigController::getRules",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/approval/tag",
+      "target": "OCA\\Approval\\Controller\\ConfigController::createTag",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/approval/api/{apiVersion}/approve/{fileId}",
+      "target": "OCA\\Approval\\Controller\\ApprovalController::approve",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/approval/api/{apiVersion}/pendings",
+      "target": "OCA\\Approval\\Controller\\ApprovalController::getPendingNodes",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/approval/api/{apiVersion}/reject/{fileId}",
+      "target": "OCA\\Approval\\Controller\\ApprovalController::reject",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/approval/api/{apiVersion}/request/{fileId}/{ruleId}",
+      "target": "OCA\\Approval\\Controller\\ApprovalController::request",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/approval/api/{apiVersion}/state/{fileId}",
+      "target": "OCA\\Approval\\Controller\\ApprovalController::getApprovalState",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/approval/api/{apiVersion}/user-requester-rules",
+      "target": "OCA\\Approval\\Controller\\ApprovalController::getUserRequesterRules",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

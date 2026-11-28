@@ -1,0 +1,320 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Onedrive\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "brick/math 0.11.0, in 3rdparty/ of Nextcloud 28 to 31",
+        "doctrine/deprecations 1.1.3, in 3rdparty/ of Nextcloud 28 to 31",
+        "doctrine/lexer 2.1.1, in 3rdparty/ of Nextcloud 28 to 31",
+        "guzzlehttp/guzzle 7.9.2, in 3rdparty/ of Nextcloud 28 to 31",
+        "guzzlehttp/promises 2.0.3, in 3rdparty/ of Nextcloud 28 to 31",
+        "guzzlehttp/psr7 2.7.0, in 3rdparty/ of Nextcloud 28 to 31",
+        "php-http/promise 1.2.1, in 3rdparty/ of Nextcloud 28 to 31",
+        "psr/cache 3.0.0, in 3rdparty/ of Nextcloud 28 to 31",
+        "psr/http-client 1.0.3, in 3rdparty/ of Nextcloud 28 to 31",
+        "psr/http-factory 1.1.0, in 3rdparty/ of Nextcloud 28 to 31",
+        "psr/http-message 2.0, in 3rdparty/ of Nextcloud 28 to 31",
+        "psr/log 1.1.4, in 3rdparty/ of Nextcloud 28 to 31",
+        "ralouphie/getallheaders 3.0.3, in 3rdparty/ of Nextcloud 28 to 31",
+        "ramsey/collection 1.3.0, in 3rdparty/ of Nextcloud 28 to 29",
+        "ramsey/uuid 4.7.6, in 3rdparty/ of Nextcloud 28 to 29",
+        "symfony/deprecation-contracts v2.5.3, in 3rdparty/ of Nextcloud 28 to 31",
+        "symfony/polyfill-mbstring v1.31.0, in 3rdparty/ of Nextcloud 28 to 31",
+        "symfony/polyfill-php80 v1.31.0, in 3rdparty/ of Nextcloud 28 to 31"
+      ],
+      "lines": [
+        "vendor/ ships 18 packages that the server ships itself in a major of Nextcloud 28 to 31. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  brick/math 0.11.0, in 3rdparty/ of Nextcloud 28 to 31",
+        "  doctrine/deprecations 1.1.3, in 3rdparty/ of Nextcloud 28 to 31",
+        "  doctrine/lexer 2.1.1, in 3rdparty/ of Nextcloud 28 to 31",
+        "  guzzlehttp/guzzle 7.9.2, in 3rdparty/ of Nextcloud 28 to 31",
+        "  guzzlehttp/promises 2.0.3, in 3rdparty/ of Nextcloud 28 to 31",
+        "  guzzlehttp/psr7 2.7.0, in 3rdparty/ of Nextcloud 28 to 31",
+        "  php-http/promise 1.2.1, in 3rdparty/ of Nextcloud 28 to 31",
+        "  psr/cache 3.0.0, in 3rdparty/ of Nextcloud 28 to 31",
+        "  psr/http-client 1.0.3, in 3rdparty/ of Nextcloud 28 to 31",
+        "  psr/http-factory 1.1.0, in 3rdparty/ of Nextcloud 28 to 31",
+        "  psr/http-message 2.0, in 3rdparty/ of Nextcloud 28 to 31",
+        "  psr/log 1.1.4, in 3rdparty/ of Nextcloud 28 to 31",
+        "  ralouphie/getallheaders 3.0.3, in 3rdparty/ of Nextcloud 28 to 31",
+        "  ramsey/collection 1.3.0, in 3rdparty/ of Nextcloud 28 to 29",
+        "  ramsey/uuid 4.7.6, in 3rdparty/ of Nextcloud 28 to 29",
+        "  symfony/deprecation-contracts v2.5.3, in 3rdparty/ of Nextcloud 28 to 31",
+        "  symfony/polyfill-mbstring v1.31.0, in 3rdparty/ of Nextcloud 28 to 31",
+        "  symfony/polyfill-php80 v1.31.0, in 3rdparty/ of Nextcloud 28 to 31"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 15
+        }
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Service/UserScopeService.php:50 OC_Util"
+      ],
+      "lines": [
+        "1 use of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Service/UserScopeService.php:50 OC_Util"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:40 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:40 injectFn()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/integration_onedrive/local-addressbooks  integration_onedrive.config.getlocaladdressbooks  appinfo/routes.php:22 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 route outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 8 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/integration_onedrive/local-addressbooks  integration_onedrive.config.getlocaladdressbooks  appinfo/routes.php:22 routes"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "psalm/phar, friendsofphp/php-cs-fixer are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/ConfigController.php:99 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:110 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:132 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:134 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:169 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:207 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/Migration/Version3300Date202410151354.php:42 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Migration/Version3300Date202410151354.php:46 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OnedriveAPIService.php:261 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OnedriveAPIService.php:263 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:28 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:30 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:32 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Personal.php:38 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Personal.php:40 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Personal.php:42 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "lines": [
+        "16 uses in 5 files of the public API that is deprecated in Nextcloud 28 to 31. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/ConfigController.php:99 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:110 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:132 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:134 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:169 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:207 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/Migration/Version3300Date202410151354.php:42 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Migration/Version3300Date202410151354.php:46 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OnedriveAPIService.php:261 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OnedriveAPIService.php:263 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:28 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:30 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:32 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Personal.php:38 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Personal.php:40 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Personal.php:42 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 13
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/ConfigController.php:160 new DateTime()",
+        "lib/Service/OnedriveAPIService.php:58 new DateTime()",
+        "lib/Service/OnedriveAPIService.php:249 new DateTime()",
+        "lib/Service/OnedriveAPIService.php:283 new DateTime()",
+        "lib/Service/OnedriveStorageAPIService.php:142 new DateTime()",
+        "lib/Service/OnedriveStorageAPIService.php:199 new DateTime()",
+        "lib/Service/OnedriveStorageAPIService.php:309 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 7 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/ConfigController.php:160 new DateTime()",
+        "  lib/Service/OnedriveAPIService.php:58 new DateTime()",
+        "  lib/Service/OnedriveAPIService.php:249 new DateTime()",
+        "  lib/Service/OnedriveAPIService.php:283 new DateTime()",
+        "  lib/Service/OnedriveStorageAPIService.php:142 new DateTime()",
+        "  lib/Service/OnedriveStorageAPIService.php:199 new DateTime()",
+        "  lib/Service/OnedriveStorageAPIService.php:309 new DateTime()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Controller/ConfigController.php:99 setAppValue()",
+        "lib/Controller/ConfigController.php:110 setAppValue()",
+        "lib/Controller/ConfigController.php:132 getAppValue()",
+        "lib/Controller/ConfigController.php:134 getAppValue()",
+        "lib/Controller/ConfigController.php:169 getAppValue()",
+        "lib/Migration/Version3300Date202410151354.php:42 getAppValue()",
+        "lib/Migration/Version3300Date202410151354.php:46 setAppValue()",
+        "lib/Service/OnedriveAPIService.php:261 getAppValue()",
+        "lib/Service/OnedriveAPIService.php:263 getAppValue()",
+        "lib/Settings/Admin.php:28 getAppValue()",
+        "lib/Settings/Admin.php:30 getAppValue()",
+        "lib/Settings/Admin.php:32 getAppValue()",
+        "lib/Settings/Personal.php:38 getAppValue()",
+        "lib/Settings/Personal.php:40 getAppValue()",
+        "lib/Settings/Personal.php:42 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 15 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Controller/ConfigController.php:99 setAppValue()",
+        "  lib/Controller/ConfigController.php:110 setAppValue()",
+        "  lib/Controller/ConfigController.php:132 getAppValue()",
+        "  lib/Controller/ConfigController.php:134 getAppValue()",
+        "  lib/Controller/ConfigController.php:169 getAppValue()",
+        "  lib/Migration/Version3300Date202410151354.php:42 getAppValue()",
+        "  lib/Migration/Version3300Date202410151354.php:46 setAppValue()",
+        "  lib/Service/OnedriveAPIService.php:261 getAppValue()",
+        "  lib/Service/OnedriveAPIService.php:263 getAppValue()",
+        "  lib/Settings/Admin.php:28 getAppValue()",
+        "  lib/Settings/Admin.php:30 getAppValue()",
+        "  lib/Settings/Admin.php:32 getAppValue()",
+        "  lib/Settings/Personal.php:38 getAppValue()",
+        "  lib/Settings/Personal.php:40 getAppValue()",
+        "  lib/Settings/Personal.php:42 getAppValue()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 12
+        }
+      ]
+    }
+  ],
+  "endpoints": 13,
+  "endpointList": [
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/integration_onedrive/admin-config",
+      "target": "OCA\\Onedrive\\Controller\\ConfigController::setAdminConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_onedrive/calendars",
+      "target": "OCA\\Onedrive\\Controller\\OnedriveAPIController::getCalendarList",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/integration_onedrive/config",
+      "target": "OCA\\Onedrive\\Controller\\ConfigController::setConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_onedrive/contact-number",
+      "target": "OCA\\Onedrive\\Controller\\OnedriveAPIController::getContactNumber",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_onedrive/import-calendar",
+      "target": "OCA\\Onedrive\\Controller\\OnedriveAPIController::importCalendar",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_onedrive/import-contacts",
+      "target": "OCA\\Onedrive\\Controller\\OnedriveAPIController::importContacts",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_onedrive/import-files",
+      "target": "OCA\\Onedrive\\Controller\\OnedriveAPIController::importOnedrive",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_onedrive/import-files-info",
+      "target": "OCA\\Onedrive\\Controller\\OnedriveAPIController::getImportOnedriveInformation",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_onedrive/local-addressbooks",
+      "target": "OCA\\Onedrive\\Controller\\ConfigController::getLocalAddressBooks",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_onedrive/oauth-redirect",
+      "target": "OCA\\Onedrive\\Controller\\ConfigController::oauthRedirect",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_onedrive/popup-success",
+      "target": "OCA\\Onedrive\\Controller\\ConfigController::popupSuccessPage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/integration_onedrive/sensitive-admin-config",
+      "target": "OCA\\Onedrive\\Controller\\ConfigController::setSensitiveAdminConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_onedrive/storage-size",
+      "target": "OCA\\Onedrive\\Controller\\OnedriveAPIController::getStorageSize",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "root": ".",
+  "app": {
+    "id": "introvox",
+    "version": "1.7.6"
+  },
+  "version": "1.7.6",
+  "nightly": false,
+  "prerelease": false,
+  "section": "1.7.6",
+  "store": {
+    "languages": 96,
+    "asOf": "data/appstore.json of ncmake, read 2026-11-04"
+  },
+  "files": [
+    {
+      "name": "CHANGELOG.md",
+      "read": "en",
+      "utf8": true,
+      "bom": false,
+      "headed": true,
+      "body": "### Fixed\n- **Imported wizard steps saved in a non-UTF-8 encoding showed \"mojibake\" (e.g. `Ã©Ã©n` instead of `één`).** The browser's `file.text()` always decodes an uploaded import file as UTF-8, so a file that was actually saved as Windows-1252/Latin-1 arrived as valid-but-wrong UTF-8 and was stored (and displayed in the tour) verbatim. Step title/text are now passed through a conservative mojibake repair in `sanitizeStep()` (so it covers import *and* any manual save/paste): a string is only rewritten when it carries a mojibake signature *and* reinterpreting its code points as the CP1252 bytes they were mis-read from yields a different, still-valid UTF-8 string. Correctly-accented copy (`café`, `naïef`, `Übung`, `—`, `→`) fails that guard and is left untouched. Existing corrupted steps are healed on the next save/re-import; already-stored values are not rewritten in place.\n- **Tour copy saved by IntroVox ≤ 1.6.x showed literal `<p>`/`<strong>` tags.** Those versions ran wizard step title/text through `\\OCP\\Util::sanitizeHTML()` on save, which HTML-escaped the admin's markup (`<p>` → `&lt;p&gt;`); since 1.7.0 the copy is stored as-is and rendered as HTML by Shepherd.js, so instances upgrading from an older version kept showing the escaped tags until each step was re-saved by hand. A new one-time repair step (`UnescapeLegacyWizardStepHtml`) un-escapes those stored rows automatically on upgrade. It only touches values carrying the pre-1.7.0 fingerprint (escaped angle brackets *and* no raw `<`/`>`), so correctly-stored 1.7.x HTML is never altered and the step is idempotent; a recoverable copy is saved to `legacy_html_backup_<key>` first.\n\n### Fixed\n- **Upgrade to 1.7.4 could silently delete an admin-customized tour (data loss).** The `RemoveStaleDefaultWizardSteps` repair step — meant to clear only the pre-1.7.4 auto-saved default tour so the new NC 34 defaults take over — detected \"untouched defaults\" by merely checking that a legacy `calendar` step *and* a legacy `search` step were both *present*. An admin who kept those two steps but extended the tour (e.g. added a custom `video` step) still matched, so their entire `wizard_steps_<lang>` override was wiped on upgrade. The step now requires the stored step ids to match the legacy fingerprint **exactly** (same eight ids, same order, nothing added, removed, renamed or reordered) *before* also checking the legacy selectors — so any customized tour is left untouched. As an extra safety net, a recoverable copy is now saved to `stale_wizard_backup_<key>` before any deletion. ([#21](https://github.com/nextcloud/IntroVox/issues/21))",
+      "own": {
+        "headed": true,
+        "body": "### Fixed\n- **Imported wizard steps saved in a non-UTF-8 encoding showed \"mojibake\" (e.g. `Ã©Ã©n` instead of `één`).** The browser's `file.text()` always decodes an uploaded import file as UTF-8, so a file that was actually saved as Windows-1252/Latin-1 arrived as valid-but-wrong UTF-8 and was stored (and displayed in the tour) verbatim. Step title/text are now passed through a conservative mojibake repair in `sanitizeStep()` (so it covers import *and* any manual save/paste): a string is only rewritten when it carries a mojibake signature *and* reinterpreting its code points as the CP1252 bytes they were mis-read from yields a different, still-valid UTF-8 string. Correctly-accented copy (`café`, `naïef`, `Übung`, `—`, `→`) fails that guard and is left untouched. Existing corrupted steps are healed on the next save/re-import; already-stored values are not rewritten in place.\n- **Tour copy saved by IntroVox ≤ 1.6.x showed literal `<p>`/`<strong>` tags.** Those versions ran wizard step title/text through `\\OCP\\Util::sanitizeHTML()` on save, which HTML-escaped the admin's markup (`<p>` → `&lt;p&gt;`); since 1.7.0 the copy is stored as-is and rendered as HTML by Shepherd.js, so instances upgrading from an older version kept showing the escaped tags until each step was re-saved by hand. A new one-time repair step (`UnescapeLegacyWizardStepHtml`) un-escapes those stored rows automatically on upgrade. It only touches values carrying the pre-1.7.0 fingerprint (escaped angle brackets *and* no raw `<`/`>`), so correctly-stored 1.7.x HTML is never altered and the step is idempotent; a recoverable copy is saved to `legacy_html_backup_<key>` first.\n\n### Fixed\n- **Upgrade to 1.7.4 could silently delete an admin-customized tour (data loss).** The `RemoveStaleDefaultWizardSteps` repair step — meant to clear only the pre-1.7.4 auto-saved default tour so the new NC 34 defaults take over — detected \"untouched defaults\" by merely checking that a legacy `calendar` step *and* a legacy `search` step were both *present*. An admin who kept those two steps but extended the tour (e.g. added a custom `video` step) still matched, so their entire `wizard_steps_<lang>` override was wiped on upgrade. The step now requires the stored step ids to match the legacy fingerprint **exactly** (same eight ids, same order, nothing added, removed, renamed or reordered) *before* also checking the legacy selectors — so any customized tour is left untouched. As an extra safety net, a recoverable copy is now saved to `stale_wizard_backup_<key>` before any deletion. ([#21](https://github.com/nextcloud/IntroVox/issues/21))"
+      }
+    }
+  ],
+  "findings": [
+    {
+      "level": "ok",
+      "id": "changelog-section",
+      "lines": [
+        "The App Store finds the section for 1.7.6 in 1 changelog.",
+        "  CHANGELOG.md (en): 6 lines"
+      ]
+    }
+  ]
+}

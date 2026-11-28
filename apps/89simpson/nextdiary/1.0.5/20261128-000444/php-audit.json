@@ -1,0 +1,433 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\NextDiary\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "route-duplicate",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/nextdiary/entry/{id}: nextdiary.page.indexentrypage at appinfo/routes.php:15 routes, nextdiary.page.get_entrylegacy at appinfo/routes.php:62 routes"
+      ],
+      "lines": [
+        "1 verb and path or route name is declared more than once. The server keeps one route per name and takes the first that matches a request, so the other one is never reached.",
+        "  GET /index.php/apps/nextdiary/entry/{id}: nextdiary.page.indexentrypage at appinfo/routes.php:15 routes, nextdiary.page.get_entrylegacy at appinfo/routes.php:62 routes"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/nextdiary/day/{date}  nextdiary.page.indexday  appinfo/routes.php:14 routes",
+        "GET /index.php/apps/nextdiary/entry/{id}  nextdiary.page.indexentrypage  appinfo/routes.php:15 routes",
+        "GET /index.php/apps/nextdiary/tag/{tagId}  nextdiary.page.indextagpage  appinfo/routes.php:33 routes",
+        "GET /index.php/apps/nextdiary/symptom/{symptomId}  nextdiary.page.indexsymptompage  appinfo/routes.php:41 routes",
+        "GET /index.php/apps/nextdiary/medication/{medicationId}  nextdiary.page.indexmedicationpage  appinfo/routes.php:49 routes",
+        "GET /index.php/apps/nextdiary/entry/{date}  nextdiary.page.get_entrylegacy  appinfo/routes.php:62 routes",
+        "GET /index.php/apps/nextdiary/entries/{amount}  nextdiary.page.get_last_entrieslegacy  appinfo/routes.php:63 routes",
+        "GET /index.php/apps/nextdiary/entry-dates  nextdiary.page.get_entry_dateslegacy  appinfo/routes.php:64 routes",
+        "PUT /index.php/apps/nextdiary/entry/{date}  nextdiary.page.update_entry  appinfo/routes.php:65 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 9 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 22 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/nextdiary/day/{date}  nextdiary.page.indexday  appinfo/routes.php:14 routes",
+        "  GET /index.php/apps/nextdiary/entry/{id}  nextdiary.page.indexentrypage  appinfo/routes.php:15 routes",
+        "  GET /index.php/apps/nextdiary/tag/{tagId}  nextdiary.page.indextagpage  appinfo/routes.php:33 routes",
+        "  GET /index.php/apps/nextdiary/symptom/{symptomId}  nextdiary.page.indexsymptompage  appinfo/routes.php:41 routes",
+        "  GET /index.php/apps/nextdiary/medication/{medicationId}  nextdiary.page.indexmedicationpage  appinfo/routes.php:49 routes",
+        "  GET /index.php/apps/nextdiary/entry/{date}  nextdiary.page.get_entrylegacy  appinfo/routes.php:62 routes",
+        "  GET /index.php/apps/nextdiary/entries/{amount}  nextdiary.page.get_last_entrieslegacy  appinfo/routes.php:63 routes",
+        "  GET /index.php/apps/nextdiary/entry-dates  nextdiary.page.get_entry_dateslegacy  appinfo/routes.php:64 routes",
+        "  PUT /index.php/apps/nextdiary/entry/{date}  nextdiary.page.update_entry  appinfo/routes.php:65 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 6
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "friendsofphp/php-cs-fixer, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/PageController.php:152 new DateTime()",
+        "lib/Controller/PageController.php:211 new DateTime()",
+        "lib/Controller/PageController.php:700 new DateTime()",
+        "lib/Db/MedicationMapper.php:73 new DateTime()",
+        "lib/Db/SymptomMapper.php:73 new DateTime()",
+        "lib/Db/TagMapper.php:73 new DateTime()",
+        "lib/Service/FileService.php:127 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 7 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/PageController.php:152 new DateTime()",
+        "  lib/Controller/PageController.php:211 new DateTime()",
+        "  lib/Controller/PageController.php:700 new DateTime()",
+        "  lib/Db/MedicationMapper.php:73 new DateTime()",
+        "  lib/Db/SymptomMapper.php:73 new DateTime()",
+        "  lib/Db/TagMapper.php:73 new DateTime()",
+        "  lib/Service/FileService.php:127 new DateTime()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    }
+  ],
+  "endpoints": 42,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/",
+      "target": "OCA\\NextDiary\\Controller\\PageController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:13 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/api/entries/{date}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::getEntriesByDate",
+      "openapi": [],
+      "source": "appinfo/routes.php:19 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/api/entries/medication/{medicationId}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::getEntriesByMedication",
+      "openapi": [],
+      "source": "appinfo/routes.php:45 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/api/entries/symptom/{symptomId}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::getEntriesBySymptom",
+      "openapi": [],
+      "source": "appinfo/routes.php:37 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/api/entries/tag/{tagId}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::getEntriesByTag",
+      "openapi": [],
+      "source": "appinfo/routes.php:29 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/api/entry-dates",
+      "target": "OCA\\NextDiary\\Controller\\PageController::getEntryDates",
+      "openapi": [],
+      "source": "appinfo/routes.php:25 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nextdiary/api/entry/{date}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::createEntry",
+      "openapi": [],
+      "source": "appinfo/routes.php:21 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/api/entry/{entryId}/files",
+      "target": "OCA\\NextDiary\\Controller\\FileController::listFiles",
+      "openapi": [],
+      "source": "appinfo/routes.php:53 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nextdiary/api/entry/{entryId}/files",
+      "target": "OCA\\NextDiary\\Controller\\FileController::upload",
+      "openapi": [],
+      "source": "appinfo/routes.php:52 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/nextdiary/api/entry/{entryId}/files/{fileId}",
+      "target": "OCA\\NextDiary\\Controller\\FileController::deleteFile",
+      "openapi": [],
+      "source": "appinfo/routes.php:54 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/nextdiary/api/entry/{id}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::deleteEntry",
+      "openapi": [],
+      "source": "appinfo/routes.php:23 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/api/entry/{id}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::getEntryById",
+      "openapi": [],
+      "source": "appinfo/routes.php:20 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/nextdiary/api/entry/{id}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::updateEntryById",
+      "openapi": [],
+      "source": "appinfo/routes.php:22 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/api/files/{fileId}/download",
+      "target": "OCA\\NextDiary\\Controller\\FileController::download",
+      "openapi": [],
+      "source": "appinfo/routes.php:55 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/api/last-entries/{amount}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::getLastEntries",
+      "openapi": [],
+      "source": "appinfo/routes.php:24 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/nextdiary/api/medication/{medicationId}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::deleteMedication",
+      "openapi": [],
+      "source": "appinfo/routes.php:48 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/api/medication/{medicationId}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::getMedication",
+      "openapi": [],
+      "source": "appinfo/routes.php:46 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/nextdiary/api/medication/{medicationId}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::renameMedication",
+      "openapi": [],
+      "source": "appinfo/routes.php:47 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/api/medications",
+      "target": "OCA\\NextDiary\\Controller\\PageController::getMedications",
+      "openapi": [],
+      "source": "appinfo/routes.php:44 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/api/settings",
+      "target": "OCA\\NextDiary\\Controller\\SettingsController::getSettings",
+      "openapi": [],
+      "source": "appinfo/routes.php:58 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/nextdiary/api/settings",
+      "target": "OCA\\NextDiary\\Controller\\SettingsController::updateSettings",
+      "openapi": [],
+      "source": "appinfo/routes.php:59 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/nextdiary/api/symptom/{symptomId}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::deleteSymptom",
+      "openapi": [],
+      "source": "appinfo/routes.php:40 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/api/symptom/{symptomId}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::getSymptom",
+      "openapi": [],
+      "source": "appinfo/routes.php:38 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/nextdiary/api/symptom/{symptomId}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::renameSymptom",
+      "openapi": [],
+      "source": "appinfo/routes.php:39 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/api/symptoms",
+      "target": "OCA\\NextDiary\\Controller\\PageController::getSymptoms",
+      "openapi": [],
+      "source": "appinfo/routes.php:36 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/nextdiary/api/tag/{tagId}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::deleteTag",
+      "openapi": [],
+      "source": "appinfo/routes.php:32 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/api/tag/{tagId}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::getTag",
+      "openapi": [],
+      "source": "appinfo/routes.php:30 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/nextdiary/api/tag/{tagId}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::renameTag",
+      "openapi": [],
+      "source": "appinfo/routes.php:31 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/api/tags",
+      "target": "OCA\\NextDiary\\Controller\\PageController::getTags",
+      "openapi": [],
+      "source": "appinfo/routes.php:28 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/date/{date}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:16 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/day/{date}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:14 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/entries/{amount}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::getLastEntries",
+      "openapi": [],
+      "source": "appinfo/routes.php:63 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/entry-dates",
+      "target": "OCA\\NextDiary\\Controller\\PageController::getEntryDates",
+      "openapi": [],
+      "source": "appinfo/routes.php:64 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/entry/{date}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::getEntry",
+      "openapi": [],
+      "source": "appinfo/routes.php:62 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/nextdiary/entry/{date}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::updateEntry",
+      "openapi": [],
+      "source": "appinfo/routes.php:65 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/entry/{id}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:15 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/export/csv",
+      "target": "OCA\\NextDiary\\Controller\\ExportController::getCsv",
+      "openapi": [],
+      "source": "appinfo/routes.php:70 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/export/markdown",
+      "target": "OCA\\NextDiary\\Controller\\ExportController::getMarkdown",
+      "openapi": [],
+      "source": "appinfo/routes.php:68 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/export/pdf",
+      "target": "OCA\\NextDiary\\Controller\\ExportController::getPdf",
+      "openapi": [],
+      "source": "appinfo/routes.php:69 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/medication/{medicationId}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:49 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/symptom/{symptomId}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:41 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextdiary/tag/{tagId}",
+      "target": "OCA\\NextDiary\\Controller\\PageController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:33 routes",
+      "kind": "route"
+    }
+  ]
+}

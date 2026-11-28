@@ -1,0 +1,1569 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Deck\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "namespace-mismatch",
+      "level": "warn",
+      "places": [
+        "lib/Sharing/DeckShareProvider.php:42 OCA\\Deck\\Sharing\\IShareProviderBackend, by its path OCA\\Deck\\Sharing\\DeckShareProvider"
+      ],
+      "lines": [
+        "1 class in lib/ whose name does not follow PSR-4 below OCA\\Deck, the namespace the server derives from <namespace> of info.xml. The loader of the server does not find such a class.",
+        "  lib/Sharing/DeckShareProvider.php:42 OCA\\Deck\\Sharing\\IShareProviderBackend, by its path OCA\\Deck\\Sharing\\DeckShareProvider"
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "justinrainbow/json-schema 6.11.0, in 3rdparty/ of Nextcloud 35",
+        "marc-mabe/php-enum v4.7.2, in 3rdparty/ of Nextcloud 35"
+      ],
+      "lines": [
+        "vendor/ ships 2 packages that the server ships itself in a major of Nextcloud 35. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  justinrainbow/json-schema 6.11.0, in 3rdparty/ of Nextcloud 35",
+        "  marc-mabe/php-enum v4.7.2, in 3rdparty/ of Nextcloud 35"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Federation/DeckFederationProxy.php:99 OC\\Http\\Client\\Response",
+        "lib/Provider/DeckProvider.php:94 OC\\FullTextSearch\\Model\\SearchTemplate",
+        "lib/Provider/DeckProvider.php:160 OC\\FullTextSearch\\Model\\IndexDocument",
+        "lib/Provider/TextContextProvider.php:30 OC\\Security\\SecureRandom",
+        "lib/Provider/TextContextProviderFactory.php:21 OC\\Security\\SecureRandom",
+        "lib/Service/BoardService.php:304 OC\\User\\LazyUser",
+        "lib/Service/FullTextSearchService.php:56 OC\\FullTextSearch\\Model\\IndexDocument",
+        "lib/Service/FullTextSearchService.php:85 OC\\FullTextSearch\\Model\\DocumentAccess",
+        "lib/Service/Importer/Systems/DeckJsonService.php:134 OC\\Comments\\Comment",
+        "lib/Service/Importer/Systems/TrelloJsonService.php:118 OC\\Comments\\Comment",
+        "lib/Sharing/DeckShareProvider.php:264 OC\\Files\\Cache\\Cache",
+        "lib/Sharing/Listener.php:56 OC\\Files\\Filesystem"
+      ],
+      "lines": [
+        "12 uses of the private API of the server in 10 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Federation/DeckFederationProxy.php:99 OC\\Http\\Client\\Response",
+        "  lib/Provider/DeckProvider.php:94 OC\\FullTextSearch\\Model\\SearchTemplate",
+        "  lib/Provider/DeckProvider.php:160 OC\\FullTextSearch\\Model\\IndexDocument",
+        "  lib/Provider/TextContextProvider.php:30 OC\\Security\\SecureRandom",
+        "  lib/Provider/TextContextProviderFactory.php:21 OC\\Security\\SecureRandom",
+        "  lib/Service/BoardService.php:304 OC\\User\\LazyUser",
+        "  lib/Service/FullTextSearchService.php:56 OC\\FullTextSearch\\Model\\IndexDocument",
+        "  lib/Service/FullTextSearchService.php:85 OC\\FullTextSearch\\Model\\DocumentAccess",
+        "  lib/Service/Importer/Systems/DeckJsonService.php:134 OC\\Comments\\Comment",
+        "  lib/Service/Importer/Systems/TrelloJsonService.php:118 OC\\Comments\\Comment",
+        "  lib/Sharing/DeckShareProvider.php:264 OC\\Files\\Cache\\Cache",
+        "  lib/Sharing/Listener.php:56 OC\\Files\\Filesystem"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 9
+        }
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:110 injectFn()",
+        "lib/AppInfo/Application.php:111 injectFn()",
+        "lib/AppInfo/Application.php:114 injectFn()",
+        "lib/AppInfo/Application.php:115 addServiceListener()",
+        "lib/AppInfo/Application.php:119 injectFn()",
+        "lib/AppInfo/Application.php:123 injectFn()",
+        "lib/AppInfo/Application.php:126 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 7 places. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:110 injectFn()",
+        "  lib/AppInfo/Application.php:111 injectFn()",
+        "  lib/AppInfo/Application.php:114 injectFn()",
+        "  lib/AppInfo/Application.php:115 addServiceListener()",
+        "  lib/AppInfo/Application.php:119 injectFn()",
+        "  lib/AppInfo/Application.php:123 injectFn()",
+        "  lib/AppInfo/Application.php:126 injectFn()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "route-target-missing",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/deck/api/v{apiVersion}/dashboard/due  deck.card_api.findallwithdue  appinfo/routes.php:116 routes: OCA\\Deck\\Controller\\CardApiController has no method findAllWithDue()"
+      ],
+      "lines": [
+        "1 route names a controller class or a method that does not exist, or a method that is not public. A request to such a route ends in an error.",
+        "  GET /index.php/apps/deck/api/v{apiVersion}/dashboard/due  deck.card_api.findallwithdue  appinfo/routes.php:116 routes: OCA\\Deck\\Controller\\CardApiController has no method findAllWithDue()"
+      ]
+    },
+    {
+      "id": "route-duplicate",
+      "level": "warn",
+      "places": [
+        "deck.attachment.update: deck.attachment.update at appinfo/routes.php:68 routes, deck.attachment.update at appinfo/routes.php:70 routes"
+      ],
+      "lines": [
+        "1 verb and path or route name is declared more than once. The server keeps one route per name and takes the first that matches a request, so the other one is never reached.",
+        "  deck.attachment.update: deck.attachment.update at appinfo/routes.php:68 routes, deck.attachment.update at appinfo/routes.php:70 routes"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Activity/DeckProvider.php:325 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Activity/DeckProvider.php:326 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/AppInfo/Application.php:209 OCP\\Comments\\CommentsEntityEvent::EVENT_ENTITY: deprecated since Nextcloud 22; Listen to the typed event instead.",
+        "lib/Command/CalendarToggle.php:57 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "lib/Command/CalendarToggle.php:61 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/PageController.php:77 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Db/CardMapper.php:589 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Db/ChangeHelper.php:41 OCP\\IDBConnection::executeUpdate(): deprecated since Nextcloud 21; use executeStatement",
+        "lib/Db/ChangeHelper.php:50 OCP\\IDBConnection::executeUpdate(): deprecated since Nextcloud 21; use executeStatement",
+        "lib/Db/ChangeHelper.php:67 OCP\\IDBConnection::executeUpdate(): deprecated since Nextcloud 21; use executeStatement",
+        "lib/Listeners/CommentEventListener.php:42 OCP\\Comments\\CommentsEvent::EVENT_ADD: deprecated since Nextcloud 22; Use \\OCP\\Comments\\Events\\CommentAddedEvent instead.",
+        "lib/Listeners/CommentEventListener.php:50 OCP\\Comments\\CommentsEvent::EVENT_UPDATE: deprecated since Nextcloud 22; Use \\OCP\\Comments\\Events\\CommentUpdatedEvent instead.",
+        "lib/Listeners/ResourceTypeRegisterListener.php:22 OCP\\OCM\\IOCMProvider: deprecated since Nextcloud 32; Please use \\OCP\\OCM\\ICapabilityAwareOCMProvider",
+        "lib/Notification/NotificationHelper.php:66 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/BoardService.php:394 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/BoardService.php:396 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/BoardService.php:397 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/BoardService.php:554 OCP\\Util::getVersion(): deprecated since Nextcloud 31; Use \\OCP\\ServerVersion::getVersion",
+        "lib/Service/BoardService.php:585 OCP\\Util::getVersion(): deprecated since Nextcloud 31; Use \\OCP\\ServerVersion::getVersion",
+        "lib/Service/ConfigService.php:78 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/ConfigService.php:83 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ConfigService.php:88 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ConfigService.php:93 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ConfigService.php:104 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/ConfigService.php:105 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ConfigService.php:110 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ConfigService.php:119 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ConfigService.php:124 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ConfigService.php:132 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/ConfigService.php:133 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ConfigService.php:135 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ConfigService.php:144 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ConfigService.php:152 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/ConfigService.php:155 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/ConfigService.php:179 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/ConfigService.php:183 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ConfigService.php:187 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ConfigService.php:191 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ConfigService.php:195 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ConfigService.php:208 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ConfigService.php:223 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/ConfigService.php:228 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/ConfigService.php:258 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ConfigService.php:266 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ConfigService.php:270 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/DefaultBoardService.php:38 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/DefaultBoardService.php:42 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/FilesAppService.php:234 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Service/FilesAppService.php:307 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Service/PermissionService.php:387 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Sharing/DeckShareProvider.php:286 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Sharing/DeckShareProvider.php:305 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Sharing/DeckShareProvider.php:669 OCP\\Constants::PERMISSION_ALL: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_ALL instead",
+        "lib/Sharing/DeckShareProvider.php:669 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Sharing/DeckShareProvider.php:670 OCP\\Constants::PERMISSION_ALL: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_ALL instead",
+        "lib/Sharing/DeckShareProvider.php:670 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/Sharing/DeckShareProvider.php:671 OCP\\Constants::PERMISSION_ALL: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_ALL instead",
+        "lib/Sharing/DeckShareProvider.php:671 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead",
+        "lib/Sharing/DeckShareProvider.php:674 OCP\\Constants::PERMISSION_ALL: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_ALL instead",
+        "lib/Sharing/DeckShareProvider.php:674 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead"
+      ],
+      "lines": [
+        "60 uses in 15 files of the public API that is deprecated in Nextcloud 35. The text of the tag names the replacement where it has one.",
+        "  lib/Activity/DeckProvider.php:325 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Activity/DeckProvider.php:326 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/AppInfo/Application.php:209 OCP\\Comments\\CommentsEntityEvent::EVENT_ENTITY: deprecated since Nextcloud 22; Listen to the typed event instead.",
+        "  lib/Command/CalendarToggle.php:57 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "  lib/Command/CalendarToggle.php:61 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/PageController.php:77 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Db/CardMapper.php:589 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Db/ChangeHelper.php:41 OCP\\IDBConnection::executeUpdate(): deprecated since Nextcloud 21; use executeStatement",
+        "  lib/Db/ChangeHelper.php:50 OCP\\IDBConnection::executeUpdate(): deprecated since Nextcloud 21; use executeStatement",
+        "  lib/Db/ChangeHelper.php:67 OCP\\IDBConnection::executeUpdate(): deprecated since Nextcloud 21; use executeStatement",
+        "  lib/Listeners/CommentEventListener.php:42 OCP\\Comments\\CommentsEvent::EVENT_ADD: deprecated since Nextcloud 22; Use \\OCP\\Comments\\Events\\CommentAddedEvent instead.",
+        "  lib/Listeners/CommentEventListener.php:50 OCP\\Comments\\CommentsEvent::EVENT_UPDATE: deprecated since Nextcloud 22; Use \\OCP\\Comments\\Events\\CommentUpdatedEvent instead.",
+        "  lib/Listeners/ResourceTypeRegisterListener.php:22 OCP\\OCM\\IOCMProvider: deprecated since Nextcloud 32; Please use \\OCP\\OCM\\ICapabilityAwareOCMProvider",
+        "  lib/Notification/NotificationHelper.php:66 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/BoardService.php:394 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/BoardService.php:396 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/BoardService.php:397 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/BoardService.php:554 OCP\\Util::getVersion(): deprecated since Nextcloud 31; Use \\OCP\\ServerVersion::getVersion",
+        "  lib/Service/BoardService.php:585 OCP\\Util::getVersion(): deprecated since Nextcloud 31; Use \\OCP\\ServerVersion::getVersion",
+        "  lib/Service/ConfigService.php:78 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/ConfigService.php:83 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ConfigService.php:88 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ConfigService.php:93 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ConfigService.php:104 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/ConfigService.php:105 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ConfigService.php:110 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ConfigService.php:119 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ConfigService.php:124 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ConfigService.php:132 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/ConfigService.php:133 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ConfigService.php:135 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ConfigService.php:144 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ConfigService.php:152 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/ConfigService.php:155 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/ConfigService.php:179 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/ConfigService.php:183 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ConfigService.php:187 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ConfigService.php:191 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ConfigService.php:195 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ConfigService.php:208 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ConfigService.php:223 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/ConfigService.php:228 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/ConfigService.php:258 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ConfigService.php:266 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ConfigService.php:270 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/DefaultBoardService.php:38 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/DefaultBoardService.php:42 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/FilesAppService.php:234 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Service/FilesAppService.php:307 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Service/PermissionService.php:387 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Sharing/DeckShareProvider.php:286 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Sharing/DeckShareProvider.php:305 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Sharing/DeckShareProvider.php:669 OCP\\Constants::PERMISSION_ALL: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_ALL instead",
+        "  lib/Sharing/DeckShareProvider.php:669 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Sharing/DeckShareProvider.php:670 OCP\\Constants::PERMISSION_ALL: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_ALL instead",
+        "  lib/Sharing/DeckShareProvider.php:670 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/Sharing/DeckShareProvider.php:671 OCP\\Constants::PERMISSION_ALL: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_ALL instead",
+        "  lib/Sharing/DeckShareProvider.php:671 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead",
+        "  lib/Sharing/DeckShareProvider.php:674 OCP\\Constants::PERMISSION_ALL: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_ALL instead",
+        "  lib/Sharing/DeckShareProvider.php:674 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 57
+        }
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Service/BoardService.php:672",
+        "lib/Service/CardService.php:214",
+        "lib/Sharing/DeckShareProvider.php:276"
+      ],
+      "lines": [
+        "3 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Service/BoardService.php:672",
+        "  lib/Service/CardService.php:214",
+        "  lib/Sharing/DeckShareProvider.php:276"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/Cron/SessionsCleanup.php OCA\\Deck\\Cron\\SessionsCleanup"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/Cron/SessionsCleanup.php OCA\\Deck\\Cron\\SessionsCleanup"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Activity/ActivityManager.php:434 time()",
+        "lib/Cron/DeleteCron.php:64 time()",
+        "lib/Dashboard/DeckWidgetUpcoming.php:100 new DateTime()",
+        "lib/Db/AclMapper.php:161 time()",
+        "lib/Db/AclMapper.php:169 time()",
+        "lib/Db/Card.php:143 new DateTime()",
+        "lib/Db/Card.php:155 new DateTime()",
+        "lib/Db/Card.php:181 new DateTime()",
+        "lib/Db/CardMapper.php:64 time()",
+        "lib/Db/CardMapper.php:65 time()",
+        "lib/Db/CardMapper.php:83 time()",
+        "lib/Db/CardMapper.php:502 new DateTime()",
+        "lib/Db/CardMapper.php:503 new DateTime()",
+        "lib/Db/ChangeHelper.php:37 time()",
+        "lib/Db/ChangeHelper.php:45 time()",
+        "lib/Db/ChangeHelper.php:50 time()",
+        "lib/Db/ChangeHelper.php:62 time()",
+        "lib/Db/ChangeHelper.php:67 time()",
+        "lib/Db/LabelMapper.php:118 time()",
+        "lib/Db/LabelMapper.php:125 time()",
+        "lib/Db/SessionMapper.php:28 time()",
+        "lib/Db/SessionMapper.php:48 time()",
+        "lib/Db/SessionMapper.php:56 time()",
+        "lib/Federation/DeckFederationProvider.php:66 new DateTime()",
+        "lib/Notification/NotificationHelper.php:119 new DateTime()",
+        "lib/Notification/NotificationHelper.php:154 new DateTime()",
+        "lib/Notification/NotificationHelper.php:171 new DateTime()",
+        "lib/Notification/NotificationHelper.php:205 new DateTime()",
+        "lib/Provider/TextContextProvider.php:101 time()",
+        "lib/Service/AttachmentService.php:81 time()",
+        "lib/Service/AttachmentService.php:182 time()",
+        "lib/Service/AttachmentService.php:183 time()",
+        "lib/Service/AttachmentService.php:305 time()",
+        "lib/Service/BoardService.php:296 time()",
+        "lib/Service/BoardService.php:454 time()",
+        "lib/Service/BoardService.php:508 time()",
+        "lib/Service/CardService.php:247 time()",
+        "lib/Service/CardService.php:514 new DateTime()",
+        "lib/Service/CardService.php:547 time()",
+        "lib/Service/CardService.php:631 new DateTime()",
+        "lib/Service/FilesAppService.php:400 time()",
+        "lib/Service/FileService.php:163 time()",
+        "lib/Service/FileService.php:228 time()",
+        "lib/Service/Importer/BoardImportService.php:388 time()",
+        "lib/Service/Importer/BoardImportService.php:389 time()",
+        "lib/Service/Importer/Systems/DeckJsonService.php:196 time()",
+        "lib/Service/Importer/Systems/DeckJsonService.php:197 time()",
+        "lib/Service/Importer/Systems/TrelloJsonService.php:130 time()",
+        "lib/Service/Importer/Systems/TrelloJsonService.php:131 time()",
+        "lib/Service/Importer/Systems/TrelloJsonService.php:230 time()",
+        "lib/Service/ShareFileAttachmentExportService.php:67 time()",
+        "lib/Service/ShareFileAttachmentExportService.php:68 time()",
+        "lib/Service/StackService.php:214 time()",
+        "lib/Service/StackService.php:325 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 54 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Activity/ActivityManager.php:434 time()",
+        "  lib/Cron/DeleteCron.php:64 time()",
+        "  lib/Dashboard/DeckWidgetUpcoming.php:100 new DateTime()",
+        "  lib/Db/AclMapper.php:161 time()",
+        "  lib/Db/AclMapper.php:169 time()",
+        "  lib/Db/Card.php:143 new DateTime()",
+        "  lib/Db/Card.php:155 new DateTime()",
+        "  lib/Db/Card.php:181 new DateTime()",
+        "  lib/Db/CardMapper.php:64 time()",
+        "  lib/Db/CardMapper.php:65 time()",
+        "  lib/Db/CardMapper.php:83 time()",
+        "  lib/Db/CardMapper.php:502 new DateTime()",
+        "  lib/Db/CardMapper.php:503 new DateTime()",
+        "  lib/Db/ChangeHelper.php:37 time()",
+        "  lib/Db/ChangeHelper.php:45 time()",
+        "  lib/Db/ChangeHelper.php:50 time()",
+        "  lib/Db/ChangeHelper.php:62 time()",
+        "  lib/Db/ChangeHelper.php:67 time()",
+        "  lib/Db/LabelMapper.php:118 time()",
+        "  lib/Db/LabelMapper.php:125 time()",
+        "  lib/Db/SessionMapper.php:28 time()",
+        "  lib/Db/SessionMapper.php:48 time()",
+        "  lib/Db/SessionMapper.php:56 time()",
+        "  lib/Federation/DeckFederationProvider.php:66 new DateTime()",
+        "  lib/Notification/NotificationHelper.php:119 new DateTime()",
+        "  lib/Notification/NotificationHelper.php:154 new DateTime()",
+        "  lib/Notification/NotificationHelper.php:171 new DateTime()",
+        "  lib/Notification/NotificationHelper.php:205 new DateTime()",
+        "  lib/Provider/TextContextProvider.php:101 time()",
+        "  lib/Service/AttachmentService.php:81 time()",
+        "  lib/Service/AttachmentService.php:182 time()",
+        "  lib/Service/AttachmentService.php:183 time()",
+        "  lib/Service/AttachmentService.php:305 time()",
+        "  lib/Service/BoardService.php:296 time()",
+        "  lib/Service/BoardService.php:454 time()",
+        "  lib/Service/BoardService.php:508 time()",
+        "  lib/Service/CardService.php:247 time()",
+        "  lib/Service/CardService.php:514 new DateTime()",
+        "  lib/Service/CardService.php:547 time()",
+        "  lib/Service/CardService.php:631 new DateTime()",
+        "  lib/Service/FilesAppService.php:400 time()",
+        "  lib/Service/FileService.php:163 time()",
+        "  lib/Service/FileService.php:228 time()",
+        "  lib/Service/Importer/BoardImportService.php:388 time()",
+        "  lib/Service/Importer/BoardImportService.php:389 time()",
+        "  lib/Service/Importer/Systems/DeckJsonService.php:196 time()",
+        "  lib/Service/Importer/Systems/DeckJsonService.php:197 time()",
+        "  lib/Service/Importer/Systems/TrelloJsonService.php:130 time()",
+        "  lib/Service/Importer/Systems/TrelloJsonService.php:131 time()",
+        "  lib/Service/Importer/Systems/TrelloJsonService.php:230 time()",
+        "  lib/Service/ShareFileAttachmentExportService.php:67 time()",
+        "  lib/Service/ShareFileAttachmentExportService.php:68 time()",
+        "  lib/Service/StackService.php:214 time()",
+        "  lib/Service/StackService.php:325 new DateTime()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 51
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/ConfigService.php:78 getAppValue()",
+        "lib/Service/ConfigService.php:104 getAppValue()",
+        "lib/Service/ConfigService.php:132 getAppValue()",
+        "lib/Service/ConfigService.php:152 getAppValue()",
+        "lib/Service/ConfigService.php:155 getAppValue()",
+        "lib/Service/ConfigService.php:179 setAppValue()",
+        "lib/Service/ConfigService.php:223 setAppValue()",
+        "lib/Service/ConfigService.php:228 getAppValue()",
+        "lib/Service/ConfigService.php:270 getAppValue()",
+        "lib/Service/PermissionService.php:387 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 10 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/ConfigService.php:78 getAppValue()",
+        "  lib/Service/ConfigService.php:104 getAppValue()",
+        "  lib/Service/ConfigService.php:132 getAppValue()",
+        "  lib/Service/ConfigService.php:152 getAppValue()",
+        "  lib/Service/ConfigService.php:155 getAppValue()",
+        "  lib/Service/ConfigService.php:179 setAppValue()",
+        "  lib/Service/ConfigService.php:223 setAppValue()",
+        "  lib/Service/ConfigService.php:228 getAppValue()",
+        "  lib/Service/ConfigService.php:270 getAppValue()",
+        "  lib/Service/PermissionService.php:387 getAppValue()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/BoardOcsController.php:65 OCA\\Deck\\Controller\\BoardOcsController::updateAcl()"
+      ],
+      "lines": [
+        "1 public method of a controller is reached by no route.",
+        "  lib/Controller/BoardOcsController.php:65 OCA\\Deck\\Controller\\BoardOcsController::updateAcl()"
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 36 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version11001Date20251009165313.php:24 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version11001Date20251009165313.php:25 addColumn() on a table whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version11001Date20251009165313.php:24 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version11001Date20251009165313.php:25 addColumn() on a table whose name is no constant"
+      ]
+    }
+  ],
+  "endpoints": 144,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/",
+      "target": "OCA\\Deck\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/{boardId}/cards/deleted",
+      "target": "OCA\\Deck\\Controller\\CardController::deleted",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/{boardId}/stacks/deleted",
+      "target": "OCA\\Deck\\Controller\\StackController::deleted",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/{path}",
+      "target": "OCA\\Deck\\Controller\\BoardApiController::preflightedCors",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards",
+      "target": "OCA\\Deck\\Controller\\BoardApiController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards",
+      "target": "OCA\\Deck\\Controller\\BoardApiController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}",
+      "target": "OCA\\Deck\\Controller\\BoardApiController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}",
+      "target": "OCA\\Deck\\Controller\\BoardApiController::get",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}",
+      "target": "OCA\\Deck\\Controller\\BoardApiController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/acl",
+      "target": "OCA\\Deck\\Controller\\BoardApiController::addAcl",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/acl/{aclId}",
+      "target": "OCA\\Deck\\Controller\\BoardApiController::deleteAcl",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/acl/{aclId}",
+      "target": "OCA\\Deck\\Controller\\BoardApiController::updateAcl",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/clone",
+      "target": "OCA\\Deck\\Controller\\BoardApiController::clone",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/labels",
+      "target": "OCA\\Deck\\Controller\\LabelApiController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/labels/{labelId}",
+      "target": "OCA\\Deck\\Controller\\LabelApiController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/labels/{labelId}",
+      "target": "OCA\\Deck\\Controller\\LabelApiController::get",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/labels/{labelId}",
+      "target": "OCA\\Deck\\Controller\\LabelApiController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks",
+      "target": "OCA\\Deck\\Controller\\StackApiController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks",
+      "target": "OCA\\Deck\\Controller\\StackApiController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}",
+      "target": "OCA\\Deck\\Controller\\StackApiController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}",
+      "target": "OCA\\Deck\\Controller\\StackApiController::get",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}",
+      "target": "OCA\\Deck\\Controller\\StackApiController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}/cards",
+      "target": "OCA\\Deck\\Controller\\CardApiController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}/cards/{cardId}",
+      "target": "OCA\\Deck\\Controller\\CardApiController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}/cards/{cardId}",
+      "target": "OCA\\Deck\\Controller\\CardApiController::get",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}/cards/{cardId}",
+      "target": "OCA\\Deck\\Controller\\CardApiController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}/cards/{cardId}/archive",
+      "target": "OCA\\Deck\\Controller\\CardApiController::archive",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}/cards/{cardId}/assignLabel",
+      "target": "OCA\\Deck\\Controller\\CardApiController::assignLabel",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}/cards/{cardId}/assignUser",
+      "target": "OCA\\Deck\\Controller\\CardApiController::assignUser",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}/cards/{cardId}/attachments",
+      "target": "OCA\\Deck\\Controller\\AttachmentApiController::getAll",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}/cards/{cardId}/attachments",
+      "target": "OCA\\Deck\\Controller\\AttachmentApiV11Controller::getAll",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}/cards/{cardId}/attachments",
+      "target": "OCA\\Deck\\Controller\\AttachmentApiController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}/cards/{cardId}/attachments",
+      "target": "OCA\\Deck\\Controller\\AttachmentApiV11Controller::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}/cards/{cardId}/attachments/{attachmentId}",
+      "target": "OCA\\Deck\\Controller\\AttachmentApiController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}/cards/{cardId}/attachments/{attachmentId}",
+      "target": "OCA\\Deck\\Controller\\AttachmentApiController::display",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}/cards/{cardId}/attachments/{attachmentId}",
+      "target": "OCA\\Deck\\Controller\\AttachmentApiController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}/cards/{cardId}/attachments/{attachmentId}/restore",
+      "target": "OCA\\Deck\\Controller\\AttachmentApiController::restore",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}/cards/{cardId}/attachments/{type}/{attachmentId}",
+      "target": "OCA\\Deck\\Controller\\AttachmentApiV11Controller::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}/cards/{cardId}/attachments/{type}/{attachmentId}",
+      "target": "OCA\\Deck\\Controller\\AttachmentApiV11Controller::display",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}/cards/{cardId}/attachments/{type}/{attachmentId}",
+      "target": "OCA\\Deck\\Controller\\AttachmentApiV11Controller::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}/cards/{cardId}/attachments/{type}/{attachmentId}/restore",
+      "target": "OCA\\Deck\\Controller\\AttachmentApiV11Controller::restore",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}/cards/{cardId}/dependentCards/{dependentCardId}",
+      "target": "OCA\\Deck\\Controller\\CardApiController::removeDependentCard",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}/cards/{cardId}/dependentCards/{dependentCardId}",
+      "target": "OCA\\Deck\\Controller\\CardApiController::assignDependentCard",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}/cards/{cardId}/removeLabel",
+      "target": "OCA\\Deck\\Controller\\CardApiController::removeLabel",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}/cards/{cardId}/reorder",
+      "target": "OCA\\Deck\\Controller\\CardApiController::reorder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}/cards/{cardId}/unarchive",
+      "target": "OCA\\Deck\\Controller\\CardApiController::unarchive",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/{stackId}/cards/{cardId}/unassignUser",
+      "target": "OCA\\Deck\\Controller\\CardApiController::unassignUser",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/stacks/archived",
+      "target": "OCA\\Deck\\Controller\\StackApiController::getArchived",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/{boardId}/undo_delete",
+      "target": "OCA\\Deck\\Controller\\BoardApiController::undoDelete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/import",
+      "target": "OCA\\Deck\\Controller\\BoardImportApiController::import",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/import/config/schema/{name}",
+      "target": "OCA\\Deck\\Controller\\BoardImportApiController::getConfigSchema",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/boards/import/getSystems",
+      "target": "OCA\\Deck\\Controller\\BoardImportApiController::getAllowedSystems",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/api/v{apiVersion}/dashboard/due",
+      "target": "OCA\\Deck\\Controller\\CardApiController::findAllWithDue",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/board",
+      "target": "OCA\\Deck\\Controller\\PageController::indexList",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/board/{boardId}",
+      "target": "OCA\\Deck\\Controller\\PageController::indexBoard",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/board/{boardId}/card/{cardId}",
+      "target": "OCA\\Deck\\Controller\\PageController::indexCard",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/board/{boardId}/details",
+      "target": "OCA\\Deck\\Controller\\PageController::indexBoardDetails",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/boards",
+      "target": "OCA\\Deck\\Controller\\BoardController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deck/boards",
+      "target": "OCA\\Deck\\Controller\\BoardController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/deck/boards/{boardId}",
+      "target": "OCA\\Deck\\Controller\\BoardController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/boards/{boardId}",
+      "target": "OCA\\Deck\\Controller\\BoardController::read",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/boards/{boardId}",
+      "target": "OCA\\Deck\\Controller\\BoardController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deck/boards/{boardId}/acl",
+      "target": "OCA\\Deck\\Controller\\BoardController::addAcl",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/deck/boards/{boardId}/acl/{aclId}",
+      "target": "OCA\\Deck\\Controller\\BoardController::deleteAcl",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/boards/{boardId}/acl/{aclId}",
+      "target": "OCA\\Deck\\Controller\\BoardController::updateAcl",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deck/boards/{boardId}/clone",
+      "target": "OCA\\Deck\\Controller\\BoardController::clone",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deck/boards/{boardId}/deleteUndo",
+      "target": "OCA\\Deck\\Controller\\BoardController::deleteUndo",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/boards/{boardId}/export",
+      "target": "OCA\\Deck\\Controller\\BoardController::export",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deck/boards/{boardId}/leave",
+      "target": "OCA\\Deck\\Controller\\BoardController::leave",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/boards/{boardId}/permissions",
+      "target": "OCA\\Deck\\Controller\\BoardController::getUserPermissions",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/boards/{boardId}/transferOwner",
+      "target": "OCA\\Deck\\Controller\\BoardController::transferOwner",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deck/boards/import",
+      "target": "OCA\\Deck\\Controller\\BoardController::import",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/card/{cardId}",
+      "target": "OCA\\Deck\\Controller\\PageController::redirectToCard",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deck/cards",
+      "target": "OCA\\Deck\\Controller\\CardController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/deck/cards/{cardId}",
+      "target": "OCA\\Deck\\Controller\\CardController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/cards/{cardId}",
+      "target": "OCA\\Deck\\Controller\\CardController::read",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/cards/{cardId}",
+      "target": "OCA\\Deck\\Controller\\CardController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/cards/{cardId}/archive",
+      "target": "OCA\\Deck\\Controller\\CardController::archive",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deck/cards/{cardId}/assign",
+      "target": "OCA\\Deck\\Controller\\CardController::assignUser",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deck/cards/{cardId}/attachment",
+      "target": "OCA\\Deck\\Controller\\AttachmentController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/deck/cards/{cardId}/attachment/{attachmentId}",
+      "target": "OCA\\Deck\\Controller\\AttachmentController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/cards/{cardId}/attachment/{attachmentId}",
+      "target": "OCA\\Deck\\Controller\\AttachmentController::display",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deck/cards/{cardId}/attachment/{attachmentId}",
+      "target": "OCA\\Deck\\Controller\\AttachmentController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/cards/{cardId}/attachment/{attachmentId}",
+      "target": "OCA\\Deck\\Controller\\AttachmentController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/cards/{cardId}/attachment/{attachmentId}/restore",
+      "target": "OCA\\Deck\\Controller\\AttachmentController::restore",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/cards/{cardId}/attachments",
+      "target": "OCA\\Deck\\Controller\\AttachmentController::getAll",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/deck/cards/{cardId}/dependentCards/{dependentCardId}",
+      "target": "OCA\\Deck\\Controller\\CardController::removeDependentCard",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deck/cards/{cardId}/dependentCards/{dependentCardId}",
+      "target": "OCA\\Deck\\Controller\\CardController::assignDependentCard",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/cards/{cardId}/done",
+      "target": "OCA\\Deck\\Controller\\CardController::done",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/deck/cards/{cardId}/label/{labelId}",
+      "target": "OCA\\Deck\\Controller\\CardController::removeLabel",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deck/cards/{cardId}/label/{labelId}",
+      "target": "OCA\\Deck\\Controller\\CardController::assignLabel",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/cards/{cardId}/rename",
+      "target": "OCA\\Deck\\Controller\\CardController::rename",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/cards/{cardId}/reorder",
+      "target": "OCA\\Deck\\Controller\\CardController::reorder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/cards/{cardId}/unarchive",
+      "target": "OCA\\Deck\\Controller\\CardController::unarchive",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/cards/{cardId}/unassign",
+      "target": "OCA\\Deck\\Controller\\CardController::unassignUser",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/cards/{cardId}/undone",
+      "target": "OCA\\Deck\\Controller\\CardController::undone",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deck/labels",
+      "target": "OCA\\Deck\\Controller\\LabelController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/deck/labels/{labelId}",
+      "target": "OCA\\Deck\\Controller\\LabelController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/labels/{labelId}",
+      "target": "OCA\\Deck\\Controller\\LabelController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deck/stacks",
+      "target": "OCA\\Deck\\Controller\\StackController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/stacks/{boardId}",
+      "target": "OCA\\Deck\\Controller\\StackController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/stacks/{boardId}/archived",
+      "target": "OCA\\Deck\\Controller\\StackController::archived",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/deck/stacks/{stackId}",
+      "target": "OCA\\Deck\\Controller\\StackController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/stacks/{stackId}",
+      "target": "OCA\\Deck\\Controller\\StackController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/deck/stacks/{stackId}/reorder",
+      "target": "OCA\\Deck\\Controller\\StackController::reorder",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deck/upcoming",
+      "target": "OCA\\Deck\\Controller\\PageController::indexUpcoming",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/board/{boardId}",
+      "target": "OCA\\Deck\\Controller\\BoardOcsController::read",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/boards",
+      "target": "OCA\\Deck\\Controller\\BoardOcsController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/boards",
+      "target": "OCA\\Deck\\Controller\\BoardOcsController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/boards/{boardId}/acl",
+      "target": "OCA\\Deck\\Controller\\BoardOcsController::addAcl",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/boards/team",
+      "target": "OCA\\Deck\\Controller\\BoardOcsController::createForTeam",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/cards",
+      "target": "OCA\\Deck\\Controller\\CardOcsController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/cards/{cardId}",
+      "target": "OCA\\Deck\\Controller\\CardOcsController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/cards/{cardId}/assign",
+      "target": "OCA\\Deck\\Controller\\CardOcsController::assignUser",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/cards/{cardId}/attachment",
+      "target": "OCA\\Deck\\Controller\\AttachmentOcsController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/cards/{cardId}/attachments",
+      "target": "OCA\\Deck\\Controller\\AttachmentOcsController::getAll",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/cards/{cardId}/attachments/{attachmentId}",
+      "target": "OCA\\Deck\\Controller\\AttachmentOcsController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/cards/{cardId}/attachments/{attachmentId}/restore",
+      "target": "OCA\\Deck\\Controller\\AttachmentOcsController::restore",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/cards/{cardId}/attachments/{type}:{attachmentId}",
+      "target": "OCA\\Deck\\Controller\\AttachmentOcsController::delete",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/cards/{cardId}/clone",
+      "target": "OCA\\Deck\\Controller\\CardController::clone",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/cards/{cardId}/comments",
+      "target": "OCA\\Deck\\Controller\\CommentsApiController::list",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/cards/{cardId}/comments",
+      "target": "OCA\\Deck\\Controller\\CommentsApiController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/cards/{cardId}/comments/{commentId}",
+      "target": "OCA\\Deck\\Controller\\CommentsApiController::delete",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/cards/{cardId}/comments/{commentId}",
+      "target": "OCA\\Deck\\Controller\\CommentsApiController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/cards/{cardId}/dependentCards/{dependentCardId}",
+      "target": "OCA\\Deck\\Controller\\CardOcsController::removeDependentCard",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/cards/{cardId}/dependentCards/{dependentCardId}",
+      "target": "OCA\\Deck\\Controller\\CardOcsController::assignDependentCard",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/cards/{cardId}/label/{labelId}",
+      "target": "OCA\\Deck\\Controller\\CardOcsController::removeLabel",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/cards/{cardId}/label/{labelId}",
+      "target": "OCA\\Deck\\Controller\\CardOcsController::assignLabel",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/cards/{cardId}/reorder",
+      "target": "OCA\\Deck\\Controller\\CardOcsController::reorder",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/cards/{cardId}/unassign",
+      "target": "OCA\\Deck\\Controller\\CardOcsController::unAssignUser",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/config",
+      "target": "OCA\\Deck\\Controller\\ConfigController::get",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/config/{key}",
+      "target": "OCA\\Deck\\Controller\\ConfigController::setValue",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/overview/upcoming",
+      "target": "OCA\\Deck\\Controller\\OverviewApiController::upcomingCards",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/search",
+      "target": "OCA\\Deck\\Controller\\SearchController::search",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/session/close",
+      "target": "OCA\\Deck\\Controller\\SessionController::close",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/session/create",
+      "target": "OCA\\Deck\\Controller\\SessionController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/session/sync",
+      "target": "OCA\\Deck\\Controller\\SessionController::sync",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/stacks",
+      "target": "OCA\\Deck\\Controller\\StackOcsController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/stacks/{boardId}",
+      "target": "OCA\\Deck\\Controller\\StackOcsController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/stacks/{stackId}/{boardId}",
+      "target": "OCA\\Deck\\Controller\\StackOcsController::delete",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/stacks/{stackId}/done",
+      "target": "OCA\\Deck\\Controller\\StackOcsController::setDoneStack",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/deck/api/v{apiVersion}/stacks/{stackId}/reorder",
+      "target": "OCA\\Deck\\Controller\\StackOcsController::reorder",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": null,
+      "path": "/remote.php/dav",
+      "target": "OCA\\Deck\\DAV\\CalendarPlugin",
+      "openapi": [],
+      "kind": "DAV"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/capabilities",
+      "target": "OCA\\Deck\\Capabilities",
+      "openapi": [],
+      "kind": "capability"
+    }
+  ]
+}

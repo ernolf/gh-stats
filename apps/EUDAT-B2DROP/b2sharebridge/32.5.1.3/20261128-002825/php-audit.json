@@ -1,0 +1,208 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\B2shareBridge\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Migration/Version010100Date20200324092922.php:65 OC::$server"
+      ],
+      "lines": [
+        "1 use of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Migration/Version010100Date20200324092922.php:65 OC::$server"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/Cron/B2shareCommunityFetcher.php OCA\\B2shareBridge\\Cron\\B2shareCommunityFetcher"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/Cron/B2shareCommunityFetcher.php OCA\\B2shareBridge\\Cron\\B2shareCommunityFetcher"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/PublishController.php:381 time()",
+        "lib/Controller/ViewController.php:654 new DateTime()",
+        "lib/Cron/TransferHandler.php:154 new DateTime()",
+        "lib/Cron/TransferHandler.php:228 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 4 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/PublishController.php:381 time()",
+        "  lib/Controller/ViewController.php:654 new DateTime()",
+        "  lib/Cron/TransferHandler.php:154 new DateTime()",
+        "  lib/Cron/TransferHandler.php:228 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "endpoints": 16,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/b2sharebridge/",
+      "target": "OCA\\B2shareBridge\\Controller\\ViewController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:29 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/b2sharebridge/apitoken",
+      "target": "OCA\\B2shareBridge\\Controller\\ViewController::getTokens",
+      "openapi": [],
+      "source": "appinfo/routes.php:79 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/b2sharebridge/apitoken",
+      "target": "OCA\\B2shareBridge\\Controller\\ViewController::setToken",
+      "openapi": [],
+      "source": "appinfo/routes.php:69 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/b2sharebridge/apitoken/{id}",
+      "target": "OCA\\B2shareBridge\\Controller\\ViewController::deleteToken",
+      "openapi": [],
+      "source": "appinfo/routes.php:74 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/b2sharebridge/attach",
+      "target": "OCA\\B2shareBridge\\Controller\\PublishController::attach",
+      "openapi": [],
+      "source": "appinfo/routes.php:39 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/b2sharebridge/download/{serverId}",
+      "target": "OCA\\B2shareBridge\\Controller\\ViewController::downloadRecordFiles",
+      "openapi": [],
+      "source": "appinfo/routes.php:64 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/b2sharebridge/drafts/{serverId}/{recordId}",
+      "target": "OCA\\B2shareBridge\\Controller\\ViewController::deleteRecord",
+      "openapi": [],
+      "source": "appinfo/routes.php:59 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/b2sharebridge/gettabviewcontent",
+      "target": "OCA\\B2shareBridge\\Controller\\ViewController::getTabViewContent",
+      "openapi": [],
+      "source": "appinfo/routes.php:84 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/b2sharebridge/next",
+      "target": "OCA\\B2shareBridge\\Controller\\PublishController::nextVersion",
+      "openapi": [],
+      "source": "appinfo/routes.php:44 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/b2sharebridge/publications",
+      "target": "OCA\\B2shareBridge\\Controller\\ViewController::publicationList",
+      "openapi": [],
+      "source": "appinfo/routes.php:54 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/b2sharebridge/publish",
+      "target": "OCA\\B2shareBridge\\Controller\\PublishController::publish",
+      "openapi": [],
+      "source": "appinfo/routes.php:34 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/b2sharebridge/server",
+      "target": "OCA\\B2shareBridge\\Controller\\ServerController::saveServer",
+      "openapi": [],
+      "source": "appinfo/routes.php:99 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/b2sharebridge/servers",
+      "target": "OCA\\B2shareBridge\\Controller\\ServerController::listServers",
+      "openapi": [],
+      "source": "appinfo/routes.php:89 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/b2sharebridge/servers",
+      "target": "OCA\\B2shareBridge\\Controller\\ServerController::saveServers",
+      "openapi": [],
+      "source": "appinfo/routes.php:94 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/b2sharebridge/servers/{id}",
+      "target": "OCA\\B2shareBridge\\Controller\\ServerController::deleteServer",
+      "openapi": [],
+      "source": "appinfo/routes.php:104 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/b2sharebridge/uploads",
+      "target": "OCA\\B2shareBridge\\Controller\\ViewController::depositList",
+      "openapi": [],
+      "source": "appinfo/routes.php:49 routes",
+      "kind": "route"
+    }
+  ]
+}

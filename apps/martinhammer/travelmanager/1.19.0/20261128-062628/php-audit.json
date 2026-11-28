@@ -1,0 +1,402 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\TravelManager\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Service/BackupService.php:117",
+        "lib/Service/BookingService.php:71",
+        "lib/Service/BookingService.php:358",
+        "lib/Service/MaintenanceService.php:36"
+      ],
+      "lines": [
+        "4 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Service/BackupService.php:117",
+        "  lib/Service/BookingService.php:71",
+        "  lib/Service/BookingService.php:358",
+        "  lib/Service/MaintenanceService.php:36"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/DispatcherJob.php OCA\\TravelManager\\BackgroundJob\\DispatcherJob"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/DispatcherJob.php OCA\\TravelManager\\BackgroundJob\\DispatcherJob"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Llm/TaskProcessingLlmService.php:107 getValueString()",
+        "lib/Service/ConfigService.php:100 getValueBool()",
+        "lib/Service/ConfigService.php:104 setValueBool()",
+        "lib/Service/ConfigService.php:109 getValueInt()",
+        "lib/Service/ConfigService.php:113 setValueInt()",
+        "lib/Service/ConfigService.php:118 getValueInt()",
+        "lib/Service/ConfigService.php:124 setValueInt()",
+        "lib/Service/ConfigService.php:129 getValueInt()",
+        "lib/Service/ConfigService.php:133 setValueInt()",
+        "lib/Service/ConfigService.php:138 getValueBool()",
+        "lib/Service/ConfigService.php:142 setValueBool()",
+        "lib/Service/ConfigService.php:147 getValueBool()",
+        "lib/Service/ConfigService.php:151 setValueBool()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 13 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Llm/TaskProcessingLlmService.php:107 getValueString()",
+        "  lib/Service/ConfigService.php:100 getValueBool()",
+        "  lib/Service/ConfigService.php:104 setValueBool()",
+        "  lib/Service/ConfigService.php:109 getValueInt()",
+        "  lib/Service/ConfigService.php:113 setValueInt()",
+        "  lib/Service/ConfigService.php:118 getValueInt()",
+        "  lib/Service/ConfigService.php:124 setValueInt()",
+        "  lib/Service/ConfigService.php:129 getValueInt()",
+        "  lib/Service/ConfigService.php:133 setValueInt()",
+        "  lib/Service/ConfigService.php:138 getValueBool()",
+        "  lib/Service/ConfigService.php:142 setValueBool()",
+        "  lib/Service/ConfigService.php:147 getValueBool()",
+        "  lib/Service/ConfigService.php:151 setValueBool()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 10
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/travelmanager/api  ocs.travelmanager.api.index  lib/Controller/ApiController.php:25"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 OCS route. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/travelmanager/api  ocs.travelmanager.api.index  lib/Controller/ApiController.php:25"
+      ]
+    }
+  ],
+  "endpoints": 30,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/travelmanager/",
+      "target": "OCA\\TravelManager\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:22",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/travelmanager/api",
+      "target": "OCA\\TravelManager\\Controller\\ApiController::index",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/ApiController.php:25",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/travelmanager/api/admin/settings",
+      "target": "OCA\\TravelManager\\Controller\\AdminController::show",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/AdminController.php:39",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/travelmanager/api/admin/settings",
+      "target": "OCA\\TravelManager\\Controller\\AdminController::update",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/AdminController.php:64",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/travelmanager/api/backup/export",
+      "target": "OCA\\TravelManager\\Controller\\BackupController::export",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/BackupController.php:44",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/travelmanager/api/backup/import",
+      "target": "OCA\\TravelManager\\Controller\\BackupController::import",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/BackupController.php:89",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/travelmanager/api/backup/preview",
+      "target": "OCA\\TravelManager\\Controller\\BackupController::preview",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/BackupController.php:66",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/travelmanager/api/bookings",
+      "target": "OCA\\TravelManager\\Controller\\BookingController::index",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/BookingController.php:42",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/travelmanager/api/bookings/{id}",
+      "target": "OCA\\TravelManager\\Controller\\BookingController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/BookingController.php:173",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/travelmanager/api/bookings/{id}",
+      "target": "OCA\\TravelManager\\Controller\\BookingController::show",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/BookingController.php:60",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/travelmanager/api/bookings/{id}",
+      "target": "OCA\\TravelManager\\Controller\\BookingController::update",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/BookingController.php:86",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/travelmanager/api/bookings/{id}/duplicate",
+      "target": "OCA\\TravelManager\\Controller\\BookingController::leaveDuplicateGroup",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/BookingController.php:149",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/travelmanager/api/bookings/{id}/review",
+      "target": "OCA\\TravelManager\\Controller\\BookingController::review",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/BookingController.php:121",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/travelmanager/api/bookings/{id}/trip",
+      "target": "OCA\\TravelManager\\Controller\\BookingController::assignTrip",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/BookingController.php:199",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/travelmanager/api/dev/data",
+      "target": "OCA\\TravelManager\\Controller\\DevController::wipe",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/DevController.php:100",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/travelmanager/api/dev/ingest",
+      "target": "OCA\\TravelManager\\Controller\\DevController::ingest",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/DevController.php:54",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/travelmanager/api/dev/logs",
+      "target": "OCA\\TravelManager\\Controller\\DevController::clearLogs",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/DevController.php:86",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/travelmanager/api/dev/logs",
+      "target": "OCA\\TravelManager\\Controller\\DevController::logs",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/DevController.php:72",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/travelmanager/api/messages",
+      "target": "OCA\\TravelManager\\Controller\\MessageController::index",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/MessageController.php:49",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/travelmanager/api/messages/{id}/body",
+      "target": "OCA\\TravelManager\\Controller\\MessageController::body",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/MessageController.php:79",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/travelmanager/api/messages/{id}/discard",
+      "target": "OCA\\TravelManager\\Controller\\MessageController::restore",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/MessageController.php:156",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/travelmanager/api/messages/{id}/discard",
+      "target": "OCA\\TravelManager\\Controller\\MessageController::discard",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/MessageController.php:136",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/travelmanager/api/messages/{id}/retry",
+      "target": "OCA\\TravelManager\\Controller\\MessageController::retry",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/MessageController.php:108",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/travelmanager/api/settings",
+      "target": "OCA\\TravelManager\\Controller\\SettingsController::show",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SettingsController.php:47",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/travelmanager/api/settings",
+      "target": "OCA\\TravelManager\\Controller\\SettingsController::update",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SettingsController.php:70",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/travelmanager/api/settings/test",
+      "target": "OCA\\TravelManager\\Controller\\SettingsController::test",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SettingsController.php:116",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/travelmanager/api/trips",
+      "target": "OCA\\TravelManager\\Controller\\TripController::index",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/TripController.php:41",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/travelmanager/api/trips",
+      "target": "OCA\\TravelManager\\Controller\\TripController::create",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/TripController.php:61",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/travelmanager/api/trips/{id}",
+      "target": "OCA\\TravelManager\\Controller\\TripController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/TripController.php:120",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/travelmanager/api/trips/{id}",
+      "target": "OCA\\TravelManager\\Controller\\TripController::update",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/TripController.php:88",
+      "kind": "OCS"
+    }
+  ]
+}

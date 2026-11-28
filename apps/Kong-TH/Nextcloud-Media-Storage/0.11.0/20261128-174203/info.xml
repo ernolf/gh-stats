@@ -1,0 +1,75 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+    <id>mediastorage</id>
+    <name>Media Storage</name>
+    <summary>Private virtual media organization using Nextcloud files</summary>
+    <description><![CDATA[Organize images and videos into virtual buckets and folders in Nextcloud. Each media reference points to an original file. You can organize the same photo into several collections while keeping one original.
+
+## Browse buckets and folders
+
+Open **Media Storage** from the Nextcloud app menu and select **Library** in the sidebar. On a small screen, open the navigation menu first. Select a folder to browse its contents, use the breadcrumb to go back up, or search by name within the current folder.
+
+Use **+** beside **Buckets** to create a separate collection. Within a bucket, choose **Add → New folder** to group related media. The pencil beside a bucket opens its settings. **Clear contents** removes all its virtual folders and references. **Remove bucket** also removes the bucket itself. The default Library can be renamed or cleared.
+
+## Add existing files or upload new media
+
+- **From Nextcloud Files:** Open the destination in Media Storage, choose **Add → Add from Nextcloud**, and select files or folders. For a folder named `Demo Album`, choose **Keep folder** to create `/Demo Album/photo.jpg`. Choose **Import contents here** to place `photo.jpg` directly in the destination. Nested folders keep their structure. Review the destination paths before confirming.
+- **From your device:** Choose **Add → Upload media**, select an image or video, confirm its display name, and complete the upload. The app stores the original under `Media Storage/YYYY-MM-DD/` in Nextcloud Files. Use **Open folder in Nextcloud** in the completion message to find it again.
+
+## Inspect, move or remove a reference
+
+Open the information button beside a media item to preview it and inspect its bucket, virtual path and original file. Choose **Copy virtual path** to get the exact spelling for an API request. If the original is unavailable, use **Rebind** to choose an accessible replacement.
+
+Select rows to show the action toolbar. Use **Move** to change their virtual location, or **Copy** and **Paste** to create independent references. **Rename** and **Move** change the path callers use to open the item. **Remove links** keeps the original in Nextcloud Files.
+
+## Create and manage an API token
+
+1. Open **API tokens → Create token**. Give the token a name that identifies the integration and choose an expiry date.
+2. Select the bucket the integration needs, such as **Library**. A bucket token covers its subfolders. Choose **All my buckets and folders** only for an integration that needs account-wide access.
+3. Select **media:read** to list and read media. Choose **Save**, then **Copy token** before closing the dialog. The secret is displayed once.
+4. To replace an active token, choose **Rotate**, update your client with the new secret and test it. Then choose **Revoke** on the old token to end its access.
+
+## Open an image by its virtual path
+
+For a Library token and a virtual path of `/Demo Album/photo.jpg`, replace the hostname and token in this example. Include every virtual folder, preserve letter case and encode spaces as `%20`. The token selects Library, so the first path segment is `Demo Album`.
+
+```text
+https://cloud.example.org/index.php/apps/mediastorage/delivery/v1/Demo%20Album/photo.jpg?key=YOUR_TOKEN
+```
+
+Anyone who receives that URL can extract the token. For an image shared with other people, have your backend request a short-lived URL with its bearer token and share the returned URL. See the [path API examples](https://github.com/Kong-TH/Nextcloud-Media-Storage/blob/main/docs/manual/path-api.md#issue-a-browser-url-from-a-path).
+
+## Configure Cloudflare for API reads
+
+If curl receives a Cloudflare **Just a moment…** page, the zone administrator can use the request’s Ray ID in **Security Events** to identify the challenge. For a custom challenge rule, exclude the two reads below from its match condition. For a security feature that supports **Skip**, create a custom rule under **Security rules**, enter the expression below, select **Skip** for the feature identified in the event, and place the exception before the challenging rule. Standard Bot Fight Mode does not support Skip. [Cloudflare Skip documentation](https://developers.cloudflare.com/waf/custom-rules/skip/)
+
+Replace both occurrences of `cloud.example.org` with your hostname. If Nextcloud is installed under a subdirectory, include it in both paths. This expression covers GET requests to the node listing and direct media URLs. Media Storage still checks the token.
+
+```text
+(http.host eq "cloud.example.org" and http.request.method eq "GET" and http.request.uri.path eq "/index.php/apps/mediastorage/external/v1/nodes") or (http.host eq "cloud.example.org" and http.request.method eq "GET" and starts_with(http.request.uri.path, "/index.php/apps/mediastorage/delivery/v1/"))
+```
+
+Test the listing with a read token stored in the shell variable `MS_TOKEN`:
+
+```bash
+curl -sS -H "Authorization: Bearer $MS_TOKEN" \
+  "https://cloud.example.org/index.php/apps/mediastorage/external/v1/nodes"
+```
+
+A JSON response containing `nodes` confirms the listing reached Media Storage. An empty array means the listing returned no entries. Next, open a known image using its copied virtual path. If Media Storage returns `Media reference not found`, check the selected bucket and every folder in the path.]]></description>
+    <version>0.11.0</version>
+    <licence>AGPL-3.0-or-later</licence>
+    <author>Kongphai Wutthichaiya</author>
+    <namespace>MediaStorage</namespace>
+    <documentation><user>https://github.com/Kong-TH/Nextcloud-Media-Storage/blob/main/docs/manual/user-guide.md</user></documentation>
+    <category>multimedia</category>
+    <bugs>https://git.kohtnas.com/publicgroup/nextcloud-media-storage</bugs>
+    <repository type="git">https://git.kohtnas.com/publicgroup/nextcloud-media-storage.git</repository>
+    <screenshot>https://lh3.googleusercontent.com/pw/AP1GczMkDcRvE3f8dfxkKVZP2qiJ_X3RYY98MjWgAH_8bDuzPVawRgUF5aax4Da4NrifYy8ufoGQzwpf643a8W0VXSXGKq325K0OuRwbhKpetuSNdo2g8nw=w2400</screenshot>
+    <screenshot>https://lh3.googleusercontent.com/pw/AP1GczPuSwKaa-Jtrt6At6oY4N6_OgIosq-IEP7GmMzv68FaWi7ArsbeIpiZp2rQ2cEIiILiRRkeRuJzfVnO4otAex1yIE4mcsAo-1o7zq-y5pdab1MnVvA=w2400</screenshot>
+    <screenshot>https://lh3.googleusercontent.com/pw/AP1GczPrA0hvpjA1nQPI0GqjTpkadMPYLMEmlq4c3pGecBD7pshpy704t6xPT76Q8PaHrXdQmzQa0N2vEQY4mxsgX9LDaOK1s09XogoBAiDaUOjPOjRDVXo=w2400</screenshot>
+    <screenshot>https://lh3.googleusercontent.com/pw/AP1GczMqLeyiZPtsBm71bd20EYHlqaTpOj6M16N4BDdNnvn2tBSQG67LGQAfzVykb7j4cCIjwa6_5PP3vVPTzKEupOm_rio1heDFt4x3doa-TNcugekNwaY=w2400</screenshot>
+    <screenshot>https://lh3.googleusercontent.com/pw/AP1GczNxt3iix59CErwN6269qWtdZWtaIOCDZdUF1smFfMGmOyv2oVUVRhca89pNWa3n3m0YMISbH_DrSgTNlTg6bgGzaL1LKNGGFBBfWL2jLJMbOgeYEHQ=w2400</screenshot>
+    <dependencies><php min-version="8.2"/><nextcloud min-version="34" max-version="35"/></dependencies>
+    <navigations><navigation><name>Media Storage</name><route>mediastorage.page.index</route><icon>app.svg</icon><order>20</order></navigation></navigations>
+</info>

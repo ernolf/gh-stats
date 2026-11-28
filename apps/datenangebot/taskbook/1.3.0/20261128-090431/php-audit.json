@@ -1,0 +1,308 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Taskbook\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/taskbook/pwa/service-worker.js  taskbook.page.serviceworker  lib/Controller/PageController.php:107"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 route outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 83 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/taskbook/pwa/service-worker.js  taskbook.page.serviceworker  lib/Controller/PageController.php:107"
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Service/EntryService.php:394",
+        "lib/Service/SyncService.php:124"
+      ],
+      "lines": [
+        "2 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Service/EntryService.php:394",
+        "  lib/Service/SyncService.php:124"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/OverdueReminderJob.php OCA\\Taskbook\\BackgroundJob\\OverdueReminderJob"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/OverdueReminderJob.php OCA\\Taskbook\\BackgroundJob\\OverdueReminderJob"
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/taskbook/api/v1/settings  ocs.taskbook.settings.get  lib/Controller/SettingsController.php:46",
+        "GET /ocs/v2.php/apps/taskbook/api/v1/views/overview  ocs.taskbook.view.overview  lib/Controller/ViewController.php:46",
+        "GET /ocs/v2.php/apps/taskbook/api/v1/views/day  ocs.taskbook.view.day  lib/Controller/ViewController.php:63",
+        "GET /ocs/v2.php/apps/taskbook/api/v1/views/week  ocs.taskbook.view.week  lib/Controller/ViewController.php:80",
+        "GET /ocs/v2.php/apps/taskbook/api/v1/views/month  ocs.taskbook.view.month  lib/Controller/ViewController.php:97",
+        "GET /ocs/v2.php/apps/taskbook/api/v1/views/future  ocs.taskbook.view.future  lib/Controller/ViewController.php:111"
+      ],
+      "lines": [
+        "Nothing in the app calls 6 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/taskbook/api/v1/settings  ocs.taskbook.settings.get  lib/Controller/SettingsController.php:46",
+        "  GET /ocs/v2.php/apps/taskbook/api/v1/views/overview  ocs.taskbook.view.overview  lib/Controller/ViewController.php:46",
+        "  GET /ocs/v2.php/apps/taskbook/api/v1/views/day  ocs.taskbook.view.day  lib/Controller/ViewController.php:63",
+        "  GET /ocs/v2.php/apps/taskbook/api/v1/views/week  ocs.taskbook.view.week  lib/Controller/ViewController.php:80",
+        "  GET /ocs/v2.php/apps/taskbook/api/v1/views/month  ocs.taskbook.view.month  lib/Controller/ViewController.php:97",
+        "  GET /ocs/v2.php/apps/taskbook/api/v1/views/future  ocs.taskbook.view.future  lib/Controller/ViewController.php:111"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    }
+  ],
+  "endpoints": 23,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/taskbook/",
+      "target": "OCA\\Taskbook\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:36",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/taskbook/{path}",
+      "target": "OCA\\Taskbook\\Controller\\PageController::deepLink",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:178",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/taskbook/pwa/",
+      "target": "OCA\\Taskbook\\Controller\\PageController::pwa",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:48",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/taskbook/pwa/manifest.webmanifest",
+      "target": "OCA\\Taskbook\\Controller\\PageController::manifest",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:77",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/taskbook/pwa/service-worker.js",
+      "target": "OCA\\Taskbook\\Controller\\PageController::serviceWorker",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:107",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/taskbook/api/v1/contexts",
+      "target": "OCA\\Taskbook\\Controller\\ContextController::index",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/ContextController.php:46",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/taskbook/api/v1/contexts",
+      "target": "OCA\\Taskbook\\Controller\\ContextController::create",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/ContextController.php:65",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/taskbook/api/v1/contexts/{id}",
+      "target": "OCA\\Taskbook\\Controller\\ContextController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/ContextController.php:116",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/ocs/v2.php/apps/taskbook/api/v1/contexts/{id}",
+      "target": "OCA\\Taskbook\\Controller\\ContextController::update",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/ContextController.php:91",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/taskbook/api/v1/entries",
+      "target": "OCA\\Taskbook\\Controller\\EntryController::create",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/EntryController.php:80",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/taskbook/api/v1/entries/{id}",
+      "target": "OCA\\Taskbook\\Controller\\EntryController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/EntryController.php:135",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/taskbook/api/v1/entries/{id}",
+      "target": "OCA\\Taskbook\\Controller\\EntryController::get",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/EntryController.php:51",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/ocs/v2.php/apps/taskbook/api/v1/entries/{id}",
+      "target": "OCA\\Taskbook\\Controller\\EntryController::update",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/EntryController.php:112",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/taskbook/api/v1/health",
+      "target": "OCA\\Taskbook\\Controller\\SyncController::health",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SyncController.php:78",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/taskbook/api/v1/settings",
+      "target": "OCA\\Taskbook\\Controller\\SettingsController::get",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SettingsController.php:46",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/taskbook/api/v1/settings/default-context",
+      "target": "OCA\\Taskbook\\Controller\\SettingsController::setDefault",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SettingsController.php:65",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/taskbook/api/v1/settings/overdue-reminders",
+      "target": "OCA\\Taskbook\\Controller\\SettingsController::setOverdueReminders",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SettingsController.php:90",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/taskbook/api/v1/sync",
+      "target": "OCA\\Taskbook\\Controller\\SyncController::sync",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SyncController.php:59",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/taskbook/api/v1/views/day",
+      "target": "OCA\\Taskbook\\Controller\\ViewController::day",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/ViewController.php:63",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/taskbook/api/v1/views/future",
+      "target": "OCA\\Taskbook\\Controller\\ViewController::future",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/ViewController.php:111",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/taskbook/api/v1/views/month",
+      "target": "OCA\\Taskbook\\Controller\\ViewController::month",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/ViewController.php:97",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/taskbook/api/v1/views/overview",
+      "target": "OCA\\Taskbook\\Controller\\ViewController::overview",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/ViewController.php:46",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/taskbook/api/v1/views/week",
+      "target": "OCA\\Taskbook\\Controller\\ViewController::week",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/ViewController.php:80",
+      "kind": "OCS"
+    }
+  ]
+}

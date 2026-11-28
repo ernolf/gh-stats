@@ -1,0 +1,182 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Wire\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Service/ImageService.php:64 OC\\Files\\Node\\File",
+        "lib/Service/WireAPIService.php:231 OC\\Files\\Node\\File",
+        "lib/Service/WireAPIService.php:231 OC\\Files\\Node\\Folder"
+      ],
+      "lines": [
+        "3 uses of the private API of the server in 2 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Service/ImageService.php:64 OC\\Files\\Node\\File",
+        "  lib/Service/WireAPIService.php:231 OC\\Files\\Node\\File",
+        "  lib/Service/WireAPIService.php:231 OC\\Files\\Node\\Folder"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:58 injectFn()",
+        "lib/AppInfo/Application.php:59 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 2 places. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:58 injectFn()",
+        "  lib/AppInfo/Application.php:59 injectFn()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "POST /index.php/apps/integration_wire/conversations/{conversationDomain}/{conversationId}/proteus/messages  integration_wire.wireapi.sendmessage  appinfo/routes.php:18 routes",
+        "GET /index.php/apps/integration_wire/url  integration_wire.wireapi.getwireurl  appinfo/routes.php:22 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 12 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  POST /index.php/apps/integration_wire/conversations/{conversationDomain}/{conversationId}/proteus/messages  integration_wire.wireapi.sendmessage  appinfo/routes.php:18 routes",
+        "  GET /index.php/apps/integration_wire/url  integration_wire.wireapi.getwireurl  appinfo/routes.php:22 routes"
+      ]
+    },
+    {
+      "id": "frontend-url-without-route",
+      "level": "warn",
+      "places": [
+        "src/filesplugin.js:234 apps/integration_wire/sendMessage"
+      ],
+      "lines": [
+        "The frontend or a template builds 1 URL below /apps/integration_wire/ that no route of the app matches. The request fails at run time.",
+        "  src/filesplugin.js:234 apps/integration_wire/sendMessage"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Service/WireAPIService.php:237 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Service/WireAPIService.php:237 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Service/WireAPIService.php:239 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead"
+      ],
+      "lines": [
+        "3 uses in 1 file of the public API that is deprecated in Nextcloud 22 to 25. The text of the tag names the replacement where it has one.",
+        "  lib/Service/WireAPIService.php:237 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Service/WireAPIService.php:237 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Service/WireAPIService.php:239 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/ConfigController.php:159 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 1 place. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/ConfigController.php:159 new DateTime()"
+      ]
+    }
+  ],
+  "endpoints": 11,
+  "endpointList": [
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/integration_wire/admin-config",
+      "target": "OCA\\Wire\\Controller\\ConfigController::setAdminConfig",
+      "openapi": [],
+      "source": "appinfo/routes.php:16 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/integration_wire/config",
+      "target": "OCA\\Wire\\Controller\\ConfigController::setConfig",
+      "openapi": [],
+      "source": "appinfo/routes.php:15 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_wire/conversations",
+      "target": "OCA\\Wire\\Controller\\WireAPIController::getConversations",
+      "openapi": [],
+      "source": "appinfo/routes.php:21 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/integration_wire/conversations/{conversationDomain}/{conversationId}/proteus/messages",
+      "target": "OCA\\Wire\\Controller\\WireAPIController::sendMessage",
+      "openapi": [],
+      "source": "appinfo/routes.php:18 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_wire/is-connected",
+      "target": "OCA\\Wire\\Controller\\ConfigController::isUserConnected",
+      "openapi": [],
+      "source": "appinfo/routes.php:14 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_wire/preview",
+      "target": "OCA\\Wire\\Controller\\FilesController::getFileImage",
+      "openapi": [],
+      "source": "appinfo/routes.php:26 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/integration_wire/sendFile",
+      "target": "OCA\\Wire\\Controller\\WireAPIController::sendFile",
+      "openapi": [],
+      "source": "appinfo/routes.php:20 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/integration_wire/sendLinks",
+      "target": "OCA\\Wire\\Controller\\WireAPIController::sendLinks",
+      "openapi": [],
+      "source": "appinfo/routes.php:19 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_wire/teams/{domain}/{teamId}/image",
+      "target": "OCA\\Wire\\Controller\\WireAPIController::getTeamAvatar",
+      "openapi": [],
+      "source": "appinfo/routes.php:24 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_wire/url",
+      "target": "OCA\\Wire\\Controller\\WireAPIController::getWireUrl",
+      "openapi": [],
+      "source": "appinfo/routes.php:22 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_wire/users/{domain}/{userId}/image",
+      "target": "OCA\\Wire\\Controller\\WireAPIController::getUserAvatar",
+      "openapi": [],
+      "source": "appinfo/routes.php:23 routes",
+      "kind": "route"
+    }
+  ]
+}

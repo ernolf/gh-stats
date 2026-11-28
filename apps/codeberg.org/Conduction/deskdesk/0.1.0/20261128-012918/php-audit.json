@@ -1,0 +1,197 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\DeskDesk\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Service/SettingsService.php:244 OC"
+      ],
+      "lines": [
+        "1 use of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Service/SettingsService.php:244 OC"
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/Service/ItemService.php:120 OCP\\IAppConfig::getValueString(): there since Nextcloud 29, the app declares from 28",
+        "lib/Service/SettingsService.php:116 OCP\\IAppConfig::getValueString(): there since Nextcloud 29, the app declares from 28",
+        "lib/Service/SettingsService.php:212 OCP\\IAppConfig::setValueString(): there since Nextcloud 29, the app declares from 28"
+      ],
+      "lines": [
+        "3 uses in 2 files of the public API that the oldest majors of Nextcloud 28 to 34 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/Service/ItemService.php:120 OCP\\IAppConfig::getValueString(): there since Nextcloud 29, the app declares from 28",
+        "  lib/Service/SettingsService.php:116 OCP\\IAppConfig::getValueString(): there since Nextcloud 29, the app declares from 28",
+        "  lib/Service/SettingsService.php:212 OCP\\IAppConfig::setValueString(): there since Nextcloud 29, the app declares from 28"
+      ]
+    },
+    {
+      "id": "route-duplicate",
+      "level": "warn",
+      "places": [
+        "deskdesk.health.index: deskdesk.health.index at appinfo/routes.php:36 routes, deskdesk.health.index at appinfo/routes.php:37 routes"
+      ],
+      "lines": [
+        "1 verb and path or route name is declared more than once. The server keeps one route per name and takes the first that matches a request, so the other one is never reached.",
+        "  deskdesk.health.index: deskdesk.health.index at appinfo/routes.php:36 routes, deskdesk.health.index at appinfo/routes.php:37 routes"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "POST /index.php/apps/deskdesk/api/settings/load  deskdesk.settings.load  appinfo/routes.php:26 routes",
+        "DELETE /index.php/apps/deskdesk/api/items/{id}  deskdesk.item.destroy  appinfo/routes.php:30 routes",
+        "GET /index.php/apps/deskdesk/api/metrics  deskdesk.metrics.index  appinfo/routes.php:33 routes",
+        "GET /index.php/apps/deskdesk/api/health  deskdesk.health.index  appinfo/routes.php:36 routes",
+        "GET /index.php/apps/deskdesk/{path}  deskdesk.dashboard.catchall  appinfo/routes.php:41 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 5 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 12 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  POST /index.php/apps/deskdesk/api/settings/load  deskdesk.settings.load  appinfo/routes.php:26 routes",
+        "  DELETE /index.php/apps/deskdesk/api/items/{id}  deskdesk.item.destroy  appinfo/routes.php:30 routes",
+        "  GET /index.php/apps/deskdesk/api/metrics  deskdesk.metrics.index  appinfo/routes.php:33 routes",
+        "  GET /index.php/apps/deskdesk/api/health  deskdesk.health.index  appinfo/routes.php:36 routes",
+        "  GET /index.php/apps/deskdesk/{path}  deskdesk.dashboard.catchall  appinfo/routes.php:41 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "vimeo/psalm, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Service/ItemService.php:114 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Service/SettingsService.php:99 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone"
+      ],
+      "lines": [
+        "2 uses in 2 files of the public API that is deprecated in Nextcloud 28 to 34. The text of the tag names the replacement where it has one.",
+        "  lib/Service/ItemService.php:114 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Service/SettingsService.php:99 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/ItemService.php:120 getValueString()",
+        "lib/Service/SettingsService.php:116 getValueString()",
+        "lib/Service/SettingsService.php:212 setValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 3 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/ItemService.php:120 getValueString()",
+        "  lib/Service/SettingsService.php:116 getValueString()",
+        "  lib/Service/SettingsService.php:212 setValueString()"
+      ]
+    },
+    {
+      "id": "cors-unreferenced",
+      "level": "info",
+      "places": [
+        "OPTIONS /index.php/apps/deskdesk/api/health  deskdesk.health.index  appinfo/routes.php:37 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 route outside OCS whose method allows requests from other origins (CORS), or that answers the preflight of such a request (OPTIONS). It is there for clients outside the app, so this is no defect in itself.",
+        "  OPTIONS /index.php/apps/deskdesk/api/health  deskdesk.health.index  appinfo/routes.php:37 routes"
+      ]
+    }
+  ],
+  "endpoints": 9,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deskdesk/",
+      "target": "OCA\\DeskDesk\\Controller\\DashboardController::page",
+      "openapi": [],
+      "source": "appinfo/routes.php:21 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deskdesk/{path}",
+      "target": "OCA\\DeskDesk\\Controller\\DashboardController::catchAll",
+      "openapi": [],
+      "source": "appinfo/routes.php:41 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deskdesk/api/health",
+      "target": "OCA\\DeskDesk\\Controller\\HealthController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:36 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/deskdesk/api/health",
+      "target": "OCA\\DeskDesk\\Controller\\HealthController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:37 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/deskdesk/api/items/{id}",
+      "target": "OCA\\DeskDesk\\Controller\\ItemController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:30 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deskdesk/api/metrics",
+      "target": "OCA\\DeskDesk\\Controller\\MetricsController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:33 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/deskdesk/api/settings",
+      "target": "OCA\\DeskDesk\\Controller\\SettingsController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:24 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deskdesk/api/settings",
+      "target": "OCA\\DeskDesk\\Controller\\SettingsController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:25 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/deskdesk/api/settings/load",
+      "target": "OCA\\DeskDesk\\Controller\\SettingsController::load",
+      "openapi": [],
+      "source": "appinfo/routes.php:26 routes",
+      "kind": "route"
+    }
+  ]
+}

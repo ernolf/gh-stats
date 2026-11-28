@@ -1,0 +1,2083 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\DutyCheck\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:433 OC\\Security\\CSRF\\CsrfTokenManager",
+        "lib/Db/SchemaProbe.php:114 OC\\DB\\SchemaWrapper",
+        "lib/Repair/EnsureDutyCheckSchema.php:89 OC\\DB\\MigrationService",
+        "lib/Repair/EnsureDutyCheckSchema.php:91 OC\\DB\\Connection",
+        "lib/Service/CsrfTokenValidator.php:18 OC\\Security\\CSRF\\CsrfTokenManager",
+        "lib/Service/CsrfTokenValidator.php:24 OC\\Security\\CSRF\\CsrfToken",
+        "templates/roster-print-error.php:16 OC",
+        "templates/roster-print-error.php:16 OC::$server",
+        "templates/roster-print.php:45 OC",
+        "templates/roster-print.php:45 OC::$server",
+        "templates/roster-print.php:46 OC\\Security\\CSP\\ContentSecurityPolicyNonceManager",
+        "templates/roster-print.php:46 OC::$server"
+      ],
+      "lines": [
+        "12 uses of the private API of the server in 6 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/AppInfo/Application.php:433 OC\\Security\\CSRF\\CsrfTokenManager",
+        "  lib/Db/SchemaProbe.php:114 OC\\DB\\SchemaWrapper",
+        "  lib/Repair/EnsureDutyCheckSchema.php:89 OC\\DB\\MigrationService",
+        "  lib/Repair/EnsureDutyCheckSchema.php:91 OC\\DB\\Connection",
+        "  lib/Service/CsrfTokenValidator.php:18 OC\\Security\\CSRF\\CsrfTokenManager",
+        "  lib/Service/CsrfTokenValidator.php:24 OC\\Security\\CSRF\\CsrfToken",
+        "  templates/roster-print-error.php:16 OC",
+        "  templates/roster-print-error.php:16 OC::$server",
+        "  templates/roster-print.php:45 OC",
+        "  templates/roster-print.php:45 OC::$server",
+        "  templates/roster-print.php:46 OC\\Security\\CSP\\ContentSecurityPolicyNonceManager",
+        "  templates/roster-print.php:46 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 9
+        }
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/Support/NavGate.php:61 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "lib/Support/NavGate.php:65 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "lib/Support/NavGate.php:74 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "lib/Support/NavGate.php:91 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "lib/Support/NavGate.php:104 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32"
+      ],
+      "lines": [
+        "5 uses in 1 file of the public API that the oldest majors of Nextcloud 32 to 35 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/Support/NavGate.php:61 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "  lib/Support/NavGate.php:65 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "  lib/Support/NavGate.php:74 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "  lib/Support/NavGate.php:91 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32",
+        "  lib/Support/NavGate.php:104 OCP\\IContainer::get(): there since Nextcloud 34, the app declares from 32"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "display-name-lookup",
+      "level": "warn",
+      "places": [
+        "lib/Service/LicenseService.php:252",
+        "lib/Service/LicenseService.php:387"
+      ],
+      "lines": [
+        "2 places load a user with IUserManager::get() only to ask for the display name. IUserManager::getDisplayName(), there since Nextcloud 25, answers from a cache and loads no user.",
+        "  lib/Service/LicenseService.php:252",
+        "  lib/Service/LicenseService.php:387"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/dutycheck/needs-role  dutycheck.page.needsrole  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/dutycheck/api/admin/transfer/reconcile  dutycheck.transfer_api.reconcile  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/dutycheck/api/swaps/{id}/accept  dutycheck.selfserviceapi.acceptswap  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/dutycheck/api/rotation-assignments/{id}/end  dutycheck.selfserviceapi.endrotationassignment  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/dutycheck/api/admin/soll-diagnostics  dutycheck.selfserviceapi.solldiagnostics  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/dutycheck/api/license/seats  dutycheck.license.assignseat  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/dutycheck/api/mobile/bootstrap  dutycheck.mobile.bootstrap  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/dutycheck/api/mobile/my/roster  dutycheck.mobile.myroster  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/dutycheck/api/mobile/my/assignments/{id}/acknowledge  dutycheck.mobile.acknowledgeassignment  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/dutycheck/api/mobile/my/absences  dutycheck.mobile.myabsences  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/dutycheck/api/mobile/my/absences  dutycheck.mobile.createmyabsence  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/dutycheck/api/mobile/open-shifts  dutycheck.mobile.listopenshifts  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/dutycheck/api/mobile/open-shifts/{id}/claim  dutycheck.mobile.claimopenshift  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/dutycheck/api/mobile/swaps  dutycheck.mobile.createswaprequest  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/dutycheck/api/mobile/swaps/{id}/accept  dutycheck.mobile.acceptswap  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/dutycheck/api/mobile/my/swaps  dutycheck.mobile.listmyswaps  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/dutycheck/api/mobile/swaps/{id}/withdraw  dutycheck.mobile.withdrawswap  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/dutycheck/api/mobile/my/swap-candidates  dutycheck.mobile.swapcandidates  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/dutycheck/api/mobile/team-week  dutycheck.mobile.teamweek  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/dutycheck/api/mobile/my/preferences  dutycheck.mobile.mypreferences  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/dutycheck/api/mobile/my/preferences  dutycheck.mobile.savemypreference  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/dutycheck/api/mobile/my/blackouts  dutycheck.mobile.myblackouts  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/dutycheck/api/mobile/my/blackouts  dutycheck.mobile.createmyblackout  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/dutycheck/api/mobile/me/ical-token  dutycheck.mobile.icaltokenmeta  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/dutycheck/api/mobile/me/ical-token  dutycheck.mobile.createicaltoken  appinfo/routes.php:5 routes",
+        "POST /index.php/apps/dutycheck/api/mobile/me/ical-token/rotate  dutycheck.mobile.rotateicaltoken  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/dutycheck/api/admin/periods/{periodId}/roster-minutes.csv  dutycheck.rosterapi.exportrosterminutescsv  appinfo/routes.php:5 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 27 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 31 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/dutycheck/needs-role  dutycheck.page.needsrole  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/dutycheck/api/admin/transfer/reconcile  dutycheck.transfer_api.reconcile  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/dutycheck/api/swaps/{id}/accept  dutycheck.selfserviceapi.acceptswap  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/dutycheck/api/rotation-assignments/{id}/end  dutycheck.selfserviceapi.endrotationassignment  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/dutycheck/api/admin/soll-diagnostics  dutycheck.selfserviceapi.solldiagnostics  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/dutycheck/api/license/seats  dutycheck.license.assignseat  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/dutycheck/api/mobile/bootstrap  dutycheck.mobile.bootstrap  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/dutycheck/api/mobile/my/roster  dutycheck.mobile.myroster  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/dutycheck/api/mobile/my/assignments/{id}/acknowledge  dutycheck.mobile.acknowledgeassignment  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/dutycheck/api/mobile/my/absences  dutycheck.mobile.myabsences  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/dutycheck/api/mobile/my/absences  dutycheck.mobile.createmyabsence  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/dutycheck/api/mobile/open-shifts  dutycheck.mobile.listopenshifts  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/dutycheck/api/mobile/open-shifts/{id}/claim  dutycheck.mobile.claimopenshift  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/dutycheck/api/mobile/swaps  dutycheck.mobile.createswaprequest  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/dutycheck/api/mobile/swaps/{id}/accept  dutycheck.mobile.acceptswap  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/dutycheck/api/mobile/my/swaps  dutycheck.mobile.listmyswaps  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/dutycheck/api/mobile/swaps/{id}/withdraw  dutycheck.mobile.withdrawswap  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/dutycheck/api/mobile/my/swap-candidates  dutycheck.mobile.swapcandidates  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/dutycheck/api/mobile/team-week  dutycheck.mobile.teamweek  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/dutycheck/api/mobile/my/preferences  dutycheck.mobile.mypreferences  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/dutycheck/api/mobile/my/preferences  dutycheck.mobile.savemypreference  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/dutycheck/api/mobile/my/blackouts  dutycheck.mobile.myblackouts  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/dutycheck/api/mobile/my/blackouts  dutycheck.mobile.createmyblackout  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/dutycheck/api/mobile/me/ical-token  dutycheck.mobile.icaltokenmeta  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/dutycheck/api/mobile/me/ical-token  dutycheck.mobile.createicaltoken  appinfo/routes.php:5 routes",
+        "  POST /index.php/apps/dutycheck/api/mobile/me/ical-token/rotate  dutycheck.mobile.rotateicaltoken  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/dutycheck/api/admin/periods/{periodId}/roster-minutes.csv  dutycheck.rosterapi.exportrosterminutescsv  appinfo/routes.php:5 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 24
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/ConfigTransfer/TransferReceiptStore.php:44 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferReceiptStore.php:46 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferReceiptStore.php:55 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferReceiptStore.php:67 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferReceiptStore.php:83 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferReceiptStore.php:91 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferReceiptStore.php:101 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferService.php:1015 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/ConfigTransfer/TransferService.php:1536 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferService.php:1555 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferService.php:1595 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/ConfigTransfer/TransferService.php:1619 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Controller/PageController.php:399 OCP\\Util::callRegister(): deprecated since Nextcloud 32; directly use CsrfTokenManager instead",
+        "lib/Controller/RosterApiController.php:1208 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "lib/Controller/RosterApiController.php:1722 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/RosterApiController.php:1728 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/RosterApiController.php:1866 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/RosterApiController.php:1867 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/RosterApiController.php:1868 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/RosterApiController.php:1870 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/RosterApiController.php:1885 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/RosterApiController.php:1890 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/RosterApiController.php:1894 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/RosterApiController.php:1898 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:76 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:79 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:104 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:105 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:124 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:206 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:216 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:229 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:235 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:264 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:275 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:288 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:302 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:313 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:342 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:382 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:404 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:407 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:441 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:448 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:552 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:615 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:617 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:618 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:621 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:622 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:624 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:625 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:632 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:644 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:645 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:650 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:651 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:652 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:653 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:1304 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:1313 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/IntegrationSyncRateLimiter.php:164 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/IntegrationSyncRateLimiter.php:210 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Integration/MaintenanceCheckOnDutyReader.php:37 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Listener/TourCheckRoundLinkListener.php:34 OCP\\EventDispatcher\\GenericEvent: deprecated since Nextcloud 22; use \\OCP\\EventDispatcher\\Event",
+        "lib/Repair/EnsureDutyCheckSchema.php:59 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Repair/UninstallDropTables.php:110 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Repair/UninstallDropTables.php:142 OCP\\IConfig::deleteAppValues(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/AccessControlService.php:115 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/AccessControlService.php:310 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/AccessControlService.php:311 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/AccessControlService.php:312 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/AccessControlService.php:313 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/AccessControlService.php:475 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/AccessControlService.php:485 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/AccessControlService.php:613 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LicenseService.php:344 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "lib/Service/PlanningDefaultsService.php:25 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PlanningDefaultsService.php:32 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/RosterMinutesExportService.php:28 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/RosterMinutesExportService.php:33 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/SnapshotRetentionService.php:36 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/ThresholdApproachNotifier.php:36 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/ThresholdApproachNotifier.php:46 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/ThresholdApproachNotifier.php:138 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/ThresholdApproachNotifier.php:143 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:139 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:321 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:517 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:521 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:764 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:768 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:775 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:837 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Support/NavGate.php:53 OCP\\AppFramework\\IAppContainer: deprecated since Nextcloud 25",
+        "templates/parts/license-panel.php:65 OCP\\Util::callRegister(): deprecated since Nextcloud 32; directly use CsrfTokenManager instead"
+      ],
+      "lines": [
+        "96 uses in 19 files of the public API that is deprecated in Nextcloud 32 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:44 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:46 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:55 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:67 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:83 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:91 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:101 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferService.php:1015 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/ConfigTransfer/TransferService.php:1536 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferService.php:1555 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferService.php:1595 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/ConfigTransfer/TransferService.php:1619 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Controller/PageController.php:399 OCP\\Util::callRegister(): deprecated since Nextcloud 32; directly use CsrfTokenManager instead",
+        "  lib/Controller/RosterApiController.php:1208 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "  lib/Controller/RosterApiController.php:1722 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/RosterApiController.php:1728 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/RosterApiController.php:1866 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/RosterApiController.php:1867 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/RosterApiController.php:1868 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/RosterApiController.php:1870 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/RosterApiController.php:1885 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/RosterApiController.php:1890 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/RosterApiController.php:1894 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/RosterApiController.php:1898 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:76 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:79 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:104 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:105 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:124 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:206 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:216 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:229 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:235 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:264 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:275 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:288 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:302 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:313 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:342 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:382 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:404 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:407 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:441 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:448 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:552 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:615 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:617 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:618 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:621 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:622 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:624 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:625 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:632 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:644 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:645 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:650 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:651 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:652 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:653 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:1304 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:1313 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/IntegrationSyncRateLimiter.php:164 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/IntegrationSyncRateLimiter.php:210 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Integration/MaintenanceCheckOnDutyReader.php:37 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Listener/TourCheckRoundLinkListener.php:34 OCP\\EventDispatcher\\GenericEvent: deprecated since Nextcloud 22; use \\OCP\\EventDispatcher\\Event",
+        "  lib/Repair/EnsureDutyCheckSchema.php:59 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Repair/UninstallDropTables.php:110 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Repair/UninstallDropTables.php:142 OCP\\IConfig::deleteAppValues(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/AccessControlService.php:115 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/AccessControlService.php:310 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/AccessControlService.php:311 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/AccessControlService.php:312 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/AccessControlService.php:313 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/AccessControlService.php:475 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/AccessControlService.php:485 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/AccessControlService.php:613 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LicenseService.php:344 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "  lib/Service/PlanningDefaultsService.php:25 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PlanningDefaultsService.php:32 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/RosterMinutesExportService.php:28 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/RosterMinutesExportService.php:33 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/SnapshotRetentionService.php:36 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/ThresholdApproachNotifier.php:36 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/ThresholdApproachNotifier.php:46 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/ThresholdApproachNotifier.php:138 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/ThresholdApproachNotifier.php:143 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:139 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:321 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:517 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:521 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:764 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:768 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:775 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:837 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Support/NavGate.php:53 OCP\\AppFramework\\IAppContainer: deprecated since Nextcloud 25",
+        "  templates/parts/license-panel.php:65 OCP\\Util::callRegister(): deprecated since Nextcloud 32; directly use CsrfTokenManager instead"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 93
+        }
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/dashboard.php:135 style= attribute",
+        "templates/parts/license-panel.php:170 style= attribute"
+      ],
+      "lines": [
+        "2 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/dashboard.php:135 style= attribute",
+        "  templates/parts/license-panel.php:170 style= attribute"
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/ConfigTransfer/TransferService.php:392",
+        "lib/ConfigTransfer/TransferService.php:1234",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:690",
+        "lib/Service/AvailabilityBlackoutService.php:121",
+        "lib/Service/LicenseService.php:197",
+        "lib/Service/LicenseService.php:221",
+        "lib/Service/RosterService.php:262",
+        "lib/Service/RosterService.php:424",
+        "lib/Service/RosterService.php:1204",
+        "lib/Service/RosterService.php:1425",
+        "lib/Service/RosterService.php:1570",
+        "lib/Service/RosterService.php:1813",
+        "lib/Service/RosterService.php:1950",
+        "lib/Service/RotationPatternService.php:90",
+        "lib/Service/RotationPatternService.php:214",
+        "lib/Service/RotationPatternService.php:310",
+        "lib/Service/RotationSuggestService.php:117",
+        "lib/Service/SwapService.php:536",
+        "lib/Service/UpgradeBackupService.php:259"
+      ],
+      "lines": [
+        "19 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/ConfigTransfer/TransferService.php:392",
+        "  lib/ConfigTransfer/TransferService.php:1234",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:690",
+        "  lib/Service/AvailabilityBlackoutService.php:121",
+        "  lib/Service/LicenseService.php:197",
+        "  lib/Service/LicenseService.php:221",
+        "  lib/Service/RosterService.php:262",
+        "  lib/Service/RosterService.php:424",
+        "  lib/Service/RosterService.php:1204",
+        "  lib/Service/RosterService.php:1425",
+        "  lib/Service/RosterService.php:1570",
+        "  lib/Service/RosterService.php:1813",
+        "  lib/Service/RosterService.php:1950",
+        "  lib/Service/RotationPatternService.php:90",
+        "  lib/Service/RotationPatternService.php:214",
+        "  lib/Service/RotationPatternService.php:310",
+        "  lib/Service/RotationSuggestService.php:117",
+        "  lib/Service/SwapService.php:536",
+        "  lib/Service/UpgradeBackupService.php:259"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 16
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/ArbeitszeitCheckMirrorReconcileJob.php OCA\\DutyCheck\\BackgroundJob\\ArbeitszeitCheckMirrorReconcileJob",
+        "lib/BackgroundJob/ConflictDirtyRematerializeJob.php OCA\\DutyCheck\\BackgroundJob\\ConflictDirtyRematerializeJob",
+        "lib/BackgroundJob/PushQuietQueueDrainJob.php OCA\\DutyCheck\\BackgroundJob\\PushQuietQueueDrainJob"
+      ],
+      "lines": [
+        "3 timed jobs do not say whether they are time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/ArbeitszeitCheckMirrorReconcileJob.php OCA\\DutyCheck\\BackgroundJob\\ArbeitszeitCheckMirrorReconcileJob",
+        "  lib/BackgroundJob/ConflictDirtyRematerializeJob.php OCA\\DutyCheck\\BackgroundJob\\ConflictDirtyRematerializeJob",
+        "  lib/BackgroundJob/PushQuietQueueDrainJob.php OCA\\DutyCheck\\BackgroundJob\\PushQuietQueueDrainJob"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/ConfigTransfer/TransferPendingStore.php:47 time()",
+        "lib/ConfigTransfer/TransferPendingStore.php:79 time()",
+        "lib/ConfigTransfer/TransferPendingStore.php:126 time()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:46 time()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:81 time()",
+        "lib/ConfigTransfer/TransferService.php:355 time()",
+        "lib/ConfigTransfer/TransferService.php:1493 time()",
+        "lib/Controller/PageController.php:229 new DateTimeImmutable()",
+        "lib/Controller/RosterApiController.php:373 new DateTimeImmutable()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:486 new DateTimeImmutable()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:555 new DateTimeImmutable()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:974 new DateTimeImmutable()",
+        "lib/Service/ApiRateLimitService.php:52 new DateTimeImmutable()",
+        "lib/Service/ApiRateLimitService.php:55 new DateTimeImmutable()",
+        "lib/Service/AvailabilityBlackoutService.php:99 new DateTimeImmutable()",
+        "lib/Service/AvailabilityBlackoutService.php:153 new DateTimeImmutable()",
+        "lib/Service/AvailabilityBlackoutService.php:400 new DateTimeImmutable()",
+        "lib/Service/AvailabilityBlackoutService.php:496 new DateTimeImmutable()",
+        "lib/Service/CompanyService.php:83 new DateTimeImmutable()",
+        "lib/Service/CompanyService.php:265 new DateTimeImmutable()",
+        "lib/Service/ConflictPolicyService.php:81 new DateTimeImmutable()",
+        "lib/Service/LateChangeNotificationService.php:58 new DateTime()",
+        "lib/Service/LocaleFormatService.php:172 new DateTimeImmutable()",
+        "lib/Service/OpenShiftService.php:64 new DateTimeImmutable()",
+        "lib/Service/PeriodLockService.php:64 new DateTimeImmutable()",
+        "lib/Service/PublishNotificationService.php:80 new DateTime()",
+        "lib/Service/PushQuietHoursService.php:75 new DateTimeImmutable()",
+        "lib/Service/PushQuietHoursService.php:122 new DateTimeImmutable()",
+        "lib/Service/PushQuietHoursService.php:123 new DateTimeImmutable()",
+        "lib/Service/PushQuietHoursService.php:168 new DateTimeImmutable()",
+        "lib/Service/PushQuietHoursService.php:216 new DateTimeImmutable()",
+        "lib/Service/PushQuietHoursService.php:291 new DateTimeImmutable()",
+        "lib/Service/PushQuietHoursService.php:343 new DateTime()",
+        "lib/Service/PushQuietHoursService.php:359 new DateTimeImmutable()",
+        "lib/Service/QualificationService.php:84 new DateTimeImmutable()",
+        "lib/Service/QualificationService.php:202 new DateTimeImmutable()",
+        "lib/Service/RosterMinutesExportService.php:45 new DateTimeImmutable()",
+        "lib/Service/RosterService.php:407 new DateTimeImmutable()",
+        "lib/Service/RosterService.php:2991 new DateTimeImmutable()",
+        "lib/Service/RosterService.php:5226 new DateTimeImmutable()",
+        "lib/Service/RotationPatternService.php:1066 new DateTimeImmutable()",
+        "lib/Service/RotationSuggestService.php:850 new DateTimeImmutable()",
+        "lib/Service/ShiftPreferenceService.php:132 new DateTimeImmutable()",
+        "lib/Service/ShiftTemplateService.php:77 new DateTimeImmutable()",
+        "lib/Service/ShiftTemplateService.php:132 new DateTimeImmutable()",
+        "lib/Service/SnapshotRetentionService.php:49 new DateTimeImmutable()",
+        "lib/Service/SollDiagnosticsService.php:82 new DateTimeImmutable()",
+        "lib/Service/SollDiagnosticsService.php:96 new DateTimeImmutable()",
+        "lib/Service/SwapService.php:104 new DateTimeImmutable()",
+        "lib/Service/SwapService.php:154 new DateTimeImmutable()",
+        "lib/Service/SwapService.php:242 new DateTimeImmutable()",
+        "lib/Service/SwapService.php:534 new DateTimeImmutable()",
+        "lib/Service/SwapService.php:835 new DateTime()",
+        "lib/Service/ThresholdApproachNotifier.php:69 new DateTime()",
+        "lib/Service/ThresholdApproachNotifier.php:143 time()",
+        "lib/Service/UpgradeBackupService.php:131 new DateTimeImmutable()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 56 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/ConfigTransfer/TransferPendingStore.php:47 time()",
+        "  lib/ConfigTransfer/TransferPendingStore.php:79 time()",
+        "  lib/ConfigTransfer/TransferPendingStore.php:126 time()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:46 time()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:81 time()",
+        "  lib/ConfigTransfer/TransferService.php:355 time()",
+        "  lib/ConfigTransfer/TransferService.php:1493 time()",
+        "  lib/Controller/PageController.php:229 new DateTimeImmutable()",
+        "  lib/Controller/RosterApiController.php:373 new DateTimeImmutable()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:486 new DateTimeImmutable()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:555 new DateTimeImmutable()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:974 new DateTimeImmutable()",
+        "  lib/Service/ApiRateLimitService.php:52 new DateTimeImmutable()",
+        "  lib/Service/ApiRateLimitService.php:55 new DateTimeImmutable()",
+        "  lib/Service/AvailabilityBlackoutService.php:99 new DateTimeImmutable()",
+        "  lib/Service/AvailabilityBlackoutService.php:153 new DateTimeImmutable()",
+        "  lib/Service/AvailabilityBlackoutService.php:400 new DateTimeImmutable()",
+        "  lib/Service/AvailabilityBlackoutService.php:496 new DateTimeImmutable()",
+        "  lib/Service/CompanyService.php:83 new DateTimeImmutable()",
+        "  lib/Service/CompanyService.php:265 new DateTimeImmutable()",
+        "  lib/Service/ConflictPolicyService.php:81 new DateTimeImmutable()",
+        "  lib/Service/LateChangeNotificationService.php:58 new DateTime()",
+        "  lib/Service/LocaleFormatService.php:172 new DateTimeImmutable()",
+        "  lib/Service/OpenShiftService.php:64 new DateTimeImmutable()",
+        "  lib/Service/PeriodLockService.php:64 new DateTimeImmutable()",
+        "  lib/Service/PublishNotificationService.php:80 new DateTime()",
+        "  lib/Service/PushQuietHoursService.php:75 new DateTimeImmutable()",
+        "  lib/Service/PushQuietHoursService.php:122 new DateTimeImmutable()",
+        "  lib/Service/PushQuietHoursService.php:123 new DateTimeImmutable()",
+        "  lib/Service/PushQuietHoursService.php:168 new DateTimeImmutable()",
+        "  lib/Service/PushQuietHoursService.php:216 new DateTimeImmutable()",
+        "  lib/Service/PushQuietHoursService.php:291 new DateTimeImmutable()",
+        "  lib/Service/PushQuietHoursService.php:343 new DateTime()",
+        "  lib/Service/PushQuietHoursService.php:359 new DateTimeImmutable()",
+        "  lib/Service/QualificationService.php:84 new DateTimeImmutable()",
+        "  lib/Service/QualificationService.php:202 new DateTimeImmutable()",
+        "  lib/Service/RosterMinutesExportService.php:45 new DateTimeImmutable()",
+        "  lib/Service/RosterService.php:407 new DateTimeImmutable()",
+        "  lib/Service/RosterService.php:2991 new DateTimeImmutable()",
+        "  lib/Service/RosterService.php:5226 new DateTimeImmutable()",
+        "  lib/Service/RotationPatternService.php:1066 new DateTimeImmutable()",
+        "  lib/Service/RotationSuggestService.php:850 new DateTimeImmutable()",
+        "  lib/Service/ShiftPreferenceService.php:132 new DateTimeImmutable()",
+        "  lib/Service/ShiftTemplateService.php:77 new DateTimeImmutable()",
+        "  lib/Service/ShiftTemplateService.php:132 new DateTimeImmutable()",
+        "  lib/Service/SnapshotRetentionService.php:49 new DateTimeImmutable()",
+        "  lib/Service/SollDiagnosticsService.php:82 new DateTimeImmutable()",
+        "  lib/Service/SollDiagnosticsService.php:96 new DateTimeImmutable()",
+        "  lib/Service/SwapService.php:104 new DateTimeImmutable()",
+        "  lib/Service/SwapService.php:154 new DateTimeImmutable()",
+        "  lib/Service/SwapService.php:242 new DateTimeImmutable()",
+        "  lib/Service/SwapService.php:534 new DateTimeImmutable()",
+        "  lib/Service/SwapService.php:835 new DateTime()",
+        "  lib/Service/ThresholdApproachNotifier.php:69 new DateTime()",
+        "  lib/Service/ThresholdApproachNotifier.php:143 time()",
+        "  lib/Service/UpgradeBackupService.php:131 new DateTimeImmutable()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 53
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/ConfigTransfer/TransferReceiptStore.php:44 setAppValue()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:46 setAppValue()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:55 getAppValue()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:67 getAppValue()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:83 setAppValue()",
+        "lib/ConfigTransfer/TransferReceiptStore.php:91 getAppValue()",
+        "lib/ConfigTransfer/TransferService.php:1555 getAppValue()",
+        "lib/ConfigTransfer/TransferService.php:1595 setAppValue()",
+        "lib/ConfigTransfer/TransferService.php:1600 setValueString()",
+        "lib/ConfigTransfer/TransferService.php:1617 setValueString()",
+        "lib/ConfigTransfer/TransferService.php:1620 setValueString()",
+        "lib/Controller/RosterApiController.php:1722 getAppValue()",
+        "lib/Controller/RosterApiController.php:1728 setAppValue()",
+        "lib/Controller/RosterApiController.php:1866 getAppValue()",
+        "lib/Controller/RosterApiController.php:1867 getAppValue()",
+        "lib/Controller/RosterApiController.php:1868 getAppValue()",
+        "lib/Controller/RosterApiController.php:1870 getAppValue()",
+        "lib/Controller/RosterApiController.php:1885 setAppValue()",
+        "lib/Controller/RosterApiController.php:1890 setAppValue()",
+        "lib/Controller/RosterApiController.php:1894 setAppValue()",
+        "lib/Controller/RosterApiController.php:1898 setAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:76 getAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:79 getAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:104 setAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:105 setAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:206 getAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:216 setAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:229 getAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:235 setAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:264 getAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:275 getAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:288 getAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:302 getAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:313 getAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:342 getAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:382 getAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:404 setAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:407 getAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:441 getAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:552 setAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:615 getAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:617 setAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:618 setAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:621 getAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:622 setAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:624 getAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:625 setAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:632 setAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:1304 setAppValue()",
+        "lib/Integration/ArbeitszeitCheckIntegrationService.php:1313 getAppValue()",
+        "lib/Integration/IntegrationSyncRateLimiter.php:164 getAppValue()",
+        "lib/Integration/IntegrationSyncRateLimiter.php:210 setAppValue()",
+        "lib/Integration/MaintenanceCheckOnDutyReader.php:37 getAppValue()",
+        "lib/Service/AccessControlService.php:115 getAppValue()",
+        "lib/Service/AccessControlService.php:310 setAppValue()",
+        "lib/Service/AccessControlService.php:311 setAppValue()",
+        "lib/Service/AccessControlService.php:312 setAppValue()",
+        "lib/Service/AccessControlService.php:313 setAppValue()",
+        "lib/Service/AccessControlService.php:475 setAppValue()",
+        "lib/Service/AccessControlService.php:485 setAppValue()",
+        "lib/Service/AccessControlService.php:613 getAppValue()",
+        "lib/Service/PlanningDefaultsService.php:25 getAppValue()",
+        "lib/Service/PlanningDefaultsService.php:32 setAppValue()",
+        "lib/Service/RosterMinutesExportService.php:28 getAppValue()",
+        "lib/Service/RosterMinutesExportService.php:33 setAppValue()",
+        "lib/Service/SnapshotRetentionService.php:36 getAppValue()",
+        "lib/Service/ThresholdApproachNotifier.php:36 getAppValue()",
+        "lib/Service/ThresholdApproachNotifier.php:46 getAppValue()",
+        "lib/Service/ThresholdApproachNotifier.php:138 getAppValue()",
+        "lib/Service/ThresholdApproachNotifier.php:143 setAppValue()",
+        "lib/Service/UpgradeBackupService.php:139 setAppValue()",
+        "lib/Service/UpgradeBackupService.php:321 setAppValue()",
+        "lib/Service/UpgradeBackupService.php:521 getAppValue()",
+        "lib/Service/UpgradeBackupService.php:775 setAppValue()",
+        "lib/Service/UpgradeBackupService.php:837 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 75 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:44 setAppValue()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:46 setAppValue()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:55 getAppValue()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:67 getAppValue()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:83 setAppValue()",
+        "  lib/ConfigTransfer/TransferReceiptStore.php:91 getAppValue()",
+        "  lib/ConfigTransfer/TransferService.php:1555 getAppValue()",
+        "  lib/ConfigTransfer/TransferService.php:1595 setAppValue()",
+        "  lib/ConfigTransfer/TransferService.php:1600 setValueString()",
+        "  lib/ConfigTransfer/TransferService.php:1617 setValueString()",
+        "  lib/ConfigTransfer/TransferService.php:1620 setValueString()",
+        "  lib/Controller/RosterApiController.php:1722 getAppValue()",
+        "  lib/Controller/RosterApiController.php:1728 setAppValue()",
+        "  lib/Controller/RosterApiController.php:1866 getAppValue()",
+        "  lib/Controller/RosterApiController.php:1867 getAppValue()",
+        "  lib/Controller/RosterApiController.php:1868 getAppValue()",
+        "  lib/Controller/RosterApiController.php:1870 getAppValue()",
+        "  lib/Controller/RosterApiController.php:1885 setAppValue()",
+        "  lib/Controller/RosterApiController.php:1890 setAppValue()",
+        "  lib/Controller/RosterApiController.php:1894 setAppValue()",
+        "  lib/Controller/RosterApiController.php:1898 setAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:76 getAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:79 getAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:104 setAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:105 setAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:206 getAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:216 setAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:229 getAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:235 setAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:264 getAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:275 getAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:288 getAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:302 getAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:313 getAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:342 getAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:382 getAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:404 setAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:407 getAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:441 getAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:552 setAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:615 getAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:617 setAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:618 setAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:621 getAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:622 setAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:624 getAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:625 setAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:632 setAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:1304 setAppValue()",
+        "  lib/Integration/ArbeitszeitCheckIntegrationService.php:1313 getAppValue()",
+        "  lib/Integration/IntegrationSyncRateLimiter.php:164 getAppValue()",
+        "  lib/Integration/IntegrationSyncRateLimiter.php:210 setAppValue()",
+        "  lib/Integration/MaintenanceCheckOnDutyReader.php:37 getAppValue()",
+        "  lib/Service/AccessControlService.php:115 getAppValue()",
+        "  lib/Service/AccessControlService.php:310 setAppValue()",
+        "  lib/Service/AccessControlService.php:311 setAppValue()",
+        "  lib/Service/AccessControlService.php:312 setAppValue()",
+        "  lib/Service/AccessControlService.php:313 setAppValue()",
+        "  lib/Service/AccessControlService.php:475 setAppValue()",
+        "  lib/Service/AccessControlService.php:485 setAppValue()",
+        "  lib/Service/AccessControlService.php:613 getAppValue()",
+        "  lib/Service/PlanningDefaultsService.php:25 getAppValue()",
+        "  lib/Service/PlanningDefaultsService.php:32 setAppValue()",
+        "  lib/Service/RosterMinutesExportService.php:28 getAppValue()",
+        "  lib/Service/RosterMinutesExportService.php:33 setAppValue()",
+        "  lib/Service/SnapshotRetentionService.php:36 getAppValue()",
+        "  lib/Service/ThresholdApproachNotifier.php:36 getAppValue()",
+        "  lib/Service/ThresholdApproachNotifier.php:46 getAppValue()",
+        "  lib/Service/ThresholdApproachNotifier.php:138 getAppValue()",
+        "  lib/Service/ThresholdApproachNotifier.php:143 setAppValue()",
+        "  lib/Service/UpgradeBackupService.php:139 setAppValue()",
+        "  lib/Service/UpgradeBackupService.php:321 setAppValue()",
+        "  lib/Service/UpgradeBackupService.php:521 getAppValue()",
+        "  lib/Service/UpgradeBackupService.php:775 setAppValue()",
+        "  lib/Service/UpgradeBackupService.php:837 getAppValue()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 72
+        }
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version1012Date20260726190000.php:49 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version1012Date20260726190000.php:50 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version1012Date20260726190000.php:56 hasIndex() on a table whose name is no constant",
+        "lib/Migration/Version1012Date20260726190000.php:57 addIndex() on a table whose name is no constant",
+        "lib/Migration/Version1013Date20260726193000.php:37 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version1013Date20260726193000.php:38 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version1013Date20260726193000.php:40 hasIndex() on a table whose name is no constant",
+        "lib/Migration/Version1013Date20260726193000.php:41 addIndex() on a table whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version1012Date20260726190000.php:49 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version1012Date20260726190000.php:50 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version1012Date20260726190000.php:56 hasIndex() on a table whose name is no constant",
+        "  lib/Migration/Version1012Date20260726190000.php:57 addIndex() on a table whose name is no constant",
+        "  lib/Migration/Version1013Date20260726193000.php:37 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version1013Date20260726193000.php:38 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version1013Date20260726193000.php:40 hasIndex() on a table whose name is no constant",
+        "  lib/Migration/Version1013Date20260726193000.php:41 addIndex() on a table whose name is no constant"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 5
+        }
+      ]
+    }
+  ],
+  "endpoints": 186,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/",
+      "target": "OCA\\DutyCheck\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/absences",
+      "target": "OCA\\DutyCheck\\Controller\\PageController::absences",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/absences",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::absences",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/absences",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::createAbsence",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/absences/{id}/transition",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::transitionAbsence",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/admin/companies",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::listCompanies",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/admin/companies",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::createCompany",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/admin/companies/{id}/members",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::listCompanyMembers",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/admin/companies/{id}/members",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::addCompanyMember",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/dutycheck/api/admin/companies/{id}/members/{userId}",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::removeCompanyMember",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/admin/conflict-policy",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::conflictPolicy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/admin/conflict-policy",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::saveConflictPolicy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/admin/conflict-policy/apply-open",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::applyConflictPolicyToOpenPeriods",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/admin/duty-roles",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::listDutyRoles",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/admin/duty-roles",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::setDutyRole",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/dutycheck/api/admin/duty-roles/{userId}",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::removeDutyRole",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/admin/groups",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::directoryGroups",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/admin/integration",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::integrationStatus",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/admin/integration/intent",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::integrationIntent",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/admin/integration/purge-legacy-absences",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::integrationPurgeLegacyAbsences",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/admin/integration/settings",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::integrationSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/admin/integration/sync",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::integrationSyncNow",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/admin/ops-flags",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::opsFlags",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/admin/ops-flags",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::saveOpsFlags",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/admin/periods/{periodId}/roster-minutes.csv",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::exportRosterMinutesCsv",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/admin/planner-scope/{userId}",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::plannerLocationScope",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/admin/planner-scope/{userId}",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::setPlannerLocationScope",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/admin/planning-defaults",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::planningDefaults",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/admin/planning-defaults",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::savePlanningDefaults",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/admin/policy",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::appPolicy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/admin/policy",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::saveAppPolicy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/admin/roster-export",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::exportRosterCsv",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/admin/snapshots/prune",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::pruneSnapshots",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/admin/soll-diagnostics",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::sollDiagnostics",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/admin/transfer/apply",
+      "target": "OCA\\DutyCheck\\Controller\\TransferApiController::apply",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/admin/transfer/export",
+      "target": "OCA\\DutyCheck\\Controller\\TransferApiController::export",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/admin/transfer/preview",
+      "target": "OCA\\DutyCheck\\Controller\\TransferApiController::preview",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/admin/transfer/reconcile",
+      "target": "OCA\\DutyCheck\\Controller\\TransferApiController::reconcile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/admin/transfer/status",
+      "target": "OCA\\DutyCheck\\Controller\\TransferApiController::status",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/admin/users",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::directoryUsers",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/assignments",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::createAssignment",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/assignments/{id}",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::updateAssignment",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/dutycheck/api/assignments/{id}",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::updateAssignment",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/assignments/{id}/blackout-override",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::blackoutOverride",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/assignments/{id}/cancel",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::cancelAssignment",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/bootstrap",
+      "target": "OCA\\DutyCheck\\Controller\\ApiController::bootstrap",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/catalog/timezones",
+      "target": "OCA\\DutyCheck\\Controller\\CatalogApiController::timezones",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/conflicts/{id}/acknowledge",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::acknowledgeConflict",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/dashboard",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::dashboard",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/employees",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::employees",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/employees",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::createEmployee",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/employees/{id}",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::updateEmployee",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/dutycheck/api/employees/{id}",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::updateEmployee",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/employees/{id}/blackouts",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::employeeBlackouts",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/employees/{id}/preferences",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::employeePreferences",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/employees/{id}/qualifications",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::attachEmployeeQualification",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/dutycheck/api/employees/{id}/qualifications/{qualificationId}",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::detachEmployeeQualification",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/employees/{id}/qualifications/{qualificationId}/detach",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::detachEmployeeQualification",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/employees/{id}/rotation-assignments",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::listEmployeeRotationAssignments",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/ical/{employeeId}",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::publicIcal",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/integrations/on-duty",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::onDutyToday",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/dutycheck/api/license",
+      "target": "OCA\\DutyCheck\\Controller\\LicenseController::remove",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/license",
+      "target": "OCA\\DutyCheck\\Controller\\LicenseController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/license",
+      "target": "OCA\\DutyCheck\\Controller\\LicenseController::apply",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/license/search/users",
+      "target": "OCA\\DutyCheck\\Controller\\LicenseController::searchUsers",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/license/seats",
+      "target": "OCA\\DutyCheck\\Controller\\LicenseController::seats",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/license/seats",
+      "target": "OCA\\DutyCheck\\Controller\\LicenseController::assignSeat",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/dutycheck/api/license/seats/{uid}",
+      "target": "OCA\\DutyCheck\\Controller\\LicenseController::removeSeat",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/locations",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::locations",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/locations",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::createLocation",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/locations/{id}",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::updateLocation",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/dutycheck/api/locations/{id}",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::updateLocation",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/locations/{id}/qualifications",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::requireLocationQualification",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/dutycheck/api/locations/{id}/qualifications/{qualificationId}",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::unrequireLocationQualification",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/locations/{id}/qualifications/{qualificationId}/detach",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::unrequireLocationQualification",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/me/ical-token",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::myIcalToken",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/me/ical-token/rotate",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::rotateMyIcalToken",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/mobile/bootstrap",
+      "target": "OCA\\DutyCheck\\Controller\\MobileController::bootstrap",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/mobile/me/ical-token",
+      "target": "OCA\\DutyCheck\\Controller\\MobileController::icalTokenMeta",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/mobile/me/ical-token",
+      "target": "OCA\\DutyCheck\\Controller\\MobileController::createIcalToken",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/mobile/me/ical-token/rotate",
+      "target": "OCA\\DutyCheck\\Controller\\MobileController::rotateIcalToken",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/mobile/my/absences",
+      "target": "OCA\\DutyCheck\\Controller\\MobileController::myAbsences",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/mobile/my/absences",
+      "target": "OCA\\DutyCheck\\Controller\\MobileController::createMyAbsence",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/mobile/my/assignments/{id}/acknowledge",
+      "target": "OCA\\DutyCheck\\Controller\\MobileController::acknowledgeAssignment",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/mobile/my/blackouts",
+      "target": "OCA\\DutyCheck\\Controller\\MobileController::myBlackouts",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/mobile/my/blackouts",
+      "target": "OCA\\DutyCheck\\Controller\\MobileController::createMyBlackout",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/dutycheck/api/mobile/my/blackouts/{id}",
+      "target": "OCA\\DutyCheck\\Controller\\MobileController::deleteMyBlackout",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/mobile/my/preferences",
+      "target": "OCA\\DutyCheck\\Controller\\MobileController::myPreferences",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/mobile/my/preferences",
+      "target": "OCA\\DutyCheck\\Controller\\MobileController::saveMyPreference",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/dutycheck/api/mobile/my/preferences/{id}",
+      "target": "OCA\\DutyCheck\\Controller\\MobileController::deleteMyPreference",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/mobile/my/roster",
+      "target": "OCA\\DutyCheck\\Controller\\MobileController::myRoster",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/mobile/my/swap-candidates",
+      "target": "OCA\\DutyCheck\\Controller\\MobileController::swapCandidates",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/mobile/my/swaps",
+      "target": "OCA\\DutyCheck\\Controller\\MobileController::listMySwaps",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/mobile/open-shifts",
+      "target": "OCA\\DutyCheck\\Controller\\MobileController::listOpenShifts",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/mobile/open-shifts/{id}/claim",
+      "target": "OCA\\DutyCheck\\Controller\\MobileController::claimOpenShift",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/mobile/swaps",
+      "target": "OCA\\DutyCheck\\Controller\\MobileController::createSwapRequest",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/mobile/swaps/{id}/accept",
+      "target": "OCA\\DutyCheck\\Controller\\MobileController::acceptSwap",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/mobile/swaps/{id}/withdraw",
+      "target": "OCA\\DutyCheck\\Controller\\MobileController::withdrawSwap",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/mobile/team-week",
+      "target": "OCA\\DutyCheck\\Controller\\MobileController::teamWeek",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/my/absences",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::myAbsences",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/my/absences",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::createMyAbsence",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/my/assignments/{id}/acknowledge",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::acknowledgeAssignment",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/my/blackouts",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::myBlackouts",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/my/blackouts",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::createMyBlackout",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/dutycheck/api/my/blackouts/{id}",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::deleteMyBlackout",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/my/preferences",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::myPreferences",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/my/preferences",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::saveMyPreference",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/dutycheck/api/my/preferences/{id}",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::deleteMyPreference",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/my/roster",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::myRoster",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/my/swap-candidates",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::swapCandidates",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/my/swaps",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::listMySwaps",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/my/swaps/{id}/withdraw",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::withdrawSwap",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/open-shifts",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::listOpenShifts",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/open-shifts",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::createOpenShift",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/dutycheck/api/open-shifts/{id}",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::deleteOpenShift",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/open-shifts/{id}/approve",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::approveOpenShiftClaim",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/open-shifts/{id}/claim",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::claimOpenShift",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/open-shifts/{id}/reject",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::rejectOpenShiftClaim",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/open-shifts/pending",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::listPendingOpenShifts",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/periods",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::listPeriods",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/periods",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::createPeriod",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/dutycheck/api/periods/{id}",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::deletePeriod",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/periods/{id}/acknowledge-stats",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::periodAcknowledgeStats",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/periods/{id}/audit",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::periodAudit",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/periods/{id}/close",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::closePeriod",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/periods/{id}/copy",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::copyPeriod",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/periods/{id}/publish",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::publishPeriod",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/periods/{id}/publish-readiness",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::publishReadiness",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/periods/{id}/reopen",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::reopenPeriod",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/periods/{id}/snapshots",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::periodSnapshots",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/periods/{id}/snapshots/verify",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::verifyPeriodSnapshots",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/periods/{id}/suggest-confirm",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::suggestConfirm",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/periods/{id}/suggest-preview",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::suggestPreview",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/periods/{id}/transition",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::transitionPeriod",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/periods/ensure-calendar-month",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::ensureCalendarMonth",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/qualifications",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::listQualifications",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/qualifications",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::createQualification",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/qualifications/{id}",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::updateQualification",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/dutycheck/api/qualifications/{id}",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::updateQualification",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/qualifications/{id}/deactivate",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::deactivateQualification",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/roster",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::roster",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/roster/signals",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::rosterSignals",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/rotation-assignments/{id}/end",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::endRotationAssignment",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/rotation-patterns",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::listPatterns",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/rotation-patterns",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::createPattern",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/rotation-patterns/{id}",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::getPattern",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/dutycheck/api/rotation-patterns/{id}",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::updatePattern",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/rotation-patterns/{id}/assign",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::assignPattern",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/rotation-patterns/{id}/deactivate",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::deactivatePattern",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/self-service/settings",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::getSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/self-service/settings",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::updateSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/dutycheck/api/self-service/settings",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::updateSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/standby/categories",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::listStandbyCategories",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/standby/categories",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::createStandbyCategory",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/dutycheck/api/standby/categories/{id}",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::deleteStandbyCategory",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/standby/categories/{id}",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::updateStandbyCategory",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/dutycheck/api/standby/categories/{id}",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::updateStandbyCategory",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/standby/roster/{periodId}",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::standbyRoster",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/swaps",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::listSwapRequests",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/swaps",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::createSwapRequest",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/swaps/{id}/accept",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::acceptSwap",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/swaps/{id}/review",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::reviewSwapRequest",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/tck-rounds",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::tckRoundCandidates",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/team-locations",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::teamLocations",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/team-week",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::teamWeek",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/templates",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::listTemplates",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/templates",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::createTemplate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/dutycheck/api/templates/{id}",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::deleteTemplate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dutycheck/api/templates/{id}",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::updateTemplate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/dutycheck/api/templates/{id}",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::updateTemplate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/today-board",
+      "target": "OCA\\DutyCheck\\Controller\\SelfServiceApiController::todayBoard",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/api/widget-snapshot",
+      "target": "OCA\\DutyCheck\\Controller\\RosterApiController::widgetSnapshot",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/dashboard",
+      "target": "OCA\\DutyCheck\\Controller\\PageController::dashboard",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/employees",
+      "target": "OCA\\DutyCheck\\Controller\\PageController::employees",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/locations",
+      "target": "OCA\\DutyCheck\\Controller\\PageController::locations",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/my-absences",
+      "target": "OCA\\DutyCheck\\Controller\\PageController::myAbsences",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/my-roster",
+      "target": "OCA\\DutyCheck\\Controller\\PageController::myRoster",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/needs-role",
+      "target": "OCA\\DutyCheck\\Controller\\PageController::needsRole",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/patterns",
+      "target": "OCA\\DutyCheck\\Controller\\PageController::patterns",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/periods",
+      "target": "OCA\\DutyCheck\\Controller\\PageController::periods",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/roster",
+      "target": "OCA\\DutyCheck\\Controller\\PageController::roster",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/roster/print",
+      "target": "OCA\\DutyCheck\\Controller\\PageController::rosterPrint",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/settings",
+      "target": "OCA\\DutyCheck\\Controller\\PageController::settings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/settings/{section}",
+      "target": "OCA\\DutyCheck\\Controller\\PageController::settingsSection",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dutycheck/today",
+      "target": "OCA\\DutyCheck\\Controller\\PageController::todayBoard",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/capabilities",
+      "target": "OCA\\DutyCheck\\Capabilities",
+      "openapi": [],
+      "kind": "capability"
+    }
+  ]
+}

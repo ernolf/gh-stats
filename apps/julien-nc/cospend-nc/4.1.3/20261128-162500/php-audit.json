@@ -1,0 +1,1961 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Cospend\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Activity/CospendProvider.php:291 OC::$server",
+        "lib/Command/DeleteBills.php:19 OC\\Core\\Command\\Base",
+        "lib/Command/ExportProject.php:20 OC\\Core\\Command\\Base",
+        "lib/Command/RepeatBills.php:16 OC\\Core\\Command\\Base",
+        "lib/Controller/PageController.php:120 OC\\Files\\Filesystem",
+        "lib/Db/Member.php:57 OC::$server",
+        "lib/Middleware/FederationMiddleware.php:53 OC::$server",
+        "lib/Service/LocalProjectService.php:1623 OC::$server",
+        "lib/Service/LocalProjectService.php:2063 OC::$server",
+        "lib/Service/LocalProjectService.php:3569 OC::$server"
+      ],
+      "lines": [
+        "10 uses of the private API of the server in 8 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Activity/CospendProvider.php:291 OC::$server",
+        "  lib/Command/DeleteBills.php:19 OC\\Core\\Command\\Base",
+        "  lib/Command/ExportProject.php:20 OC\\Core\\Command\\Base",
+        "  lib/Command/RepeatBills.php:16 OC\\Core\\Command\\Base",
+        "  lib/Controller/PageController.php:120 OC\\Files\\Filesystem",
+        "  lib/Db/Member.php:57 OC::$server",
+        "  lib/Middleware/FederationMiddleware.php:53 OC::$server",
+        "  lib/Service/LocalProjectService.php:1623 OC::$server",
+        "  lib/Service/LocalProjectService.php:2063 OC::$server",
+        "  lib/Service/LocalProjectService.php:3569 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:134 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:134 injectFn()"
+      ]
+    },
+    {
+      "id": "route-target-missing",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/cospend/option-values  cospend.page.getoptionsvalues  appinfo/routes.php:26 routes: OCA\\Cospend\\Controller\\PageController::getOptionsValues() is private"
+      ],
+      "lines": [
+        "1 route names a controller class or a method that does not exist, or a method that is not public. A request to such a route ends in an error.",
+        "  GET /index.php/apps/cospend/option-values  cospend.page.getoptionsvalues  appinfo/routes.php:26 routes: OCA\\Cospend\\Controller\\PageController::getOptionsValues() is private"
+      ]
+    },
+    {
+      "id": "route-duplicate",
+      "level": "warn",
+      "places": [
+        "cospend.oldapi.preflighted_cors: cospend.oldapi.preflighted_cors at appinfo/routes.php:31 routes, cospend.oldapi.preflighted_cors at appinfo/routes.php:32 routes, cospend.oldapi.preflighted_cors at appinfo/routes.php:68 routes"
+      ],
+      "lines": [
+        "1 verb and path or route name is declared more than once. The server keeps one route per name and takes the first that matches a request, so the other one is never reached.",
+        "  cospend.oldapi.preflighted_cors: cospend.oldapi.preflighted_cors at appinfo/routes.php:31 routes, cospend.oldapi.preflighted_cors at appinfo/routes.php:32 routes, cospend.oldapi.preflighted_cors at appinfo/routes.php:68 routes"
+      ]
+    },
+    {
+      "id": "frontend-url-without-route",
+      "level": "warn",
+      "places": [
+        "src/App.vue:1109 /apps/cospend/login"
+      ],
+      "lines": [
+        "The frontend or a template builds 1 URL below /apps/cospend/ that no route of the app matches. The request fails at run time.",
+        "  src/App.vue:1109 /apps/cospend/login"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/ApiController.php:1483 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Controller/OldApiController.php:1181 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Controller/PageController.php:216 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Listener/CSPListener.php:30 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ],
+      "lines": [
+        "4 uses in 4 files of the public API that is deprecated in Nextcloud 33 to 36. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/ApiController.php:1483 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Controller/OldApiController.php:1181 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Controller/PageController.php:216 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Listener/CSPListener.php:30 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Service/CospendService.php:80"
+      ],
+      "lines": [
+        "1 transaction is opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Service/CospendService.php:80"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/Cron/AutoExport.php OCA\\Cospend\\Cron\\AutoExport",
+        "lib/Cron/RepeatBills.php OCA\\Cospend\\Cron\\RepeatBills"
+      ],
+      "lines": [
+        "2 timed jobs do not say whether they are time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/Cron/AutoExport.php OCA\\Cospend\\Cron\\AutoExport",
+        "  lib/Cron/RepeatBills.php OCA\\Cospend\\Cron\\RepeatBills"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Activity/ActivityManager.php:175 time()",
+        "lib/Command/DeleteBills.php:68 new DateTime()",
+        "lib/Controller/OldApiController.php:271 new DateTime()",
+        "lib/Controller/OldApiController.php:293 new DateTime()",
+        "lib/Controller/PublicApiController.php:579 new DateTime()",
+        "lib/Db/ProjectMapper.php:112 new DateTime()",
+        "lib/Federation/CloudFederationProviderCospend.php:273 new DateTime()",
+        "lib/Migration/Version000406Date20200426154317.php:144 new DateTime()",
+        "lib/Migration/Version010314Date20210815170535.php:118 new DateTime()",
+        "lib/Migration/Version010314Date20210828143421.php:121 new DateTime()",
+        "lib/Search/CospendSearchBillProvider.php:180 new DateTime()",
+        "lib/Service/CospendService.php:698 new DateTime()",
+        "lib/Service/CospendService.php:712 new DateTime()",
+        "lib/Service/CospendService.php:727 new DateTime()",
+        "lib/Service/LocalProjectService.php:366 time()",
+        "lib/Service/LocalProjectService.php:881 new DateTime()",
+        "lib/Service/LocalProjectService.php:1007 new DateTime()",
+        "lib/Service/LocalProjectService.php:1086 new DateTime()",
+        "lib/Service/LocalProjectService.php:1159 new DateTime()",
+        "lib/Service/LocalProjectService.php:1408 new DateTime()",
+        "lib/Service/LocalProjectService.php:1458 new DateTime()",
+        "lib/Service/LocalProjectService.php:1486 new DateTime()",
+        "lib/Service/LocalProjectService.php:1537 new DateTime()",
+        "lib/Service/LocalProjectService.php:2212 new DateTime()",
+        "lib/Service/LocalProjectService.php:2381 new DateTimeImmutable()",
+        "lib/Service/LocalProjectService.php:2403 new DateTimeImmutable()",
+        "lib/Service/LocalProjectService.php:3184 new DateTime()",
+        "lib/Service/LocalProjectService.php:3385 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 28 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Activity/ActivityManager.php:175 time()",
+        "  lib/Command/DeleteBills.php:68 new DateTime()",
+        "  lib/Controller/OldApiController.php:271 new DateTime()",
+        "  lib/Controller/OldApiController.php:293 new DateTime()",
+        "  lib/Controller/PublicApiController.php:579 new DateTime()",
+        "  lib/Db/ProjectMapper.php:112 new DateTime()",
+        "  lib/Federation/CloudFederationProviderCospend.php:273 new DateTime()",
+        "  lib/Migration/Version000406Date20200426154317.php:144 new DateTime()",
+        "  lib/Migration/Version010314Date20210815170535.php:118 new DateTime()",
+        "  lib/Migration/Version010314Date20210828143421.php:121 new DateTime()",
+        "  lib/Search/CospendSearchBillProvider.php:180 new DateTime()",
+        "  lib/Service/CospendService.php:698 new DateTime()",
+        "  lib/Service/CospendService.php:712 new DateTime()",
+        "  lib/Service/CospendService.php:727 new DateTime()",
+        "  lib/Service/LocalProjectService.php:366 time()",
+        "  lib/Service/LocalProjectService.php:881 new DateTime()",
+        "  lib/Service/LocalProjectService.php:1007 new DateTime()",
+        "  lib/Service/LocalProjectService.php:1086 new DateTime()",
+        "  lib/Service/LocalProjectService.php:1159 new DateTime()",
+        "  lib/Service/LocalProjectService.php:1408 new DateTime()",
+        "  lib/Service/LocalProjectService.php:1458 new DateTime()",
+        "  lib/Service/LocalProjectService.php:1486 new DateTime()",
+        "  lib/Service/LocalProjectService.php:1537 new DateTime()",
+        "  lib/Service/LocalProjectService.php:2212 new DateTime()",
+        "  lib/Service/LocalProjectService.php:2381 new DateTimeImmutable()",
+        "  lib/Service/LocalProjectService.php:2403 new DateTimeImmutable()",
+        "  lib/Service/LocalProjectService.php:3184 new DateTime()",
+        "  lib/Service/LocalProjectService.php:3385 new DateTime()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 25
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:141 getValueString()",
+        "lib/Capabilities.php:36 getValueString()",
+        "lib/Controller/PageController.php:308 setValueString()",
+        "lib/Federation/CloudFederationProviderCospend.php:72 getValueString()",
+        "lib/Federation/CloudFederationProviderCospend.php:222 getValueString()",
+        "lib/Federation/CloudFederationProviderCospend.php:251 getValueString()",
+        "lib/Federation/RestrictionValidator.php:55 getAppValueBool()",
+        "lib/Migration/Version040000Date20250107000432.php:32 getValueString()",
+        "lib/Service/LocalProjectService.php:365 getValueString()",
+        "lib/Settings/Admin.php:28 getValueString()",
+        "lib/Settings/Admin.php:29 getValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 11 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/AppInfo/Application.php:141 getValueString()",
+        "  lib/Capabilities.php:36 getValueString()",
+        "  lib/Controller/PageController.php:308 setValueString()",
+        "  lib/Federation/CloudFederationProviderCospend.php:72 getValueString()",
+        "  lib/Federation/CloudFederationProviderCospend.php:222 getValueString()",
+        "  lib/Federation/CloudFederationProviderCospend.php:251 getValueString()",
+        "  lib/Federation/RestrictionValidator.php:55 getAppValueBool()",
+        "  lib/Migration/Version040000Date20250107000432.php:32 getValueString()",
+        "  lib/Service/LocalProjectService.php:365 getValueString()",
+        "  lib/Settings/Admin.php:28 getValueString()",
+        "  lib/Settings/Admin.php:29 getValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 8
+        }
+      ]
+    },
+    {
+      "id": "cors-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /index.php/apps/cospend/api/projects/{token}/{password}/members  cospend.oldapi.apigetmembers  appinfo/routes.php:37 routes",
+        "POST /index.php/apps/cospend/api/projects/{token}/{password}/members  cospend.oldapi.apiaddmember  appinfo/routes.php:38 routes",
+        "POST /index.php/apps/cospend/apiv2/projects/{token}/{password}/members  cospend.oldapi.apiv2addmember  appinfo/routes.php:39 routes",
+        "GET /index.php/apps/cospend/api/projects/{token}/{password}/bills  cospend.oldapi.apigetbills  appinfo/routes.php:42 routes",
+        "POST /index.php/apps/cospend/api/projects/{token}/{password}/bills  cospend.oldapi.apiaddbill  appinfo/routes.php:43 routes",
+        "GET /index.php/apps/cospend/api/projects/{token}/{password}/bills/{billId}/repeat  cospend.oldapi.apirepeatbill  appinfo/routes.php:44 routes",
+        "PUT /index.php/apps/cospend/api/projects/{token}/{password}/bills  cospend.oldapi.apieditbills  appinfo/routes.php:46 routes",
+        "DELETE /index.php/apps/cospend/api/projects/{token}/{password}/bills  cospend.oldapi.apideletebills  appinfo/routes.php:48 routes",
+        "DELETE /index.php/apps/cospend/api/projects/{token}/{password}/trashbin  cospend.oldapi.apicleartrashbin  appinfo/routes.php:49 routes",
+        "GET /index.php/apps/cospend/apiv2/projects/{token}/{password}/bills  cospend.oldapi.apiv2getbills  appinfo/routes.php:50 routes",
+        "GET /index.php/apps/cospend/apiv3/projects/{token}/{password}/bills  cospend.oldapi.apiv3getbills  appinfo/routes.php:51 routes",
+        "GET /index.php/apps/cospend/api/projects/{token}/{password}/statistics  cospend.oldapi.apigetprojectstatistics  appinfo/routes.php:52 routes",
+        "GET /index.php/apps/cospend/api/projects/{token}/{password}/settle  cospend.oldapi.apigetprojectsettlement  appinfo/routes.php:53 routes",
+        "GET /index.php/apps/cospend/api/projects/{token}/{password}/autosettlement  cospend.oldapi.apiautosettlement  appinfo/routes.php:54 routes",
+        "POST /index.php/apps/cospend/api/projects/{token}/{password}/currency  cospend.oldapi.apiaddcurrency  appinfo/routes.php:55 routes",
+        "POST /index.php/apps/cospend/api/projects/{token}/{password}/paymentmode  cospend.oldapi.apiaddpaymentmode  appinfo/routes.php:58 routes",
+        "PUT /index.php/apps/cospend/api/projects/{token}/{password}/paymentmode-order  cospend.oldapi.apisavepaymentmodeorder  appinfo/routes.php:60 routes",
+        "POST /index.php/apps/cospend/api/projects/{token}/{password}/category  cospend.oldapi.apiaddcategory  appinfo/routes.php:62 routes",
+        "PUT /index.php/apps/cospend/api/projects/{token}/{password}/category-order  cospend.oldapi.apisavecategoryorder  appinfo/routes.php:64 routes",
+        "GET /index.php/apps/cospend/api/ping  cospend.oldapi.apiping  appinfo/routes.php:70 routes",
+        "GET /index.php/apps/cospend/api-priv/projects  cospend.oldapi.apiprivgetprojects  appinfo/routes.php:71 routes",
+        "POST /index.php/apps/cospend/getProjects  cospend.oldapi.apiprivgetprojects2  appinfo/routes.php:73 routes",
+        "POST /index.php/apps/cospend/api-priv/projects  cospend.oldapi.apiprivcreateproject  appinfo/routes.php:74 routes",
+        "GET /index.php/apps/cospend/api-priv/projects/{projectId}/members  cospend.oldapi.apiprivgetmembers  appinfo/routes.php:78 routes",
+        "POST /index.php/apps/cospend/api-priv/projects/{projectId}/members  cospend.oldapi.apiprivaddmember  appinfo/routes.php:79 routes",
+        "GET /index.php/apps/cospend/api-priv/projects/{projectId}/bills  cospend.oldapi.apiprivgetbills  appinfo/routes.php:82 routes",
+        "POST /index.php/apps/cospend/api-priv/projects/{projectId}/bills  cospend.oldapi.apiprivaddbill  appinfo/routes.php:83 routes",
+        "DELETE /index.php/apps/cospend/api-priv/projects/{projectId}/trashbin  cospend.oldapi.apiprivcleartrashbin  appinfo/routes.php:86 routes",
+        "GET /index.php/apps/cospend/api-priv/projects/{projectId}/statistics  cospend.oldapi.apiprivgetprojectstatistics  appinfo/routes.php:87 routes",
+        "GET /index.php/apps/cospend/api-priv/projects/{projectId}/settle  cospend.oldapi.apiprivgetprojectsettlement  appinfo/routes.php:88 routes",
+        "GET /index.php/apps/cospend/api-priv/projects/{projectId}/autosettlement  cospend.oldapi.apiprivautosettlement  appinfo/routes.php:89 routes",
+        "POST /index.php/apps/cospend/api-priv/projects/{projectId}/currency  cospend.oldapi.apiprivaddcurrency  appinfo/routes.php:90 routes",
+        "POST /index.php/apps/cospend/api-priv/projects/{projectId}/paymentmode  cospend.oldapi.apiprivaddpaymentmode  appinfo/routes.php:93 routes",
+        "POST /index.php/apps/cospend/api-priv/projects/{projectId}/category  cospend.oldapi.apiprivaddcategory  appinfo/routes.php:96 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 34 routes outside OCS whose method allows requests from other origins (CORS), or that answer the preflight of such a request (OPTIONS). They are there for clients outside the app, so this is no defect in itself.",
+        "  GET /index.php/apps/cospend/api/projects/{token}/{password}/members  cospend.oldapi.apigetmembers  appinfo/routes.php:37 routes",
+        "  POST /index.php/apps/cospend/api/projects/{token}/{password}/members  cospend.oldapi.apiaddmember  appinfo/routes.php:38 routes",
+        "  POST /index.php/apps/cospend/apiv2/projects/{token}/{password}/members  cospend.oldapi.apiv2addmember  appinfo/routes.php:39 routes",
+        "  GET /index.php/apps/cospend/api/projects/{token}/{password}/bills  cospend.oldapi.apigetbills  appinfo/routes.php:42 routes",
+        "  POST /index.php/apps/cospend/api/projects/{token}/{password}/bills  cospend.oldapi.apiaddbill  appinfo/routes.php:43 routes",
+        "  GET /index.php/apps/cospend/api/projects/{token}/{password}/bills/{billId}/repeat  cospend.oldapi.apirepeatbill  appinfo/routes.php:44 routes",
+        "  PUT /index.php/apps/cospend/api/projects/{token}/{password}/bills  cospend.oldapi.apieditbills  appinfo/routes.php:46 routes",
+        "  DELETE /index.php/apps/cospend/api/projects/{token}/{password}/bills  cospend.oldapi.apideletebills  appinfo/routes.php:48 routes",
+        "  DELETE /index.php/apps/cospend/api/projects/{token}/{password}/trashbin  cospend.oldapi.apicleartrashbin  appinfo/routes.php:49 routes",
+        "  GET /index.php/apps/cospend/apiv2/projects/{token}/{password}/bills  cospend.oldapi.apiv2getbills  appinfo/routes.php:50 routes",
+        "  GET /index.php/apps/cospend/apiv3/projects/{token}/{password}/bills  cospend.oldapi.apiv3getbills  appinfo/routes.php:51 routes",
+        "  GET /index.php/apps/cospend/api/projects/{token}/{password}/statistics  cospend.oldapi.apigetprojectstatistics  appinfo/routes.php:52 routes",
+        "  GET /index.php/apps/cospend/api/projects/{token}/{password}/settle  cospend.oldapi.apigetprojectsettlement  appinfo/routes.php:53 routes",
+        "  GET /index.php/apps/cospend/api/projects/{token}/{password}/autosettlement  cospend.oldapi.apiautosettlement  appinfo/routes.php:54 routes",
+        "  POST /index.php/apps/cospend/api/projects/{token}/{password}/currency  cospend.oldapi.apiaddcurrency  appinfo/routes.php:55 routes",
+        "  POST /index.php/apps/cospend/api/projects/{token}/{password}/paymentmode  cospend.oldapi.apiaddpaymentmode  appinfo/routes.php:58 routes",
+        "  PUT /index.php/apps/cospend/api/projects/{token}/{password}/paymentmode-order  cospend.oldapi.apisavepaymentmodeorder  appinfo/routes.php:60 routes",
+        "  POST /index.php/apps/cospend/api/projects/{token}/{password}/category  cospend.oldapi.apiaddcategory  appinfo/routes.php:62 routes",
+        "  PUT /index.php/apps/cospend/api/projects/{token}/{password}/category-order  cospend.oldapi.apisavecategoryorder  appinfo/routes.php:64 routes",
+        "  GET /index.php/apps/cospend/api/ping  cospend.oldapi.apiping  appinfo/routes.php:70 routes",
+        "  GET /index.php/apps/cospend/api-priv/projects  cospend.oldapi.apiprivgetprojects  appinfo/routes.php:71 routes",
+        "  POST /index.php/apps/cospend/getProjects  cospend.oldapi.apiprivgetprojects2  appinfo/routes.php:73 routes",
+        "  POST /index.php/apps/cospend/api-priv/projects  cospend.oldapi.apiprivcreateproject  appinfo/routes.php:74 routes",
+        "  GET /index.php/apps/cospend/api-priv/projects/{projectId}/members  cospend.oldapi.apiprivgetmembers  appinfo/routes.php:78 routes",
+        "  POST /index.php/apps/cospend/api-priv/projects/{projectId}/members  cospend.oldapi.apiprivaddmember  appinfo/routes.php:79 routes",
+        "  GET /index.php/apps/cospend/api-priv/projects/{projectId}/bills  cospend.oldapi.apiprivgetbills  appinfo/routes.php:82 routes",
+        "  POST /index.php/apps/cospend/api-priv/projects/{projectId}/bills  cospend.oldapi.apiprivaddbill  appinfo/routes.php:83 routes",
+        "  DELETE /index.php/apps/cospend/api-priv/projects/{projectId}/trashbin  cospend.oldapi.apiprivcleartrashbin  appinfo/routes.php:86 routes",
+        "  GET /index.php/apps/cospend/api-priv/projects/{projectId}/statistics  cospend.oldapi.apiprivgetprojectstatistics  appinfo/routes.php:87 routes",
+        "  GET /index.php/apps/cospend/api-priv/projects/{projectId}/settle  cospend.oldapi.apiprivgetprojectsettlement  appinfo/routes.php:88 routes",
+        "  GET /index.php/apps/cospend/api-priv/projects/{projectId}/autosettlement  cospend.oldapi.apiprivautosettlement  appinfo/routes.php:89 routes",
+        "  POST /index.php/apps/cospend/api-priv/projects/{projectId}/currency  cospend.oldapi.apiprivaddcurrency  appinfo/routes.php:90 routes",
+        "  POST /index.php/apps/cospend/api-priv/projects/{projectId}/paymentmode  cospend.oldapi.apiprivaddpaymentmode  appinfo/routes.php:93 routes",
+        "  POST /index.php/apps/cospend/api-priv/projects/{projectId}/category  cospend.oldapi.apiprivaddcategory  appinfo/routes.php:96 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 31
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/cospend/api/{apiVersion}/ping  ocs.cospend.api.ping  appinfo/routes.php:104 ocs"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 OCS route. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/cospend/api/{apiVersion}/ping  ocs.cospend.api.ping  appinfo/routes.php:104 ocs"
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/PageController.php:296 OCA\\Cospend\\Controller\\PageController::deleteOptionsValues()"
+      ],
+      "lines": [
+        "1 public method of a controller is reached by no route.",
+        "  lib/Controller/PageController.php:296 OCA\\Cospend\\Controller\\PageController::deleteOptionsValues()"
+      ]
+    }
+  ],
+  "endpoints": 160,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cospend/",
+      "target": "OCA\\Cospend\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:19 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/cospend/admin-option-values",
+      "target": "OCA\\Cospend\\Controller\\PageController::saveAdminOptionValues",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:28 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/cospend/api-priv/{path}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::preflightedCors",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:68 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cospend/api-priv/projects",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivGetProjects",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:71 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/cospend/api-priv/projects",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivCreateProject",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:74 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/cospend/api-priv/projects/{projectId}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivDeleteProject",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:77 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cospend/api-priv/projects/{projectId}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivGetProjectInfo",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:75 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/cospend/api-priv/projects/{projectId}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivSetProjectInfo",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:76 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cospend/api-priv/projects/{projectId}/autosettlement",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivAutoSettlement",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:89 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cospend/api-priv/projects/{projectId}/bills",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivGetBills",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:82 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/cospend/api-priv/projects/{projectId}/bills",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivAddBill",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:83 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/cospend/api-priv/projects/{projectId}/bills/{billid}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivDeleteBill",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:85 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/cospend/api-priv/projects/{projectId}/bills/{billid}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivEditBill",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:84 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/cospend/api-priv/projects/{projectId}/category",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivAddCategory",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:96 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/cospend/api-priv/projects/{projectId}/category/{categoryid}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivDeleteCategory",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:98 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/cospend/api-priv/projects/{projectId}/category/{categoryid}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivEditCategory",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:97 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/cospend/api-priv/projects/{projectId}/currency",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivAddCurrency",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:90 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/cospend/api-priv/projects/{projectId}/currency/{currencyid}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivDeleteCurrency",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:92 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/cospend/api-priv/projects/{projectId}/currency/{currencyid}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivEditCurrency",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:91 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cospend/api-priv/projects/{projectId}/members",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivGetMembers",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:78 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/cospend/api-priv/projects/{projectId}/members",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivAddMember",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:79 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/cospend/api-priv/projects/{projectId}/members/{memberid}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivDeleteMember",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:81 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/cospend/api-priv/projects/{projectId}/members/{memberid}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivEditMember",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:80 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/cospend/api-priv/projects/{projectId}/paymentmode",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivAddPaymentMode",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:93 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/cospend/api-priv/projects/{projectId}/paymentmode/{pmid}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivDeletePaymentMode",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:95 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/cospend/api-priv/projects/{projectId}/paymentmode/{pmid}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivEditPaymentMode",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:94 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cospend/api-priv/projects/{projectId}/settle",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivGetProjectSettlement",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:88 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cospend/api-priv/projects/{projectId}/statistics",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivGetProjectStatistics",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:87 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/cospend/api-priv/projects/{projectId}/trashbin",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivClearTrashBin",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:86 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/cospend/api/{path}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::preflightedCors",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:31 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cospend/api/ping",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPing",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:70 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiDeleteProject",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:36 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiGetProjectInfo",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:34 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiSetProjectInfo",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:35 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}/autosettlement",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiAutoSettlement",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:54 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}/bills",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiDeleteBills",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:48 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}/bills",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiGetBills",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:42 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}/bills",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiAddBill",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:43 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}/bills",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiEditBills",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:46 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}/bills/{billid}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiDeleteBill",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:47 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}/bills/{billid}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiEditBill",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:45 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}/bills/{billId}/repeat",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiRepeatBill",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:44 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}/category",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiAddCategory",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:62 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}/category-order",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiSaveCategoryOrder",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:64 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}/category/{categoryid}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiDeleteCategory",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:65 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}/category/{categoryid}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiEditCategory",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:63 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}/currency",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiAddCurrency",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:55 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}/currency/{currencyid}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiDeleteCurrency",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:57 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}/currency/{currencyid}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiEditCurrency",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:56 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}/members",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiGetMembers",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:37 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}/members",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiAddMember",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:38 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}/members/{memberid}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiDeleteMember",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:41 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}/members/{memberid}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiEditMember",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:40 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}/paymentmode",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiAddPaymentMode",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:58 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}/paymentmode-order",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiSavePaymentModeOrder",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:60 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}/paymentmode/{pmid}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiDeletePaymentMode",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:61 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}/paymentmode/{pmid}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiEditPaymentMode",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:59 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}/settle",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiGetProjectSettlement",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:53 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}/statistics",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiGetProjectStatistics",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:52 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/cospend/api/projects/{token}/{password}/trashbin",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiClearTrashBin",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:49 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/cospend/apiv2/{path}",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::preflightedCors",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:32 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cospend/apiv2/projects/{token}/{password}/bills",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiv2GetBills",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:50 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/cospend/apiv2/projects/{token}/{password}/members",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiv2AddMember",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:39 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cospend/apiv3/projects/{token}/{password}/bills",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiv3GetBills",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:51 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/cospend/getProjects",
+      "target": "OCA\\Cospend\\Controller\\OldApiController::apiPrivGetProjects2",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:73 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cospend/option-values",
+      "target": "OCA\\Cospend\\Controller\\PageController::getOptionsValues",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:26 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/cospend/option-values",
+      "target": "OCA\\Cospend\\Controller\\PageController::saveOptionValues",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:27 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cospend/p/{projectId}",
+      "target": "OCA\\Cospend\\Controller\\PageController::indexProject",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:21 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cospend/p/{projectId}/b/{billId}",
+      "target": "OCA\\Cospend\\Controller\\PageController::indexBill",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:22 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/cospend/project",
+      "target": "OCA\\Cospend\\Controller\\PageController::pubProject",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:23 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cospend/s/{token}",
+      "target": "OCA\\Cospend\\Controller\\PageController::publicShareLinkPage",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:24 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/cospend/svg/{fileName}",
+      "target": "OCA\\Cospend\\Controller\\PageController::getSvgFromApp",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:20 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/federated-projects",
+      "target": "OCA\\Cospend\\Controller\\ApiController::getFederatedProjects",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:112 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/federation/invitation/{id}",
+      "target": "OCA\\Cospend\\Controller\\FederationController::rejectShare",
+      "openapi": [
+        "federation"
+      ],
+      "source": "appinfo/routes.php:109 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/federation/invitation/{id}",
+      "target": "OCA\\Cospend\\Controller\\FederationController::acceptShare",
+      "openapi": [
+        "federation"
+      ],
+      "source": "appinfo/routes.php:108 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/federation/pending-invitations",
+      "target": "OCA\\Cospend\\Controller\\FederationController::getPendingShares",
+      "openapi": [
+        "federation"
+      ],
+      "source": "appinfo/routes.php:107 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/import-csv-project",
+      "target": "OCA\\Cospend\\Controller\\ApiController::importCsvProject",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:118 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/import-sw-project",
+      "target": "OCA\\Cospend\\Controller\\ApiController::importSWProject",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:119 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/ping",
+      "target": "OCA\\Cospend\\Controller\\ApiController::ping",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:104 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects",
+      "target": "OCA\\Cospend\\Controller\\ApiController::getLocalProjects",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:111 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects",
+      "target": "OCA\\Cospend\\Controller\\ApiController::createProject",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:113 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}",
+      "target": "OCA\\Cospend\\Controller\\ApiController::deleteProject",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:114 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}",
+      "target": "OCA\\Cospend\\Controller\\ApiController::getProjectInfo",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:116 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}",
+      "target": "OCA\\Cospend\\Controller\\ApiController::editProject",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:115 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/auto-settlement",
+      "target": "OCA\\Cospend\\Controller\\ApiController::autoSettlement",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:123 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/bills",
+      "target": "OCA\\Cospend\\Controller\\ApiController::deleteBills",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:138 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/bills",
+      "target": "OCA\\Cospend\\Controller\\ApiController::getBills",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:135 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/bills",
+      "target": "OCA\\Cospend\\Controller\\ApiController::createBill",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:133 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/bills",
+      "target": "OCA\\Cospend\\Controller\\ApiController::editBills",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:140 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/bills/{billId}",
+      "target": "OCA\\Cospend\\Controller\\ApiController::deleteBill",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:137 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/bills/{billId}",
+      "target": "OCA\\Cospend\\Controller\\ApiController::getBill",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:134 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/bills/{billId}",
+      "target": "OCA\\Cospend\\Controller\\ApiController::editBill",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:139 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/bills/{billId}/move",
+      "target": "OCA\\Cospend\\Controller\\ApiController::moveBill",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:141 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/bills/{billId}/repeat",
+      "target": "OCA\\Cospend\\Controller\\ApiController::repeatBill",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:142 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/category",
+      "target": "OCA\\Cospend\\Controller\\ApiController::createCategory",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:191 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/category-order",
+      "target": "OCA\\Cospend\\Controller\\ApiController::saveCategoryOrder",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:193 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/category/{categoryId}",
+      "target": "OCA\\Cospend\\Controller\\ApiController::deleteCategory",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:194 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/category/{categoryId}",
+      "target": "OCA\\Cospend\\Controller\\ApiController::editCategory",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:192 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/circle-share",
+      "target": "OCA\\Cospend\\Controller\\ApiController::createCircleShare",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:166 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/circle-share/{shId}",
+      "target": "OCA\\Cospend\\Controller\\ApiController::deleteCircleShare",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:167 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/currency",
+      "target": "OCA\\Cospend\\Controller\\ApiController::createCurrency",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:175 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/currency/{currencyId}",
+      "target": "OCA\\Cospend\\Controller\\ApiController::deleteCurrency",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:177 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/currency/{currencyId}",
+      "target": "OCA\\Cospend\\Controller\\ApiController::editCurrency",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:176 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/export-csv-project",
+      "target": "OCA\\Cospend\\Controller\\ApiController::exportCsvProject",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:117 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/export-csv-settlement",
+      "target": "OCA\\Cospend\\Controller\\ApiController::exportCsvSettlement",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:124 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/export-csv-statistics",
+      "target": "OCA\\Cospend\\Controller\\ApiController::exportCsvStatistics",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:121 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/federated-share",
+      "target": "OCA\\Cospend\\Controller\\ApiController::createFederatedShare",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:170 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/federated-share/{shId}",
+      "target": "OCA\\Cospend\\Controller\\ApiController::deleteFederatedShare",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:171 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/group-share",
+      "target": "OCA\\Cospend\\Controller\\ApiController::createGroupShare",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:164 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/group-share/{shId}",
+      "target": "OCA\\Cospend\\Controller\\ApiController::deleteGroupShare",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:165 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/members",
+      "target": "OCA\\Cospend\\Controller\\ApiController::getMembers",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:153 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/members",
+      "target": "OCA\\Cospend\\Controller\\ApiController::createMember",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:154 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/members/{memberId}",
+      "target": "OCA\\Cospend\\Controller\\ApiController::deleteMember",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:156 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/members/{memberId}",
+      "target": "OCA\\Cospend\\Controller\\ApiController::editMember",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:155 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/paymentmode",
+      "target": "OCA\\Cospend\\Controller\\ApiController::createPaymentMode",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:182 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/paymentmode-order",
+      "target": "OCA\\Cospend\\Controller\\ApiController::savePaymentModeOrder",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:184 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/paymentmode/{pmId}",
+      "target": "OCA\\Cospend\\Controller\\ApiController::deletePaymentMode",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:185 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/paymentmode/{pmId}",
+      "target": "OCA\\Cospend\\Controller\\ApiController::editPaymentMode",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:183 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/public-share",
+      "target": "OCA\\Cospend\\Controller\\ApiController::createPublicShare",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:168 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/public-share/{shId}",
+      "target": "OCA\\Cospend\\Controller\\ApiController::deletePublicShare",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:169 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/settlement",
+      "target": "OCA\\Cospend\\Controller\\ApiController::getProjectSettlement",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:122 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/share-access-level/{shId}",
+      "target": "OCA\\Cospend\\Controller\\ApiController::editSharedAccessLevel",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:172 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/share-access/{shId}",
+      "target": "OCA\\Cospend\\Controller\\ApiController::editSharedAccess",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:173 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/statistics",
+      "target": "OCA\\Cospend\\Controller\\ApiController::getProjectStatistics",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:120 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/trash-bin",
+      "target": "OCA\\Cospend\\Controller\\ApiController::ClearTrashBin",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:136 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/user-share",
+      "target": "OCA\\Cospend\\Controller\\ApiController::createUserShare",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:162 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/projects/{projectId}/user-share/{shId}",
+      "target": "OCA\\Cospend\\Controller\\ApiController::deleteUserShare",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:163 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public-file-share",
+      "target": "OCA\\Cospend\\Controller\\ApiController::getPublicFileShare",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:125 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicDeleteProject",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:126 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicGetProjectInfo",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:128 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicEditProject",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:127 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/auto-settlement",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicAutoSettlement",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:131 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/bills",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicDeleteBills",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:149 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/bills",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicGetBills",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:146 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/bills",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicCreateBill",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:143 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/bills",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicEditBills",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:151 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/bills/{billId}",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicDeleteBill",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:148 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/bills/{billId}",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicGetBill",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:145 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/bills/{billId}",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicEditBill",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:150 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/bills/{billId}/repeat",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicRepeatBill",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:144 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/category",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicCreateCategory",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:195 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/category-order",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicSaveCategoryOrder",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:197 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/category/{categoryId}",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicDeleteCategory",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:198 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/category/{categoryId}",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicEditCategory",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:196 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/currency",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicCreateCurrency",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:178 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/currency/{currencyId}",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicDeleteCurrency",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:180 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/currency/{currencyId}",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicEditCurrency",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:179 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/members",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicGetMembers",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:157 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/members",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicCreateMember",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:158 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/members/{memberId}",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicDeleteMember",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:160 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/members/{memberId}",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicEditMember",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:159 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/paymentmode",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicCreatePaymentMode",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:186 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/paymentmode-order",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicSavePaymentModeOrder",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:188 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/paymentmode/{pmId}",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicDeletePaymentMode",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:189 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/paymentmode/{pmId}",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicEditPaymentMode",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:187 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/settlement",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicGetProjectSettlement",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:130 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/statistics",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicGetProjectStatistics",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:129 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/public/projects/{token}/{password}/trash-bin",
+      "target": "OCA\\Cospend\\Controller\\PublicApiController::publicClearTrashBin",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:147 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/cospend/api/{apiVersion}/remote/avatar/{size}",
+      "target": "OCA\\Cospend\\Controller\\FederationController::getRemoteUserAvatar",
+      "openapi": [
+        "federation"
+      ],
+      "source": "appinfo/routes.php:106 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/capabilities",
+      "target": "OCA\\Cospend\\Capabilities",
+      "openapi": [],
+      "source": "lib/AppInfo/Application.php:126",
+      "kind": "capability"
+    }
+  ]
+}

@@ -1,0 +1,334 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\AtriumSecureShare\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "firebase/php-jwt v7.1.0, in 3rdparty/ of Nextcloud 35",
+        "symfony/polyfill-intl-normalizer v1.38.0, in 3rdparty/ of Nextcloud 33 to 35"
+      ],
+      "lines": [
+        "vendor/ ships 2 packages that the server ships itself in a major of Nextcloud 33 to 35. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  firebase/php-jwt v7.1.0, in 3rdparty/ of Nextcloud 35",
+        "  symfony/polyfill-intl-normalizer v1.38.0, in 3rdparty/ of Nextcloud 33 to 35"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:55 injectFn()",
+        "lib/AppInfo/Application.php:60 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 2 places. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:55 injectFn()",
+        "  lib/AppInfo/Application.php:60 injectFn()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/atrium_secureshare/status  atrium_secureshare.status.index  appinfo/routes.php:14 routes",
+        "GET /index.php/apps/atrium_secureshare/api/v1/health  atrium_secureshare.health.index  appinfo/routes.php:15 routes",
+        "GET /index.php/apps/atrium_secureshare/api/v1/shares/{shareId}/content  atrium_secureshare.shares.content  appinfo/routes.php:17 routes",
+        "GET /index.php/apps/atrium_secureshare/api/v1/shares/{shareId}/folder  atrium_secureshare.shares.folder  appinfo/routes.php:18 routes",
+        "GET /index.php/apps/atrium_secureshare/api/v1/shares/{shareId}/folder/{fileId}/content  atrium_secureshare.shares.folderfile  appinfo/routes.php:19 routes",
+        "POST /index.php/apps/atrium_secureshare/api/v1/shares/{shareId}/upload  atrium_secureshare.shares.upload  appinfo/routes.php:20 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 6 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 16 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/atrium_secureshare/status  atrium_secureshare.status.index  appinfo/routes.php:14 routes",
+        "  GET /index.php/apps/atrium_secureshare/api/v1/health  atrium_secureshare.health.index  appinfo/routes.php:15 routes",
+        "  GET /index.php/apps/atrium_secureshare/api/v1/shares/{shareId}/content  atrium_secureshare.shares.content  appinfo/routes.php:17 routes",
+        "  GET /index.php/apps/atrium_secureshare/api/v1/shares/{shareId}/folder  atrium_secureshare.shares.folder  appinfo/routes.php:18 routes",
+        "  GET /index.php/apps/atrium_secureshare/api/v1/shares/{shareId}/folder/{fileId}/content  atrium_secureshare.shares.folderfile  appinfo/routes.php:19 routes",
+        "  POST /index.php/apps/atrium_secureshare/api/v1/shares/{shareId}/upload  atrium_secureshare.shares.upload  appinfo/routes.php:20 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Service/MailService.php:52 OCP\\Mail\\IMailer::validateMailAddress(): deprecated since Nextcloud 32; use IEmailValidator::isValid() instead",
+        "lib/Share/AtriumShareProvider.php:190 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead"
+      ],
+      "lines": [
+        "2 uses in 2 files of the public API that is deprecated in Nextcloud 33 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Service/MailService.php:52 OCP\\Mail\\IMailer::validateMailAddress(): deprecated since Nextcloud 32; use IEmailValidator::isValid() instead",
+        "  lib/Share/AtriumShareProvider.php:190 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/SidebarShareController.php:244 new DateTime()",
+        "lib/Controller/SidebarShareController.php:287 new DateTime()",
+        "lib/Db/AtriumShare.php:80 new DateTime()",
+        "lib/Service/FolderService.php:129 new DateTime()",
+        "lib/Service/FolderService.php:142 new DateTime()",
+        "lib/Service/JWTValidator.php:89 time()",
+        "lib/Service/ShareService.php:66 new DateTime()",
+        "lib/Service/ShareService.php:216 new DateTime()",
+        "lib/Service/ShareService.php:277 new DateTime()",
+        "lib/Share/AtriumShareProvider.php:191 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 10 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/SidebarShareController.php:244 new DateTime()",
+        "  lib/Controller/SidebarShareController.php:287 new DateTime()",
+        "  lib/Db/AtriumShare.php:80 new DateTime()",
+        "  lib/Service/FolderService.php:129 new DateTime()",
+        "  lib/Service/FolderService.php:142 new DateTime()",
+        "  lib/Service/JWTValidator.php:89 time()",
+        "  lib/Service/ShareService.php:66 new DateTime()",
+        "  lib/Service/ShareService.php:216 new DateTime()",
+        "  lib/Service/ShareService.php:277 new DateTime()",
+        "  lib/Share/AtriumShareProvider.php:191 new DateTime()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/AdminConfigService.php:99 getValueString()",
+        "lib/Service/AdminConfigService.php:112 setValueString()",
+        "lib/Service/AdminConfigService.php:119 getValueString()",
+        "lib/Service/AdminConfigService.php:127 setValueString()",
+        "lib/Service/AdminConfigService.php:131 getValueBool()",
+        "lib/Service/AdminConfigService.php:135 setValueBool()",
+        "lib/Service/AdminConfigService.php:139 getValueBool()",
+        "lib/Service/AdminConfigService.php:143 setValueBool()",
+        "lib/Service/AdminConfigService.php:154 getValueArray()",
+        "lib/Service/AdminConfigService.php:181 setValueArray()",
+        "lib/Service/AdminConfigService.php:186 getValueInt()",
+        "lib/Service/AdminConfigService.php:201 setValueInt()",
+        "lib/Service/AdminConfigService.php:211 getValueInt()",
+        "lib/Service/AdminConfigService.php:224 setValueInt()",
+        "lib/Service/AdminConfigService.php:228 getValueString()",
+        "lib/Service/AdminConfigService.php:233 setValueString()",
+        "lib/Service/JWTValidator.php:100 getValueString()",
+        "lib/Service/PortalConfig.php:25 getValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 18 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/AdminConfigService.php:99 getValueString()",
+        "  lib/Service/AdminConfigService.php:112 setValueString()",
+        "  lib/Service/AdminConfigService.php:119 getValueString()",
+        "  lib/Service/AdminConfigService.php:127 setValueString()",
+        "  lib/Service/AdminConfigService.php:131 getValueBool()",
+        "  lib/Service/AdminConfigService.php:135 setValueBool()",
+        "  lib/Service/AdminConfigService.php:139 getValueBool()",
+        "  lib/Service/AdminConfigService.php:143 setValueBool()",
+        "  lib/Service/AdminConfigService.php:154 getValueArray()",
+        "  lib/Service/AdminConfigService.php:181 setValueArray()",
+        "  lib/Service/AdminConfigService.php:186 getValueInt()",
+        "  lib/Service/AdminConfigService.php:201 setValueInt()",
+        "  lib/Service/AdminConfigService.php:211 getValueInt()",
+        "  lib/Service/AdminConfigService.php:224 setValueInt()",
+        "  lib/Service/AdminConfigService.php:228 getValueString()",
+        "  lib/Service/AdminConfigService.php:233 setValueString()",
+        "  lib/Service/JWTValidator.php:100 getValueString()",
+        "  lib/Service/PortalConfig.php:25 getValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 15
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "PUT /ocs/v2.php/apps/atrium_secureshare/api/v1/shares/{id}  ocs.atrium_secureshare.sidebarshare.update  appinfo/routes.php:29 ocs",
+        "DELETE /ocs/v2.php/apps/atrium_secureshare/api/v1/shares/{id}  ocs.atrium_secureshare.sidebarshare.destroy  appinfo/routes.php:30 ocs"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  PUT /ocs/v2.php/apps/atrium_secureshare/api/v1/shares/{id}  ocs.atrium_secureshare.sidebarshare.update  appinfo/routes.php:29 ocs",
+        "  DELETE /ocs/v2.php/apps/atrium_secureshare/api/v1/shares/{id}  ocs.atrium_secureshare.sidebarshare.destroy  appinfo/routes.php:30 ocs"
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/HealthController.php:29 OCA\\AtriumSecureShare\\Controller\\HealthController::requiredAction()",
+        "lib/Controller/SharesController.php:46 OCA\\AtriumSecureShare\\Controller\\SharesController::requiredAction()"
+      ],
+      "lines": [
+        "2 public methods of controllers are reached by no route.",
+        "  lib/Controller/HealthController.php:29 OCA\\AtriumSecureShare\\Controller\\HealthController::requiredAction()",
+        "  lib/Controller/SharesController.php:46 OCA\\AtriumSecureShare\\Controller\\SharesController::requiredAction()"
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 6 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 14,
+  "endpointList": [
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/atrium_secureshare/admin/settings",
+      "target": "OCA\\AtriumSecureShare\\Controller\\AdminSettingsController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:23 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/atrium_secureshare/api/v1/health",
+      "target": "OCA\\AtriumSecureShare\\Controller\\HealthController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:15 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/atrium_secureshare/api/v1/shares",
+      "target": "OCA\\AtriumSecureShare\\Controller\\SharesController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:16 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/atrium_secureshare/api/v1/shares/{shareId}/content",
+      "target": "OCA\\AtriumSecureShare\\Controller\\SharesController::content",
+      "openapi": [],
+      "source": "appinfo/routes.php:17 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/atrium_secureshare/api/v1/shares/{shareId}/folder",
+      "target": "OCA\\AtriumSecureShare\\Controller\\SharesController::folder",
+      "openapi": [],
+      "source": "appinfo/routes.php:18 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/atrium_secureshare/api/v1/shares/{shareId}/folder/{fileId}/content",
+      "target": "OCA\\AtriumSecureShare\\Controller\\SharesController::folderFile",
+      "openapi": [],
+      "source": "appinfo/routes.php:19 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/atrium_secureshare/api/v1/shares/{shareId}/upload",
+      "target": "OCA\\AtriumSecureShare\\Controller\\SharesController::upload",
+      "openapi": [],
+      "source": "appinfo/routes.php:20 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/atrium_secureshare/status",
+      "target": "OCA\\AtriumSecureShare\\Controller\\StatusController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:14 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/atrium_secureshare/api/v1/overview",
+      "target": "OCA\\AtriumSecureShare\\Controller\\SidebarShareController::overview",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:27 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/atrium_secureshare/api/v1/policy",
+      "target": "OCA\\AtriumSecureShare\\Controller\\SidebarShareController::policy",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:31 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/atrium_secureshare/api/v1/shares",
+      "target": "OCA\\AtriumSecureShare\\Controller\\SidebarShareController::index",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:26 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/atrium_secureshare/api/v1/shares",
+      "target": "OCA\\AtriumSecureShare\\Controller\\SidebarShareController::create",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:28 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/atrium_secureshare/api/v1/shares/{id}",
+      "target": "OCA\\AtriumSecureShare\\Controller\\SidebarShareController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:30 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/atrium_secureshare/api/v1/shares/{id}",
+      "target": "OCA\\AtriumSecureShare\\Controller\\SidebarShareController::update",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:29 ocs",
+      "kind": "OCS"
+    }
+  ]
+}

@@ -1,0 +1,512 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Shifts\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/ShiftsCalendarController.php:60 OC\\Security\\CSP\\ContentSecurityPolicy",
+        "lib/Service/ShiftsCalendarService.php:117 OC\\OCS\\Exception",
+        "lib/Settings/AdminSettings.php:33 OC::$server",
+        "lib/Settings/Settings.php:101 OC::$server"
+      ],
+      "lines": [
+        "4 uses of the private API of the server in 4 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/ShiftsCalendarController.php:60 OC\\Security\\CSP\\ContentSecurityPolicy",
+        "  lib/Service/ShiftsCalendarService.php:117 OC\\OCS\\Exception",
+        "  lib/Settings/AdminSettings.php:33 OC::$server",
+        "  lib/Settings/Settings.php:101 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "route-target-missing",
+      "level": "warn",
+      "places": [
+        "DELETE /index.php/apps/shifts/shiftsCalendar  shifts.shiftscalendar.delete  appinfo/routes.php:36 routes: OCA\\Shifts\\Controller\\ShiftsCalendarController has no method delete()",
+        "GET /index.php/apps/shifts/shiftsCalendar/{id}  shifts.shiftscalendar.show  appinfo/routes.php:15 resources: OCA\\Shifts\\Controller\\ShiftsCalendarController has no method show()"
+      ],
+      "lines": [
+        "2 routes name a controller class or a method that does not exist, or a method that is not public. A request to such a route ends in an error.",
+        "  DELETE /index.php/apps/shifts/shiftsCalendar  shifts.shiftscalendar.delete  appinfo/routes.php:36 routes: OCA\\Shifts\\Controller\\ShiftsCalendarController has no method delete()",
+        "  GET /index.php/apps/shifts/shiftsCalendar/{id}  shifts.shiftscalendar.show  appinfo/routes.php:15 resources: OCA\\Shifts\\Controller\\ShiftsCalendarController has no method show()"
+      ]
+    },
+    {
+      "id": "route-duplicate",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/shifts/shiftsCalendar: shifts.shiftscalendar.index at appinfo/routes.php:33 routes, shifts.shiftscalendar.index at appinfo/routes.php:15 resources",
+        "shifts.shiftscalendar.index: shifts.shiftscalendar.index at appinfo/routes.php:33 routes, shifts.shiftscalendar.index at appinfo/routes.php:15 resources",
+        "POST /index.php/apps/shifts/shiftsCalendar: shifts.shiftscalendar.create at appinfo/routes.php:34 routes, shifts.shiftscalendar.create at appinfo/routes.php:15 resources",
+        "shifts.shiftscalendar.create: shifts.shiftscalendar.create at appinfo/routes.php:34 routes, shifts.shiftscalendar.create at appinfo/routes.php:15 resources",
+        "shifts.shiftscalendar.update: shifts.shiftscalendar.update at appinfo/routes.php:35 routes, shifts.shiftscalendar.update at appinfo/routes.php:15 resources"
+      ],
+      "lines": [
+        "5 verbs and paths or route names are declared more than once. The server keeps one route per name and takes the first that matches a request, so the other one is never reached.",
+        "  GET /index.php/apps/shifts/shiftsCalendar: shifts.shiftscalendar.index at appinfo/routes.php:33 routes, shifts.shiftscalendar.index at appinfo/routes.php:15 resources",
+        "  shifts.shiftscalendar.index: shifts.shiftscalendar.index at appinfo/routes.php:33 routes, shifts.shiftscalendar.index at appinfo/routes.php:15 resources",
+        "  POST /index.php/apps/shifts/shiftsCalendar: shifts.shiftscalendar.create at appinfo/routes.php:34 routes, shifts.shiftscalendar.create at appinfo/routes.php:15 resources",
+        "  shifts.shiftscalendar.create: shifts.shiftscalendar.create at appinfo/routes.php:34 routes, shifts.shiftscalendar.create at appinfo/routes.php:15 resources",
+        "  shifts.shiftscalendar.update: shifts.shiftscalendar.update at appinfo/routes.php:35 routes, shifts.shiftscalendar.update at appinfo/routes.php:15 resources"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/shifts/getAnalysts  shifts.shift.getanalystsexcludingcurrent  appinfo/routes.php:26 routes",
+        "GET /index.php/apps/shifts/shiftsCalendarChange  shifts.shiftscalendarchange.index  appinfo/routes.php:16 resources",
+        "POST /index.php/apps/shifts/shiftsCalendarChange  shifts.shiftscalendarchange.create  appinfo/routes.php:16 resources"
+      ],
+      "lines": [
+        "Nothing in the app calls 3 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 26 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/shifts/getAnalysts  shifts.shift.getanalystsexcludingcurrent  appinfo/routes.php:26 routes",
+        "  GET /index.php/apps/shifts/shiftsCalendarChange  shifts.shiftscalendarchange.index  appinfo/routes.php:16 resources",
+        "  POST /index.php/apps/shifts/shiftsCalendarChange  shifts.shiftscalendarchange.create  appinfo/routes.php:16 resources"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Db/ShiftMapper.php:137"
+      ],
+      "lines": [
+        "1 transaction is opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Db/ShiftMapper.php:137"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/ShiftService.php:113 new DateTime()",
+        "lib/Service/ShiftsTypeService.php:76 new DateTime()",
+        "lib/Service/ShiftsTypeService.php:93 new DateTime()",
+        "lib/Service/ShiftsTypeService.php:148 new DateTime()",
+        "lib/Service/ShiftsTypeService.php:153 new DateTime()",
+        "lib/Service/ShiftsTypeService.php:179 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 6 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/ShiftService.php:113 new DateTime()",
+        "  lib/Service/ShiftsTypeService.php:76 new DateTime()",
+        "  lib/Service/ShiftsTypeService.php:93 new DateTime()",
+        "  lib/Service/ShiftsTypeService.php:148 new DateTime()",
+        "  lib/Service/ShiftsTypeService.php:153 new DateTime()",
+        "  lib/Service/ShiftsTypeService.php:179 new DateTime()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/SettingsController.php:58 OCA\\Shifts\\Controller\\SettingsController::index()"
+      ],
+      "lines": [
+        "1 public method of a controller is reached by no route.",
+        "  lib/Controller/SettingsController.php:58 OCA\\Shifts\\Controller\\SettingsController::index()"
+      ]
+    }
+  ],
+  "endpoints": 44,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shifts/",
+      "target": "OCA\\Shifts\\Controller\\PageController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:19 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shifts/archive",
+      "target": "OCA\\Shifts\\Controller\\PageController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:23 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shifts/checkAdmin",
+      "target": "OCA\\Shifts\\Controller\\ShiftController::getGroupStatus",
+      "openapi": [],
+      "source": "appinfo/routes.php:24 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shifts/getAllAnalysts",
+      "target": "OCA\\Shifts\\Controller\\ShiftController::getAllAnalysts",
+      "openapi": [],
+      "source": "appinfo/routes.php:25 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shifts/getAnalysts",
+      "target": "OCA\\Shifts\\Controller\\ShiftController::getAnalystsExcludingCurrent",
+      "openapi": [],
+      "source": "appinfo/routes.php:26 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shifts/getCurrentUserId",
+      "target": "OCA\\Shifts\\Controller\\ShiftController::getCurrentUserId",
+      "openapi": [],
+      "source": "appinfo/routes.php:28 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shifts/getShiftsDataByTimeRange/{start}/{end}",
+      "target": "OCA\\Shifts\\Controller\\ShiftController::getShiftsDataByTimeRange",
+      "openapi": [],
+      "source": "appinfo/routes.php:30 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shifts/requests",
+      "target": "OCA\\Shifts\\Controller\\PageController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:21 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shifts/settings",
+      "target": "OCA\\Shifts\\Controller\\SettingsController::getSettings",
+      "openapi": [],
+      "source": "appinfo/routes.php:31 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/shifts/settings",
+      "target": "OCA\\Shifts\\Controller\\SettingsController::saveSettings",
+      "openapi": [],
+      "source": "appinfo/routes.php:32 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shifts/shifts",
+      "target": "OCA\\Shifts\\Controller\\ShiftController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:12 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/shifts/shifts",
+      "target": "OCA\\Shifts\\Controller\\ShiftController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:12 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/shifts/shifts/{id}",
+      "target": "OCA\\Shifts\\Controller\\ShiftController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:12 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shifts/shifts/{id}",
+      "target": "OCA\\Shifts\\Controller\\ShiftController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:12 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/shifts/shifts/{id}",
+      "target": "OCA\\Shifts\\Controller\\ShiftController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:12 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shifts/shifts/getAllByUserId",
+      "target": "OCA\\Shifts\\Controller\\ShiftController::getShiftsByUserId",
+      "openapi": [],
+      "source": "appinfo/routes.php:27 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/shifts/shiftsCalendar",
+      "target": "OCA\\Shifts\\Controller\\ShiftsCalendarController::delete",
+      "openapi": [],
+      "source": "appinfo/routes.php:36 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shifts/shiftsCalendar",
+      "target": "OCA\\Shifts\\Controller\\ShiftsCalendarController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:33 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shifts/shiftsCalendar",
+      "target": "OCA\\Shifts\\Controller\\ShiftsCalendarController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:15 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/index.php/apps/shifts/shiftsCalendar",
+      "target": "OCA\\Shifts\\Controller\\ShiftsCalendarController::synchronize",
+      "openapi": [],
+      "source": "appinfo/routes.php:37 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/shifts/shiftsCalendar",
+      "target": "OCA\\Shifts\\Controller\\ShiftsCalendarController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:34 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/shifts/shiftsCalendar",
+      "target": "OCA\\Shifts\\Controller\\ShiftsCalendarController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:15 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/shifts/shiftsCalendar",
+      "target": "OCA\\Shifts\\Controller\\ShiftsCalendarController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:35 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/shifts/shiftsCalendar/{id}",
+      "target": "OCA\\Shifts\\Controller\\ShiftsCalendarController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:15 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shifts/shiftsCalendar/{id}",
+      "target": "OCA\\Shifts\\Controller\\ShiftsCalendarController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:15 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/shifts/shiftsCalendar/{id}",
+      "target": "OCA\\Shifts\\Controller\\ShiftsCalendarController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:15 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shifts/shiftsCalendarChange",
+      "target": "OCA\\Shifts\\Controller\\ShiftsCalendarChangeController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:16 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/shifts/shiftsCalendarChange",
+      "target": "OCA\\Shifts\\Controller\\ShiftsCalendarChangeController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:16 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/shifts/shiftsCalendarChange/{id}",
+      "target": "OCA\\Shifts\\Controller\\ShiftsCalendarChangeController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:16 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shifts/shiftsCalendarChange/{id}",
+      "target": "OCA\\Shifts\\Controller\\ShiftsCalendarChangeController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:16 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/shifts/shiftsCalendarChange/{id}",
+      "target": "OCA\\Shifts\\Controller\\ShiftsCalendarChangeController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:16 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shifts/shiftsChange",
+      "target": "OCA\\Shifts\\Controller\\ShiftsChangeController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:14 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/shifts/shiftsChange",
+      "target": "OCA\\Shifts\\Controller\\ShiftsChangeController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:14 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/shifts/shiftsChange/{id}",
+      "target": "OCA\\Shifts\\Controller\\ShiftsChangeController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:14 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shifts/shiftsChange/{id}",
+      "target": "OCA\\Shifts\\Controller\\ShiftsChangeController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:14 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/shifts/shiftsChange/{id}",
+      "target": "OCA\\Shifts\\Controller\\ShiftsChangeController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:14 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shifts/shiftsType",
+      "target": "OCA\\Shifts\\Controller\\ShiftsTypeController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:13 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/shifts/shiftsType",
+      "target": "OCA\\Shifts\\Controller\\ShiftsTypeController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:13 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/shifts/shiftsType/{id}",
+      "target": "OCA\\Shifts\\Controller\\ShiftsTypeController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:13 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shifts/shiftsType/{id}",
+      "target": "OCA\\Shifts\\Controller\\ShiftsTypeController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:13 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/shifts/shiftsType/{id}",
+      "target": "OCA\\Shifts\\Controller\\ShiftsTypeController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:13 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shifts/shiftsTypes",
+      "target": "OCA\\Shifts\\Controller\\PageController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:22 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shifts/timeline",
+      "target": "OCA\\Shifts\\Controller\\PageController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:20 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/shifts/triggerUnassignedShifts",
+      "target": "OCA\\Shifts\\Controller\\ShiftController::triggerUnassignedShifts",
+      "openapi": [],
+      "source": "appinfo/routes.php:29 routes",
+      "kind": "route"
+    }
+  ]
+}

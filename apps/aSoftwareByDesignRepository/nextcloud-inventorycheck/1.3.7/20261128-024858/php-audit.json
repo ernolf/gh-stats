@@ -1,0 +1,1239 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\InventoryCheck\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/PageController.php:361 OC",
+        "lib/Repair/EnsureInventoryCheckSchema.php:57 OC\\DB\\MigrationService",
+        "lib/Repair/EnsureInventoryCheckSchema.php:59 OC\\DB\\Connection",
+        "templates/label-print.php:17 OC::$server",
+        "templates/label-print.php:22 OC::$server",
+        "templates/label-sheet-print.php:16 OC::$server",
+        "templates/label-sheet-print.php:21 OC::$server"
+      ],
+      "lines": [
+        "7 uses of the private API of the server in 4 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/PageController.php:361 OC",
+        "  lib/Repair/EnsureInventoryCheckSchema.php:57 OC\\DB\\MigrationService",
+        "  lib/Repair/EnsureInventoryCheckSchema.php:59 OC\\DB\\Connection",
+        "  templates/label-print.php:17 OC::$server",
+        "  templates/label-print.php:22 OC::$server",
+        "  templates/label-sheet-print.php:16 OC::$server",
+        "  templates/label-sheet-print.php:21 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "template-inline-script",
+      "level": "warn",
+      "places": [
+        "templates/label-print.php:70 <script> with content",
+        "templates/label-sheet-print.php:92 <script> with content"
+      ],
+      "lines": [
+        "2 inline scripts in templates/. The Content Security Policy of the server runs neither a <script> without a source or the nonce of the response nor an event handler attribute, so the browser does not run them. A script added with OCP\\Util::addScript() or addInitScript() runs.",
+        "  templates/label-print.php:70 <script> with content",
+        "  templates/label-sheet-print.php:92 <script> with content"
+      ]
+    },
+    {
+      "id": "display-name-lookup",
+      "level": "warn",
+      "places": [
+        "lib/Service/LicenseService.php:138",
+        "lib/Service/LicenseService.php:352"
+      ],
+      "lines": [
+        "2 places load a user with IUserManager::get() only to ask for the display name. IUserManager::getDisplayName(), there since Nextcloud 25, answers from a cache and loads no user.",
+        "  lib/Service/LicenseService.php:138",
+        "  lib/Service/LicenseService.php:352"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/inventorycheck/api/locations/by-code/{code}  inventorycheck.location.bycode  appinfo/routes.php:22 routes",
+        "GET /index.php/apps/inventorycheck/api/locations/{id}  inventorycheck.location.show  appinfo/routes.php:23 routes",
+        "POST /index.php/apps/inventorycheck/api/locations  inventorycheck.location.create  appinfo/routes.php:24 routes",
+        "PUT /index.php/apps/inventorycheck/api/locations/{id}  inventorycheck.location.update  appinfo/routes.php:25 routes",
+        "DELETE /index.php/apps/inventorycheck/api/locations/{id}  inventorycheck.location.destroy  appinfo/routes.php:26 routes",
+        "GET /index.php/apps/inventorycheck/api/locations/{id}/label  inventorycheck.location.labelalias  appinfo/routes.php:28 routes",
+        "GET /index.php/apps/inventorycheck/api/items/{id}/label  inventorycheck.item.labelalias  appinfo/routes.php:35 routes",
+        "GET /index.php/apps/inventorycheck/api/items/{id}  inventorycheck.item.show  appinfo/routes.php:38 routes",
+        "POST /index.php/apps/inventorycheck/api/items  inventorycheck.item.create  appinfo/routes.php:39 routes",
+        "PUT /index.php/apps/inventorycheck/api/items/{id}  inventorycheck.item.update  appinfo/routes.php:40 routes",
+        "DELETE /index.php/apps/inventorycheck/api/items/{id}  inventorycheck.item.destroy  appinfo/routes.php:41 routes",
+        "POST /index.php/apps/inventorycheck/api/movements/scan  inventorycheck.movement.scan  appinfo/routes.php:54 routes",
+        "GET /index.php/apps/inventorycheck/api/cycle-counts/{id}  inventorycheck.cyclecount.show  appinfo/routes.php:65 routes",
+        "POST /index.php/apps/inventorycheck/api/cycle-counts  inventorycheck.cyclecount.create  appinfo/routes.php:66 routes",
+        "POST /index.php/apps/inventorycheck/api/favourites/locations  inventorycheck.favourite.create  appinfo/routes.php:72 routes",
+        "POST /index.php/apps/inventorycheck/api/flange/maint/issue  inventorycheck.flange.issuemaintwo  appinfo/routes.php:76 routes",
+        "POST /index.php/apps/inventorycheck/api/flange/project-issue  inventorycheck.flange.issueproject  appinfo/routes.php:77 routes",
+        "PUT /index.php/apps/inventorycheck/api/config/location-acl  inventorycheck.config.savelocationacl  appinfo/routes.php:88 routes",
+        "POST /index.php/apps/inventorycheck/api/license  inventorycheck.license.apply  appinfo/routes.php:94 routes",
+        "DELETE /index.php/apps/inventorycheck/api/license  inventorycheck.license.remove  appinfo/routes.php:95 routes",
+        "POST /index.php/apps/inventorycheck/api/license/seats  inventorycheck.license.assignseat  appinfo/routes.php:97 routes",
+        "DELETE /index.php/apps/inventorycheck/api/license/seats/{uid}  inventorycheck.license.removeseat  appinfo/routes.php:98 routes",
+        "POST /index.php/apps/inventorycheck/api/license/devices  inventorycheck.license.createdevice  appinfo/routes.php:100 routes",
+        "POST /index.php/apps/inventorycheck/api/license/devices/{id}/pair-code  inventorycheck.license.regeneratepaircode  appinfo/routes.php:101 routes",
+        "DELETE /index.php/apps/inventorycheck/api/license/devices/{id}  inventorycheck.license.removedevice  appinfo/routes.php:102 routes",
+        "GET /index.php/apps/inventorycheck/mobile/v1/bootstrap  inventorycheck.mobile.bootstrap  appinfo/routes.php:104 routes",
+        "GET /index.php/apps/inventorycheck/mobile/v1/items/by-code/{code}  inventorycheck.mobile.bycode  appinfo/routes.php:105 routes",
+        "GET /index.php/apps/inventorycheck/mobile/v1/items/{id}/photo  inventorycheck.mobile.itemphoto  appinfo/routes.php:106 routes",
+        "GET /index.php/apps/inventorycheck/mobile/v1/locations/by-code/{code}  inventorycheck.mobile.locationbycode  appinfo/routes.php:107 routes",
+        "GET /index.php/apps/inventorycheck/mobile/v1/locations  inventorycheck.mobile.locations  appinfo/routes.php:108 routes",
+        "GET /index.php/apps/inventorycheck/mobile/v1/balances  inventorycheck.mobile.balances  appinfo/routes.php:109 routes",
+        "GET /index.php/apps/inventorycheck/mobile/v1/movements  inventorycheck.mobile.movements  appinfo/routes.php:110 routes",
+        "POST /index.php/apps/inventorycheck/mobile/v1/movements/scan  inventorycheck.mobile.scan  appinfo/routes.php:111 routes",
+        "POST /index.php/apps/inventorycheck/mobile/v1/devices/pair  inventorycheck.mobile.pairdevice  appinfo/routes.php:112 routes",
+        "GET /index.php/apps/inventorycheck/mobile/v1/favourites/locations  inventorycheck.mobile.favourites  appinfo/routes.php:113 routes",
+        "POST /index.php/apps/inventorycheck/mobile/v1/favourites/locations  inventorycheck.mobile.addfavourite  appinfo/routes.php:114 routes",
+        "DELETE /index.php/apps/inventorycheck/mobile/v1/favourites/locations/{locationId}  inventorycheck.mobile.removefavourite  appinfo/routes.php:115 routes",
+        "GET /index.php/apps/inventorycheck/mobile/v1/cycle-counts  inventorycheck.mobile.cyclecounts  appinfo/routes.php:116 routes",
+        "GET /index.php/apps/inventorycheck/mobile/v1/cycle-counts/{id}  inventorycheck.mobile.cyclecountshow  appinfo/routes.php:117 routes",
+        "PUT /index.php/apps/inventorycheck/mobile/v1/cycle-counts/lines/{lineId}  inventorycheck.mobile.cyclecountsetcount  appinfo/routes.php:118 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 40 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 5 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/inventorycheck/api/locations/by-code/{code}  inventorycheck.location.bycode  appinfo/routes.php:22 routes",
+        "  GET /index.php/apps/inventorycheck/api/locations/{id}  inventorycheck.location.show  appinfo/routes.php:23 routes",
+        "  POST /index.php/apps/inventorycheck/api/locations  inventorycheck.location.create  appinfo/routes.php:24 routes",
+        "  PUT /index.php/apps/inventorycheck/api/locations/{id}  inventorycheck.location.update  appinfo/routes.php:25 routes",
+        "  DELETE /index.php/apps/inventorycheck/api/locations/{id}  inventorycheck.location.destroy  appinfo/routes.php:26 routes",
+        "  GET /index.php/apps/inventorycheck/api/locations/{id}/label  inventorycheck.location.labelalias  appinfo/routes.php:28 routes",
+        "  GET /index.php/apps/inventorycheck/api/items/{id}/label  inventorycheck.item.labelalias  appinfo/routes.php:35 routes",
+        "  GET /index.php/apps/inventorycheck/api/items/{id}  inventorycheck.item.show  appinfo/routes.php:38 routes",
+        "  POST /index.php/apps/inventorycheck/api/items  inventorycheck.item.create  appinfo/routes.php:39 routes",
+        "  PUT /index.php/apps/inventorycheck/api/items/{id}  inventorycheck.item.update  appinfo/routes.php:40 routes",
+        "  DELETE /index.php/apps/inventorycheck/api/items/{id}  inventorycheck.item.destroy  appinfo/routes.php:41 routes",
+        "  POST /index.php/apps/inventorycheck/api/movements/scan  inventorycheck.movement.scan  appinfo/routes.php:54 routes",
+        "  GET /index.php/apps/inventorycheck/api/cycle-counts/{id}  inventorycheck.cyclecount.show  appinfo/routes.php:65 routes",
+        "  POST /index.php/apps/inventorycheck/api/cycle-counts  inventorycheck.cyclecount.create  appinfo/routes.php:66 routes",
+        "  POST /index.php/apps/inventorycheck/api/favourites/locations  inventorycheck.favourite.create  appinfo/routes.php:72 routes",
+        "  POST /index.php/apps/inventorycheck/api/flange/maint/issue  inventorycheck.flange.issuemaintwo  appinfo/routes.php:76 routes",
+        "  POST /index.php/apps/inventorycheck/api/flange/project-issue  inventorycheck.flange.issueproject  appinfo/routes.php:77 routes",
+        "  PUT /index.php/apps/inventorycheck/api/config/location-acl  inventorycheck.config.savelocationacl  appinfo/routes.php:88 routes",
+        "  POST /index.php/apps/inventorycheck/api/license  inventorycheck.license.apply  appinfo/routes.php:94 routes",
+        "  DELETE /index.php/apps/inventorycheck/api/license  inventorycheck.license.remove  appinfo/routes.php:95 routes",
+        "  POST /index.php/apps/inventorycheck/api/license/seats  inventorycheck.license.assignseat  appinfo/routes.php:97 routes",
+        "  DELETE /index.php/apps/inventorycheck/api/license/seats/{uid}  inventorycheck.license.removeseat  appinfo/routes.php:98 routes",
+        "  POST /index.php/apps/inventorycheck/api/license/devices  inventorycheck.license.createdevice  appinfo/routes.php:100 routes",
+        "  POST /index.php/apps/inventorycheck/api/license/devices/{id}/pair-code  inventorycheck.license.regeneratepaircode  appinfo/routes.php:101 routes",
+        "  DELETE /index.php/apps/inventorycheck/api/license/devices/{id}  inventorycheck.license.removedevice  appinfo/routes.php:102 routes",
+        "  GET /index.php/apps/inventorycheck/mobile/v1/bootstrap  inventorycheck.mobile.bootstrap  appinfo/routes.php:104 routes",
+        "  GET /index.php/apps/inventorycheck/mobile/v1/items/by-code/{code}  inventorycheck.mobile.bycode  appinfo/routes.php:105 routes",
+        "  GET /index.php/apps/inventorycheck/mobile/v1/items/{id}/photo  inventorycheck.mobile.itemphoto  appinfo/routes.php:106 routes",
+        "  GET /index.php/apps/inventorycheck/mobile/v1/locations/by-code/{code}  inventorycheck.mobile.locationbycode  appinfo/routes.php:107 routes",
+        "  GET /index.php/apps/inventorycheck/mobile/v1/locations  inventorycheck.mobile.locations  appinfo/routes.php:108 routes",
+        "  GET /index.php/apps/inventorycheck/mobile/v1/balances  inventorycheck.mobile.balances  appinfo/routes.php:109 routes",
+        "  GET /index.php/apps/inventorycheck/mobile/v1/movements  inventorycheck.mobile.movements  appinfo/routes.php:110 routes",
+        "  POST /index.php/apps/inventorycheck/mobile/v1/movements/scan  inventorycheck.mobile.scan  appinfo/routes.php:111 routes",
+        "  POST /index.php/apps/inventorycheck/mobile/v1/devices/pair  inventorycheck.mobile.pairdevice  appinfo/routes.php:112 routes",
+        "  GET /index.php/apps/inventorycheck/mobile/v1/favourites/locations  inventorycheck.mobile.favourites  appinfo/routes.php:113 routes",
+        "  POST /index.php/apps/inventorycheck/mobile/v1/favourites/locations  inventorycheck.mobile.addfavourite  appinfo/routes.php:114 routes",
+        "  DELETE /index.php/apps/inventorycheck/mobile/v1/favourites/locations/{locationId}  inventorycheck.mobile.removefavourite  appinfo/routes.php:115 routes",
+        "  GET /index.php/apps/inventorycheck/mobile/v1/cycle-counts  inventorycheck.mobile.cyclecounts  appinfo/routes.php:116 routes",
+        "  GET /index.php/apps/inventorycheck/mobile/v1/cycle-counts/{id}  inventorycheck.mobile.cyclecountshow  appinfo/routes.php:117 routes",
+        "  PUT /index.php/apps/inventorycheck/mobile/v1/cycle-counts/lines/{lineId}  inventorycheck.mobile.cyclecountsetcount  appinfo/routes.php:118 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 37
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/PageController.php:309 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/PageController.php:317 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/PageController.php:322 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Public/StockIssueFacade.php:64 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Public/StockIssueFacade.php:68 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Public/StockIssueFacade.php:347 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Repair/EnsureInventoryCheckSchema.php:47 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Repair/EnsureInventoryCheckSchema.php:84 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Repair/EnsureInventoryCheckSchema.php:85 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Repair/EnsureInventoryCheckSchema.php:91 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Repair/EnsureInventoryCheckSchema.php:146 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Repair/UninstallDropTables.php:82 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Repair/UninstallDropTables.php:114 OCP\\IConfig::deleteAppValues(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/AccessControlService.php:67 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/AccessControlService.php:130 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/AccessControlService.php:135 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/AccessControlService.php:143 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/AccessControlService.php:170 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/AccessControlService.php:208 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/DevicePairingService.php:122 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/DevicePairingService.php:132 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/DevicePairingService.php:138 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/DirectoryOptionsService.php:41 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "lib/Service/FlangeService.php:52 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/FlangeService.php:57 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/FlangeService.php:63 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/FlangeService.php:70 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/FlangeService.php:172 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/FlangeService.php:177 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/FlangeService.php:182 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LocationAclService.php:50 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LocationAclService.php:55 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LocationAclService.php:60 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LocationAclService.php:65 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LocationScanPolicy.php:21 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LocationScanPolicy.php:26 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LowStockService.php:63 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/LowStockService.php:68 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/QtyScale.php:28 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/QtyScaleService.php:74 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/ReasonCodes.php:36 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/ReasonCodes.php:45 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:143 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:295 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:502 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:506 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:681 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:685 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:692 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/UpgradeBackupService.php:751 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "lines": [
+        "50 uses in 15 files of the public API that is deprecated in Nextcloud 32 to 34. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/PageController.php:309 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/PageController.php:317 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/PageController.php:322 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Public/StockIssueFacade.php:64 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Public/StockIssueFacade.php:68 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Public/StockIssueFacade.php:347 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Repair/EnsureInventoryCheckSchema.php:47 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Repair/EnsureInventoryCheckSchema.php:84 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Repair/EnsureInventoryCheckSchema.php:85 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Repair/EnsureInventoryCheckSchema.php:91 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Repair/EnsureInventoryCheckSchema.php:146 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Repair/UninstallDropTables.php:82 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Repair/UninstallDropTables.php:114 OCP\\IConfig::deleteAppValues(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/AccessControlService.php:67 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/AccessControlService.php:130 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/AccessControlService.php:135 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/AccessControlService.php:143 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/AccessControlService.php:170 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/AccessControlService.php:208 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/DevicePairingService.php:122 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/DevicePairingService.php:132 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/DevicePairingService.php:138 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/DirectoryOptionsService.php:41 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "  lib/Service/FlangeService.php:52 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/FlangeService.php:57 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/FlangeService.php:63 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/FlangeService.php:70 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/FlangeService.php:172 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/FlangeService.php:177 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/FlangeService.php:182 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LocationAclService.php:50 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LocationAclService.php:55 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LocationAclService.php:60 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LocationAclService.php:65 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LocationScanPolicy.php:21 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LocationScanPolicy.php:26 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LowStockService.php:63 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/LowStockService.php:68 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/QtyScale.php:28 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/QtyScaleService.php:74 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/ReasonCodes.php:36 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/ReasonCodes.php:45 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:143 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:295 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:502 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:506 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:681 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:685 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:692 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/UpgradeBackupService.php:751 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 47
+        }
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/label-print.php:23 <style> with content",
+        "templates/label-sheet-print.php:22 <style> with content"
+      ],
+      "lines": [
+        "2 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/label-print.php:23 <style> with content",
+        "  templates/label-sheet-print.php:22 <style> with content"
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Command/RebuildBalancesCommand.php:70",
+        "lib/Db/LocationAclMapper.php:90",
+        "lib/Public/StockIssueFacade.php:206",
+        "lib/Service/CsvImportService.php:76",
+        "lib/Service/CycleCountService.php:119",
+        "lib/Service/CycleCountService.php:192",
+        "lib/Service/CycleCountService.php:221",
+        "lib/Service/CycleCountService.php:262",
+        "lib/Service/ItemPhotoService.php:67",
+        "lib/Service/ItemPhotoService.php:96",
+        "lib/Service/ItemService.php:181",
+        "lib/Service/ItemService.php:204",
+        "lib/Service/LicenseService.php:104",
+        "lib/Service/LocationAclService.php:236",
+        "lib/Service/LocationAclService.php:307",
+        "lib/Service/LocationService.php:145",
+        "lib/Service/LocationService.php:210",
+        "lib/Service/MovementService.php:587",
+        "lib/Service/QtyScaleService.php:65",
+        "lib/Service/UpgradeBackupService.php:252"
+      ],
+      "lines": [
+        "20 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Command/RebuildBalancesCommand.php:70",
+        "  lib/Db/LocationAclMapper.php:90",
+        "  lib/Public/StockIssueFacade.php:206",
+        "  lib/Service/CsvImportService.php:76",
+        "  lib/Service/CycleCountService.php:119",
+        "  lib/Service/CycleCountService.php:192",
+        "  lib/Service/CycleCountService.php:221",
+        "  lib/Service/CycleCountService.php:262",
+        "  lib/Service/ItemPhotoService.php:67",
+        "  lib/Service/ItemPhotoService.php:96",
+        "  lib/Service/ItemService.php:181",
+        "  lib/Service/ItemService.php:204",
+        "  lib/Service/LicenseService.php:104",
+        "  lib/Service/LocationAclService.php:236",
+        "  lib/Service/LocationAclService.php:307",
+        "  lib/Service/LocationService.php:145",
+        "  lib/Service/LocationService.php:210",
+        "  lib/Service/MovementService.php:587",
+        "  lib/Service/QtyScaleService.php:65",
+        "  lib/Service/UpgradeBackupService.php:252"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 17
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Command/RebuildBalancesCommand.php:50 time()",
+        "lib/Db/ScanDevice.php:60 time()",
+        "lib/Repair/EnsureInventoryCheckSchema.php:96 time()",
+        "lib/Service/Clock.php:12 time()",
+        "lib/Service/UpgradeBackupService.php:135 new DateTimeImmutable()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 5 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Command/RebuildBalancesCommand.php:50 time()",
+        "  lib/Db/ScanDevice.php:60 time()",
+        "  lib/Repair/EnsureInventoryCheckSchema.php:96 time()",
+        "  lib/Service/Clock.php:12 time()",
+        "  lib/Service/UpgradeBackupService.php:135 new DateTimeImmutable()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Controller/PageController.php:309 getAppValue()",
+        "lib/Controller/PageController.php:317 getAppValue()",
+        "lib/Public/StockIssueFacade.php:64 getAppValue()",
+        "lib/Public/StockIssueFacade.php:68 getAppValue()",
+        "lib/Public/StockIssueFacade.php:347 getAppValue()",
+        "lib/Repair/EnsureInventoryCheckSchema.php:84 getAppValue()",
+        "lib/Repair/EnsureInventoryCheckSchema.php:85 setAppValue()",
+        "lib/Repair/EnsureInventoryCheckSchema.php:91 getAppValue()",
+        "lib/Repair/EnsureInventoryCheckSchema.php:146 setAppValue()",
+        "lib/Service/AccessControlService.php:67 getAppValue()",
+        "lib/Service/AccessControlService.php:130 getAppValue()",
+        "lib/Service/AccessControlService.php:135 setAppValue()",
+        "lib/Service/AccessControlService.php:143 getAppValue()",
+        "lib/Service/AccessControlService.php:170 setAppValue()",
+        "lib/Service/AccessControlService.php:208 setAppValue()",
+        "lib/Service/DevicePairingService.php:122 getAppValue()",
+        "lib/Service/DevicePairingService.php:132 setAppValue()",
+        "lib/Service/DevicePairingService.php:138 getAppValue()",
+        "lib/Service/FlangeService.php:52 setAppValue()",
+        "lib/Service/FlangeService.php:57 setAppValue()",
+        "lib/Service/FlangeService.php:70 setAppValue()",
+        "lib/Service/FlangeService.php:172 getAppValue()",
+        "lib/Service/FlangeService.php:177 getAppValue()",
+        "lib/Service/FlangeService.php:182 getAppValue()",
+        "lib/Service/LocationAclService.php:50 getAppValue()",
+        "lib/Service/LocationAclService.php:55 setAppValue()",
+        "lib/Service/LocationAclService.php:60 getAppValue()",
+        "lib/Service/LocationAclService.php:65 setAppValue()",
+        "lib/Service/LocationScanPolicy.php:21 getAppValue()",
+        "lib/Service/LocationScanPolicy.php:26 setAppValue()",
+        "lib/Service/LowStockService.php:63 getAppValue()",
+        "lib/Service/LowStockService.php:68 setAppValue()",
+        "lib/Service/QtyScale.php:28 getAppValue()",
+        "lib/Service/QtyScaleService.php:74 setAppValue()",
+        "lib/Service/ReasonCodes.php:36 getAppValue()",
+        "lib/Service/ReasonCodes.php:45 setAppValue()",
+        "lib/Service/UpgradeBackupService.php:143 setAppValue()",
+        "lib/Service/UpgradeBackupService.php:295 setAppValue()",
+        "lib/Service/UpgradeBackupService.php:506 getAppValue()",
+        "lib/Service/UpgradeBackupService.php:692 setAppValue()",
+        "lib/Service/UpgradeBackupService.php:751 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 41 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Controller/PageController.php:309 getAppValue()",
+        "  lib/Controller/PageController.php:317 getAppValue()",
+        "  lib/Public/StockIssueFacade.php:64 getAppValue()",
+        "  lib/Public/StockIssueFacade.php:68 getAppValue()",
+        "  lib/Public/StockIssueFacade.php:347 getAppValue()",
+        "  lib/Repair/EnsureInventoryCheckSchema.php:84 getAppValue()",
+        "  lib/Repair/EnsureInventoryCheckSchema.php:85 setAppValue()",
+        "  lib/Repair/EnsureInventoryCheckSchema.php:91 getAppValue()",
+        "  lib/Repair/EnsureInventoryCheckSchema.php:146 setAppValue()",
+        "  lib/Service/AccessControlService.php:67 getAppValue()",
+        "  lib/Service/AccessControlService.php:130 getAppValue()",
+        "  lib/Service/AccessControlService.php:135 setAppValue()",
+        "  lib/Service/AccessControlService.php:143 getAppValue()",
+        "  lib/Service/AccessControlService.php:170 setAppValue()",
+        "  lib/Service/AccessControlService.php:208 setAppValue()",
+        "  lib/Service/DevicePairingService.php:122 getAppValue()",
+        "  lib/Service/DevicePairingService.php:132 setAppValue()",
+        "  lib/Service/DevicePairingService.php:138 getAppValue()",
+        "  lib/Service/FlangeService.php:52 setAppValue()",
+        "  lib/Service/FlangeService.php:57 setAppValue()",
+        "  lib/Service/FlangeService.php:70 setAppValue()",
+        "  lib/Service/FlangeService.php:172 getAppValue()",
+        "  lib/Service/FlangeService.php:177 getAppValue()",
+        "  lib/Service/FlangeService.php:182 getAppValue()",
+        "  lib/Service/LocationAclService.php:50 getAppValue()",
+        "  lib/Service/LocationAclService.php:55 setAppValue()",
+        "  lib/Service/LocationAclService.php:60 getAppValue()",
+        "  lib/Service/LocationAclService.php:65 setAppValue()",
+        "  lib/Service/LocationScanPolicy.php:21 getAppValue()",
+        "  lib/Service/LocationScanPolicy.php:26 setAppValue()",
+        "  lib/Service/LowStockService.php:63 getAppValue()",
+        "  lib/Service/LowStockService.php:68 setAppValue()",
+        "  lib/Service/QtyScale.php:28 getAppValue()",
+        "  lib/Service/QtyScaleService.php:74 setAppValue()",
+        "  lib/Service/ReasonCodes.php:36 getAppValue()",
+        "  lib/Service/ReasonCodes.php:45 setAppValue()",
+        "  lib/Service/UpgradeBackupService.php:143 setAppValue()",
+        "  lib/Service/UpgradeBackupService.php:295 setAppValue()",
+        "  lib/Service/UpgradeBackupService.php:506 getAppValue()",
+        "  lib/Service/UpgradeBackupService.php:692 setAppValue()",
+        "  lib/Service/UpgradeBackupService.php:751 getAppValue()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 38
+        }
+      ]
+    }
+  ],
+  "endpoints": 95,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/",
+      "target": "OCA\\InventoryCheck\\Controller\\PageController::dashboard",
+      "openapi": [],
+      "source": "appinfo/routes.php:7 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/balances",
+      "target": "OCA\\InventoryCheck\\Controller\\BalanceController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:47 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/config",
+      "target": "OCA\\InventoryCheck\\Controller\\ConfigController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:80 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/api/config/access",
+      "target": "OCA\\InventoryCheck\\Controller\\ConfigController::saveAccess",
+      "openapi": [],
+      "source": "appinfo/routes.php:81 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/api/config/fractional",
+      "target": "OCA\\InventoryCheck\\Controller\\ConfigController::saveFractional",
+      "openapi": [],
+      "source": "appinfo/routes.php:84 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/config/location-acl",
+      "target": "OCA\\InventoryCheck\\Controller\\ConfigController::locationAcl",
+      "openapi": [],
+      "source": "appinfo/routes.php:87 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/inventorycheck/api/config/location-acl",
+      "target": "OCA\\InventoryCheck\\Controller\\ConfigController::saveLocationAcl",
+      "openapi": [],
+      "source": "appinfo/routes.php:88 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/api/config/notify",
+      "target": "OCA\\InventoryCheck\\Controller\\ConfigController::saveNotify",
+      "openapi": [],
+      "source": "appinfo/routes.php:83 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/api/config/office",
+      "target": "OCA\\InventoryCheck\\Controller\\ConfigController::saveOffice",
+      "openapi": [],
+      "source": "appinfo/routes.php:82 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/api/config/wave-d",
+      "target": "OCA\\InventoryCheck\\Controller\\ConfigController::saveWaveD",
+      "openapi": [],
+      "source": "appinfo/routes.php:85 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/cycle-counts",
+      "target": "OCA\\InventoryCheck\\Controller\\CycleCountController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:64 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/api/cycle-counts",
+      "target": "OCA\\InventoryCheck\\Controller\\CycleCountController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:66 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/cycle-counts/{id}",
+      "target": "OCA\\InventoryCheck\\Controller\\CycleCountController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:65 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/api/cycle-counts/{id}/close",
+      "target": "OCA\\InventoryCheck\\Controller\\CycleCountController::close",
+      "openapi": [],
+      "source": "appinfo/routes.php:69 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/api/cycle-counts/{id}/start",
+      "target": "OCA\\InventoryCheck\\Controller\\CycleCountController::start",
+      "openapi": [],
+      "source": "appinfo/routes.php:67 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/inventorycheck/api/cycle-counts/lines/{lineId}",
+      "target": "OCA\\InventoryCheck\\Controller\\CycleCountController::setCount",
+      "openapi": [],
+      "source": "appinfo/routes.php:68 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/directory/groups",
+      "target": "OCA\\InventoryCheck\\Controller\\DirectoryController::searchGroups",
+      "openapi": [],
+      "source": "appinfo/routes.php:91 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/directory/users",
+      "target": "OCA\\InventoryCheck\\Controller\\DirectoryController::searchUsers",
+      "openapi": [],
+      "source": "appinfo/routes.php:90 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/export",
+      "target": "OCA\\InventoryCheck\\Controller\\ExportController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:59 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/favourites/locations",
+      "target": "OCA\\InventoryCheck\\Controller\\FavouriteController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:71 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/api/favourites/locations",
+      "target": "OCA\\InventoryCheck\\Controller\\FavouriteController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:72 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/inventorycheck/api/favourites/locations/{locationId}",
+      "target": "OCA\\InventoryCheck\\Controller\\FavouriteController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:73 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/flange",
+      "target": "OCA\\InventoryCheck\\Controller\\FlangeController::status",
+      "openapi": [],
+      "source": "appinfo/routes.php:75 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/api/flange/maint/issue",
+      "target": "OCA\\InventoryCheck\\Controller\\FlangeController::issueMaintWo",
+      "openapi": [],
+      "source": "appinfo/routes.php:76 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/api/flange/project-issue",
+      "target": "OCA\\InventoryCheck\\Controller\\FlangeController::issueProject",
+      "openapi": [],
+      "source": "appinfo/routes.php:77 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/api/flange/settings",
+      "target": "OCA\\InventoryCheck\\Controller\\FlangeController::saveSettings",
+      "openapi": [],
+      "source": "appinfo/routes.php:78 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/api/import/commit",
+      "target": "OCA\\InventoryCheck\\Controller\\ImportController::commit",
+      "openapi": [],
+      "source": "appinfo/routes.php:62 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/api/import/dry-run",
+      "target": "OCA\\InventoryCheck\\Controller\\ImportController::dryRun",
+      "openapi": [],
+      "source": "appinfo/routes.php:61 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/items",
+      "target": "OCA\\InventoryCheck\\Controller\\ItemController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:32 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/api/items",
+      "target": "OCA\\InventoryCheck\\Controller\\ItemController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:39 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/inventorycheck/api/items/{id}",
+      "target": "OCA\\InventoryCheck\\Controller\\ItemController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:41 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/items/{id}",
+      "target": "OCA\\InventoryCheck\\Controller\\ItemController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:38 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/inventorycheck/api/items/{id}",
+      "target": "OCA\\InventoryCheck\\Controller\\ItemController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:40 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/items/{id}/label",
+      "target": "OCA\\InventoryCheck\\Controller\\ItemController::labelAlias",
+      "openapi": [],
+      "source": "appinfo/routes.php:35 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/items/{id}/label.svg",
+      "target": "OCA\\InventoryCheck\\Controller\\ItemController::label",
+      "openapi": [],
+      "source": "appinfo/routes.php:34 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/inventorycheck/api/items/{id}/photo",
+      "target": "OCA\\InventoryCheck\\Controller\\ItemPhotoController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:45 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/items/{id}/photo",
+      "target": "OCA\\InventoryCheck\\Controller\\ItemPhotoController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:43 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/api/items/{id}/photo",
+      "target": "OCA\\InventoryCheck\\Controller\\ItemPhotoController::upload",
+      "openapi": [],
+      "source": "appinfo/routes.php:44 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/items/by-code/{code}",
+      "target": "OCA\\InventoryCheck\\Controller\\ItemController::byCode",
+      "openapi": [],
+      "source": "appinfo/routes.php:33 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/items/labels",
+      "target": "OCA\\InventoryCheck\\Controller\\ItemController::bulkLabels",
+      "openapi": [],
+      "source": "appinfo/routes.php:37 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/inventorycheck/api/license",
+      "target": "OCA\\InventoryCheck\\Controller\\LicenseController::remove",
+      "openapi": [],
+      "source": "appinfo/routes.php:95 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/license",
+      "target": "OCA\\InventoryCheck\\Controller\\LicenseController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:93 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/api/license",
+      "target": "OCA\\InventoryCheck\\Controller\\LicenseController::apply",
+      "openapi": [],
+      "source": "appinfo/routes.php:94 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/license/devices",
+      "target": "OCA\\InventoryCheck\\Controller\\LicenseController::devices",
+      "openapi": [],
+      "source": "appinfo/routes.php:99 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/api/license/devices",
+      "target": "OCA\\InventoryCheck\\Controller\\LicenseController::createDevice",
+      "openapi": [],
+      "source": "appinfo/routes.php:100 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/inventorycheck/api/license/devices/{id}",
+      "target": "OCA\\InventoryCheck\\Controller\\LicenseController::removeDevice",
+      "openapi": [],
+      "source": "appinfo/routes.php:102 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/api/license/devices/{id}/pair-code",
+      "target": "OCA\\InventoryCheck\\Controller\\LicenseController::regeneratePairCode",
+      "openapi": [],
+      "source": "appinfo/routes.php:101 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/license/seats",
+      "target": "OCA\\InventoryCheck\\Controller\\LicenseController::seats",
+      "openapi": [],
+      "source": "appinfo/routes.php:96 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/api/license/seats",
+      "target": "OCA\\InventoryCheck\\Controller\\LicenseController::assignSeat",
+      "openapi": [],
+      "source": "appinfo/routes.php:97 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/inventorycheck/api/license/seats/{uid}",
+      "target": "OCA\\InventoryCheck\\Controller\\LicenseController::removeSeat",
+      "openapi": [],
+      "source": "appinfo/routes.php:98 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/locations",
+      "target": "OCA\\InventoryCheck\\Controller\\LocationController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:21 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/api/locations",
+      "target": "OCA\\InventoryCheck\\Controller\\LocationController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:24 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/inventorycheck/api/locations/{id}",
+      "target": "OCA\\InventoryCheck\\Controller\\LocationController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:26 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/locations/{id}",
+      "target": "OCA\\InventoryCheck\\Controller\\LocationController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:23 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/inventorycheck/api/locations/{id}",
+      "target": "OCA\\InventoryCheck\\Controller\\LocationController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:25 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/locations/{id}/label",
+      "target": "OCA\\InventoryCheck\\Controller\\LocationController::labelAlias",
+      "openapi": [],
+      "source": "appinfo/routes.php:28 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/locations/{id}/label.svg",
+      "target": "OCA\\InventoryCheck\\Controller\\LocationController::label",
+      "openapi": [],
+      "source": "appinfo/routes.php:27 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/locations/by-code/{code}",
+      "target": "OCA\\InventoryCheck\\Controller\\LocationController::byCode",
+      "openapi": [],
+      "source": "appinfo/routes.php:22 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/locations/labels",
+      "target": "OCA\\InventoryCheck\\Controller\\LocationController::bulkLabels",
+      "openapi": [],
+      "source": "appinfo/routes.php:30 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/low-stock",
+      "target": "OCA\\InventoryCheck\\Controller\\LowStockController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:56 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/low-stock/per-location",
+      "target": "OCA\\InventoryCheck\\Controller\\LowStockController::perLocation",
+      "openapi": [],
+      "source": "appinfo/routes.php:57 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/movements",
+      "target": "OCA\\InventoryCheck\\Controller\\MovementController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:49 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/api/movements/adjust",
+      "target": "OCA\\InventoryCheck\\Controller\\MovementController::adjust",
+      "openapi": [],
+      "source": "appinfo/routes.php:53 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/api/movements/issue",
+      "target": "OCA\\InventoryCheck\\Controller\\MovementController::issue",
+      "openapi": [],
+      "source": "appinfo/routes.php:51 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/api/movements/receive",
+      "target": "OCA\\InventoryCheck\\Controller\\MovementController::receive",
+      "openapi": [],
+      "source": "appinfo/routes.php:50 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/api/movements/scan",
+      "target": "OCA\\InventoryCheck\\Controller\\MovementController::scan",
+      "openapi": [],
+      "source": "appinfo/routes.php:54 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/api/movements/transfer",
+      "target": "OCA\\InventoryCheck\\Controller\\MovementController::transfer",
+      "openapi": [],
+      "source": "appinfo/routes.php:52 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/api/reason-codes",
+      "target": "OCA\\InventoryCheck\\Controller\\ConfigController::reasonCodes",
+      "openapi": [],
+      "source": "appinfo/routes.php:86 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/items",
+      "target": "OCA\\InventoryCheck\\Controller\\PageController::items",
+      "openapi": [],
+      "source": "appinfo/routes.php:8 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/items/{id}",
+      "target": "OCA\\InventoryCheck\\Controller\\PageController::item",
+      "openapi": [],
+      "source": "appinfo/routes.php:9 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/items/{id}/label",
+      "target": "OCA\\InventoryCheck\\Controller\\ItemController::labelPrint",
+      "openapi": [],
+      "source": "appinfo/routes.php:36 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/locations",
+      "target": "OCA\\InventoryCheck\\Controller\\PageController::locations",
+      "openapi": [],
+      "source": "appinfo/routes.php:10 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/locations/{id}",
+      "target": "OCA\\InventoryCheck\\Controller\\PageController::location",
+      "openapi": [],
+      "source": "appinfo/routes.php:11 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/locations/{id}/label",
+      "target": "OCA\\InventoryCheck\\Controller\\LocationController::labelPrint",
+      "openapi": [],
+      "source": "appinfo/routes.php:29 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/mobile/v1/balances",
+      "target": "OCA\\InventoryCheck\\Controller\\MobileController::balances",
+      "openapi": [],
+      "source": "appinfo/routes.php:109 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/mobile/v1/bootstrap",
+      "target": "OCA\\InventoryCheck\\Controller\\MobileController::bootstrap",
+      "openapi": [],
+      "source": "appinfo/routes.php:104 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/mobile/v1/cycle-counts",
+      "target": "OCA\\InventoryCheck\\Controller\\MobileController::cycleCounts",
+      "openapi": [],
+      "source": "appinfo/routes.php:116 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/mobile/v1/cycle-counts/{id}",
+      "target": "OCA\\InventoryCheck\\Controller\\MobileController::cycleCountShow",
+      "openapi": [],
+      "source": "appinfo/routes.php:117 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/inventorycheck/mobile/v1/cycle-counts/lines/{lineId}",
+      "target": "OCA\\InventoryCheck\\Controller\\MobileController::cycleCountSetCount",
+      "openapi": [],
+      "source": "appinfo/routes.php:118 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/mobile/v1/devices/pair",
+      "target": "OCA\\InventoryCheck\\Controller\\MobileController::pairDevice",
+      "openapi": [],
+      "source": "appinfo/routes.php:112 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/mobile/v1/favourites/locations",
+      "target": "OCA\\InventoryCheck\\Controller\\MobileController::favourites",
+      "openapi": [],
+      "source": "appinfo/routes.php:113 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/mobile/v1/favourites/locations",
+      "target": "OCA\\InventoryCheck\\Controller\\MobileController::addFavourite",
+      "openapi": [],
+      "source": "appinfo/routes.php:114 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/inventorycheck/mobile/v1/favourites/locations/{locationId}",
+      "target": "OCA\\InventoryCheck\\Controller\\MobileController::removeFavourite",
+      "openapi": [],
+      "source": "appinfo/routes.php:115 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/mobile/v1/items/{id}/photo",
+      "target": "OCA\\InventoryCheck\\Controller\\MobileController::itemPhoto",
+      "openapi": [],
+      "source": "appinfo/routes.php:106 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/mobile/v1/items/by-code/{code}",
+      "target": "OCA\\InventoryCheck\\Controller\\MobileController::byCode",
+      "openapi": [],
+      "source": "appinfo/routes.php:105 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/mobile/v1/locations",
+      "target": "OCA\\InventoryCheck\\Controller\\MobileController::locations",
+      "openapi": [],
+      "source": "appinfo/routes.php:108 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/mobile/v1/locations/by-code/{code}",
+      "target": "OCA\\InventoryCheck\\Controller\\MobileController::locationByCode",
+      "openapi": [],
+      "source": "appinfo/routes.php:107 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/mobile/v1/movements",
+      "target": "OCA\\InventoryCheck\\Controller\\MobileController::movements",
+      "openapi": [],
+      "source": "appinfo/routes.php:110 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/inventorycheck/mobile/v1/movements/scan",
+      "target": "OCA\\InventoryCheck\\Controller\\MobileController::scan",
+      "openapi": [],
+      "source": "appinfo/routes.php:111 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/movements",
+      "target": "OCA\\InventoryCheck\\Controller\\PageController::movements",
+      "openapi": [],
+      "source": "appinfo/routes.php:12 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/settings",
+      "target": "OCA\\InventoryCheck\\Controller\\PageController::settings",
+      "openapi": [],
+      "source": "appinfo/routes.php:16 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/settings/{section}",
+      "target": "OCA\\InventoryCheck\\Controller\\PageController::settingsSection",
+      "openapi": [],
+      "source": "appinfo/routes.php:18 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/stocktake",
+      "target": "OCA\\InventoryCheck\\Controller\\PageController::stocktake",
+      "openapi": [],
+      "source": "appinfo/routes.php:13 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/stocktake/{id}",
+      "target": "OCA\\InventoryCheck\\Controller\\PageController::stocktakeCampaign",
+      "openapi": [],
+      "source": "appinfo/routes.php:15 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/inventorycheck/stocktake/create",
+      "target": "OCA\\InventoryCheck\\Controller\\PageController::stocktakeNew",
+      "openapi": [],
+      "source": "appinfo/routes.php:14 routes",
+      "kind": "route"
+    }
+  ]
+}

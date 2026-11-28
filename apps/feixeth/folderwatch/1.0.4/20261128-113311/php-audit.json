@@ -1,0 +1,225 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\FolderWatch\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "vimeo/psalm, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Alert/MailChannel.php:51 OCP\\Mail\\IMailer::validateMailAddress(): deprecated since Nextcloud 32; use IEmailValidator::isValid() instead",
+        "lib/Service/UserSettings.php:28 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/UserSettings.php:32 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "lines": [
+        "3 uses in 2 files of the public API that is deprecated in Nextcloud 33 to 36. The text of the tag names the replacement where it has one.",
+        "  lib/Alert/MailChannel.php:51 OCP\\Mail\\IMailer::validateMailAddress(): deprecated since Nextcloud 32; use IEmailValidator::isValid() instead",
+        "  lib/Service/UserSettings.php:28 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/UserSettings.php:32 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Db/QueueItemMapper.php:36"
+      ],
+      "lines": [
+        "1 transaction is opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Db/QueueItemMapper.php:36"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Alert/NotificationChannel.php:27 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 1 place. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Alert/NotificationChannel.php:27 new DateTime()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/AppSettings.php:38 getValueBool()",
+        "lib/Service/AppSettings.php:42 getValueInt()",
+        "lib/Service/AppSettings.php:49 getValueInt()",
+        "lib/Service/AppSettings.php:58 getValueString()",
+        "lib/Service/AppSettings.php:67 getValueString()",
+        "lib/Service/AppSettings.php:104 setValueBool()",
+        "lib/Service/AppSettings.php:107 setValueInt()",
+        "lib/Service/AppSettings.php:110 setValueInt()",
+        "lib/Service/AppSettings.php:113 setValueString()",
+        "lib/Service/CleanupService.php:63 getValueInt()",
+        "lib/Service/CleanupService.php:75 setValueInt()",
+        "lib/Service/LinkResolver.php:107 getValueInt()",
+        "lib/Service/LinkResolver.php:110 setValueInt()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 13 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/AppSettings.php:38 getValueBool()",
+        "  lib/Service/AppSettings.php:42 getValueInt()",
+        "  lib/Service/AppSettings.php:49 getValueInt()",
+        "  lib/Service/AppSettings.php:58 getValueString()",
+        "  lib/Service/AppSettings.php:67 getValueString()",
+        "  lib/Service/AppSettings.php:104 setValueBool()",
+        "  lib/Service/AppSettings.php:107 setValueInt()",
+        "  lib/Service/AppSettings.php:110 setValueInt()",
+        "  lib/Service/AppSettings.php:113 setValueString()",
+        "  lib/Service/CleanupService.php:63 getValueInt()",
+        "  lib/Service/CleanupService.php:75 setValueInt()",
+        "  lib/Service/LinkResolver.php:107 getValueInt()",
+        "  lib/Service/LinkResolver.php:110 setValueInt()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 10
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/folderwatch/api/v1/admin/settings  ocs.folderwatch.adminsettings.index  lib/Controller/AdminSettingsController.php:46",
+        "PUT /ocs/v2.php/apps/folderwatch/api/v1/admin/settings  ocs.folderwatch.adminsettings.update  lib/Controller/AdminSettingsController.php:63",
+        "GET /ocs/v2.php/apps/folderwatch/api/v1/settings  ocs.folderwatch.usersettings.index  lib/Controller/UserSettingsController.php:42",
+        "PUT /ocs/v2.php/apps/folderwatch/api/v1/settings  ocs.folderwatch.usersettings.update  lib/Controller/UserSettingsController.php:56",
+        "GET /ocs/v2.php/apps/folderwatch/api/v1/watches  ocs.folderwatch.watch.index  lib/Controller/WatchController.php:46",
+        "GET /ocs/v2.php/apps/folderwatch/api/v1/watches/status  ocs.folderwatch.watch.status  lib/Controller/WatchController.php:60",
+        "POST /ocs/v2.php/apps/folderwatch/api/v1/watches  ocs.folderwatch.watch.create  lib/Controller/WatchController.php:83",
+        "PATCH /ocs/v2.php/apps/folderwatch/api/v1/watches/{id}  ocs.folderwatch.watch.update  lib/Controller/WatchController.php:124",
+        "DELETE /ocs/v2.php/apps/folderwatch/api/v1/watches/{id}  ocs.folderwatch.watch.destroy  lib/Controller/WatchController.php:157"
+      ],
+      "lines": [
+        "Nothing in the app calls 9 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/folderwatch/api/v1/admin/settings  ocs.folderwatch.adminsettings.index  lib/Controller/AdminSettingsController.php:46",
+        "  PUT /ocs/v2.php/apps/folderwatch/api/v1/admin/settings  ocs.folderwatch.adminsettings.update  lib/Controller/AdminSettingsController.php:63",
+        "  GET /ocs/v2.php/apps/folderwatch/api/v1/settings  ocs.folderwatch.usersettings.index  lib/Controller/UserSettingsController.php:42",
+        "  PUT /ocs/v2.php/apps/folderwatch/api/v1/settings  ocs.folderwatch.usersettings.update  lib/Controller/UserSettingsController.php:56",
+        "  GET /ocs/v2.php/apps/folderwatch/api/v1/watches  ocs.folderwatch.watch.index  lib/Controller/WatchController.php:46",
+        "  GET /ocs/v2.php/apps/folderwatch/api/v1/watches/status  ocs.folderwatch.watch.status  lib/Controller/WatchController.php:60",
+        "  POST /ocs/v2.php/apps/folderwatch/api/v1/watches  ocs.folderwatch.watch.create  lib/Controller/WatchController.php:83",
+        "  PATCH /ocs/v2.php/apps/folderwatch/api/v1/watches/{id}  ocs.folderwatch.watch.update  lib/Controller/WatchController.php:124",
+        "  DELETE /ocs/v2.php/apps/folderwatch/api/v1/watches/{id}  ocs.folderwatch.watch.destroy  lib/Controller/WatchController.php:157"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 6
+        }
+      ]
+    }
+  ],
+  "endpoints": 9,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/folderwatch/api/v1/admin/settings",
+      "target": "OCA\\FolderWatch\\Controller\\AdminSettingsController::index",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/AdminSettingsController.php:46",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/folderwatch/api/v1/admin/settings",
+      "target": "OCA\\FolderWatch\\Controller\\AdminSettingsController::update",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/AdminSettingsController.php:63",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/folderwatch/api/v1/settings",
+      "target": "OCA\\FolderWatch\\Controller\\UserSettingsController::index",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/UserSettingsController.php:42",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/folderwatch/api/v1/settings",
+      "target": "OCA\\FolderWatch\\Controller\\UserSettingsController::update",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/UserSettingsController.php:56",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/folderwatch/api/v1/watches",
+      "target": "OCA\\FolderWatch\\Controller\\WatchController::index",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/WatchController.php:46",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/folderwatch/api/v1/watches",
+      "target": "OCA\\FolderWatch\\Controller\\WatchController::create",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/WatchController.php:83",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/folderwatch/api/v1/watches/{id}",
+      "target": "OCA\\FolderWatch\\Controller\\WatchController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/WatchController.php:157",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/ocs/v2.php/apps/folderwatch/api/v1/watches/{id}",
+      "target": "OCA\\FolderWatch\\Controller\\WatchController::update",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/WatchController.php:124",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/folderwatch/api/v1/watches/status",
+      "target": "OCA\\FolderWatch\\Controller\\WatchController::status",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/WatchController.php:60",
+      "kind": "OCS"
+    }
+  ]
+}

@@ -1,0 +1,555 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\PaperlessSync\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Service/UserFilesystem.php:42 OC\\Files\\SetupManager",
+        "lib/Service/UserFilesystem.php:49 OC\\Files\\Filesystem"
+      ],
+      "lines": [
+        "2 uses of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Service/UserFilesystem.php:42 OC\\Files\\SetupManager",
+        "  lib/Service/UserFilesystem.php:49 OC\\Files\\Filesystem"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/paperless_sync/settings/users  paperless_sync.directory.users  lib/Controller/DirectoryController.php:46",
+        "GET /index.php/apps/paperless_sync/settings/groups  paperless_sync.directory.groups  lib/Controller/DirectoryController.php:67",
+        "GET /index.php/apps/paperless_sync/api/v1/health  paperless_sync.health.check  lib/Controller/HealthController.php:71",
+        "GET /index.php/apps/paperless_sync/settings/health-token  paperless_sync.health.state  lib/Controller/HealthController.php:97",
+        "POST /index.php/apps/paperless_sync/settings/health-token  paperless_sync.health.create  lib/Controller/HealthController.php:107",
+        "DELETE /index.php/apps/paperless_sync/settings/health-token  paperless_sync.health.remove  lib/Controller/HealthController.php:117",
+        "POST /index.php/apps/paperless_sync/settings/preview  paperless_sync.settings.preview  lib/Controller/SettingsController.php:74",
+        "POST /index.php/apps/paperless_sync/settings  paperless_sync.settings.save  lib/Controller/SettingsController.php:126",
+        "POST /index.php/apps/paperless_sync/settings/test  paperless_sync.settings.test  lib/Controller/SettingsController.php:184",
+        "DELETE /index.php/apps/paperless_sync/settings  paperless_sync.settings.reset  lib/Controller/SettingsController.php:276",
+        "POST /index.php/apps/paperless_sync/settings/account  paperless_sync.settings.account  lib/Controller/SettingsController.php:304",
+        "POST /index.php/apps/paperless_sync/sync/run  paperless_sync.sync.run  lib/Controller/SyncController.php:62",
+        "GET /index.php/apps/paperless_sync/sync/status  paperless_sync.sync.status  lib/Controller/SyncController.php:103",
+        "POST /index.php/apps/paperless_sync/sync/forget  paperless_sync.sync.forget  lib/Controller/SyncController.php:120",
+        "GET /index.php/apps/paperless_sync/settings/user-tags/shares  paperless_sync.tagshares.shares  lib/Controller/TagSharesController.php:42",
+        "DELETE /index.php/apps/paperless_sync/settings/user-tags/shares  paperless_sync.tagshares.remove  lib/Controller/TagSharesController.php:58",
+        "POST /index.php/apps/paperless_sync/api/v1/webhook  paperless_sync.webhook.receive  lib/Controller/WebhookController.php:82",
+        "GET /index.php/apps/paperless_sync/settings/webhook  paperless_sync.webhook.state  lib/Controller/WebhookController.php:136",
+        "POST /index.php/apps/paperless_sync/settings/webhook  paperless_sync.webhook.create  lib/Controller/WebhookController.php:146",
+        "DELETE /index.php/apps/paperless_sync/settings/webhook  paperless_sync.webhook.remove  lib/Controller/WebhookController.php:156"
+      ],
+      "lines": [
+        "Nothing in the app calls 20 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 3 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/paperless_sync/settings/users  paperless_sync.directory.users  lib/Controller/DirectoryController.php:46",
+        "  GET /index.php/apps/paperless_sync/settings/groups  paperless_sync.directory.groups  lib/Controller/DirectoryController.php:67",
+        "  GET /index.php/apps/paperless_sync/api/v1/health  paperless_sync.health.check  lib/Controller/HealthController.php:71",
+        "  GET /index.php/apps/paperless_sync/settings/health-token  paperless_sync.health.state  lib/Controller/HealthController.php:97",
+        "  POST /index.php/apps/paperless_sync/settings/health-token  paperless_sync.health.create  lib/Controller/HealthController.php:107",
+        "  DELETE /index.php/apps/paperless_sync/settings/health-token  paperless_sync.health.remove  lib/Controller/HealthController.php:117",
+        "  POST /index.php/apps/paperless_sync/settings/preview  paperless_sync.settings.preview  lib/Controller/SettingsController.php:74",
+        "  POST /index.php/apps/paperless_sync/settings  paperless_sync.settings.save  lib/Controller/SettingsController.php:126",
+        "  POST /index.php/apps/paperless_sync/settings/test  paperless_sync.settings.test  lib/Controller/SettingsController.php:184",
+        "  DELETE /index.php/apps/paperless_sync/settings  paperless_sync.settings.reset  lib/Controller/SettingsController.php:276",
+        "  POST /index.php/apps/paperless_sync/settings/account  paperless_sync.settings.account  lib/Controller/SettingsController.php:304",
+        "  POST /index.php/apps/paperless_sync/sync/run  paperless_sync.sync.run  lib/Controller/SyncController.php:62",
+        "  GET /index.php/apps/paperless_sync/sync/status  paperless_sync.sync.status  lib/Controller/SyncController.php:103",
+        "  POST /index.php/apps/paperless_sync/sync/forget  paperless_sync.sync.forget  lib/Controller/SyncController.php:120",
+        "  GET /index.php/apps/paperless_sync/settings/user-tags/shares  paperless_sync.tagshares.shares  lib/Controller/TagSharesController.php:42",
+        "  DELETE /index.php/apps/paperless_sync/settings/user-tags/shares  paperless_sync.tagshares.remove  lib/Controller/TagSharesController.php:58",
+        "  POST /index.php/apps/paperless_sync/api/v1/webhook  paperless_sync.webhook.receive  lib/Controller/WebhookController.php:82",
+        "  GET /index.php/apps/paperless_sync/settings/webhook  paperless_sync.webhook.state  lib/Controller/WebhookController.php:136",
+        "  POST /index.php/apps/paperless_sync/settings/webhook  paperless_sync.webhook.create  lib/Controller/WebhookController.php:146",
+        "  DELETE /index.php/apps/paperless_sync/settings/webhook  paperless_sync.webhook.remove  lib/Controller/WebhookController.php:156"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 17
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "vimeo/psalm, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Notification/NotificationPublisher.php:234 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Operation/SendToPaperless.php:197 OCP\\EventDispatcher\\GenericEvent: deprecated since Nextcloud 22; use \\OCP\\EventDispatcher\\Event",
+        "lib/Service/StatusService.php:492 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Service/WebhookService.php:53 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Service/WebhookService.php:61 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig"
+      ],
+      "lines": [
+        "5 uses in 4 files of the public API that is deprecated in Nextcloud 33 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Notification/NotificationPublisher.php:234 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Operation/SendToPaperless.php:197 OCP\\EventDispatcher\\GenericEvent: deprecated since Nextcloud 22; use \\OCP\\EventDispatcher\\Event",
+        "  lib/Service/StatusService.php:492 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Service/WebhookService.php:53 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Service/WebhookService.php:61 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/Cron/SyncJob.php OCA\\PaperlessSync\\Cron\\SyncJob"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/Cron/SyncJob.php OCA\\PaperlessSync\\Cron\\SyncJob"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Notification/NotificationPublisher.php:230 getValueInt()",
+        "lib/Notification/NotificationPublisher.php:255 setValueInt()",
+        "lib/Notification/NotificationPublisher.php:271 getValueString()",
+        "lib/Service/ConfigService.php:154 hasKey()",
+        "lib/Service/ConfigService.php:157 getValueString()",
+        "lib/Service/ConfigService.php:352 setValueBool()",
+        "lib/Service/ConfigService.php:354 setValueInt()",
+        "lib/Service/ConfigService.php:356 setValueString()",
+        "lib/Service/ConfigService.php:375 setValueBool()",
+        "lib/Service/ConfigService.php:480 setValueString()",
+        "lib/Service/ConfigService.php:494 hasKey()",
+        "lib/Service/ConfigService.php:495 setValueString()",
+        "lib/Service/ConfigService.php:517 getValueString()",
+        "lib/Service/ConfigService.php:526 getValueString()",
+        "lib/Service/ConfigService.php:536 getValueString()",
+        "lib/Service/ConfigService.php:553 setValueString()",
+        "lib/Service/ConfigService.php:569 getValueBool()",
+        "lib/Service/ConfigService.php:571 getValueInt()",
+        "lib/Service/ConfigService.php:573 getValueString()",
+        "lib/Service/ConfigService.php:778 getValueString()",
+        "lib/Service/ConfigService.php:785 setValueString()",
+        "lib/Service/ConfigService.php:802 getValueString()",
+        "lib/Service/ConfigService.php:805 setValueString()",
+        "lib/Service/NextcloudStorageService.php:116 setValueString()",
+        "lib/Service/NextcloudStorageService.php:123 setValueString()",
+        "lib/Service/NextcloudStorageService.php:124 setValueString()",
+        "lib/Service/NextcloudStorageService.php:135 getValueString()",
+        "lib/Service/StatusService.php:147 setValueInt()",
+        "lib/Service/StatusService.php:148 setValueString()",
+        "lib/Service/StatusService.php:165 getValueString()",
+        "lib/Service/StatusService.php:177 setValueInt()",
+        "lib/Service/StatusService.php:198 setValueInt()",
+        "lib/Service/StatusService.php:200 setValueInt()",
+        "lib/Service/StatusService.php:202 setValueInt()",
+        "lib/Service/StatusService.php:204 setValueString()",
+        "lib/Service/StatusService.php:205 setValueString()",
+        "lib/Service/StatusService.php:206 setValueString()",
+        "lib/Service/StatusService.php:208 setValueString()",
+        "lib/Service/StatusService.php:209 setValueString()",
+        "lib/Service/StatusService.php:219 setValueString()",
+        "lib/Service/StatusService.php:220 setValueString()",
+        "lib/Service/StatusService.php:224 setValueInt()",
+        "lib/Service/StatusService.php:225 setValueInt()",
+        "lib/Service/StatusService.php:227 setValueInt()",
+        "lib/Service/StatusService.php:229 setValueInt()",
+        "lib/Service/StatusService.php:236 setValueInt()",
+        "lib/Service/StatusService.php:237 setValueInt()",
+        "lib/Service/StatusService.php:239 setValueString()",
+        "lib/Service/StatusService.php:240 setValueString()",
+        "lib/Service/StatusService.php:241 setValueString()",
+        "lib/Service/StatusService.php:256 setValueInt()",
+        "lib/Service/StatusService.php:258 setValueInt()",
+        "lib/Service/StatusService.php:261 setValueString()",
+        "lib/Service/StatusService.php:262 setValueString()",
+        "lib/Service/StatusService.php:263 setValueString()",
+        "lib/Service/StatusService.php:271 getValueInt()",
+        "lib/Service/StatusService.php:272 getValueInt()",
+        "lib/Service/StatusService.php:273 getValueString()",
+        "lib/Service/StatusService.php:277 getValueInt()",
+        "lib/Service/StatusService.php:290 getValueInt()",
+        "lib/Service/StatusService.php:291 getValueInt()",
+        "lib/Service/StatusService.php:293 getValueString()",
+        "lib/Service/StatusService.php:294 getValueString()",
+        "lib/Service/StatusService.php:296 getValueString()",
+        "lib/Service/StatusService.php:297 getValueString()",
+        "lib/Service/StatusService.php:298 getValueString()",
+        "lib/Service/StatusService.php:299 getValueString()",
+        "lib/Service/StatusService.php:302 getValueInt()",
+        "lib/Service/StatusService.php:308 getValueInt()",
+        "lib/Service/StatusService.php:318 getValueString()",
+        "lib/Service/StatusService.php:337 getValueInt()",
+        "lib/Service/StatusService.php:338 getValueInt()",
+        "lib/Service/StatusService.php:347 setValueString()",
+        "lib/Service/StatusService.php:348 setValueBool()",
+        "lib/Service/StatusService.php:354 getValueString()",
+        "lib/Service/StatusService.php:355 getValueBool()",
+        "lib/Service/StatusService.php:391 getValueInt()",
+        "lib/Service/StatusService.php:438 getValueInt()",
+        "lib/Service/StatusService.php:439 getValueInt()",
+        "lib/Service/StatusService.php:439 getValueInt()",
+        "lib/Service/StatusService.php:444 getValueInt()",
+        "lib/Service/StatusService.php:445 getValueInt()",
+        "lib/Service/StatusService.php:457 getValueInt()",
+        "lib/Service/StatusService.php:458 getValueInt()",
+        "lib/Service/StatusService.php:470 getValueInt()",
+        "lib/Service/StatusService.php:473 setValueInt()",
+        "lib/Service/StatusService.php:473 getValueInt()",
+        "lib/Service/StatusService.php:474 setValueInt()",
+        "lib/Service/StatusService.php:474 getValueInt()",
+        "lib/Service/StatusService.php:474 getValueInt()",
+        "lib/Service/StatusService.php:480 setValueString()",
+        "lib/Service/StatusService.php:503 setValueString()",
+        "lib/Service/StatusService.php:527 setValueString()",
+        "lib/Service/SystemTagService.php:88 setValueString()",
+        "lib/Service/SystemTagService.php:99 getValueString()",
+        "lib/Service/WebhookService.php:74 setValueString()",
+        "lib/Service/WebhookService.php:123 getValueString()",
+        "lib/SetupChecks/BackgroundJobMode.php:46 getValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 98 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Notification/NotificationPublisher.php:230 getValueInt()",
+        "  lib/Notification/NotificationPublisher.php:255 setValueInt()",
+        "  lib/Notification/NotificationPublisher.php:271 getValueString()",
+        "  lib/Service/ConfigService.php:154 hasKey()",
+        "  lib/Service/ConfigService.php:157 getValueString()",
+        "  lib/Service/ConfigService.php:352 setValueBool()",
+        "  lib/Service/ConfigService.php:354 setValueInt()",
+        "  lib/Service/ConfigService.php:356 setValueString()",
+        "  lib/Service/ConfigService.php:375 setValueBool()",
+        "  lib/Service/ConfigService.php:480 setValueString()",
+        "  lib/Service/ConfigService.php:494 hasKey()",
+        "  lib/Service/ConfigService.php:495 setValueString()",
+        "  lib/Service/ConfigService.php:517 getValueString()",
+        "  lib/Service/ConfigService.php:526 getValueString()",
+        "  lib/Service/ConfigService.php:536 getValueString()",
+        "  lib/Service/ConfigService.php:553 setValueString()",
+        "  lib/Service/ConfigService.php:569 getValueBool()",
+        "  lib/Service/ConfigService.php:571 getValueInt()",
+        "  lib/Service/ConfigService.php:573 getValueString()",
+        "  lib/Service/ConfigService.php:778 getValueString()",
+        "  lib/Service/ConfigService.php:785 setValueString()",
+        "  lib/Service/ConfigService.php:802 getValueString()",
+        "  lib/Service/ConfigService.php:805 setValueString()",
+        "  lib/Service/NextcloudStorageService.php:116 setValueString()",
+        "  lib/Service/NextcloudStorageService.php:123 setValueString()",
+        "  lib/Service/NextcloudStorageService.php:124 setValueString()",
+        "  lib/Service/NextcloudStorageService.php:135 getValueString()",
+        "  lib/Service/StatusService.php:147 setValueInt()",
+        "  lib/Service/StatusService.php:148 setValueString()",
+        "  lib/Service/StatusService.php:165 getValueString()",
+        "  lib/Service/StatusService.php:177 setValueInt()",
+        "  lib/Service/StatusService.php:198 setValueInt()",
+        "  lib/Service/StatusService.php:200 setValueInt()",
+        "  lib/Service/StatusService.php:202 setValueInt()",
+        "  lib/Service/StatusService.php:204 setValueString()",
+        "  lib/Service/StatusService.php:205 setValueString()",
+        "  lib/Service/StatusService.php:206 setValueString()",
+        "  lib/Service/StatusService.php:208 setValueString()",
+        "  lib/Service/StatusService.php:209 setValueString()",
+        "  lib/Service/StatusService.php:219 setValueString()",
+        "  lib/Service/StatusService.php:220 setValueString()",
+        "  lib/Service/StatusService.php:224 setValueInt()",
+        "  lib/Service/StatusService.php:225 setValueInt()",
+        "  lib/Service/StatusService.php:227 setValueInt()",
+        "  lib/Service/StatusService.php:229 setValueInt()",
+        "  lib/Service/StatusService.php:236 setValueInt()",
+        "  lib/Service/StatusService.php:237 setValueInt()",
+        "  lib/Service/StatusService.php:239 setValueString()",
+        "  lib/Service/StatusService.php:240 setValueString()",
+        "  lib/Service/StatusService.php:241 setValueString()",
+        "  lib/Service/StatusService.php:256 setValueInt()",
+        "  lib/Service/StatusService.php:258 setValueInt()",
+        "  lib/Service/StatusService.php:261 setValueString()",
+        "  lib/Service/StatusService.php:262 setValueString()",
+        "  lib/Service/StatusService.php:263 setValueString()",
+        "  lib/Service/StatusService.php:271 getValueInt()",
+        "  lib/Service/StatusService.php:272 getValueInt()",
+        "  lib/Service/StatusService.php:273 getValueString()",
+        "  lib/Service/StatusService.php:277 getValueInt()",
+        "  lib/Service/StatusService.php:290 getValueInt()",
+        "  lib/Service/StatusService.php:291 getValueInt()",
+        "  lib/Service/StatusService.php:293 getValueString()",
+        "  lib/Service/StatusService.php:294 getValueString()",
+        "  lib/Service/StatusService.php:296 getValueString()",
+        "  lib/Service/StatusService.php:297 getValueString()",
+        "  lib/Service/StatusService.php:298 getValueString()",
+        "  lib/Service/StatusService.php:299 getValueString()",
+        "  lib/Service/StatusService.php:302 getValueInt()",
+        "  lib/Service/StatusService.php:308 getValueInt()",
+        "  lib/Service/StatusService.php:318 getValueString()",
+        "  lib/Service/StatusService.php:337 getValueInt()",
+        "  lib/Service/StatusService.php:338 getValueInt()",
+        "  lib/Service/StatusService.php:347 setValueString()",
+        "  lib/Service/StatusService.php:348 setValueBool()",
+        "  lib/Service/StatusService.php:354 getValueString()",
+        "  lib/Service/StatusService.php:355 getValueBool()",
+        "  lib/Service/StatusService.php:391 getValueInt()",
+        "  lib/Service/StatusService.php:438 getValueInt()",
+        "  lib/Service/StatusService.php:439 getValueInt()",
+        "  lib/Service/StatusService.php:439 getValueInt()",
+        "  lib/Service/StatusService.php:444 getValueInt()",
+        "  lib/Service/StatusService.php:445 getValueInt()",
+        "  lib/Service/StatusService.php:457 getValueInt()",
+        "  lib/Service/StatusService.php:458 getValueInt()",
+        "  lib/Service/StatusService.php:470 getValueInt()",
+        "  lib/Service/StatusService.php:473 setValueInt()",
+        "  lib/Service/StatusService.php:473 getValueInt()",
+        "  lib/Service/StatusService.php:474 setValueInt()",
+        "  lib/Service/StatusService.php:474 getValueInt()",
+        "  lib/Service/StatusService.php:474 getValueInt()",
+        "  lib/Service/StatusService.php:480 setValueString()",
+        "  lib/Service/StatusService.php:503 setValueString()",
+        "  lib/Service/StatusService.php:527 setValueString()",
+        "  lib/Service/SystemTagService.php:88 setValueString()",
+        "  lib/Service/SystemTagService.php:99 getValueString()",
+        "  lib/Service/WebhookService.php:74 setValueString()",
+        "  lib/Service/WebhookService.php:123 getValueString()",
+        "  lib/SetupChecks/BackgroundJobMode.php:46 getValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 95
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/paperless_sync/api/v1/status  ocs.paperless_sync.statusapi.status  lib/Controller/StatusApiController.php:46"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 OCS route. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/paperless_sync/api/v1/status  ocs.paperless_sync.statusapi.status  lib/Controller/StatusApiController.php:46"
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 1 OCS route and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version000190Date20261123000000.php:37 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version000190Date20261123000000.php:38 addColumn() on a table whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version000190Date20261123000000.php:37 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000190Date20261123000000.php:38 addColumn() on a table whose name is no constant"
+      ]
+    }
+  ],
+  "endpoints": 26,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/paperless_sync/api/v1/folder-info",
+      "target": "OCA\\PaperlessSync\\Controller\\FolderInfoController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/paperless_sync/api/v1/folder-info/dismissed",
+      "target": "OCA\\PaperlessSync\\Controller\\FolderInfoController::dismiss",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/paperless_sync/api/v1/health",
+      "target": "OCA\\PaperlessSync\\Controller\\HealthController::check",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/paperless_sync/api/v1/send",
+      "target": "OCA\\PaperlessSync\\Controller\\FileActionController::send",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/paperless_sync/api/v1/webhook",
+      "target": "OCA\\PaperlessSync\\Controller\\WebhookController::receive",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/paperless_sync/settings",
+      "target": "OCA\\PaperlessSync\\Controller\\SettingsController::reset",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/paperless_sync/settings",
+      "target": "OCA\\PaperlessSync\\Controller\\SettingsController::save",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/paperless_sync/settings/account",
+      "target": "OCA\\PaperlessSync\\Controller\\SettingsController::account",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/paperless_sync/settings/groups",
+      "target": "OCA\\PaperlessSync\\Controller\\DirectoryController::groups",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/paperless_sync/settings/health-token",
+      "target": "OCA\\PaperlessSync\\Controller\\HealthController::remove",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/paperless_sync/settings/health-token",
+      "target": "OCA\\PaperlessSync\\Controller\\HealthController::state",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/paperless_sync/settings/health-token",
+      "target": "OCA\\PaperlessSync\\Controller\\HealthController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/paperless_sync/settings/paperless/tags",
+      "target": "OCA\\PaperlessSync\\Controller\\SettingsController::tags",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/paperless_sync/settings/preview",
+      "target": "OCA\\PaperlessSync\\Controller\\SettingsController::preview",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/paperless_sync/settings/test",
+      "target": "OCA\\PaperlessSync\\Controller\\SettingsController::test",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/paperless_sync/settings/user-tags/shares",
+      "target": "OCA\\PaperlessSync\\Controller\\TagSharesController::remove",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/paperless_sync/settings/user-tags/shares",
+      "target": "OCA\\PaperlessSync\\Controller\\TagSharesController::shares",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/paperless_sync/settings/users",
+      "target": "OCA\\PaperlessSync\\Controller\\DirectoryController::users",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/paperless_sync/settings/users/{id}",
+      "target": "OCA\\PaperlessSync\\Controller\\DirectoryController::user",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/paperless_sync/settings/webhook",
+      "target": "OCA\\PaperlessSync\\Controller\\WebhookController::remove",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/paperless_sync/settings/webhook",
+      "target": "OCA\\PaperlessSync\\Controller\\WebhookController::state",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/paperless_sync/settings/webhook",
+      "target": "OCA\\PaperlessSync\\Controller\\WebhookController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/paperless_sync/sync/forget",
+      "target": "OCA\\PaperlessSync\\Controller\\SyncController::forget",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/paperless_sync/sync/run",
+      "target": "OCA\\PaperlessSync\\Controller\\SyncController::run",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/paperless_sync/sync/status",
+      "target": "OCA\\PaperlessSync\\Controller\\SyncController::status",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/paperless_sync/api/v1/status",
+      "target": "OCA\\PaperlessSync\\Controller\\StatusApiController::status",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

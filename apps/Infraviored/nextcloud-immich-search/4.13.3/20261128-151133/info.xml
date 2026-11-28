@@ -1,0 +1,115 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	  xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>glimpse</id>
+	<name>Glimpse</name>
+	<summary>Find photos by what is in them: content and face search, timeline, map and people, powered by Immich</summary>
+	<description><![CDATA[
+**Find any photo in your Nextcloud by what is in it.** Type "dog in the snow", "birthday cake"
+or a person's name, and Glimpse finds the picture, among the files you already keep in
+Nextcloud. The image understanding (CLIP), face recognition, memories and duplicate detection
+come from a self-hosted [Immich](https://immich.app) that indexes your Nextcloud files
+read-only. Nextcloud still decides who sees what.
+
+### Search
+- **By content**: describe the picture, results are ranked by meaning, not by file names or tags.
+- **Inside videos**: finds moments in videos by what is in them, jumping straight to the scene.
+- **By person**, or both at once: "Alex beach" finds Alex's beach pictures.
+- Filter by tag, photos or videos; "More like this" for any picture.
+- Also in Nextcloud's own search bar and in the Nextcloud mobile apps.
+
+### Browse
+- **Timeline** in year bands with a year rail, "On this day" and "Back to today".
+- **Map** of geotagged pictures (tiles proxied by your server).
+- **Folders** as galleries, **duplicates** with Immich's suggestion of what to keep.
+
+### People
+Name, merge, hide and favorite people; assign single faces or correct many at once; "Label
+people" names them in a row. Faces are cut only from pictures the viewer may open.
+
+### Viewer
+Below an open picture, as in the Android app: share, favorite, similar, delete, and an info
+sheet with date, the people in it, its folder, download, move, copy, album and tag.
+
+### Sort in bulk
+Select many (long-press on touch), then move or copy into folders with undo, tag, favorite, add to
+a Photos album and share it, download as ZIP, or delete.
+
+### Private area
+Folders, people and single pictures that only appear after unlocking with your password, and
+never in the global search or on the dashboard.
+
+### Sensitive pictures (optional)
+Off unless the admin allows it and you turn it on: recognises nudity from what Immich already
+knows, marks it on the tiles, and lets you hide it or see only it. You correct it with one tap
+and it learns from that.
+
+### Nextcloud permissions decide
+One shared index, but every user only ever sees files they can open in Nextcloud: their own and
+those shared with them. Thumbnails, faces, map markers, memories and duplicates are checked the
+same way.
+
+### Everywhere in Nextcloud
+A "Similar pictures" action and a "People" tab in Files, an "On this day" dashboard widget, and
+a native [Android app](https://github.com/Infraviored/glimpse-android).
+
+**Requirements:** a self-hosted Immich with its machine-learning service, read-only access for
+Immich to the Nextcloud data directory, Nextcloud cron, and ffmpeg on the Nextcloud server (for
+search inside videos). Setup guide:
+[README](https://github.com/Infraviored/nextcloud-immich-search#install).
+	]]></description>
+	<version>4.13.3</version>
+	<licence>AGPL-3.0-or-later</licence>
+	<author>Florian Schneider</author>
+	<namespace>Glimpse</namespace>
+	<category>multimedia</category>
+	<category>search</category>
+	<website>https://github.com/Infraviored/nextcloud-immich-search</website>
+	<bugs>https://github.com/Infraviored/nextcloud-immich-search/issues</bugs>
+	<repository type="git">https://github.com/Infraviored/nextcloud-immich-search.git</repository>
+	<!-- App Store schema (info.xsd) allows at most 10 screenshots -->
+	<screenshot>https://raw.githubusercontent.com/Infraviored/nextcloud-immich-search/main/docs/screenshots/search.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/Infraviored/nextcloud-immich-search/main/docs/screenshots/video.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/Infraviored/nextcloud-immich-search/main/docs/screenshots/viewer-info.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/Infraviored/nextcloud-immich-search/main/docs/screenshots/search-person.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/Infraviored/nextcloud-immich-search/main/docs/screenshots/timeline.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/Infraviored/nextcloud-immich-search/main/docs/screenshots/person.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/Infraviored/nextcloud-immich-search/main/docs/screenshots/map.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/Infraviored/nextcloud-immich-search/main/docs/screenshots/selection.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/Infraviored/nextcloud-immich-search/main/docs/screenshots/duplicates.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/Infraviored/nextcloud-immich-search/main/docs/screenshots/android.png</screenshot>
+	<dependencies>
+		<php min-version="8.1"/>
+		<nextcloud min-version="30" max-version="35"/>
+	</dependencies>
+	<background-jobs>
+		<job>OCA\Glimpse\BackgroundJob\BuildPeopleIndex</job>
+		<job>OCA\Glimpse\BackgroundJob\PruneSmallImages</job>
+		<job>OCA\Glimpse\BackgroundJob\PruneTileCache</job>
+		<job>OCA\Glimpse\BackgroundJob\IndexVideoScenes</job>
+		<job>OCA\Glimpse\BackgroundJob\UpdateSensitive</job>
+	</background-jobs>
+	<repair-steps>
+		<post-migration>
+			<step>OCA\Glimpse\Migration\DropPrunedPatterns</step>
+		</post-migration>
+	</repair-steps>
+	<commands>
+		<command>OCA\Glimpse\Command\Configure</command>
+		<command>OCA\Glimpse\Command\PeopleIndexCommand</command>
+		<command>OCA\Glimpse\Command\PruneCommand</command>
+		<command>OCA\Glimpse\Command\SensitiveCommand</command>
+		<command>OCA\Glimpse\Command\VideoScenesCommand</command>
+	</commands>
+	<settings>
+		<admin>OCA\Glimpse\Settings\Admin</admin>
+	</settings>
+	<navigations>
+		<navigation>
+			<name>Glimpse</name>
+			<route>glimpse.page.index</route>
+			<icon>app.svg</icon>
+			<order>6</order>
+		</navigation>
+	</navigations>
+</info>

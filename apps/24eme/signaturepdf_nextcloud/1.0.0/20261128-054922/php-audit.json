@@ -1,0 +1,221 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\SignaturePDF\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/BackgroundJob/CleanupExpiredTokensJob.php:31 OC\\Authentication\\Token\\IProvider",
+        "lib/BackgroundJob/CleanupExpiredTokensJob.php:81 OC\\Authentication\\Token\\IToken",
+        "lib/Controller/PageController.php:50 OC\\Authentication\\Token\\IProvider",
+        "lib/Controller/PageController.php:148 OC\\Authentication\\Token\\IToken"
+      ],
+      "lines": [
+        "4 uses of the private API of the server in 2 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/BackgroundJob/CleanupExpiredTokensJob.php:31 OC\\Authentication\\Token\\IProvider",
+        "  lib/BackgroundJob/CleanupExpiredTokensJob.php:81 OC\\Authentication\\Token\\IToken",
+        "  lib/Controller/PageController.php:50 OC\\Authentication\\Token\\IProvider",
+        "  lib/Controller/PageController.php:148 OC\\Authentication\\Token\\IToken"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "ocp-missing",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:39 OCP\\IContainer::query(): Nextcloud 35 is the last major to have it, the app declares up to 36; use self::get()",
+        "lib/AppInfo/Application.php:40 OCP\\IContainer::query(): Nextcloud 35 is the last major to have it, the app declares up to 36; use self::get()"
+      ],
+      "lines": [
+        "2 uses in 1 file of the public API that a major of Nextcloud 31 to 36 no longer has. The app fails there where it comes to that line, or the server no longer calls the method it overrides.",
+        "  lib/AppInfo/Application.php:39 OCP\\IContainer::query(): Nextcloud 35 is the last major to have it, the app declares up to 36; use self::get()",
+        "  lib/AppInfo/Application.php:40 OCP\\IContainer::query(): Nextcloud 35 is the last major to have it, the app declares up to 36; use self::get()"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:58 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:58 injectFn()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/signaturepdf/onetime_webauth_token  signaturepdf.page.generateonetimewebauthtoken  lib/Controller/PageController.php:122"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 route outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 3 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/signaturepdf/onetime_webauth_token  signaturepdf.page.generateonetimewebauthtoken  lib/Controller/PageController.php:122"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:37 OCP\\IContainer: deprecated since Nextcloud 20; use \\Psr\\Container\\ContainerInterface",
+        "lib/AppInfo/Application.php:60 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/AppInfo/Application.php:69 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Config/Config.php:31 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Config/Config.php:35 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Connector/Sabre/CorsPlugin.php:27 OCP\\Util::getVersion(): deprecated since Nextcloud 31; Use \\OCP\\ServerVersion::getVersion",
+        "lib/Listener/CSPListener.php:35 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ],
+      "lines": [
+        "7 uses in 4 files of the public API that is deprecated in Nextcloud 31 to 36. The text of the tag names the replacement where it has one.",
+        "  lib/AppInfo/Application.php:37 OCP\\IContainer: deprecated since Nextcloud 20; use \\Psr\\Container\\ContainerInterface",
+        "  lib/AppInfo/Application.php:60 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/AppInfo/Application.php:69 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Config/Config.php:31 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Config/Config.php:35 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Connector/Sabre/CorsPlugin.php:27 OCP\\Util::getVersion(): deprecated since Nextcloud 31; Use \\OCP\\ServerVersion::getVersion",
+        "  lib/Listener/CSPListener.php:35 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/index.php:11 style= attribute",
+        "templates/index.php:12 style= attribute"
+      ],
+      "lines": [
+        "2 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/index.php:11 style= attribute",
+        "  templates/index.php:12 style= attribute"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/CleanupExpiredTokensJob.php OCA\\SignaturePDF\\BackgroundJob\\CleanupExpiredTokensJob"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/CleanupExpiredTokensJob.php OCA\\SignaturePDF\\BackgroundJob\\CleanupExpiredTokensJob"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:60 getAppValue()",
+        "lib/AppInfo/Application.php:69 setAppValue()",
+        "lib/Config/Config.php:31 getAppValue()",
+        "lib/Config/Config.php:35 setAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 4 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/AppInfo/Application.php:60 getAppValue()",
+        "  lib/AppInfo/Application.php:69 setAppValue()",
+        "  lib/Config/Config.php:31 getAppValue()",
+        "  lib/Config/Config.php:35 setAppValue()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/signaturepdf/api  ocs.signaturepdf.api.index  lib/Controller/ApiController.php:25"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 OCS route. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/signaturepdf/api  ocs.signaturepdf.api.index  lib/Controller/ApiController.php:25"
+      ]
+    }
+  ],
+  "endpoints": 6,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/signaturepdf/compress",
+      "target": "OCA\\SignaturePDF\\Controller\\PageController::compress",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:109",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/signaturepdf/metadata",
+      "target": "OCA\\SignaturePDF\\Controller\\PageController::metadata",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:70",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/signaturepdf/onetime_webauth_token",
+      "target": "OCA\\SignaturePDF\\Controller\\PageController::generateOneTimeWebAuthToken",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:122",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/signaturepdf/organization",
+      "target": "OCA\\SignaturePDF\\Controller\\PageController::organization",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:96",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/signaturepdf/signature",
+      "target": "OCA\\SignaturePDF\\Controller\\PageController::signature",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:83",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/signaturepdf/api",
+      "target": "OCA\\SignaturePDF\\Controller\\ApiController::index",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/ApiController.php:25",
+      "kind": "OCS"
+    }
+  ]
+}

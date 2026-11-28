@@ -1,0 +1,282 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\NextLibrary\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/nextlibrary/api/state  nextlibrary.api.state  appinfo/routes.php:10 routes",
+        "POST /index.php/apps/nextlibrary/api/import  nextlibrary.api.import  appinfo/routes.php:12 routes",
+        "GET /index.php/apps/nextlibrary/api/principals  nextlibrary.api.searchprincipals  appinfo/routes.php:14 routes",
+        "POST /index.php/apps/nextlibrary/api/collections  nextlibrary.api.createcollection  appinfo/routes.php:19 routes",
+        "GET /index.php/apps/nextlibrary/api/trash  nextlibrary.api.trash  appinfo/routes.php:35 routes",
+        "GET /index.php/apps/nextlibrary/api/editors  nextlibrary.api.geteditors  appinfo/routes.php:42 routes",
+        "PUT /index.php/apps/nextlibrary/api/editors  nextlibrary.api.seteditors  appinfo/routes.php:43 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 7 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 2 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/nextlibrary/api/state  nextlibrary.api.state  appinfo/routes.php:10 routes",
+        "  POST /index.php/apps/nextlibrary/api/import  nextlibrary.api.import  appinfo/routes.php:12 routes",
+        "  GET /index.php/apps/nextlibrary/api/principals  nextlibrary.api.searchprincipals  appinfo/routes.php:14 routes",
+        "  POST /index.php/apps/nextlibrary/api/collections  nextlibrary.api.createcollection  appinfo/routes.php:19 routes",
+        "  GET /index.php/apps/nextlibrary/api/trash  nextlibrary.api.trash  appinfo/routes.php:35 routes",
+        "  GET /index.php/apps/nextlibrary/api/editors  nextlibrary.api.geteditors  appinfo/routes.php:42 routes",
+        "  PUT /index.php/apps/nextlibrary/api/editors  nextlibrary.api.seteditors  appinfo/routes.php:43 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/ApiController.php:332 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "lib/Controller/PageController.php:41 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Service/PermissionService.php:164 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PermissionService.php:165 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PermissionService.php:178 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "lines": [
+        "5 uses in 3 files of the public API that is deprecated in Nextcloud 28 to 34. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/ApiController.php:332 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "  lib/Controller/PageController.php:41 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Service/PermissionService.php:164 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PermissionService.php:165 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PermissionService.php:178 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/main.php:13 style= attribute",
+        "templates/main.php:71 style= attribute",
+        "templates/main.php:79 style= attribute",
+        "templates/main.php:81 style= attribute"
+      ],
+      "lines": [
+        "4 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/main.php:13 style= attribute",
+        "  templates/main.php:71 style= attribute",
+        "  templates/main.php:79 style= attribute",
+        "  templates/main.php:81 style= attribute"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/PermissionService.php:164 setAppValue()",
+        "lib/Service/PermissionService.php:165 setAppValue()",
+        "lib/Service/PermissionService.php:178 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 3 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/PermissionService.php:164 setAppValue()",
+        "  lib/Service/PermissionService.php:165 setAppValue()",
+        "  lib/Service/PermissionService.php:178 getAppValue()"
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version001300Date20260731150000.php:32 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version001300Date20260731150000.php:33 addColumn() on a table whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version001300Date20260731150000.php:32 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version001300Date20260731150000.php:33 addColumn() on a table whose name is no constant"
+      ]
+    }
+  ],
+  "endpoints": 23,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextlibrary/",
+      "target": "OCA\\NextLibrary\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nextlibrary/api/collections",
+      "target": "OCA\\NextLibrary\\Controller\\ApiController::createCollection",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/nextlibrary/api/collections/{id}",
+      "target": "OCA\\NextLibrary\\Controller\\ApiController::deleteCollection",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/nextlibrary/api/collections/{id}",
+      "target": "OCA\\NextLibrary\\Controller\\ApiController::updateCollection",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/nextlibrary/api/collections/{id}/members",
+      "target": "OCA\\NextLibrary\\Controller\\ApiController::setMembers",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nextlibrary/api/collections/{id}/pages",
+      "target": "OCA\\NextLibrary\\Controller\\ApiController::createPage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/nextlibrary/api/collections/{id}/purge",
+      "target": "OCA\\NextLibrary\\Controller\\ApiController::purgeCollection",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextlibrary/api/collections/{id}/report",
+      "target": "OCA\\NextLibrary\\Controller\\ApiController::collectionReport",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nextlibrary/api/collections/{id}/restore",
+      "target": "OCA\\NextLibrary\\Controller\\ApiController::restoreCollection",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextlibrary/api/editors",
+      "target": "OCA\\NextLibrary\\Controller\\ApiController::getEditors",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/nextlibrary/api/editors",
+      "target": "OCA\\NextLibrary\\Controller\\ApiController::setEditors",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nextlibrary/api/import",
+      "target": "OCA\\NextLibrary\\Controller\\ApiController::import",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextlibrary/api/media/{cid}/{name}",
+      "target": "OCA\\NextLibrary\\Controller\\ApiController::media",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/nextlibrary/api/pages/{id}",
+      "target": "OCA\\NextLibrary\\Controller\\ApiController::deletePage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/nextlibrary/api/pages/{id}",
+      "target": "OCA\\NextLibrary\\Controller\\ApiController::updatePage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/nextlibrary/api/pages/{id}/purge",
+      "target": "OCA\\NextLibrary\\Controller\\ApiController::purgePage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/nextlibrary/api/pages/{id}/read",
+      "target": "OCA\\NextLibrary\\Controller\\ApiController::unmarkRead",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nextlibrary/api/pages/{id}/read",
+      "target": "OCA\\NextLibrary\\Controller\\ApiController::markRead",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nextlibrary/api/pages/{id}/restore",
+      "target": "OCA\\NextLibrary\\Controller\\ApiController::restorePage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextlibrary/api/principals",
+      "target": "OCA\\NextLibrary\\Controller\\ApiController::searchPrincipals",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextlibrary/api/state",
+      "target": "OCA\\NextLibrary\\Controller\\ApiController::state",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/nextlibrary/api/trash",
+      "target": "OCA\\NextLibrary\\Controller\\ApiController::trash",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/nextlibrary/api/upload",
+      "target": "OCA\\NextLibrary\\Controller\\ApiController::upload",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

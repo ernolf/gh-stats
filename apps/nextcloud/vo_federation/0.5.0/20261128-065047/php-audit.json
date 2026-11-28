@@ -1,0 +1,383 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\VO_Federation\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:93 OC\\EventDispatcher\\EventDispatcher",
+        "lib/AppInfo/Application.php:120 OC::$server",
+        "lib/Backend/GroupBackend.php:82 OC::$server",
+        "lib/Command/AddProvider.php:21 OC\\Core\\Command\\Base",
+        "lib/Command/DeleteProvider.php:22 OC\\Core\\Command\\Base",
+        "lib/Command/ListProvider.php:21 OC\\Core\\Command\\Base",
+        "lib/Controller/AvatarController.php:65 OC\\AppFramework\\Utility\\TimeFactory",
+        "lib/Controller/AvatarController.php:165 OC\\Files\\Filesystem",
+        "lib/Controller/AvatarController.php:345 OC\\NotSquareException",
+        "lib/FederatedGroupShareProvider.php:289 OC\\Share20\\Share",
+        "lib/FederatedGroupShareProvider.php:793 OC\\Share20\\Exception\\InvalidShare",
+        "lib/OCM/CloudGroupFederationProviderFiles.php:202 OC\\AppFramework\\Http",
+        "lib/OCM/CloudGroupFederationProviderFiles.php:263 OC::$server",
+        "lib/OCM/CloudGroupFederationProviderFiles.php:272 OC::$server",
+        "lib/OCM/CloudGroupFederationProviderFiles.php:285 OC::$server",
+        "lib/OCM/CloudGroupFederationProviderFiles.php:614 OC::$server",
+        "lib/OCM/CloudGroupFederationProviderFiles.php:778 OC_Util",
+        "lib/OCM/CloudGroupFederationProviderFiles.php:781 OC\\Files\\Filesystem",
+        "lib/Service/GroupsService.php:177 OC\\Group\\Group"
+      ],
+      "lines": [
+        "19 uses of the private API of the server in 9 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/AppInfo/Application.php:93 OC\\EventDispatcher\\EventDispatcher",
+        "  lib/AppInfo/Application.php:120 OC::$server",
+        "  lib/Backend/GroupBackend.php:82 OC::$server",
+        "  lib/Command/AddProvider.php:21 OC\\Core\\Command\\Base",
+        "  lib/Command/DeleteProvider.php:22 OC\\Core\\Command\\Base",
+        "  lib/Command/ListProvider.php:21 OC\\Core\\Command\\Base",
+        "  lib/Controller/AvatarController.php:65 OC\\AppFramework\\Utility\\TimeFactory",
+        "  lib/Controller/AvatarController.php:165 OC\\Files\\Filesystem",
+        "  lib/Controller/AvatarController.php:345 OC\\NotSquareException",
+        "  lib/FederatedGroupShareProvider.php:289 OC\\Share20\\Share",
+        "  lib/FederatedGroupShareProvider.php:793 OC\\Share20\\Exception\\InvalidShare",
+        "  lib/OCM/CloudGroupFederationProviderFiles.php:202 OC\\AppFramework\\Http",
+        "  lib/OCM/CloudGroupFederationProviderFiles.php:263 OC::$server",
+        "  lib/OCM/CloudGroupFederationProviderFiles.php:272 OC::$server",
+        "  lib/OCM/CloudGroupFederationProviderFiles.php:285 OC::$server",
+        "  lib/OCM/CloudGroupFederationProviderFiles.php:614 OC::$server",
+        "  lib/OCM/CloudGroupFederationProviderFiles.php:778 OC_Util",
+        "  lib/OCM/CloudGroupFederationProviderFiles.php:781 OC\\Files\\Filesystem",
+        "  lib/Service/GroupsService.php:177 OC\\Group\\Group"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 16
+        }
+      ]
+    },
+    {
+      "id": "implements-consumable",
+      "level": "warn",
+      "places": [
+        "lib/Federation/CloudIdResolver.php:38 OCA\\VO_Federation\\Federation\\CloudIdResolver implements OCP\\Federation\\ICloudIdResolver"
+      ],
+      "lines": [
+        "1 class implements or extends what the public API marks #[Consumable] in a major of Nextcloud 32: an app calls it, and the server may add a method to it in any release, which breaks a class that implements it.",
+        "  lib/Federation/CloudIdResolver.php:38 OCA\\VO_Federation\\Federation\\CloudIdResolver implements OCP\\Federation\\ICloudIdResolver"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:75 injectFn()",
+        "lib/AppInfo/Application.php:88 get()",
+        "lib/AppInfo/Application.php:93 injectFn()",
+        "lib/AppInfo/Application.php:99 addListener()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 4 places. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:75 injectFn()",
+        "  lib/AppInfo/Application.php:88 get()",
+        "  lib/AppInfo/Application.php:93 injectFn()",
+        "  lib/AppInfo/Application.php:99 addListener()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "vimeo/psalm, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/AddressHandler.php:126 OCP\\Util::emitHook(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTypedEvent",
+        "lib/AddressHandler.php:131 OCP\\Util::emitHook(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTypedEvent",
+        "lib/Collaboration/FederatedGroupPlugin.php:77 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Collaboration/FederatedGroupPlugin.php:78 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Collaboration/FederatedGroupPlugin.php:79 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Collaboration/FederatedGroupPlugin.php:80 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Collaboration/FederatedGroupPlugin.php:81 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/FederatedGroupShareProvider.php:304 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/FederatedGroupShareProvider.php:378 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/FederatedGroupShareProvider.php:412 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/FederatedGroupShareProvider.php:1073 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/FederatedGroupShareProvider.php:1086 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/FederatedGroupShareProvider.php:1100 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/FederatedGroupShareProvider.php:1113 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/FederatedGroupShareProvider.php:1136 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/FederatedGroupShareProvider.php:1151 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Notifications.php:367 OCP\\Federation\\ICloudFederationProviderManager::sendShare(): deprecated since Nextcloud 29; Use sendCloudShare() instead and handle errors manually",
+        "lib/Notifications.php:384 OCP\\Federation\\ICloudFederationProviderManager::sendNotification(): deprecated since Nextcloud 29; Use sendCloudNotification() instead and handle errors manually",
+        "lib/Notifications.php:397 OCP\\Federation\\ICloudFederationProviderManager::sendNotification(): deprecated since Nextcloud 29; Use sendCloudNotification() instead and handle errors manually",
+        "lib/Notifications.php:410 OCP\\Federation\\ICloudFederationProviderManager::sendNotification(): deprecated since Nextcloud 29; Use sendCloudNotification() instead and handle errors manually",
+        "lib/OCM/CloudGroupFederationProviderFiles.php:413 OCP\\Federation\\ICloudFederationProviderManager::sendNotification(): deprecated since Nextcloud 29; Use sendCloudNotification() instead and handle errors manually",
+        "lib/OCM/CloudGroupFederationProviderFiles.php:483 OCP\\Federation\\ICloudFederationProviderManager::sendNotification(): deprecated since Nextcloud 29; Use sendCloudNotification() instead and handle errors manually",
+        "lib/OCM/CloudGroupFederationProviderFiles.php:665 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/OCM/CloudGroupFederationProviderFiles.php:665 OCP\\Constants::PERMISSION_ALL: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_ALL instead",
+        "lib/OCM/CloudGroupFederationProviderFiles.php:683 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "lib/OCM/CloudGroupFederationProviderFiles.php:739 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/OCM/CloudGroupFederationProviderFiles.php:742 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/OCM/CloudGroupFederationProviderFiles.php:742 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/OCM/CloudGroupFederationProviderFiles.php:745 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead"
+      ],
+      "lines": [
+        "29 uses in 5 files of the public API that is deprecated in Nextcloud 32. The text of the tag names the replacement where it has one.",
+        "  lib/AddressHandler.php:126 OCP\\Util::emitHook(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTypedEvent",
+        "  lib/AddressHandler.php:131 OCP\\Util::emitHook(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTypedEvent",
+        "  lib/Collaboration/FederatedGroupPlugin.php:77 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Collaboration/FederatedGroupPlugin.php:78 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Collaboration/FederatedGroupPlugin.php:79 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Collaboration/FederatedGroupPlugin.php:80 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Collaboration/FederatedGroupPlugin.php:81 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/FederatedGroupShareProvider.php:304 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/FederatedGroupShareProvider.php:378 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/FederatedGroupShareProvider.php:412 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/FederatedGroupShareProvider.php:1073 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/FederatedGroupShareProvider.php:1086 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/FederatedGroupShareProvider.php:1100 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/FederatedGroupShareProvider.php:1113 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/FederatedGroupShareProvider.php:1136 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/FederatedGroupShareProvider.php:1151 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Notifications.php:367 OCP\\Federation\\ICloudFederationProviderManager::sendShare(): deprecated since Nextcloud 29; Use sendCloudShare() instead and handle errors manually",
+        "  lib/Notifications.php:384 OCP\\Federation\\ICloudFederationProviderManager::sendNotification(): deprecated since Nextcloud 29; Use sendCloudNotification() instead and handle errors manually",
+        "  lib/Notifications.php:397 OCP\\Federation\\ICloudFederationProviderManager::sendNotification(): deprecated since Nextcloud 29; Use sendCloudNotification() instead and handle errors manually",
+        "  lib/Notifications.php:410 OCP\\Federation\\ICloudFederationProviderManager::sendNotification(): deprecated since Nextcloud 29; Use sendCloudNotification() instead and handle errors manually",
+        "  lib/OCM/CloudGroupFederationProviderFiles.php:413 OCP\\Federation\\ICloudFederationProviderManager::sendNotification(): deprecated since Nextcloud 29; Use sendCloudNotification() instead and handle errors manually",
+        "  lib/OCM/CloudGroupFederationProviderFiles.php:483 OCP\\Federation\\ICloudFederationProviderManager::sendNotification(): deprecated since Nextcloud 29; Use sendCloudNotification() instead and handle errors manually",
+        "  lib/OCM/CloudGroupFederationProviderFiles.php:665 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/OCM/CloudGroupFederationProviderFiles.php:665 OCP\\Constants::PERMISSION_ALL: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_ALL instead",
+        "  lib/OCM/CloudGroupFederationProviderFiles.php:683 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "  lib/OCM/CloudGroupFederationProviderFiles.php:739 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/OCM/CloudGroupFederationProviderFiles.php:742 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/OCM/CloudGroupFederationProviderFiles.php:742 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/OCM/CloudGroupFederationProviderFiles.php:745 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 26
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/OCMNotificationJob.php OCA\\VO_Federation\\BackgroundJob\\OCMNotificationJob"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/OCMNotificationJob.php OCA\\VO_Federation\\BackgroundJob\\OCMNotificationJob"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/AvatarController.php:301 new DateTime()",
+        "lib/FederatedGroupShareProvider.php:266 time()",
+        "lib/FederatedGroupShareProvider.php:380 time()",
+        "lib/FederatedGroupShareProvider.php:940 new DateTime()",
+        "lib/Notifications.php:290 time()",
+        "lib/OCM/CloudGroupFederationProviderFiles.php:356 new DateTime()",
+        "lib/Vendor/Firebase/JWT/JWT.php:85 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 7 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/AvatarController.php:301 new DateTime()",
+        "  lib/FederatedGroupShareProvider.php:266 time()",
+        "  lib/FederatedGroupShareProvider.php:380 time()",
+        "  lib/FederatedGroupShareProvider.php:940 new DateTime()",
+        "  lib/Notifications.php:290 time()",
+        "  lib/OCM/CloudGroupFederationProviderFiles.php:356 new DateTime()",
+        "  lib/Vendor/Firebase/JWT/JWT.php:85 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Collaboration/FederatedGroupPlugin.php:77 getAppValue()",
+        "lib/Collaboration/FederatedGroupPlugin.php:78 getAppValue()",
+        "lib/Collaboration/FederatedGroupPlugin.php:79 getAppValue()",
+        "lib/Collaboration/FederatedGroupPlugin.php:80 getAppValue()",
+        "lib/Collaboration/FederatedGroupPlugin.php:81 getAppValue()",
+        "lib/FederatedGroupShareProvider.php:1073 getAppValue()",
+        "lib/FederatedGroupShareProvider.php:1086 getAppValue()",
+        "lib/FederatedGroupShareProvider.php:1100 getAppValue()",
+        "lib/FederatedGroupShareProvider.php:1113 getAppValue()",
+        "lib/FederatedGroupShareProvider.php:1136 getAppValue()",
+        "lib/FederatedGroupShareProvider.php:1151 getAppValue()",
+        "lib/OCM/CloudGroupFederationProviderFiles.php:665 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 12 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Collaboration/FederatedGroupPlugin.php:77 getAppValue()",
+        "  lib/Collaboration/FederatedGroupPlugin.php:78 getAppValue()",
+        "  lib/Collaboration/FederatedGroupPlugin.php:79 getAppValue()",
+        "  lib/Collaboration/FederatedGroupPlugin.php:80 getAppValue()",
+        "  lib/Collaboration/FederatedGroupPlugin.php:81 getAppValue()",
+        "  lib/FederatedGroupShareProvider.php:1073 getAppValue()",
+        "  lib/FederatedGroupShareProvider.php:1086 getAppValue()",
+        "  lib/FederatedGroupShareProvider.php:1100 getAppValue()",
+        "  lib/FederatedGroupShareProvider.php:1113 getAppValue()",
+        "  lib/FederatedGroupShareProvider.php:1136 getAppValue()",
+        "  lib/FederatedGroupShareProvider.php:1151 getAppValue()",
+        "  lib/OCM/CloudGroupFederationProviderFiles.php:665 getAppValue()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 9
+        }
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/LoginController.php:361 OCA\\VO_Federation\\Controller\\LoginController::buildAuthorizationUrl()",
+        "lib/Controller/SettingsController.php:156 OCA\\VO_Federation\\Controller\\SettingsController::getProviders()"
+      ],
+      "lines": [
+        "2 public methods of controllers are reached by no route.",
+        "  lib/Controller/LoginController.php:361 OCA\\VO_Federation\\Controller\\LoginController::buildAuthorizationUrl()",
+        "  lib/Controller/SettingsController.php:156 OCA\\VO_Federation\\Controller\\SettingsController::getProviders()"
+      ]
+    }
+  ],
+  "endpoints": 12,
+  "endpointList": [
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/vo_federation/avatar/{providerId}",
+      "target": "OCA\\VO_Federation\\Controller\\AvatarController::deleteAvatar",
+      "openapi": [],
+      "source": "appinfo/routes.php:38 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/vo_federation/avatar/{providerId}",
+      "target": "OCA\\VO_Federation\\Controller\\AvatarController::postAvatar",
+      "openapi": [],
+      "source": "appinfo/routes.php:41 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/vo_federation/avatar/{providerId}/{size}",
+      "target": "OCA\\VO_Federation\\Controller\\AvatarController::getAvatar",
+      "openapi": [],
+      "source": "appinfo/routes.php:37 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/vo_federation/avatar/{providerId}/{size}/dark",
+      "target": "OCA\\VO_Federation\\Controller\\AvatarController::getAvatarDark",
+      "openapi": [],
+      "source": "appinfo/routes.php:36 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/vo_federation/avatar/{providerId}/cropped",
+      "target": "OCA\\VO_Federation\\Controller\\AvatarController::postCroppedAvatar",
+      "openapi": [],
+      "source": "appinfo/routes.php:39 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/vo_federation/avatar/tmp",
+      "target": "OCA\\VO_Federation\\Controller\\AvatarController::getTmpAvatar",
+      "openapi": [],
+      "source": "appinfo/routes.php:40 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/vo_federation/code",
+      "target": "OCA\\VO_Federation\\Controller\\LoginController::code",
+      "openapi": [],
+      "source": "appinfo/routes.php:34 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/vo_federation/login/{providerId}",
+      "target": "OCA\\VO_Federation\\Controller\\LoginController::login",
+      "openapi": [],
+      "source": "appinfo/routes.php:33 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/vo_federation/provider",
+      "target": "OCA\\VO_Federation\\Controller\\SettingsController::createProvider",
+      "openapi": [],
+      "source": "appinfo/routes.php:28 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/vo_federation/provider/{providerId}",
+      "target": "OCA\\VO_Federation\\Controller\\SettingsController::deleteProvider",
+      "openapi": [],
+      "source": "appinfo/routes.php:30 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/vo_federation/provider/{providerId}",
+      "target": "OCA\\VO_Federation\\Controller\\SettingsController::updateProvider",
+      "openapi": [],
+      "source": "appinfo/routes.php:29 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/vo_federation/provider/{providerId}/logout",
+      "target": "OCA\\VO_Federation\\Controller\\SettingsController::logoutProvider",
+      "openapi": [],
+      "source": "appinfo/routes.php:31 routes",
+      "kind": "route"
+    }
+  ]
+}

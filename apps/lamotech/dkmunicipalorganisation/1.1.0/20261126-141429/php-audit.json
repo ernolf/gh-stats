@@ -1,0 +1,317 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\DkMunicipalOrganisation\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "paragonie/constant_time_encoding v3.1.3, in 3rdparty/ of Nextcloud 34",
+        "phpseclib/phpseclib 3.0.48, in 3rdparty/ of Nextcloud 34"
+      ],
+      "lines": [
+        "vendor/ ships 2 packages that the server ships itself in a major of Nextcloud 34. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  paragonie/constant_time_encoding v3.1.3, in 3rdparty/ of Nextcloud 34",
+        "  phpseclib/phpseclib 3.0.48, in 3rdparty/ of Nextcloud 34"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:136 OC",
+        "lib/AppInfo/Application.php:184 OC\\User\\Session",
+        "lib/AppInfo/Application.php:265 OC::$server",
+        "lib/Controller/SamlController.php:318 OC",
+        "lib/Controller/SamlController.php:326 OC_User",
+        "lib/Controller/SamlController.php:346 OC\\Authentication\\Token\\IProvider",
+        "lib/Controller/SamlController.php:346 OC::$server",
+        "lib/Controller/SamlController.php:362 OC\\User\\Session",
+        "lib/Controller/SamlController.php:825 OC::$server",
+        "lib/Controller/SamlController.php:828 OC_Util",
+        "lib/Service/TraceLogger.php:39 OC"
+      ],
+      "lines": [
+        "11 uses of the private API of the server in 3 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/AppInfo/Application.php:136 OC",
+        "  lib/AppInfo/Application.php:184 OC\\User\\Session",
+        "  lib/AppInfo/Application.php:265 OC::$server",
+        "  lib/Controller/SamlController.php:318 OC",
+        "  lib/Controller/SamlController.php:326 OC_User",
+        "  lib/Controller/SamlController.php:346 OC\\Authentication\\Token\\IProvider",
+        "  lib/Controller/SamlController.php:346 OC::$server",
+        "  lib/Controller/SamlController.php:362 OC\\User\\Session",
+        "  lib/Controller/SamlController.php:825 OC::$server",
+        "  lib/Controller/SamlController.php:828 OC_Util",
+        "  lib/Service/TraceLogger.php:39 OC"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 8
+        }
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:40 get()",
+        "lib/AppInfo/Application.php:46 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 2 places. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:40 get()",
+        "  lib/AppInfo/Application.php:46 injectFn()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/dkmunicipalorganisation/saml/noaccess  dkmunicipalorganisation.saml.noaccess  appinfo/routes.php:9 routes",
+        "POST /index.php/apps/dkmunicipalorganisation/settings/certificate  dkmunicipalorganisation.settings.save_certificate  appinfo/routes.php:15 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 2 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/dkmunicipalorganisation/saml/noaccess  dkmunicipalorganisation.saml.noaccess  appinfo/routes.php:9 routes",
+        "  POST /index.php/apps/dkmunicipalorganisation/settings/certificate  dkmunicipalorganisation.settings.save_certificate  appinfo/routes.php:15 routes"
+      ]
+    },
+    {
+      "id": "openapi-drift",
+      "level": "warn",
+      "places": [
+        "GET /ocs/v2.php/apps/dkmunicipalorganisation/api: in openapi.json, and no route provides it"
+      ],
+      "lines": [
+        "The OpenAPI specification and the routes differ in 1 operation. A client generated from the specification then calls what is not there, or lacks what is. This holds the routes against the specification and does not generate it again.",
+        "  GET /ocs/v2.php/apps/dkmunicipalorganisation/api: in openapi.json, and no route provides it"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:124 OCP\\IConfig::getUserKeys(): deprecated since Nextcloud 33; use IUserConfig::getKeys directly",
+        "lib/Command/ValidateOrganisationsCommand.php:16 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Command/ValidateOrganisationsCommand.php:17 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Command/ValidateOrganisationsCommand.php:18 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/Command/ValidateOrganisationsCommand.php:19 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "lib/Command/ValidateOrganisationsCommand.php:20 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead",
+        "lib/Controller/SamlController.php:368 OCP\\IConfig::getUserKeys(): deprecated since Nextcloud 33; use IUserConfig::getKeys directly",
+        "lib/Controller/SamlController.php:385 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OrganisationSyncService.php:81 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Service/OrganisationSyncService.php:81 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Service/OrganisationSyncService.php:81 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/Service/OrganisationSyncService.php:81 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "lib/Service/OrganisationSyncService.php:81 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead"
+      ],
+      "lines": [
+        "13 uses in 4 files of the public API that is deprecated in Nextcloud 34. The text of the tag names the replacement where it has one.",
+        "  lib/AppInfo/Application.php:124 OCP\\IConfig::getUserKeys(): deprecated since Nextcloud 33; use IUserConfig::getKeys directly",
+        "  lib/Command/ValidateOrganisationsCommand.php:16 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Command/ValidateOrganisationsCommand.php:17 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Command/ValidateOrganisationsCommand.php:18 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/Command/ValidateOrganisationsCommand.php:19 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "  lib/Command/ValidateOrganisationsCommand.php:20 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead",
+        "  lib/Controller/SamlController.php:368 OCP\\IConfig::getUserKeys(): deprecated since Nextcloud 33; use IUserConfig::getKeys directly",
+        "  lib/Controller/SamlController.php:385 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OrganisationSyncService.php:81 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Service/OrganisationSyncService.php:81 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Service/OrganisationSyncService.php:81 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/Service/OrganisationSyncService.php:81 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "  lib/Service/OrganisationSyncService.php:81 OCP\\Constants::PERMISSION_DELETE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_DELETE instead"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 10
+        }
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/loggedout.php:14 style= attribute",
+        "templates/loggedout.php:17 style= attribute",
+        "templates/loggedout.php:20 style= attribute",
+        "templates/loggedout.php:27 <style> with content",
+        "templates/noaccess.php:14 style= attribute",
+        "templates/noaccess.php:17 style= attribute",
+        "templates/noaccess.php:20 style= attribute",
+        "templates/noaccess.php:23 style= attribute",
+        "templates/noaccess.php:30 <style> with content"
+      ],
+      "lines": [
+        "9 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/loggedout.php:14 style= attribute",
+        "  templates/loggedout.php:17 style= attribute",
+        "  templates/loggedout.php:20 style= attribute",
+        "  templates/loggedout.php:27 <style> with content",
+        "  templates/noaccess.php:14 style= attribute",
+        "  templates/noaccess.php:17 style= attribute",
+        "  templates/noaccess.php:20 style= attribute",
+        "  templates/noaccess.php:23 style= attribute",
+        "  templates/noaccess.php:30 <style> with content"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 6
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/SyncOrganisationsJob.php OCA\\DkMunicipalOrganisation\\BackgroundJob\\SyncOrganisationsJob"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/SyncOrganisationsJob.php OCA\\DkMunicipalOrganisation\\BackgroundJob\\SyncOrganisationsJob"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:137 time()",
+        "lib/AppInfo/Application.php:138 time()",
+        "lib/AppInfo/Application.php:139 time()",
+        "lib/AppInfo/Application.php:177 time()",
+        "lib/AppInfo/Application.php:216 time()",
+        "lib/AppInfo/Application.php:217 time()",
+        "lib/AppInfo/Application.php:218 time()",
+        "lib/Command/RegisterCertificateCommand.php:86 new DateTimeImmutable()",
+        "lib/Controller/SamlController.php:136 time()",
+        "lib/Controller/SamlController.php:316 time()",
+        "lib/Controller/SamlController.php:379 time()",
+        "lib/Controller/SamlController.php:385 time()",
+        "lib/Service/Certificate.php:63 new DateTimeImmutable()",
+        "lib/Service/Certificate.php:91 new DateTimeImmutable()",
+        "lib/Service/Serviceplatformen/OrganisationWrapper.php:87 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 15 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/AppInfo/Application.php:137 time()",
+        "  lib/AppInfo/Application.php:138 time()",
+        "  lib/AppInfo/Application.php:139 time()",
+        "  lib/AppInfo/Application.php:177 time()",
+        "  lib/AppInfo/Application.php:216 time()",
+        "  lib/AppInfo/Application.php:217 time()",
+        "  lib/AppInfo/Application.php:218 time()",
+        "  lib/Command/RegisterCertificateCommand.php:86 new DateTimeImmutable()",
+        "  lib/Controller/SamlController.php:136 time()",
+        "  lib/Controller/SamlController.php:316 time()",
+        "  lib/Controller/SamlController.php:379 time()",
+        "  lib/Controller/SamlController.php:385 time()",
+        "  lib/Service/Certificate.php:63 new DateTimeImmutable()",
+        "  lib/Service/Certificate.php:91 new DateTimeImmutable()",
+        "  lib/Service/Serviceplatformen/OrganisationWrapper.php:87 new DateTime()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 12
+        }
+      ]
+    }
+  ],
+  "endpoints": 12,
+  "endpointList": [
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dkmunicipalorganisation/saml/acs",
+      "target": "OCA\\DkMunicipalOrganisation\\Controller\\SamlController::acs",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dkmunicipalorganisation/saml/loggedout",
+      "target": "OCA\\DkMunicipalOrganisation\\Controller\\SamlController::loggedout",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dkmunicipalorganisation/saml/login",
+      "target": "OCA\\DkMunicipalOrganisation\\Controller\\SamlController::login",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dkmunicipalorganisation/saml/logout",
+      "target": "OCA\\DkMunicipalOrganisation\\Controller\\SamlController::logout",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dkmunicipalorganisation/saml/metadata",
+      "target": "OCA\\DkMunicipalOrganisation\\Controller\\SamlController::metadata",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dkmunicipalorganisation/saml/noaccess",
+      "target": "OCA\\DkMunicipalOrganisation\\Controller\\SamlController::noaccess",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/dkmunicipalorganisation/saml/sls",
+      "target": "OCA\\DkMunicipalOrganisation\\Controller\\SamlController::sls",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dkmunicipalorganisation/saml/sls",
+      "target": "OCA\\DkMunicipalOrganisation\\Controller\\SamlController::slsPost",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dkmunicipalorganisation/settings/certificate",
+      "target": "OCA\\DkMunicipalOrganisation\\Controller\\SettingsController::saveCertificate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dkmunicipalorganisation/settings/certificate/validate",
+      "target": "OCA\\DkMunicipalOrganisation\\Controller\\SettingsController::validateCertificate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dkmunicipalorganisation/settings/config",
+      "target": "OCA\\DkMunicipalOrganisation\\Controller\\SettingsController::saveConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/dkmunicipalorganisation/settings/sync-organisations",
+      "target": "OCA\\DkMunicipalOrganisation\\Controller\\SettingsController::syncOrganisations",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

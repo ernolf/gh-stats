@@ -1,0 +1,178 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Secrets\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "ocp-removed-soon",
+      "level": "warn",
+      "places": [
+        "lib/Controller/SecretApiController.php:84 OCP\\ILogger::logException(): deprecated since Nextcloud 20, Nextcloud 30 is the last major to have it; use the `exception` entry in the context of any method in \\Psr\\Log\\LoggerInterface",
+        "lib/Notification/Notifier.php:68 OCP\\ILogger::logException(): deprecated since Nextcloud 20, Nextcloud 30 is the last major to have it; use the `exception` entry in the context of any method in \\Psr\\Log\\LoggerInterface"
+      ],
+      "lines": [
+        "2 uses in 2 files of the public API that is deprecated and that Nextcloud 36 no longer has: the app fails on the first major without it, once it declares that one.",
+        "  lib/Controller/SecretApiController.php:84 OCP\\ILogger::logException(): deprecated since Nextcloud 20, Nextcloud 30 is the last major to have it; use the `exception` entry in the context of any method in \\Psr\\Log\\LoggerInterface",
+        "  lib/Notification/Notifier.php:68 OCP\\ILogger::logException(): deprecated since Nextcloud 20, Nextcloud 30 is the last major to have it; use the `exception` entry in the context of any method in \\Psr\\Log\\LoggerInterface"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/SecretApiController.php:27 OCP\\ILogger: deprecated since Nextcloud 20; use the PSR-3 logger \\Psr\\Log\\LoggerInterface",
+        "lib/Notification/Notifier.php:24 OCP\\ILogger: deprecated since Nextcloud 20; use the PSR-3 logger \\Psr\\Log\\LoggerInterface"
+      ],
+      "lines": [
+        "2 uses in 2 files of the public API that is deprecated in Nextcloud 26 to 29. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/SecretApiController.php:27 OCP\\ILogger: deprecated since Nextcloud 20; use the PSR-3 logger \\Psr\\Log\\LoggerInterface",
+        "  lib/Notification/Notifier.php:24 OCP\\ILogger: deprecated since Nextcloud 20; use the PSR-3 logger \\Psr\\Log\\LoggerInterface"
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/public.php:6 style= attribute",
+        "templates/publicshareauth.php:16 style= attribute"
+      ],
+      "lines": [
+        "2 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/public.php:6 style= attribute",
+        "  templates/publicshareauth.php:16 style= attribute"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/Cron/SecretCleanup.php OCA\\Secrets\\Cron\\SecretCleanup"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/Cron/SecretCleanup.php OCA\\Secrets\\Cron\\SecretCleanup"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/SecretApiController.php:80 new DateTime()",
+        "lib/Cron/SecretCleanup.php:32 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 2 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/SecretApiController.php:80 new DateTime()",
+        "  lib/Cron/SecretCleanup.php:32 new DateTime()"
+      ]
+    }
+  ],
+  "endpoints": 11,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/secrets/",
+      "target": "OCA\\Secrets\\Controller\\PageController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:17 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/secrets/api/get",
+      "target": "OCA\\Secrets\\Controller\\SecretApiController::getSecret",
+      "openapi": [],
+      "source": "appinfo/routes.php:25 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/secrets/s/{uuid}",
+      "target": "OCA\\Secrets\\Controller\\PageController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:18 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/secrets/secrets",
+      "target": "OCA\\Secrets\\Controller\\SecretController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:19 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/secrets/secrets",
+      "target": "OCA\\Secrets\\Controller\\SecretController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:21 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/secrets/secrets/{uuid}",
+      "target": "OCA\\Secrets\\Controller\\SecretController::delete",
+      "openapi": [],
+      "source": "appinfo/routes.php:22 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/secrets/secrets/{uuid}",
+      "target": "OCA\\Secrets\\Controller\\SecretController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:20 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/secrets/secrets/{uuid}/title",
+      "target": "OCA\\Secrets\\Controller\\SecretController::updateTitle",
+      "openapi": [],
+      "source": "appinfo/routes.php:23 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/secrets/show/{token}",
+      "target": "OCA\\Secrets\\Controller\\SecretShareController::showShare",
+      "openapi": [],
+      "source": "appinfo/routes.php:27 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/secrets/show/{token}/authenticate/{redirect}",
+      "target": "OCA\\Secrets\\Controller\\SecretShareController::showAuthenticate",
+      "openapi": [],
+      "source": "appinfo/routes.php:29 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/secrets/show/{token}/authenticate/{redirect}",
+      "target": "OCA\\Secrets\\Controller\\SecretShareController::authenticate",
+      "openapi": [],
+      "source": "appinfo/routes.php:31 routes",
+      "kind": "route"
+    }
+  ]
+}

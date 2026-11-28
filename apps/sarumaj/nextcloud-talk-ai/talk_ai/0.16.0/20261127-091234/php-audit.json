@@ -1,0 +1,700 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\TalkAi\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:52 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:52 injectFn()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "POST /index.php/apps/talk_ai/process  talk_ai.process.run  appinfo/routes.php:11 routes",
+        "POST /index.php/apps/talk_ai/document  talk_ai.document.run  appinfo/routes.php:13 routes",
+        "POST /index.php/apps/talk_ai/ticker  talk_ai.ticker.run  appinfo/routes.php:15 routes",
+        "PUT /index.php/apps/talk_ai/settings  talk_ai.settings.save  appinfo/routes.php:17 routes",
+        "GET /index.php/apps/talk_ai/settings/status  talk_ai.settings.status  appinfo/routes.php:18 routes",
+        "POST /index.php/apps/talk_ai/settings/jobs/{id}/cancel  talk_ai.settings.cancel  appinfo/routes.php:19 routes",
+        "POST /index.php/apps/talk_ai/settings/styles/{style}/files  talk_ai.settings.upload  appinfo/routes.php:20 routes",
+        "GET /index.php/apps/talk_ai/settings/ai  talk_ai.settings.ai  appinfo/routes.php:22 routes",
+        "PUT /index.php/apps/talk_ai/settings/ai/choice  talk_ai.settings.choose  appinfo/routes.php:23 routes",
+        "PUT /index.php/apps/talk_ai/settings/ai/scenarios  talk_ai.settings.savescenarios  appinfo/routes.php:24 routes",
+        "PUT /index.php/apps/talk_ai/settings/ai/engines/{name}  talk_ai.settings.saveengine  appinfo/routes.php:25 routes",
+        "DELETE /index.php/apps/talk_ai/settings/ai/engines/{name}/key  talk_ai.settings.clearkey  appinfo/routes.php:26 routes",
+        "GET /index.php/apps/talk_ai/settings/ai/engines/{name}/models  talk_ai.settings.models  appinfo/routes.php:27 routes",
+        "POST /index.php/apps/talk_ai/settings/ai/engines/{name}/test  talk_ai.settings.test  appinfo/routes.php:28 routes",
+        "POST /index.php/apps/talk_ai/settings/ai/engines/{name}/probe  talk_ai.settings.probe  appinfo/routes.php:29 routes",
+        "GET /index.php/apps/talk_ai/metrics  talk_ai.metrics.run  appinfo/routes.php:31 routes",
+        "POST /index.php/apps/talk_ai/api/v1/run  talk_ai.ticket.run  appinfo/routes.php:33 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 17 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 1 file of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  POST /index.php/apps/talk_ai/process  talk_ai.process.run  appinfo/routes.php:11 routes",
+        "  POST /index.php/apps/talk_ai/document  talk_ai.document.run  appinfo/routes.php:13 routes",
+        "  POST /index.php/apps/talk_ai/ticker  talk_ai.ticker.run  appinfo/routes.php:15 routes",
+        "  PUT /index.php/apps/talk_ai/settings  talk_ai.settings.save  appinfo/routes.php:17 routes",
+        "  GET /index.php/apps/talk_ai/settings/status  talk_ai.settings.status  appinfo/routes.php:18 routes",
+        "  POST /index.php/apps/talk_ai/settings/jobs/{id}/cancel  talk_ai.settings.cancel  appinfo/routes.php:19 routes",
+        "  POST /index.php/apps/talk_ai/settings/styles/{style}/files  talk_ai.settings.upload  appinfo/routes.php:20 routes",
+        "  GET /index.php/apps/talk_ai/settings/ai  talk_ai.settings.ai  appinfo/routes.php:22 routes",
+        "  PUT /index.php/apps/talk_ai/settings/ai/choice  talk_ai.settings.choose  appinfo/routes.php:23 routes",
+        "  PUT /index.php/apps/talk_ai/settings/ai/scenarios  talk_ai.settings.savescenarios  appinfo/routes.php:24 routes",
+        "  PUT /index.php/apps/talk_ai/settings/ai/engines/{name}  talk_ai.settings.saveengine  appinfo/routes.php:25 routes",
+        "  DELETE /index.php/apps/talk_ai/settings/ai/engines/{name}/key  talk_ai.settings.clearkey  appinfo/routes.php:26 routes",
+        "  GET /index.php/apps/talk_ai/settings/ai/engines/{name}/models  talk_ai.settings.models  appinfo/routes.php:27 routes",
+        "  POST /index.php/apps/talk_ai/settings/ai/engines/{name}/test  talk_ai.settings.test  appinfo/routes.php:28 routes",
+        "  POST /index.php/apps/talk_ai/settings/ai/engines/{name}/probe  talk_ai.settings.probe  appinfo/routes.php:29 routes",
+        "  GET /index.php/apps/talk_ai/metrics  talk_ai.metrics.run  appinfo/routes.php:31 routes",
+        "  POST /index.php/apps/talk_ai/api/v1/run  talk_ai.ticket.run  appinfo/routes.php:33 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 14
+        }
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Ai/Config.php:50 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Ai/Conversations.php:42 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Ai/Conversations.php:70 OCP\\IAppConfig::getKeys(): deprecated since Nextcloud 13; use method getAppKeys of \\OCP\\IConfig  This function gets all keys of an app. Please note that the values are not returned.",
+        "lib/Ai/Conversations.php:74 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Ai/Tickets.php:95 OCP\\IAppConfig::getKeys(): deprecated since Nextcloud 13; use method getAppKeys of \\OCP\\IConfig  This function gets all keys of an app. Please note that the values are not returned.",
+        "lib/Ai/Tickets.php:99 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/BackgroundJob/CleanTraces.php:61 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/BackgroundJob/CleanTraces.php:62 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/BackgroundJob/CleanTraces.php:79 OCP\\IAppConfig::getKeys(): deprecated since Nextcloud 13; use method getAppKeys of \\OCP\\IConfig  This function gets all keys of an app. Please note that the values are not returned.",
+        "lib/BackgroundJob/CleanTraces.php:83 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/BackgroundJob/CleanTraces.php:86 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/BackgroundJob/ReplyJob.php:28 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Migration/Version001100Date20261028.php:48 OCP\\IAppConfig::getKeys(): deprecated since Nextcloud 13; use method getAppKeys of \\OCP\\IConfig  This function gets all keys of an app. Please note that the values are not returned.",
+        "lib/Migration/Version001100Date20261028.php:50 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Service/Calendar.php:153 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/Service/Calendar.php:159 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/Capabilities.php:85 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Service/Capabilities.php:86 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Service/Confirmations.php:48 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Service/Conversation.php:250 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Service/Conversation.php:250 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "lib/Service/Conversation.php:283 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Service/Reply.php:1069 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/Reply.php:1102 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/Reply.php:1112 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/Reply.php:1138 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/Reply.php:1241 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Service/Reply.php:1241 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Service/Reply.php:1274 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/Reply.php:1276 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Service/Texts.php:28 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "lines": [
+        "31 uses in 12 files of the public API that is deprecated in Nextcloud 32 to 36. The text of the tag names the replacement where it has one.",
+        "  lib/Ai/Config.php:50 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Ai/Conversations.php:42 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Ai/Conversations.php:70 OCP\\IAppConfig::getKeys(): deprecated since Nextcloud 13; use method getAppKeys of \\OCP\\IConfig  This function gets all keys of an app. Please note that the values are not returned.",
+        "  lib/Ai/Conversations.php:74 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Ai/Tickets.php:95 OCP\\IAppConfig::getKeys(): deprecated since Nextcloud 13; use method getAppKeys of \\OCP\\IConfig  This function gets all keys of an app. Please note that the values are not returned.",
+        "  lib/Ai/Tickets.php:99 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/BackgroundJob/CleanTraces.php:61 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/BackgroundJob/CleanTraces.php:62 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/BackgroundJob/CleanTraces.php:79 OCP\\IAppConfig::getKeys(): deprecated since Nextcloud 13; use method getAppKeys of \\OCP\\IConfig  This function gets all keys of an app. Please note that the values are not returned.",
+        "  lib/BackgroundJob/CleanTraces.php:83 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/BackgroundJob/CleanTraces.php:86 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/BackgroundJob/ReplyJob.php:28 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Migration/Version001100Date20261028.php:48 OCP\\IAppConfig::getKeys(): deprecated since Nextcloud 13; use method getAppKeys of \\OCP\\IConfig  This function gets all keys of an app. Please note that the values are not returned.",
+        "  lib/Migration/Version001100Date20261028.php:50 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Service/Calendar.php:153 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/Service/Calendar.php:159 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/Capabilities.php:85 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Service/Capabilities.php:86 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Service/Confirmations.php:48 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Service/Conversation.php:250 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Service/Conversation.php:250 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "  lib/Service/Conversation.php:283 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Service/Reply.php:1069 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/Reply.php:1102 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/Reply.php:1112 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/Reply.php:1138 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/Reply.php:1241 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Service/Reply.php:1241 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Service/Reply.php:1274 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/Reply.php:1276 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Service/Texts.php:28 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 28
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/Ai/CleanJob.php OCA\\TalkAi\\Ai\\CleanJob",
+        "lib/BackgroundJob/CleanTraces.php OCA\\TalkAi\\BackgroundJob\\CleanTraces",
+        "lib/BackgroundJob/RunQueue.php OCA\\TalkAi\\BackgroundJob\\RunQueue",
+        "lib/BackgroundJob/SyncName.php OCA\\TalkAi\\BackgroundJob\\SyncName"
+      ],
+      "lines": [
+        "4 timed jobs do not say whether they are time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/Ai/CleanJob.php OCA\\TalkAi\\Ai\\CleanJob",
+        "  lib/BackgroundJob/CleanTraces.php OCA\\TalkAi\\BackgroundJob\\CleanTraces",
+        "  lib/BackgroundJob/RunQueue.php OCA\\TalkAi\\BackgroundJob\\RunQueue",
+        "  lib/BackgroundJob/SyncName.php OCA\\TalkAi\\BackgroundJob\\SyncName"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Ai/Conversations.php:38 time()",
+        "lib/Ai/Conversations.php:90 time()",
+        "lib/Ai/Counters.php:50 time()",
+        "lib/Ai/Counters.php:65 time()",
+        "lib/Ai/Limits.php:41 time()",
+        "lib/Ai/Limits.php:57 time()",
+        "lib/Ai/Limits.php:67 time()",
+        "lib/Ai/Limits.php:73 time()",
+        "lib/Ai/Limits.php:85 time()",
+        "lib/Ai/Limits.php:89 time()",
+        "lib/Ai/Limits.php:118 time()",
+        "lib/Ai/Metrics.php:46 time()",
+        "lib/Ai/Metrics.php:82 time()",
+        "lib/Ai/Tickets.php:53 time()",
+        "lib/Ai/Tickets.php:82 time()",
+        "lib/Ai/Tickets.php:98 time()",
+        "lib/Ai/Tickets.php:106 time()",
+        "lib/Ai/Tickets.php:142 time()",
+        "lib/Ai/Watch.php:37 time()",
+        "lib/Controller/TicketController.php:39 time()",
+        "lib/Listener/BotInvokeListener.php:193 time()",
+        "lib/Listener/BotInvokeListener.php:225 time()",
+        "lib/Service/Capabilities.php:45 time()",
+        "lib/Service/Capabilities.php:57 time()",
+        "lib/Service/Capabilities.php:59 time()",
+        "lib/Service/Capabilities.php:61 time()",
+        "lib/Service/Conversation.php:71 new DateTime()",
+        "lib/Service/Conversation.php:145 new DateTime()",
+        "lib/Service/Conversation.php:174 new DateTime()",
+        "lib/Service/Conversation.php:187 new DateTime()",
+        "lib/Service/Conversation.php:209 new DateTime()",
+        "lib/Service/Conversation.php:271 time()",
+        "lib/Service/Conversation.php:319 new DateTime()",
+        "lib/Service/Conversation.php:396 time()",
+        "lib/Service/DocumentJob.php:819 time()",
+        "lib/Service/DocumentJob.php:823 time()",
+        "lib/Service/Golden.php:68 time()",
+        "lib/Service/Golden.php:73 time()",
+        "lib/Service/Golden.php:92 time()",
+        "lib/Service/Health.php:122 time()",
+        "lib/Service/Progress.php:32 time()",
+        "lib/Service/Reply.php:372 time()",
+        "lib/Service/Reply.php:1130 time()",
+        "lib/Service/Settings.php:69 time()",
+        "lib/Service/Settings.php:100 time()",
+        "lib/Service/Settings.php:158 time()",
+        "lib/Service/Settings.php:178 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 47 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Ai/Conversations.php:38 time()",
+        "  lib/Ai/Conversations.php:90 time()",
+        "  lib/Ai/Counters.php:50 time()",
+        "  lib/Ai/Counters.php:65 time()",
+        "  lib/Ai/Limits.php:41 time()",
+        "  lib/Ai/Limits.php:57 time()",
+        "  lib/Ai/Limits.php:67 time()",
+        "  lib/Ai/Limits.php:73 time()",
+        "  lib/Ai/Limits.php:85 time()",
+        "  lib/Ai/Limits.php:89 time()",
+        "  lib/Ai/Limits.php:118 time()",
+        "  lib/Ai/Metrics.php:46 time()",
+        "  lib/Ai/Metrics.php:82 time()",
+        "  lib/Ai/Tickets.php:53 time()",
+        "  lib/Ai/Tickets.php:82 time()",
+        "  lib/Ai/Tickets.php:98 time()",
+        "  lib/Ai/Tickets.php:106 time()",
+        "  lib/Ai/Tickets.php:142 time()",
+        "  lib/Ai/Watch.php:37 time()",
+        "  lib/Controller/TicketController.php:39 time()",
+        "  lib/Listener/BotInvokeListener.php:193 time()",
+        "  lib/Listener/BotInvokeListener.php:225 time()",
+        "  lib/Service/Capabilities.php:45 time()",
+        "  lib/Service/Capabilities.php:57 time()",
+        "  lib/Service/Capabilities.php:59 time()",
+        "  lib/Service/Capabilities.php:61 time()",
+        "  lib/Service/Conversation.php:71 new DateTime()",
+        "  lib/Service/Conversation.php:145 new DateTime()",
+        "  lib/Service/Conversation.php:174 new DateTime()",
+        "  lib/Service/Conversation.php:187 new DateTime()",
+        "  lib/Service/Conversation.php:209 new DateTime()",
+        "  lib/Service/Conversation.php:271 time()",
+        "  lib/Service/Conversation.php:319 new DateTime()",
+        "  lib/Service/Conversation.php:396 time()",
+        "  lib/Service/DocumentJob.php:819 time()",
+        "  lib/Service/DocumentJob.php:823 time()",
+        "  lib/Service/Golden.php:68 time()",
+        "  lib/Service/Golden.php:73 time()",
+        "  lib/Service/Golden.php:92 time()",
+        "  lib/Service/Health.php:122 time()",
+        "  lib/Service/Progress.php:32 time()",
+        "  lib/Service/Reply.php:372 time()",
+        "  lib/Service/Reply.php:1130 time()",
+        "  lib/Service/Settings.php:69 time()",
+        "  lib/Service/Settings.php:100 time()",
+        "  lib/Service/Settings.php:158 time()",
+        "  lib/Service/Settings.php:178 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 44
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Ai/Admin.php:125 setValueString()",
+        "lib/Ai/Admin.php:128 setValueString()",
+        "lib/Ai/Admin.php:134 getValueString()",
+        "lib/Ai/Admin.php:153 setValueString()",
+        "lib/Ai/CleanJob.php:30 getValueString()",
+        "lib/Ai/Config.php:28 getValueString()",
+        "lib/Ai/Config.php:41 getValueString()",
+        "lib/Ai/Config.php:44 setValueString()",
+        "lib/Ai/Config.php:53 setValueString()",
+        "lib/Ai/Config.php:62 getValueString()",
+        "lib/Ai/Conversations.php:35 getValueString()",
+        "lib/Ai/Conversations.php:37 setValueString()",
+        "lib/Ai/Conversations.php:70 getKeys()",
+        "lib/Ai/Conversations.php:72 getValueString()",
+        "lib/Ai/Conversations.php:81 getValueString()",
+        "lib/Ai/Conversations.php:89 getValueString()",
+        "lib/Ai/Engines.php:47 getValueString()",
+        "lib/Ai/Engines.php:52 getValueString()",
+        "lib/Ai/Engines.php:59 getValueString()",
+        "lib/Ai/Engines.php:65 getValueString()",
+        "lib/Ai/Limits.php:130 getValueString()",
+        "lib/Ai/Tickets.php:95 getKeys()",
+        "lib/Ai/Tickets.php:97 getValueString()",
+        "lib/Ai/Tickets.php:141 getValueString()",
+        "lib/Ai/Tickets.php:146 setValueString()",
+        "lib/AppInfo/Application.php:42 getValueString()",
+        "lib/AppInfo/Application.php:42 getValueString()",
+        "lib/BackgroundJob/CleanTraces.php:57 getValueString()",
+        "lib/BackgroundJob/CleanTraces.php:79 getKeys()",
+        "lib/BackgroundJob/CleanTraces.php:81 getValueString()",
+        "lib/BackgroundJob/CleanTraces.php:111 getValueString()",
+        "lib/BackgroundJob/ReplyJob.php:27 getValueString()",
+        "lib/Controller/MetricsController.php:41 getValueString()",
+        "lib/Listener/BotEnabledListener.php:49 getValueString()",
+        "lib/Listener/BotEnabledListener.php:61 getValueString()",
+        "lib/Listener/BotInvokeListener.php:230 getValueString()",
+        "lib/Migration/UninstallBot.php:32 getValueString()",
+        "lib/Migration/Version001100Date20261028.php:48 getKeys()",
+        "lib/Service/Bot.php:43 getValueString()",
+        "lib/Service/Bot.php:49 getValueString()",
+        "lib/Service/Bot.php:76 getValueString()",
+        "lib/Service/Bot.php:79 setValueString()",
+        "lib/Service/Bot.php:83 setValueString()",
+        "lib/Service/Bot.php:107 getValueString()",
+        "lib/Service/Capabilities.php:44 getValueString()",
+        "lib/Service/Capabilities.php:59 setValueString()",
+        "lib/Service/Capabilities.php:61 setValueString()",
+        "lib/Service/Capabilities.php:90 getValueString()",
+        "lib/Service/Confirmations.php:29 setValueString()",
+        "lib/Service/Confirmations.php:44 getValueString()",
+        "lib/Service/Conversation.php:277 getValueString()",
+        "lib/Service/Conversation.php:285 setValueString()",
+        "lib/Service/Dispatcher.php:93 setValueString()",
+        "lib/Service/Dispatcher.php:98 getValueString()",
+        "lib/Service/Dispatcher.php:102 getValueString()",
+        "lib/Service/DocumentJob.php:152 getValueString()",
+        "lib/Service/DocumentJob.php:652 getValueString()",
+        "lib/Service/DocumentJob.php:818 getValueString()",
+        "lib/Service/DocumentJob.php:823 setValueString()",
+        "lib/Service/DocumentJob.php:866 getValueString()",
+        "lib/Service/DocumentJob.php:914 getValueString()",
+        "lib/Service/DocumentJob.php:918 getValueString()",
+        "lib/Service/Golden.php:91 getValueString()",
+        "lib/Service/Golden.php:93 setValueString()",
+        "lib/Service/Harvester.php:96 getValueString()",
+        "lib/Service/Health.php:62 getValueString()",
+        "lib/Service/Health.php:120 getValueString()",
+        "lib/Service/Health.php:121 getValueInt()",
+        "lib/Service/Jobs.php:341 getValueString()",
+        "lib/Service/Policy.php:38 getValueString()",
+        "lib/Service/Policy.php:41 getValueString()",
+        "lib/Service/Policy.php:51 getValueString()",
+        "lib/Service/Policy.php:57 getValueString()",
+        "lib/Service/Reply.php:363 getValueString()",
+        "lib/Service/Reply.php:371 setValueString()",
+        "lib/Service/Reply.php:379 getValueString()",
+        "lib/Service/Reply.php:493 getValueString()",
+        "lib/Service/Reply.php:686 getValueString()",
+        "lib/Service/Reply.php:953 getValueString()",
+        "lib/Service/Reply.php:1063 getValueString()",
+        "lib/Service/Reply.php:1080 getValueString()",
+        "lib/Service/Reply.php:1092 setValueString()",
+        "lib/Service/Reply.php:1130 getValueString()",
+        "lib/Service/Reply.php:1156 getValueString()",
+        "lib/Service/Sandbox.php:92 getValueString()",
+        "lib/Service/Sandbox.php:100 getValueString()",
+        "lib/Service/Sandbox.php:121 getValueString()",
+        "lib/Service/Settings.php:189 getValueString()",
+        "lib/Service/Settings.php:193 setValueString()",
+        "lib/Service/Switches.php:26 getValueString()",
+        "lib/Service/Switches.php:39 getValueString()",
+        "lib/Service/Switches.php:45 setValueString()",
+        "lib/Service/Switches.php:48 setValueString()",
+        "lib/Service/Switches.php:63 setValueString()",
+        "lib/Service/Switches.php:67 setValueString()",
+        "lib/Service/Switches.php:72 getValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 96 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Ai/Admin.php:125 setValueString()",
+        "  lib/Ai/Admin.php:128 setValueString()",
+        "  lib/Ai/Admin.php:134 getValueString()",
+        "  lib/Ai/Admin.php:153 setValueString()",
+        "  lib/Ai/CleanJob.php:30 getValueString()",
+        "  lib/Ai/Config.php:28 getValueString()",
+        "  lib/Ai/Config.php:41 getValueString()",
+        "  lib/Ai/Config.php:44 setValueString()",
+        "  lib/Ai/Config.php:53 setValueString()",
+        "  lib/Ai/Config.php:62 getValueString()",
+        "  lib/Ai/Conversations.php:35 getValueString()",
+        "  lib/Ai/Conversations.php:37 setValueString()",
+        "  lib/Ai/Conversations.php:70 getKeys()",
+        "  lib/Ai/Conversations.php:72 getValueString()",
+        "  lib/Ai/Conversations.php:81 getValueString()",
+        "  lib/Ai/Conversations.php:89 getValueString()",
+        "  lib/Ai/Engines.php:47 getValueString()",
+        "  lib/Ai/Engines.php:52 getValueString()",
+        "  lib/Ai/Engines.php:59 getValueString()",
+        "  lib/Ai/Engines.php:65 getValueString()",
+        "  lib/Ai/Limits.php:130 getValueString()",
+        "  lib/Ai/Tickets.php:95 getKeys()",
+        "  lib/Ai/Tickets.php:97 getValueString()",
+        "  lib/Ai/Tickets.php:141 getValueString()",
+        "  lib/Ai/Tickets.php:146 setValueString()",
+        "  lib/AppInfo/Application.php:42 getValueString()",
+        "  lib/AppInfo/Application.php:42 getValueString()",
+        "  lib/BackgroundJob/CleanTraces.php:57 getValueString()",
+        "  lib/BackgroundJob/CleanTraces.php:79 getKeys()",
+        "  lib/BackgroundJob/CleanTraces.php:81 getValueString()",
+        "  lib/BackgroundJob/CleanTraces.php:111 getValueString()",
+        "  lib/BackgroundJob/ReplyJob.php:27 getValueString()",
+        "  lib/Controller/MetricsController.php:41 getValueString()",
+        "  lib/Listener/BotEnabledListener.php:49 getValueString()",
+        "  lib/Listener/BotEnabledListener.php:61 getValueString()",
+        "  lib/Listener/BotInvokeListener.php:230 getValueString()",
+        "  lib/Migration/UninstallBot.php:32 getValueString()",
+        "  lib/Migration/Version001100Date20261028.php:48 getKeys()",
+        "  lib/Service/Bot.php:43 getValueString()",
+        "  lib/Service/Bot.php:49 getValueString()",
+        "  lib/Service/Bot.php:76 getValueString()",
+        "  lib/Service/Bot.php:79 setValueString()",
+        "  lib/Service/Bot.php:83 setValueString()",
+        "  lib/Service/Bot.php:107 getValueString()",
+        "  lib/Service/Capabilities.php:44 getValueString()",
+        "  lib/Service/Capabilities.php:59 setValueString()",
+        "  lib/Service/Capabilities.php:61 setValueString()",
+        "  lib/Service/Capabilities.php:90 getValueString()",
+        "  lib/Service/Confirmations.php:29 setValueString()",
+        "  lib/Service/Confirmations.php:44 getValueString()",
+        "  lib/Service/Conversation.php:277 getValueString()",
+        "  lib/Service/Conversation.php:285 setValueString()",
+        "  lib/Service/Dispatcher.php:93 setValueString()",
+        "  lib/Service/Dispatcher.php:98 getValueString()",
+        "  lib/Service/Dispatcher.php:102 getValueString()",
+        "  lib/Service/DocumentJob.php:152 getValueString()",
+        "  lib/Service/DocumentJob.php:652 getValueString()",
+        "  lib/Service/DocumentJob.php:818 getValueString()",
+        "  lib/Service/DocumentJob.php:823 setValueString()",
+        "  lib/Service/DocumentJob.php:866 getValueString()",
+        "  lib/Service/DocumentJob.php:914 getValueString()",
+        "  lib/Service/DocumentJob.php:918 getValueString()",
+        "  lib/Service/Golden.php:91 getValueString()",
+        "  lib/Service/Golden.php:93 setValueString()",
+        "  lib/Service/Harvester.php:96 getValueString()",
+        "  lib/Service/Health.php:62 getValueString()",
+        "  lib/Service/Health.php:120 getValueString()",
+        "  lib/Service/Health.php:121 getValueInt()",
+        "  lib/Service/Jobs.php:341 getValueString()",
+        "  lib/Service/Policy.php:38 getValueString()",
+        "  lib/Service/Policy.php:41 getValueString()",
+        "  lib/Service/Policy.php:51 getValueString()",
+        "  lib/Service/Policy.php:57 getValueString()",
+        "  lib/Service/Reply.php:363 getValueString()",
+        "  lib/Service/Reply.php:371 setValueString()",
+        "  lib/Service/Reply.php:379 getValueString()",
+        "  lib/Service/Reply.php:493 getValueString()",
+        "  lib/Service/Reply.php:686 getValueString()",
+        "  lib/Service/Reply.php:953 getValueString()",
+        "  lib/Service/Reply.php:1063 getValueString()",
+        "  lib/Service/Reply.php:1080 getValueString()",
+        "  lib/Service/Reply.php:1092 setValueString()",
+        "  lib/Service/Reply.php:1130 getValueString()",
+        "  lib/Service/Reply.php:1156 getValueString()",
+        "  lib/Service/Sandbox.php:92 getValueString()",
+        "  lib/Service/Sandbox.php:100 getValueString()",
+        "  lib/Service/Sandbox.php:121 getValueString()",
+        "  lib/Service/Settings.php:189 getValueString()",
+        "  lib/Service/Settings.php:193 setValueString()",
+        "  lib/Service/Switches.php:26 getValueString()",
+        "  lib/Service/Switches.php:39 getValueString()",
+        "  lib/Service/Switches.php:45 setValueString()",
+        "  lib/Service/Switches.php:48 setValueString()",
+        "  lib/Service/Switches.php:63 setValueString()",
+        "  lib/Service/Switches.php:67 setValueString()",
+        "  lib/Service/Switches.php:72 getValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 93
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/talk_ai/api/v1/status  ocs.talk_ai.api.status  appinfo/routes.php:37 ocs",
+        "POST /ocs/v2.php/apps/talk_ai/api/v1/ask  ocs.talk_ai.api.ask  appinfo/routes.php:38 ocs",
+        "GET /ocs/v2.php/apps/talk_ai/api/v1/result/{id}  ocs.talk_ai.api.result  appinfo/routes.php:39 ocs",
+        "POST /ocs/v2.php/apps/talk_ai/api/v1/forget  ocs.talk_ai.api.forget  appinfo/routes.php:40 ocs"
+      ],
+      "lines": [
+        "Nothing in the app calls 4 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/talk_ai/api/v1/status  ocs.talk_ai.api.status  appinfo/routes.php:37 ocs",
+        "  POST /ocs/v2.php/apps/talk_ai/api/v1/ask  ocs.talk_ai.api.ask  appinfo/routes.php:38 ocs",
+        "  GET /ocs/v2.php/apps/talk_ai/api/v1/result/{id}  ocs.talk_ai.api.result  appinfo/routes.php:39 ocs",
+        "  POST /ocs/v2.php/apps/talk_ai/api/v1/forget  ocs.talk_ai.api.forget  appinfo/routes.php:40 ocs"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/TickerController.php:65 OCA\\TalkAi\\Controller\\TickerController::tick()"
+      ],
+      "lines": [
+        "1 public method of a controller is reached by no route.",
+        "  lib/Controller/TickerController.php:65 OCA\\TalkAi\\Controller\\TickerController::tick()"
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 4 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version001100Date20261028.php:40 dropTable() on a table whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version001100Date20261028.php:40 dropTable() on a table whose name is no constant"
+      ]
+    }
+  ],
+  "endpoints": 21,
+  "endpointList": [
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/talk_ai/api/v1/run",
+      "target": "OCA\\TalkAi\\Controller\\TicketController::run",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/talk_ai/document",
+      "target": "OCA\\TalkAi\\Controller\\DocumentController::run",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/talk_ai/metrics",
+      "target": "OCA\\TalkAi\\Controller\\MetricsController::run",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/talk_ai/process",
+      "target": "OCA\\TalkAi\\Controller\\ProcessController::run",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/talk_ai/settings",
+      "target": "OCA\\TalkAi\\Controller\\SettingsController::save",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/talk_ai/settings/ai",
+      "target": "OCA\\TalkAi\\Controller\\SettingsController::ai",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/talk_ai/settings/ai/choice",
+      "target": "OCA\\TalkAi\\Controller\\SettingsController::choose",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/talk_ai/settings/ai/engines/{name}",
+      "target": "OCA\\TalkAi\\Controller\\SettingsController::saveEngine",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/talk_ai/settings/ai/engines/{name}/key",
+      "target": "OCA\\TalkAi\\Controller\\SettingsController::clearKey",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/talk_ai/settings/ai/engines/{name}/models",
+      "target": "OCA\\TalkAi\\Controller\\SettingsController::models",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/talk_ai/settings/ai/engines/{name}/probe",
+      "target": "OCA\\TalkAi\\Controller\\SettingsController::probe",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/talk_ai/settings/ai/engines/{name}/test",
+      "target": "OCA\\TalkAi\\Controller\\SettingsController::test",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/talk_ai/settings/ai/scenarios",
+      "target": "OCA\\TalkAi\\Controller\\SettingsController::saveScenarios",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/talk_ai/settings/jobs/{id}/cancel",
+      "target": "OCA\\TalkAi\\Controller\\SettingsController::cancel",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/talk_ai/settings/status",
+      "target": "OCA\\TalkAi\\Controller\\SettingsController::status",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/talk_ai/settings/styles/{style}/files",
+      "target": "OCA\\TalkAi\\Controller\\SettingsController::upload",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/talk_ai/ticker",
+      "target": "OCA\\TalkAi\\Controller\\TickerController::run",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/talk_ai/api/v1/ask",
+      "target": "OCA\\TalkAi\\Controller\\ApiController::ask",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/talk_ai/api/v1/forget",
+      "target": "OCA\\TalkAi\\Controller\\ApiController::forget",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/talk_ai/api/v1/result/{id}",
+      "target": "OCA\\TalkAi\\Controller\\ApiController::result",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/talk_ai/api/v1/status",
+      "target": "OCA\\TalkAi\\Controller\\ApiController::status",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

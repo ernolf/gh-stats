@@ -1,0 +1,263 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\UserRightsOverview\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "psr/http-message 2.0, in 3rdparty/ of Nextcloud 31 to 35",
+        "psr/log 3.0.2, in 3rdparty/ of Nextcloud 31 to 35"
+      ],
+      "lines": [
+        "vendor/ ships 2 packages that the server ships itself in a major of Nextcloud 31 to 35. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  psr/http-message 2.0, in 3rdparty/ of Nextcloud 31 to 35",
+        "  psr/log 3.0.2, in 3rdparty/ of Nextcloud 31 to 35"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Service/GroupFoldersService.php:30 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated in Nextcloud 31 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Service/GroupFoldersService.php:30 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/MonthlyReportJob.php OCA\\UserRightsOverview\\BackgroundJob\\MonthlyReportJob"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/MonthlyReportJob.php OCA\\UserRightsOverview\\BackgroundJob\\MonthlyReportJob"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/MonthlyReportJob.php:48 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 1 place. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/BackgroundJob/MonthlyReportJob.php:48 new DateTime()"
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/userrightsoverview/api/v1/groups  ocs.userrightsoverview.groups.getgroups  lib/Controller/GroupsController.php:42",
+        "GET /ocs/v2.php/apps/userrightsoverview/api/v1/groups/{groupId}  ocs.userrightsoverview.groups.getgroup  lib/Controller/GroupsController.php:69",
+        "GET /ocs/v2.php/apps/userrightsoverview/api/v1/admins  ocs.userrightsoverview.groups.getadmins  lib/Controller/GroupsController.php:101",
+        "GET /ocs/v2.php/apps/userrightsoverview/api/v1/overview  ocs.userrightsoverview.overview.getoverview  lib/Controller/OverviewController.php:46",
+        "GET /ocs/v2.php/apps/userrightsoverview/api/v1/teamfolders/status  ocs.userrightsoverview.teamfolders.getstatus  lib/Controller/TeamFoldersController.php:46",
+        "GET /ocs/v2.php/apps/userrightsoverview/api/v1/teamfolders  ocs.userrightsoverview.teamfolders.getfolders  lib/Controller/TeamFoldersController.php:76",
+        "GET /ocs/v2.php/apps/userrightsoverview/api/v1/teamfolders/{folderId}  ocs.userrightsoverview.teamfolders.getfolder  lib/Controller/TeamFoldersController.php:115",
+        "GET /ocs/v2.php/apps/userrightsoverview/api/v1/teamfolders/group/{groupId}  ocs.userrightsoverview.teamfolders.getfoldersbygroup  lib/Controller/TeamFoldersController.php:160",
+        "GET /ocs/v2.php/apps/userrightsoverview/api/v1/teamfolders/user/{userId}  ocs.userrightsoverview.teamfolders.getfoldersbyuser  lib/Controller/TeamFoldersController.php:199",
+        "GET /ocs/v2.php/apps/userrightsoverview/api/v1/teamfolders/stats  ocs.userrightsoverview.teamfolders.getstats  lib/Controller/TeamFoldersController.php:246",
+        "GET /ocs/v2.php/apps/userrightsoverview/api/v1/users  ocs.userrightsoverview.users.getusers  lib/Controller/UsersController.php:42",
+        "GET /ocs/v2.php/apps/userrightsoverview/api/v1/users/{userId}  ocs.userrightsoverview.users.getuser  lib/Controller/UsersController.php:69",
+        "GET /ocs/v2.php/apps/userrightsoverview/api/v1/users/activity  ocs.userrightsoverview.users.getrecentactivity  lib/Controller/UsersController.php:102"
+      ],
+      "lines": [
+        "Nothing in the app calls 13 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/userrightsoverview/api/v1/groups  ocs.userrightsoverview.groups.getgroups  lib/Controller/GroupsController.php:42",
+        "  GET /ocs/v2.php/apps/userrightsoverview/api/v1/groups/{groupId}  ocs.userrightsoverview.groups.getgroup  lib/Controller/GroupsController.php:69",
+        "  GET /ocs/v2.php/apps/userrightsoverview/api/v1/admins  ocs.userrightsoverview.groups.getadmins  lib/Controller/GroupsController.php:101",
+        "  GET /ocs/v2.php/apps/userrightsoverview/api/v1/overview  ocs.userrightsoverview.overview.getoverview  lib/Controller/OverviewController.php:46",
+        "  GET /ocs/v2.php/apps/userrightsoverview/api/v1/teamfolders/status  ocs.userrightsoverview.teamfolders.getstatus  lib/Controller/TeamFoldersController.php:46",
+        "  GET /ocs/v2.php/apps/userrightsoverview/api/v1/teamfolders  ocs.userrightsoverview.teamfolders.getfolders  lib/Controller/TeamFoldersController.php:76",
+        "  GET /ocs/v2.php/apps/userrightsoverview/api/v1/teamfolders/{folderId}  ocs.userrightsoverview.teamfolders.getfolder  lib/Controller/TeamFoldersController.php:115",
+        "  GET /ocs/v2.php/apps/userrightsoverview/api/v1/teamfolders/group/{groupId}  ocs.userrightsoverview.teamfolders.getfoldersbygroup  lib/Controller/TeamFoldersController.php:160",
+        "  GET /ocs/v2.php/apps/userrightsoverview/api/v1/teamfolders/user/{userId}  ocs.userrightsoverview.teamfolders.getfoldersbyuser  lib/Controller/TeamFoldersController.php:199",
+        "  GET /ocs/v2.php/apps/userrightsoverview/api/v1/teamfolders/stats  ocs.userrightsoverview.teamfolders.getstats  lib/Controller/TeamFoldersController.php:246",
+        "  GET /ocs/v2.php/apps/userrightsoverview/api/v1/users  ocs.userrightsoverview.users.getusers  lib/Controller/UsersController.php:42",
+        "  GET /ocs/v2.php/apps/userrightsoverview/api/v1/users/{userId}  ocs.userrightsoverview.users.getuser  lib/Controller/UsersController.php:69",
+        "  GET /ocs/v2.php/apps/userrightsoverview/api/v1/users/activity  ocs.userrightsoverview.users.getrecentactivity  lib/Controller/UsersController.php:102"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 10
+        }
+      ]
+    }
+  ],
+  "endpoints": 16,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/userrightsoverview/",
+      "target": "OCA\\UserRightsOverview\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:22",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/userrightsoverview/api/v1/admins",
+      "target": "OCA\\UserRightsOverview\\Controller\\GroupsController::getAdmins",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/GroupsController.php:101",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/userrightsoverview/api/v1/export/csv",
+      "target": "OCA\\UserRightsOverview\\Controller\\ExportController::exportCsv",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/ExportController.php:47",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/userrightsoverview/api/v1/export/pdf",
+      "target": "OCA\\UserRightsOverview\\Controller\\ExportController::exportPdf",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/ExportController.php:77",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/userrightsoverview/api/v1/groups",
+      "target": "OCA\\UserRightsOverview\\Controller\\GroupsController::getGroups",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/GroupsController.php:42",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/userrightsoverview/api/v1/groups/{groupId}",
+      "target": "OCA\\UserRightsOverview\\Controller\\GroupsController::getGroup",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/GroupsController.php:69",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/userrightsoverview/api/v1/overview",
+      "target": "OCA\\UserRightsOverview\\Controller\\OverviewController::getOverview",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/OverviewController.php:46",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/userrightsoverview/api/v1/teamfolders",
+      "target": "OCA\\UserRightsOverview\\Controller\\TeamFoldersController::getFolders",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/TeamFoldersController.php:76",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/userrightsoverview/api/v1/teamfolders/{folderId}",
+      "target": "OCA\\UserRightsOverview\\Controller\\TeamFoldersController::getFolder",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/TeamFoldersController.php:115",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/userrightsoverview/api/v1/teamfolders/group/{groupId}",
+      "target": "OCA\\UserRightsOverview\\Controller\\TeamFoldersController::getFoldersByGroup",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/TeamFoldersController.php:160",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/userrightsoverview/api/v1/teamfolders/stats",
+      "target": "OCA\\UserRightsOverview\\Controller\\TeamFoldersController::getStats",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/TeamFoldersController.php:246",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/userrightsoverview/api/v1/teamfolders/status",
+      "target": "OCA\\UserRightsOverview\\Controller\\TeamFoldersController::getStatus",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/TeamFoldersController.php:46",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/userrightsoverview/api/v1/teamfolders/user/{userId}",
+      "target": "OCA\\UserRightsOverview\\Controller\\TeamFoldersController::getFoldersByUser",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/TeamFoldersController.php:199",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/userrightsoverview/api/v1/users",
+      "target": "OCA\\UserRightsOverview\\Controller\\UsersController::getUsers",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/UsersController.php:42",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/userrightsoverview/api/v1/users/{userId}",
+      "target": "OCA\\UserRightsOverview\\Controller\\UsersController::getUser",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/UsersController.php:69",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/userrightsoverview/api/v1/users/activity",
+      "target": "OCA\\UserRightsOverview\\Controller\\UsersController::getRecentActivity",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/UsersController.php:102",
+      "kind": "OCS"
+    }
+  ]
+}

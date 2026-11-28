@@ -1,0 +1,383 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\SocialLogin\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "namespace-mismatch",
+      "level": "warn",
+      "places": [
+        "lib/Provider/CustomDiscourse.php:19 OCA\\SocialLogin\\Provider\\HybridauthDiscourse, by its path OCA\\SocialLogin\\Provider\\CustomDiscourse"
+      ],
+      "lines": [
+        "1 class in lib/ whose name does not follow PSR-4 below OCA\\SocialLogin, the namespace the server derives from <namespace> of info.xml. The loader of the server does not find such a class.",
+        "  lib/Provider/CustomDiscourse.php:19 OCA\\SocialLogin\\Provider\\HybridauthDiscourse, by its path OCA\\SocialLogin\\Provider\\CustomDiscourse"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/LoginController.php:56 OC\\User\\LoginException",
+        "lib/Controller/SettingsController.php:31 OC\\Authentication\\Token\\IProvider",
+        "lib/Service/ProviderService.php:169 OC\\Authentication\\Token\\IProvider",
+        "lib/Service/ProviderService.php:272 OC\\User\\LoginException",
+        "lib/Service/ProviderService.php:601 OC::$server"
+      ],
+      "lines": [
+        "5 uses of the private API of the server in 3 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/LoginController.php:56 OC\\User\\LoginException",
+        "  lib/Controller/SettingsController.php:31 OC\\Authentication\\Token\\IProvider",
+        "  lib/Service/ProviderService.php:169 OC\\Authentication\\Token\\IProvider",
+        "  lib/Service/ProviderService.php:272 OC\\User\\LoginException",
+        "  lib/Service/ProviderService.php:601 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/Controller/SettingsController.php:101 OCP\\Authentication\\Token\\IToken::SCOPE_SKIP_PASSWORD_VALIDATION: there since Nextcloud 30, the app declares from 29",
+        "lib/Service/ProviderService.php:588 OCP\\Authentication\\Token\\IToken::SCOPE_SKIP_PASSWORD_VALIDATION: there since Nextcloud 30, the app declares from 29"
+      ],
+      "lines": [
+        "2 uses in 2 files of the public API that the oldest majors of Nextcloud 29 to 36 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/Controller/SettingsController.php:101 OCP\\Authentication\\Token\\IToken::SCOPE_SKIP_PASSWORD_VALIDATION: there since Nextcloud 30, the app declares from 29",
+        "  lib/Service/ProviderService.php:588 OCP\\Authentication\\Token\\IToken::SCOPE_SKIP_PASSWORD_VALIDATION: there since Nextcloud 30, the app declares from 29"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:47 addListener()",
+        "lib/AppInfo/Application.php:57 addListener()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 2 places. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:47 addListener()",
+        "  lib/AppInfo/Application.php:57 addListener()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "POST /index.php/apps/sociallogin/api/config  sociallogin.api.setconfig  appinfo/routes.php:15 routes",
+        "GET /index.php/apps/sociallogin/api/config  sociallogin.api.getconfig  appinfo/routes.php:16 routes",
+        "POST /index.php/apps/sociallogin/oauth/{provider}  sociallogin.login.oauth.post  appinfo/routes.php:18 routes",
+        "POST /index.php/apps/sociallogin/{type}/{provider}  sociallogin.login.custom.post  appinfo/routes.php:20 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 4 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 8 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  POST /index.php/apps/sociallogin/api/config  sociallogin.api.setconfig  appinfo/routes.php:15 routes",
+        "  GET /index.php/apps/sociallogin/api/config  sociallogin.api.getconfig  appinfo/routes.php:16 routes",
+        "  POST /index.php/apps/sociallogin/oauth/{provider}  sociallogin.login.oauth.post  appinfo/routes.php:18 routes",
+        "  POST /index.php/apps/sociallogin/{type}/{provider}  sociallogin.login.custom.post  appinfo/routes.php:20 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/AlternativeLogin/TelegramLogin.php:32 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/AppInfo/Application.php:53 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/SettingsController.php:45 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Controller/SettingsController.php:62 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Controller/SettingsController.php:97 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Migration/OneKeyCustomProviders.php:34 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Migration/ProvidersDefaultGroup.php:38 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Migration/TelegramToProviders.php:33 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Migration/TelegramToProviders.php:34 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Migration/TelegramToProviders.php:35 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Service/ProviderService.php:484 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ProviderService.php:584 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Settings/PersonalSettings.php:38 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Settings/PersonalSettings.php:56 OCP\\Util::callRegister(): deprecated since Nextcloud 32; directly use CsrfTokenManager instead"
+      ],
+      "lines": [
+        "14 uses in 8 files of the public API that is deprecated in Nextcloud 29 to 36. The text of the tag names the replacement where it has one.",
+        "  lib/AlternativeLogin/TelegramLogin.php:32 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/AppInfo/Application.php:53 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/SettingsController.php:45 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Controller/SettingsController.php:62 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Controller/SettingsController.php:97 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Migration/OneKeyCustomProviders.php:34 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Migration/ProvidersDefaultGroup.php:38 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Migration/TelegramToProviders.php:33 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Migration/TelegramToProviders.php:34 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Migration/TelegramToProviders.php:35 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Service/ProviderService.php:484 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ProviderService.php:584 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Settings/PersonalSettings.php:38 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Settings/PersonalSettings.php:56 OCP\\Util::callRegister(): deprecated since Nextcloud 32; directly use CsrfTokenManager instead"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 11
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:54 time()",
+        "lib/Service/ProviderService.php:611 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 2 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/AppInfo/Application.php:54 time()",
+        "  lib/Service/ProviderService.php:611 time()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/AlternativeLogin/TelegramLogin.php:36 getValueArray()",
+        "lib/AppInfo/Application.php:65 getValueBool()",
+        "lib/AppInfo/Application.php:74 getValueArray()",
+        "lib/AppInfo/Application.php:83 getValueArray()",
+        "lib/AppInfo/Application.php:104 getValueBool()",
+        "lib/Controller/ApiController.php:32 setValueArray()",
+        "lib/Controller/ApiController.php:34 setValueBool()",
+        "lib/Controller/ApiController.php:47 getValueArray()",
+        "lib/Controller/ApiController.php:49 getValueBool()",
+        "lib/Controller/SettingsController.php:39 setValueBool()",
+        "lib/Controller/SettingsController.php:43 setValueArray()",
+        "lib/Controller/SettingsController.php:60 setValueArray()",
+        "lib/Migration/OneKeyCustomProviders.php:23 getValueString()",
+        "lib/Migration/OneKeyCustomProviders.php:26 getValueArray()",
+        "lib/Migration/OneKeyCustomProviders.php:30 getValueArray()",
+        "lib/Migration/OneKeyCustomProviders.php:36 setValueArray()",
+        "lib/Migration/ProvidersDefaultGroup.php:23 getValueString()",
+        "lib/Migration/ProvidersDefaultGroup.php:27 getValueString()",
+        "lib/Migration/ProvidersDefaultGroup.php:35 setValueString()",
+        "lib/Migration/ProvidersDefaultGroup.php:43 getValueArray()",
+        "lib/Migration/ProvidersDefaultGroup.php:50 setValueArray()",
+        "lib/Migration/SeparateProvidersNameAndTitle.php:25 getValueString()",
+        "lib/Migration/SeparateProvidersNameAndTitle.php:39 getValueArray()",
+        "lib/Migration/SeparateProvidersNameAndTitle.php:46 setValueArray()",
+        "lib/Migration/TelegramToProviders.php:23 getValueString()",
+        "lib/Migration/TelegramToProviders.php:26 getValueArray()",
+        "lib/Migration/TelegramToProviders.php:28 getValueString()",
+        "lib/Migration/TelegramToProviders.php:29 getValueString()",
+        "lib/Migration/TelegramToProviders.php:30 getValueString()",
+        "lib/Migration/TelegramToProviders.php:32 setValueArray()",
+        "lib/Service/ProviderService.php:185 getValueBool()",
+        "lib/Service/ProviderService.php:196 getValueArray()",
+        "lib/Service/ProviderService.php:243 getValueArray()",
+        "lib/Service/ProviderService.php:441 getValueBool()",
+        "lib/Service/ProviderService.php:452 getValueBool()",
+        "lib/Service/ProviderService.php:456 getValueBool()",
+        "lib/Service/ProviderService.php:464 getValueBool()",
+        "lib/Service/ProviderService.php:468 getValueBool()",
+        "lib/Service/ProviderService.php:472 getValueBool()",
+        "lib/Service/ProviderService.php:480 getValueBool()",
+        "lib/Service/ProviderService.php:487 getValueBool()",
+        "lib/Service/ProviderService.php:509 getValueBool()",
+        "lib/Service/ProviderService.php:532 getValueBool()",
+        "lib/Settings/AdminSettings.php:32 getValueArray()",
+        "lib/Settings/AdminSettings.php:43 getValueArray()",
+        "lib/Settings/AdminSettings.php:53 getValueBool()",
+        "lib/Settings/PersonalSettings.php:37 getValueBool()",
+        "lib/Settings/PersonalSettings.php:41 getValueArray()",
+        "lib/Settings/PersonalSettings.php:66 getValueArray()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 49 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/AlternativeLogin/TelegramLogin.php:36 getValueArray()",
+        "  lib/AppInfo/Application.php:65 getValueBool()",
+        "  lib/AppInfo/Application.php:74 getValueArray()",
+        "  lib/AppInfo/Application.php:83 getValueArray()",
+        "  lib/AppInfo/Application.php:104 getValueBool()",
+        "  lib/Controller/ApiController.php:32 setValueArray()",
+        "  lib/Controller/ApiController.php:34 setValueBool()",
+        "  lib/Controller/ApiController.php:47 getValueArray()",
+        "  lib/Controller/ApiController.php:49 getValueBool()",
+        "  lib/Controller/SettingsController.php:39 setValueBool()",
+        "  lib/Controller/SettingsController.php:43 setValueArray()",
+        "  lib/Controller/SettingsController.php:60 setValueArray()",
+        "  lib/Migration/OneKeyCustomProviders.php:23 getValueString()",
+        "  lib/Migration/OneKeyCustomProviders.php:26 getValueArray()",
+        "  lib/Migration/OneKeyCustomProviders.php:30 getValueArray()",
+        "  lib/Migration/OneKeyCustomProviders.php:36 setValueArray()",
+        "  lib/Migration/ProvidersDefaultGroup.php:23 getValueString()",
+        "  lib/Migration/ProvidersDefaultGroup.php:27 getValueString()",
+        "  lib/Migration/ProvidersDefaultGroup.php:35 setValueString()",
+        "  lib/Migration/ProvidersDefaultGroup.php:43 getValueArray()",
+        "  lib/Migration/ProvidersDefaultGroup.php:50 setValueArray()",
+        "  lib/Migration/SeparateProvidersNameAndTitle.php:25 getValueString()",
+        "  lib/Migration/SeparateProvidersNameAndTitle.php:39 getValueArray()",
+        "  lib/Migration/SeparateProvidersNameAndTitle.php:46 setValueArray()",
+        "  lib/Migration/TelegramToProviders.php:23 getValueString()",
+        "  lib/Migration/TelegramToProviders.php:26 getValueArray()",
+        "  lib/Migration/TelegramToProviders.php:28 getValueString()",
+        "  lib/Migration/TelegramToProviders.php:29 getValueString()",
+        "  lib/Migration/TelegramToProviders.php:30 getValueString()",
+        "  lib/Migration/TelegramToProviders.php:32 setValueArray()",
+        "  lib/Service/ProviderService.php:185 getValueBool()",
+        "  lib/Service/ProviderService.php:196 getValueArray()",
+        "  lib/Service/ProviderService.php:243 getValueArray()",
+        "  lib/Service/ProviderService.php:441 getValueBool()",
+        "  lib/Service/ProviderService.php:452 getValueBool()",
+        "  lib/Service/ProviderService.php:456 getValueBool()",
+        "  lib/Service/ProviderService.php:464 getValueBool()",
+        "  lib/Service/ProviderService.php:468 getValueBool()",
+        "  lib/Service/ProviderService.php:472 getValueBool()",
+        "  lib/Service/ProviderService.php:480 getValueBool()",
+        "  lib/Service/ProviderService.php:487 getValueBool()",
+        "  lib/Service/ProviderService.php:509 getValueBool()",
+        "  lib/Service/ProviderService.php:532 getValueBool()",
+        "  lib/Settings/AdminSettings.php:32 getValueArray()",
+        "  lib/Settings/AdminSettings.php:43 getValueArray()",
+        "  lib/Settings/AdminSettings.php:53 getValueBool()",
+        "  lib/Settings/PersonalSettings.php:37 getValueBool()",
+        "  lib/Settings/PersonalSettings.php:41 getValueArray()",
+        "  lib/Settings/PersonalSettings.php:66 getValueArray()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 46
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "POST /ocs/v2.php/apps/sociallogin/api/connect/{uid}  ocs.sociallogin.link.connectsociallogin  appinfo/routes.php:23 ocs",
+        "DELETE /ocs/v2.php/apps/sociallogin/api/connect/{identifier}  ocs.sociallogin.link.disconnectsociallogin  appinfo/routes.php:24 ocs"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  POST /ocs/v2.php/apps/sociallogin/api/connect/{uid}  ocs.sociallogin.link.connectsociallogin  appinfo/routes.php:23 ocs",
+        "  DELETE /ocs/v2.php/apps/sociallogin/api/connect/{identifier}  ocs.sociallogin.link.disconnectsociallogin  appinfo/routes.php:24 ocs"
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 2 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 11,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sociallogin/{type}/{provider}",
+      "target": "OCA\\SocialLogin\\Controller\\LoginController::custom",
+      "openapi": [],
+      "source": "appinfo/routes.php:19 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sociallogin/{type}/{provider}",
+      "target": "OCA\\SocialLogin\\Controller\\LoginController::custom",
+      "openapi": [],
+      "source": "appinfo/routes.php:20 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sociallogin/api/config",
+      "target": "OCA\\SocialLogin\\Controller\\ApiController::getConfig",
+      "openapi": [],
+      "source": "appinfo/routes.php:16 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sociallogin/api/config",
+      "target": "OCA\\SocialLogin\\Controller\\ApiController::setConfig",
+      "openapi": [],
+      "source": "appinfo/routes.php:15 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sociallogin/disconnect-social/{login}",
+      "target": "OCA\\SocialLogin\\Controller\\SettingsController::disconnectSocialLogin",
+      "openapi": [],
+      "source": "appinfo/routes.php:13 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/sociallogin/oauth/{provider}",
+      "target": "OCA\\SocialLogin\\Controller\\LoginController::oauth",
+      "openapi": [],
+      "source": "appinfo/routes.php:17 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sociallogin/oauth/{provider}",
+      "target": "OCA\\SocialLogin\\Controller\\LoginController::oauth",
+      "openapi": [],
+      "source": "appinfo/routes.php:18 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sociallogin/settings/save-admin",
+      "target": "OCA\\SocialLogin\\Controller\\SettingsController::saveAdmin",
+      "openapi": [],
+      "source": "appinfo/routes.php:12 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/sociallogin/settings/save-personal",
+      "target": "OCA\\SocialLogin\\Controller\\SettingsController::savePersonal",
+      "openapi": [],
+      "source": "appinfo/routes.php:14 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/sociallogin/api/connect/{identifier}",
+      "target": "OCA\\SocialLogin\\Controller\\LinkController::disconnectSocialLogin",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:24 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/sociallogin/api/connect/{uid}",
+      "target": "OCA\\SocialLogin\\Controller\\LinkController::connectSocialLogin",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:23 ocs",
+      "kind": "OCS"
+    }
+  ]
+}

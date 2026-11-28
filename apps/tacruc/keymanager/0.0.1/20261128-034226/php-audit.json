@@ -1,0 +1,162 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\KeyManager\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "appinfo/app.php:3 OC::$server",
+        "appinfo/app.php:4 OC::$server",
+        "appinfo/app.php:22 OC::$server",
+        "lib/Controller/KeyController.php:39 OC::$server",
+        "lib/Controller/KeyController.php:100 OC::$server",
+        "lib/Controller/KeyController.php:112 OC::$server",
+        "lib/Controller/KeyController.php:126 OC::$server"
+      ],
+      "lines": [
+        "7 uses of the private API of the server in 2 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  appinfo/app.php:3 OC::$server",
+        "  appinfo/app.php:4 OC::$server",
+        "  appinfo/app.php:22 OC::$server",
+        "  lib/Controller/KeyController.php:39 OC::$server",
+        "  lib/Controller/KeyController.php:100 OC::$server",
+        "  lib/Controller/KeyController.php:112 OC::$server",
+        "  lib/Controller/KeyController.php:126 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/keymanager/keys/{id}  keymanager.key.show  appinfo/routes.php:15 routes",
+        "DELETE /index.php/apps/keymanager/keys/{id}  keymanager.key.delete  appinfo/routes.php:17 routes",
+        "POST /index.php/apps/keymanager/keys/{id}/revoke  keymanager.key.revoke  appinfo/routes.php:18 routes",
+        "GET /index.php/apps/keymanager/keys/{id}/revoke  keymanager.key.generate_revoke_certificate  appinfo/routes.php:19 routes",
+        "GET /index.php/apps/keymanager/keys/default/{id}  keymanager.key.set_default  appinfo/routes.php:20 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 5 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 2 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/keymanager/keys/{id}  keymanager.key.show  appinfo/routes.php:15 routes",
+        "  DELETE /index.php/apps/keymanager/keys/{id}  keymanager.key.delete  appinfo/routes.php:17 routes",
+        "  POST /index.php/apps/keymanager/keys/{id}/revoke  keymanager.key.revoke  appinfo/routes.php:18 routes",
+        "  GET /index.php/apps/keymanager/keys/{id}/revoke  keymanager.key.generate_revoke_certificate  appinfo/routes.php:19 routes",
+        "  GET /index.php/apps/keymanager/keys/default/{id}  keymanager.key.set_default  appinfo/routes.php:20 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "legacy-hook",
+      "level": "info",
+      "places": [
+        "appinfo/app.php:27 OC_User::pre_deleteUser: the manual names no replacement event"
+      ],
+      "lines": [
+        "1 connection to a legacy hook of the server. A hook the server removed is never emitted, and the listener never runs; the typed events of OCP\\EventDispatcher replace the hooks.",
+        "OCP\\Util::connectHook() is deprecated since Nextcloud 21: use \\OCP\\EventDispatcher\\IEventDispatcher::addListener. ocp-deprecated leaves these calls to this finding.",
+        "  appinfo/app.php:27 OC_User::pre_deleteUser: the manual names no replacement event"
+      ]
+    }
+  ],
+  "endpoints": 9,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/keymanager/",
+      "target": "OCA\\KeyManager\\Controller\\PageController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:12 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/keymanager/{filename}.asc",
+      "target": "OCA\\KeyManager\\Controller\\KeyController::publicServerKey",
+      "openapi": [],
+      "source": "appinfo/routes.php:13 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/keymanager/keys",
+      "target": "OCA\\KeyManager\\Controller\\KeyController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:14 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/keymanager/keys",
+      "target": "OCA\\KeyManager\\Controller\\KeyController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:16 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/keymanager/keys/{id}",
+      "target": "OCA\\KeyManager\\Controller\\KeyController::delete",
+      "openapi": [],
+      "source": "appinfo/routes.php:17 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/keymanager/keys/{id}",
+      "target": "OCA\\KeyManager\\Controller\\KeyController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:15 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/keymanager/keys/{id}/revoke",
+      "target": "OCA\\KeyManager\\Controller\\KeyController::generateRevokeCertificate",
+      "openapi": [],
+      "source": "appinfo/routes.php:19 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/keymanager/keys/{id}/revoke",
+      "target": "OCA\\KeyManager\\Controller\\KeyController::revoke",
+      "openapi": [],
+      "source": "appinfo/routes.php:18 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/keymanager/keys/default/{id}",
+      "target": "OCA\\KeyManager\\Controller\\KeyController::setDefault",
+      "openapi": [],
+      "source": "appinfo/routes.php:20 routes",
+      "kind": "route"
+    }
+  ]
+}

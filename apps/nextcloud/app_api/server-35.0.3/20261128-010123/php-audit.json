@@ -1,0 +1,1341 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\AppAPI\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "namespace-mismatch",
+      "level": "warn",
+      "places": [
+        "lib/Controller/HarpController.php:166 OCA\\AppAPI\\Controller\\ExAppRouteAccessLevel, by its path OCA\\AppAPI\\Controller\\HarpController",
+        "lib/Db/ExApp.php:156 OCA\\AppAPI\\Db\\ExAppRouteAccessLevel, by its path OCA\\AppAPI\\Db\\ExApp"
+      ],
+      "lines": [
+        "2 classes in lib/ whose name does not follow PSR-4 below OCA\\AppAPI, the namespace the server derives from <namespace> of info.xml. The loader of the server does not find such a class.",
+        "  lib/Controller/HarpController.php:166 OCA\\AppAPI\\Controller\\ExAppRouteAccessLevel, by its path OCA\\AppAPI\\Controller\\HarpController",
+        "  lib/Db/ExApp.php:156 OCA\\AppAPI\\Db\\ExAppRouteAccessLevel, by its path OCA\\AppAPI\\Db\\ExApp"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Command/Daemon/ListDaemons.php:20 OC\\Core\\Command\\Base",
+        "lib/Controller/ExAppProxyController.php:45 OC\\Security\\CSP\\ContentSecurityPolicyNonceManager",
+        "lib/Controller/ExAppsPageController.php:55 OC\\App\\AppStore\\Fetcher\\CategoryFetcher",
+        "lib/Controller/ExAppsPageController.php:74 OC\\App\\AppStore\\Version\\VersionParser",
+        "lib/Controller/ExAppsPageController.php:199 OC\\App\\DependencyAnalyzer",
+        "lib/Controller/ExAppsPageController.php:199 OC\\App\\Platform",
+        "lib/DeployActions/DockerActions.php:1296 OC",
+        "lib/DeployActions/KubernetesActions.php:800 OC",
+        "lib/Fetcher/AppAPIFetcher.php:43 OC\\Files\\AppData\\Factory",
+        "lib/Fetcher/ExAppArchiveFetcher.php:48 OC",
+        "lib/Fetcher/ExAppArchiveFetcher.php:59 OC\\Archive\\TAR",
+        "lib/Fetcher/ExAppFetcher.php:28 OC\\Files\\AppData\\Factory",
+        "lib/Fetcher/ExAppFetcher.php:32 OC\\App\\CompareVersion",
+        "lib/Fetcher/ExAppFetcher.php:75 OC\\App\\AppStore\\Version\\VersionParser",
+        "lib/Middleware/ExAppUIL10NMiddleware.php:33 OC\\Security\\CSP\\ContentSecurityPolicyNonceManager",
+        "lib/Service/AppAPIService.php:393 OC",
+        "lib/Service/ExAppService.php:66 OC\\Memcache\\APCu",
+        "lib/Service/HarpService.php:36 OC"
+      ],
+      "lines": [
+        "18 uses of the private API of the server in 12 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Command/Daemon/ListDaemons.php:20 OC\\Core\\Command\\Base",
+        "  lib/Controller/ExAppProxyController.php:45 OC\\Security\\CSP\\ContentSecurityPolicyNonceManager",
+        "  lib/Controller/ExAppsPageController.php:55 OC\\App\\AppStore\\Fetcher\\CategoryFetcher",
+        "  lib/Controller/ExAppsPageController.php:74 OC\\App\\AppStore\\Version\\VersionParser",
+        "  lib/Controller/ExAppsPageController.php:199 OC\\App\\DependencyAnalyzer",
+        "  lib/Controller/ExAppsPageController.php:199 OC\\App\\Platform",
+        "  lib/DeployActions/DockerActions.php:1296 OC",
+        "  lib/DeployActions/KubernetesActions.php:800 OC",
+        "  lib/Fetcher/AppAPIFetcher.php:43 OC\\Files\\AppData\\Factory",
+        "  lib/Fetcher/ExAppArchiveFetcher.php:48 OC",
+        "  lib/Fetcher/ExAppArchiveFetcher.php:59 OC\\Archive\\TAR",
+        "  lib/Fetcher/ExAppFetcher.php:28 OC\\Files\\AppData\\Factory",
+        "  lib/Fetcher/ExAppFetcher.php:32 OC\\App\\CompareVersion",
+        "  lib/Fetcher/ExAppFetcher.php:75 OC\\App\\AppStore\\Version\\VersionParser",
+        "  lib/Middleware/ExAppUIL10NMiddleware.php:33 OC\\Security\\CSP\\ContentSecurityPolicyNonceManager",
+        "  lib/Service/AppAPIService.php:393 OC",
+        "  lib/Service/ExAppService.php:66 OC\\Memcache\\APCu",
+        "  lib/Service/HarpService.php:36 OC"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 15
+        }
+      ]
+    },
+    {
+      "id": "ocp-removed-soon",
+      "level": "warn",
+      "places": [
+        "lib/Service/ProvidersAI/TaskProcessingService.php:251 OCP\\IServerContainer: deprecated since Nextcloud 25, Nextcloud 35 is the last major to have it"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated and that Nextcloud 36 no longer has: the app fails on the first major without it, once it declares that one.",
+        "  lib/Service/ProvidersAI/TaskProcessingService.php:251 OCP\\IServerContainer: deprecated since Nextcloud 25, Nextcloud 35 is the last major to have it"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/app_api/apps/categories  app_api.exappspage.listcategories  appinfo/routes.php:35 routes",
+        "GET /index.php/apps/app_api/apps/list  app_api.exappspage.listapps  appinfo/routes.php:36 routes",
+        "GET /index.php/apps/app_api/apps/enable/{appId}/{daemonId}  app_api.exappspage.enableappget  appinfo/routes.php:37 routes",
+        "POST /index.php/apps/app_api/apps/enable/{appId}/{daemonId}  app_api.exappspage.enableapp  appinfo/routes.php:38 routes",
+        "GET /index.php/apps/app_api/apps/status/{appId}  app_api.exappspage.getappstatus  appinfo/routes.php:39 routes",
+        "GET /index.php/apps/app_api/apps/deploy-options/{appId}  app_api.exappspage.getappdeployoptions  appinfo/routes.php:41 routes",
+        "GET /index.php/apps/app_api/apps/disable/{appId}  app_api.exappspage.disableapp  appinfo/routes.php:42 routes",
+        "GET /index.php/apps/app_api/apps/update/{appId}  app_api.exappspage.updateapp  appinfo/routes.php:43 routes",
+        "GET /index.php/apps/app_api/apps/uninstall/{appId}  app_api.exappspage.uninstallapp  appinfo/routes.php:44 routes",
+        "POST /index.php/apps/app_api/apps/force  app_api.exappspage.force  appinfo/routes.php:45 routes",
+        "GET /index.php/apps/app_api/harp/exapp-meta  app_api.harp.getexappmetadata  appinfo/routes.php:63 routes",
+        "GET /index.php/apps/app_api/harp/user-info  app_api.harp.getuserinfo  appinfo/routes.php:64 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 12 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 18 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/app_api/apps/categories  app_api.exappspage.listcategories  appinfo/routes.php:35 routes",
+        "  GET /index.php/apps/app_api/apps/list  app_api.exappspage.listapps  appinfo/routes.php:36 routes",
+        "  GET /index.php/apps/app_api/apps/enable/{appId}/{daemonId}  app_api.exappspage.enableappget  appinfo/routes.php:37 routes",
+        "  POST /index.php/apps/app_api/apps/enable/{appId}/{daemonId}  app_api.exappspage.enableapp  appinfo/routes.php:38 routes",
+        "  GET /index.php/apps/app_api/apps/status/{appId}  app_api.exappspage.getappstatus  appinfo/routes.php:39 routes",
+        "  GET /index.php/apps/app_api/apps/deploy-options/{appId}  app_api.exappspage.getappdeployoptions  appinfo/routes.php:41 routes",
+        "  GET /index.php/apps/app_api/apps/disable/{appId}  app_api.exappspage.disableapp  appinfo/routes.php:42 routes",
+        "  GET /index.php/apps/app_api/apps/update/{appId}  app_api.exappspage.updateapp  appinfo/routes.php:43 routes",
+        "  GET /index.php/apps/app_api/apps/uninstall/{appId}  app_api.exappspage.uninstallapp  appinfo/routes.php:44 routes",
+        "  POST /index.php/apps/app_api/apps/force  app_api.exappspage.force  appinfo/routes.php:45 routes",
+        "  GET /index.php/apps/app_api/harp/exapp-meta  app_api.harp.getexappmetadata  appinfo/routes.php:63 routes",
+        "  GET /index.php/apps/app_api/harp/user-info  app_api.harp.getuserinfo  appinfo/routes.php:64 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 9
+        }
+      ]
+    },
+    {
+      "id": "openapi-drift",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/categories: in openapi-full.json, and no route provides it",
+        "GET /index.php/apps/list: in openapi-full.json, and no route provides it",
+        "GET /index.php/apps/enable/{}/{}: in openapi-full.json, and no route provides it",
+        "POST /index.php/apps/enable/{}/{}: in openapi-full.json, and no route provides it",
+        "GET /index.php/apps/status/{}: in openapi-full.json, and no route provides it",
+        "GET /index.php/apps/logs/{}: in openapi-full.json, and no route provides it",
+        "GET /index.php/apps/deploy-options/{}: in openapi-full.json, and no route provides it",
+        "GET /index.php/apps/disable/{}: in openapi-full.json, and no route provides it",
+        "GET /index.php/apps/update/{}: in openapi-full.json, and no route provides it",
+        "GET /index.php/apps/uninstall/{}: in openapi-full.json, and no route provides it",
+        "POST /index.php/apps/force: in openapi-full.json, and no route provides it"
+      ],
+      "lines": [
+        "The OpenAPI specification and the routes differ in 11 operations. A client generated from the specification then calls what is not there, or lacks what is. This holds the routes against the specification and does not generate it again.",
+        "  GET /index.php/apps/categories: in openapi-full.json, and no route provides it",
+        "  GET /index.php/apps/list: in openapi-full.json, and no route provides it",
+        "  GET /index.php/apps/enable/{}/{}: in openapi-full.json, and no route provides it",
+        "  POST /index.php/apps/enable/{}/{}: in openapi-full.json, and no route provides it",
+        "  GET /index.php/apps/status/{}: in openapi-full.json, and no route provides it",
+        "  GET /index.php/apps/logs/{}: in openapi-full.json, and no route provides it",
+        "  GET /index.php/apps/deploy-options/{}: in openapi-full.json, and no route provides it",
+        "  GET /index.php/apps/disable/{}: in openapi-full.json, and no route provides it",
+        "  GET /index.php/apps/update/{}: in openapi-full.json, and no route provides it",
+        "  GET /index.php/apps/uninstall/{}: in openapi-full.json, and no route provides it",
+        "  POST /index.php/apps/force: in openapi-full.json, and no route provides it"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 8
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "psalm/phar, friendsofphp/php-cs-fixer are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/DaemonConfigController.php:156 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Controller/TopMenuController.php:79 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Db/ExAppMapper.php:199 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Fetcher/AppAPIFetcher.php:58 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Fetcher/AppAPIFetcher.php:80 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Fetcher/AppAPIFetcher.php:92 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Migration/Version032001Date20250115164140.php:50 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version035000Date20260529130000.php:67 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Migration/Version1000Date202305221555.php:97 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version1000Date202305221555.php:147 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version1004Date202311061844.php:89 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version2005Date20240209094951.php:45 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version2203Date20240325124149.php:34 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version2205Date20240411124836.php:58 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version2205Date20240411124836.php:62 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version2205Date20240411124836.php:66 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Service/ExAppConfigService.php:106 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Service/ExAppConfigService.php:123 OCP\\IAppConfig::getKeys(): deprecated since Nextcloud 13; use method getAppKeys of \\OCP\\IConfig  This function gets all keys of an app. Please note that the values are not returned.",
+        "lib/Service/ExAppConfigService.php:166 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Service/ExAppConfigService.php:185 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Service/ExAppSetupCheckService.php:54 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Service/ExAppSetupCheckService.php:79 OCP\\IAppConfig::getKeys(): deprecated since Nextcloud 13; use method getAppKeys of \\OCP\\IConfig  This function gets all keys of an app. Please note that the values are not returned.",
+        "lib/Service/ExAppsPageService.php:41 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone"
+      ],
+      "lines": [
+        "23 uses in 14 files of the public API that is deprecated in Nextcloud 35. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/DaemonConfigController.php:156 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Controller/TopMenuController.php:79 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Db/ExAppMapper.php:199 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Fetcher/AppAPIFetcher.php:58 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Fetcher/AppAPIFetcher.php:80 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Fetcher/AppAPIFetcher.php:92 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Migration/Version032001Date20250115164140.php:50 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version035000Date20260529130000.php:67 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Migration/Version1000Date202305221555.php:97 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version1000Date202305221555.php:147 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version1004Date202311061844.php:89 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version2005Date20240209094951.php:45 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version2203Date20240325124149.php:34 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version2205Date20240411124836.php:58 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version2205Date20240411124836.php:62 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version2205Date20240411124836.php:66 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Service/ExAppConfigService.php:106 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Service/ExAppConfigService.php:123 OCP\\IAppConfig::getKeys(): deprecated since Nextcloud 13; use method getAppKeys of \\OCP\\IConfig  This function gets all keys of an app. Please note that the values are not returned.",
+        "  lib/Service/ExAppConfigService.php:166 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Service/ExAppConfigService.php:185 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Service/ExAppSetupCheckService.php:54 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Service/ExAppSetupCheckService.php:79 OCP\\IAppConfig::getKeys(): deprecated since Nextcloud 13; use method getAppKeys of \\OCP\\IConfig  This function gets all keys of an app. Please note that the values are not returned.",
+        "  lib/Service/ExAppsPageService.php:41 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 20
+        }
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version034000Date20260428144801.php:141",
+        "lib/Service/ExAppConfigService.php:183",
+        "lib/Service/ExAppPreferenceService.php:131"
+      ],
+      "lines": [
+        "3 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Migration/Version034000Date20260428144801.php:141",
+        "  lib/Service/ExAppConfigService.php:183",
+        "  lib/Service/ExAppPreferenceService.php:131"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/ExAppInitStatusCheckJob.php OCA\\AppAPI\\BackgroundJob\\ExAppInitStatusCheckJob",
+        "lib/BackgroundJob/ExAppSetupChecksRefreshJob.php OCA\\AppAPI\\BackgroundJob\\ExAppSetupChecksRefreshJob"
+      ],
+      "lines": [
+        "2 timed jobs do not say whether they are time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/ExAppInitStatusCheckJob.php OCA\\AppAPI\\BackgroundJob\\ExAppInitStatusCheckJob",
+        "  lib/BackgroundJob/ExAppSetupChecksRefreshJob.php OCA\\AppAPI\\BackgroundJob\\ExAppSetupChecksRefreshJob"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/ExAppInitStatusCheckJob.php:51 time()",
+        "lib/Fetcher/AppAPIFetcher.php:58 time()",
+        "lib/Fetcher/AppAPIFetcher.php:80 time()",
+        "lib/Migration/Version034000Date20260428144801.php:219 time()",
+        "lib/Notifications/ExNotificationsManager.php:33 new DateTime()",
+        "lib/Notifications/ExNotificationsManager.php:48 new DateTime()",
+        "lib/ProxyResponse.php:28 new DateTime()",
+        "lib/Service/AppAPIService.php:779 time()",
+        "lib/Service/ExAppService.php:94 time()",
+        "lib/Service/ExAppService.php:361 time()",
+        "lib/Service/ExAppSetupCheckService.php:108 time()",
+        "lib/Service/TalkBotsService.php:70 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 12 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/BackgroundJob/ExAppInitStatusCheckJob.php:51 time()",
+        "  lib/Fetcher/AppAPIFetcher.php:58 time()",
+        "  lib/Fetcher/AppAPIFetcher.php:80 time()",
+        "  lib/Migration/Version034000Date20260428144801.php:219 time()",
+        "  lib/Notifications/ExNotificationsManager.php:33 new DateTime()",
+        "  lib/Notifications/ExNotificationsManager.php:48 new DateTime()",
+        "  lib/ProxyResponse.php:28 new DateTime()",
+        "  lib/Service/AppAPIService.php:779 time()",
+        "  lib/Service/ExAppService.php:94 time()",
+        "  lib/Service/ExAppService.php:361 time()",
+        "  lib/Service/ExAppSetupCheckService.php:108 time()",
+        "  lib/Service/TalkBotsService.php:70 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 9
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/ExAppInitStatusCheckJob.php:39 getValueString()",
+        "lib/Command/Daemon/ListDaemons.php:42 getValueString()",
+        "lib/Command/Daemon/RegisterDaemon.php:219 setValueString()",
+        "lib/Command/ExApp/Register.php:122 getValueString()",
+        "lib/Controller/ConfigController.php:44 setValueString()",
+        "lib/Controller/DaemonConfigController.php:64 getValueString()",
+        "lib/Controller/DaemonConfigController.php:82 setValueString()",
+        "lib/Controller/DaemonConfigController.php:153 getValueString()",
+        "lib/DeployActions/AIODockerActions.php:48 getValueString()",
+        "lib/DeployActions/AIODockerActions.php:77 setValueString()",
+        "lib/DeployActions/AIODockerActions.php:149 setValueString()",
+        "lib/DeployActions/DockerActions.php:159 getValueString()",
+        "lib/DeployActions/DockerActions.php:423 getValueString()",
+        "lib/DeployActions/DockerActions.php:479 getValueString()",
+        "lib/Fetcher/AppAPIFetcher.php:58 getAppValue()",
+        "lib/Fetcher/AppAPIFetcher.php:80 setAppValue()",
+        "lib/Migration/Version035000Date20260529120000.php:78 setValueString()",
+        "lib/Migration/Version035000Date20260529120000.php:98 hasKey()",
+        "lib/Migration/Version035000Date20260529120000.php:108 setValueString()",
+        "lib/Migration/Version035000Date20260529130000.php:65 hasKey()",
+        "lib/Migration/Version035000Date20260529130000.php:92 hasKey()",
+        "lib/Migration/Version035000Date20260529130000.php:93 getValueString()",
+        "lib/Service/ExAppConfigService.php:45 hasKey()",
+        "lib/Service/ExAppConfigService.php:75 hasKey()",
+        "lib/Service/ExAppConfigService.php:82 setValueString()",
+        "lib/Service/ExAppConfigService.php:105 hasKey()",
+        "lib/Service/ExAppConfigService.php:123 getKeys()",
+        "lib/Service/ExAppConfigService.php:140 hasKey()",
+        "lib/Service/ExAppConfigService.php:163 hasKey()",
+        "lib/Service/ExAppConfigService.php:186 setValueString()",
+        "lib/Service/ExAppConfigService.php:207 getValueString()",
+        "lib/Service/ExAppSetupCheckService.php:46 setValueString()",
+        "lib/Service/ExAppSetupCheckService.php:53 hasKey()",
+        "lib/Service/ExAppSetupCheckService.php:79 getKeys()",
+        "lib/Service/ExAppSetupCheckService.php:98 getValueString()",
+        "lib/Service/ExAppSetupCheckService.php:108 setValueString()",
+        "lib/Service/ExAppsPageService.php:49 getValueString()",
+        "lib/Settings/Admin.php:37 getValueString()",
+        "lib/Settings/Admin.php:38 getValueString()",
+        "lib/Settings/Admin.php:39 getValueString()",
+        "lib/Settings/Admin.php:42 getValueString()",
+        "lib/SetupChecks/DaemonCheck.php:45 getValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 42 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/BackgroundJob/ExAppInitStatusCheckJob.php:39 getValueString()",
+        "  lib/Command/Daemon/ListDaemons.php:42 getValueString()",
+        "  lib/Command/Daemon/RegisterDaemon.php:219 setValueString()",
+        "  lib/Command/ExApp/Register.php:122 getValueString()",
+        "  lib/Controller/ConfigController.php:44 setValueString()",
+        "  lib/Controller/DaemonConfigController.php:64 getValueString()",
+        "  lib/Controller/DaemonConfigController.php:82 setValueString()",
+        "  lib/Controller/DaemonConfigController.php:153 getValueString()",
+        "  lib/DeployActions/AIODockerActions.php:48 getValueString()",
+        "  lib/DeployActions/AIODockerActions.php:77 setValueString()",
+        "  lib/DeployActions/AIODockerActions.php:149 setValueString()",
+        "  lib/DeployActions/DockerActions.php:159 getValueString()",
+        "  lib/DeployActions/DockerActions.php:423 getValueString()",
+        "  lib/DeployActions/DockerActions.php:479 getValueString()",
+        "  lib/Fetcher/AppAPIFetcher.php:58 getAppValue()",
+        "  lib/Fetcher/AppAPIFetcher.php:80 setAppValue()",
+        "  lib/Migration/Version035000Date20260529120000.php:78 setValueString()",
+        "  lib/Migration/Version035000Date20260529120000.php:98 hasKey()",
+        "  lib/Migration/Version035000Date20260529120000.php:108 setValueString()",
+        "  lib/Migration/Version035000Date20260529130000.php:65 hasKey()",
+        "  lib/Migration/Version035000Date20260529130000.php:92 hasKey()",
+        "  lib/Migration/Version035000Date20260529130000.php:93 getValueString()",
+        "  lib/Service/ExAppConfigService.php:45 hasKey()",
+        "  lib/Service/ExAppConfigService.php:75 hasKey()",
+        "  lib/Service/ExAppConfigService.php:82 setValueString()",
+        "  lib/Service/ExAppConfigService.php:105 hasKey()",
+        "  lib/Service/ExAppConfigService.php:123 getKeys()",
+        "  lib/Service/ExAppConfigService.php:140 hasKey()",
+        "  lib/Service/ExAppConfigService.php:163 hasKey()",
+        "  lib/Service/ExAppConfigService.php:186 setValueString()",
+        "  lib/Service/ExAppConfigService.php:207 getValueString()",
+        "  lib/Service/ExAppSetupCheckService.php:46 setValueString()",
+        "  lib/Service/ExAppSetupCheckService.php:53 hasKey()",
+        "  lib/Service/ExAppSetupCheckService.php:79 getKeys()",
+        "  lib/Service/ExAppSetupCheckService.php:98 getValueString()",
+        "  lib/Service/ExAppSetupCheckService.php:108 setValueString()",
+        "  lib/Service/ExAppsPageService.php:49 getValueString()",
+        "  lib/Settings/Admin.php:37 getValueString()",
+        "  lib/Settings/Admin.php:38 getValueString()",
+        "  lib/Settings/Admin.php:39 getValueString()",
+        "  lib/Settings/Admin.php:42 getValueString()",
+        "  lib/SetupChecks/DaemonCheck.php:45 getValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 39
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "POST /ocs/v2.php/apps/app_api/api/v1/log  ocs.app_api.ocsapi.log  appinfo/routes.php:68 ocs",
+        "GET /ocs/v2.php/apps/app_api/api/v1/users  ocs.app_api.ocsapi.getncuserslist  appinfo/routes.php:70 ocs",
+        "PUT /ocs/v2.php/apps/app_api/apps/status/{appId}  ocs.app_api.ocsapi.setappinitprogressdeprecated  appinfo/routes.php:71 ocs",
+        "PUT /ocs/v2.php/apps/app_api/ex-app/status  ocs.app_api.ocsapi.setappinitprogress  appinfo/routes.php:72 ocs",
+        "GET /ocs/v2.php/apps/app_api/ex-app/state  ocs.app_api.ocsapi.getenabledstate  appinfo/routes.php:73 ocs",
+        "GET /ocs/v2.php/apps/app_api/api/v1/info/nextcloud_url/absolute  ocs.app_api.ocsapi.getnextcloudabsoluteurl  appinfo/routes.php:74 ocs",
+        "GET /ocs/v2.php/apps/app_api/api/v1/info/nextcloud_url  ocs.app_api.ocsexapp.getnextcloudurl  appinfo/routes.php:77 ocs",
+        "GET /ocs/v2.php/apps/app_api/api/v1/ex-app/{list}  ocs.app_api.ocsexapp.getexappslist  appinfo/routes.php:78 ocs",
+        "GET /ocs/v2.php/apps/app_api/api/v1/ex-app/info/{appId}  ocs.app_api.ocsexapp.getexapp  appinfo/routes.php:79 ocs",
+        "POST /ocs/v2.php/apps/app_api/api/v1/ex-app/request/{appId}/  ocs.app_api.ocsexapp.requesttoexapp  appinfo/routes.php:82 ocs",
+        "POST /ocs/v2.php/apps/app_api/api/v1/ex-app/request/{appId}/{$userId}  ocs.app_api.ocsexapp.aerequesttoexapp  appinfo/routes.php:83 ocs",
+        "PUT /ocs/v2.php/apps/app_api/api/v1/ex-app/{appId}/enabled  ocs.app_api.ocsexapp.setexappenabled  appinfo/routes.php:86 ocs",
+        "POST /ocs/v2.php/apps/app_api/api/v1/ex-app/config  ocs.app_api.appconfig.setappconfigvalue  appinfo/routes.php:91 ocs",
+        "POST /ocs/v2.php/apps/app_api/api/v1/ex-app/config/get-values  ocs.app_api.appconfig.getappconfigvalues  appinfo/routes.php:92 ocs",
+        "DELETE /ocs/v2.php/apps/app_api/api/v1/ex-app/config  ocs.app_api.appconfig.deleteappconfigvalues  appinfo/routes.php:93 ocs",
+        "POST /ocs/v2.php/apps/app_api/api/v1/ex-app/preference  ocs.app_api.preferences.setuserconfigvalue  appinfo/routes.php:98 ocs",
+        "POST /ocs/v2.php/apps/app_api/api/v1/ex-app/preference/get-values  ocs.app_api.preferences.getuserconfigvalues  appinfo/routes.php:99 ocs",
+        "DELETE /ocs/v2.php/apps/app_api/api/v1/ex-app/preference  ocs.app_api.preferences.deleteuserconfigvalues  appinfo/routes.php:100 ocs",
+        "POST /ocs/v2.php/apps/app_api/api/v1/notification  ocs.app_api.notifications.sendnotification  appinfo/routes.php:103 ocs",
+        "POST /ocs/v2.php/apps/app_api/api/v1/occ_command  ocs.app_api.occcommand.registercommand  appinfo/routes.php:106 ocs",
+        "DELETE /ocs/v2.php/apps/app_api/api/v1/occ_command  ocs.app_api.occcommand.unregistercommand  appinfo/routes.php:107 ocs",
+        "GET /ocs/v2.php/apps/app_api/api/v1/occ_command  ocs.app_api.occcommand.getcommand  appinfo/routes.php:108 ocs",
+        "POST /ocs/v2.php/apps/app_api/api/v1/talk_bot  ocs.app_api.talkbot.registerexapptalkbot  appinfo/routes.php:111 ocs",
+        "DELETE /ocs/v2.php/apps/app_api/api/v1/talk_bot  ocs.app_api.talkbot.unregisterexapptalkbot  appinfo/routes.php:112 ocs",
+        "POST /ocs/v2.php/apps/app_api/api/v1/ui/files-actions-menu  ocs.app_api.ocsui.registerfileactionmenu  appinfo/routes.php:118 ocs",
+        "POST /ocs/v2.php/apps/app_api/api/v2/ui/files-actions-menu  ocs.app_api.ocsui.registerfileactionmenuv2  appinfo/routes.php:119 ocs",
+        "DELETE /ocs/v2.php/apps/app_api/api/v1/ui/files-actions-menu  ocs.app_api.ocsui.unregisterfileactionmenu  appinfo/routes.php:120 ocs",
+        "GET /ocs/v2.php/apps/app_api/api/v1/ui/files-actions-menu  ocs.app_api.ocsui.getfileactionmenu  appinfo/routes.php:121 ocs",
+        "POST /ocs/v2.php/apps/app_api/api/v1/ui/top-menu  ocs.app_api.ocsui.registerexappmenuentry  appinfo/routes.php:124 ocs",
+        "DELETE /ocs/v2.php/apps/app_api/api/v1/ui/top-menu  ocs.app_api.ocsui.unregisterexappmenuentry  appinfo/routes.php:125 ocs",
+        "GET /ocs/v2.php/apps/app_api/api/v1/ui/top-menu  ocs.app_api.ocsui.getexappmenuentry  appinfo/routes.php:126 ocs",
+        "POST /ocs/v2.php/apps/app_api/api/v1/ui/initial-state  ocs.app_api.ocsui.setexappinitialstate  appinfo/routes.php:129 ocs",
+        "DELETE /ocs/v2.php/apps/app_api/api/v1/ui/initial-state  ocs.app_api.ocsui.deleteexappinitialstate  appinfo/routes.php:130 ocs",
+        "GET /ocs/v2.php/apps/app_api/api/v1/ui/initial-state  ocs.app_api.ocsui.getexappinitialstate  appinfo/routes.php:131 ocs",
+        "POST /ocs/v2.php/apps/app_api/api/v1/ui/script  ocs.app_api.ocsui.setexappscript  appinfo/routes.php:132 ocs",
+        "DELETE /ocs/v2.php/apps/app_api/api/v1/ui/script  ocs.app_api.ocsui.deleteexappscript  appinfo/routes.php:133 ocs",
+        "GET /ocs/v2.php/apps/app_api/api/v1/ui/script  ocs.app_api.ocsui.getexappscript  appinfo/routes.php:134 ocs",
+        "POST /ocs/v2.php/apps/app_api/api/v1/ui/style  ocs.app_api.ocsui.setexappstyle  appinfo/routes.php:135 ocs",
+        "DELETE /ocs/v2.php/apps/app_api/api/v1/ui/style  ocs.app_api.ocsui.deleteexappstyle  appinfo/routes.php:136 ocs",
+        "GET /ocs/v2.php/apps/app_api/api/v1/ui/style  ocs.app_api.ocsui.getexappstyle  appinfo/routes.php:137 ocs",
+        "POST /ocs/v2.php/apps/app_api/api/v1/ui/settings  ocs.app_api.ocssettings.registerform  appinfo/routes.php:140 ocs",
+        "DELETE /ocs/v2.php/apps/app_api/api/v1/ui/settings  ocs.app_api.ocssettings.unregisterform  appinfo/routes.php:141 ocs",
+        "GET /ocs/v2.php/apps/app_api/api/v1/ui/settings  ocs.app_api.ocssettings.getform  appinfo/routes.php:142 ocs",
+        "POST /ocs/v2.php/apps/app_api/api/v1/ai_provider/task_processing  ocs.app_api.taskprocessing.registerprovider  appinfo/routes.php:145 ocs",
+        "DELETE /ocs/v2.php/apps/app_api/api/v1/ai_provider/task_processing  ocs.app_api.taskprocessing.unregisterprovider  appinfo/routes.php:146 ocs",
+        "GET /ocs/v2.php/apps/app_api/api/v1/ai_provider/task_processing  ocs.app_api.taskprocessing.getprovider  appinfo/routes.php:147 ocs",
+        "POST /ocs/v2.php/apps/app_api/api/v1/setup_check  ocs.app_api.setupcheck.registerchecks  appinfo/routes.php:150 ocs",
+        "DELETE /ocs/v2.php/apps/app_api/api/v1/setup_check  ocs.app_api.setupcheck.unregisterchecks  appinfo/routes.php:151 ocs"
+      ],
+      "lines": [
+        "Nothing in the app calls 48 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  POST /ocs/v2.php/apps/app_api/api/v1/log  ocs.app_api.ocsapi.log  appinfo/routes.php:68 ocs",
+        "  GET /ocs/v2.php/apps/app_api/api/v1/users  ocs.app_api.ocsapi.getncuserslist  appinfo/routes.php:70 ocs",
+        "  PUT /ocs/v2.php/apps/app_api/apps/status/{appId}  ocs.app_api.ocsapi.setappinitprogressdeprecated  appinfo/routes.php:71 ocs",
+        "  PUT /ocs/v2.php/apps/app_api/ex-app/status  ocs.app_api.ocsapi.setappinitprogress  appinfo/routes.php:72 ocs",
+        "  GET /ocs/v2.php/apps/app_api/ex-app/state  ocs.app_api.ocsapi.getenabledstate  appinfo/routes.php:73 ocs",
+        "  GET /ocs/v2.php/apps/app_api/api/v1/info/nextcloud_url/absolute  ocs.app_api.ocsapi.getnextcloudabsoluteurl  appinfo/routes.php:74 ocs",
+        "  GET /ocs/v2.php/apps/app_api/api/v1/info/nextcloud_url  ocs.app_api.ocsexapp.getnextcloudurl  appinfo/routes.php:77 ocs",
+        "  GET /ocs/v2.php/apps/app_api/api/v1/ex-app/{list}  ocs.app_api.ocsexapp.getexappslist  appinfo/routes.php:78 ocs",
+        "  GET /ocs/v2.php/apps/app_api/api/v1/ex-app/info/{appId}  ocs.app_api.ocsexapp.getexapp  appinfo/routes.php:79 ocs",
+        "  POST /ocs/v2.php/apps/app_api/api/v1/ex-app/request/{appId}/  ocs.app_api.ocsexapp.requesttoexapp  appinfo/routes.php:82 ocs",
+        "  POST /ocs/v2.php/apps/app_api/api/v1/ex-app/request/{appId}/{$userId}  ocs.app_api.ocsexapp.aerequesttoexapp  appinfo/routes.php:83 ocs",
+        "  PUT /ocs/v2.php/apps/app_api/api/v1/ex-app/{appId}/enabled  ocs.app_api.ocsexapp.setexappenabled  appinfo/routes.php:86 ocs",
+        "  POST /ocs/v2.php/apps/app_api/api/v1/ex-app/config  ocs.app_api.appconfig.setappconfigvalue  appinfo/routes.php:91 ocs",
+        "  POST /ocs/v2.php/apps/app_api/api/v1/ex-app/config/get-values  ocs.app_api.appconfig.getappconfigvalues  appinfo/routes.php:92 ocs",
+        "  DELETE /ocs/v2.php/apps/app_api/api/v1/ex-app/config  ocs.app_api.appconfig.deleteappconfigvalues  appinfo/routes.php:93 ocs",
+        "  POST /ocs/v2.php/apps/app_api/api/v1/ex-app/preference  ocs.app_api.preferences.setuserconfigvalue  appinfo/routes.php:98 ocs",
+        "  POST /ocs/v2.php/apps/app_api/api/v1/ex-app/preference/get-values  ocs.app_api.preferences.getuserconfigvalues  appinfo/routes.php:99 ocs",
+        "  DELETE /ocs/v2.php/apps/app_api/api/v1/ex-app/preference  ocs.app_api.preferences.deleteuserconfigvalues  appinfo/routes.php:100 ocs",
+        "  POST /ocs/v2.php/apps/app_api/api/v1/notification  ocs.app_api.notifications.sendnotification  appinfo/routes.php:103 ocs",
+        "  POST /ocs/v2.php/apps/app_api/api/v1/occ_command  ocs.app_api.occcommand.registercommand  appinfo/routes.php:106 ocs",
+        "  DELETE /ocs/v2.php/apps/app_api/api/v1/occ_command  ocs.app_api.occcommand.unregistercommand  appinfo/routes.php:107 ocs",
+        "  GET /ocs/v2.php/apps/app_api/api/v1/occ_command  ocs.app_api.occcommand.getcommand  appinfo/routes.php:108 ocs",
+        "  POST /ocs/v2.php/apps/app_api/api/v1/talk_bot  ocs.app_api.talkbot.registerexapptalkbot  appinfo/routes.php:111 ocs",
+        "  DELETE /ocs/v2.php/apps/app_api/api/v1/talk_bot  ocs.app_api.talkbot.unregisterexapptalkbot  appinfo/routes.php:112 ocs",
+        "  POST /ocs/v2.php/apps/app_api/api/v1/ui/files-actions-menu  ocs.app_api.ocsui.registerfileactionmenu  appinfo/routes.php:118 ocs",
+        "  POST /ocs/v2.php/apps/app_api/api/v2/ui/files-actions-menu  ocs.app_api.ocsui.registerfileactionmenuv2  appinfo/routes.php:119 ocs",
+        "  DELETE /ocs/v2.php/apps/app_api/api/v1/ui/files-actions-menu  ocs.app_api.ocsui.unregisterfileactionmenu  appinfo/routes.php:120 ocs",
+        "  GET /ocs/v2.php/apps/app_api/api/v1/ui/files-actions-menu  ocs.app_api.ocsui.getfileactionmenu  appinfo/routes.php:121 ocs",
+        "  POST /ocs/v2.php/apps/app_api/api/v1/ui/top-menu  ocs.app_api.ocsui.registerexappmenuentry  appinfo/routes.php:124 ocs",
+        "  DELETE /ocs/v2.php/apps/app_api/api/v1/ui/top-menu  ocs.app_api.ocsui.unregisterexappmenuentry  appinfo/routes.php:125 ocs",
+        "  GET /ocs/v2.php/apps/app_api/api/v1/ui/top-menu  ocs.app_api.ocsui.getexappmenuentry  appinfo/routes.php:126 ocs",
+        "  POST /ocs/v2.php/apps/app_api/api/v1/ui/initial-state  ocs.app_api.ocsui.setexappinitialstate  appinfo/routes.php:129 ocs",
+        "  DELETE /ocs/v2.php/apps/app_api/api/v1/ui/initial-state  ocs.app_api.ocsui.deleteexappinitialstate  appinfo/routes.php:130 ocs",
+        "  GET /ocs/v2.php/apps/app_api/api/v1/ui/initial-state  ocs.app_api.ocsui.getexappinitialstate  appinfo/routes.php:131 ocs",
+        "  POST /ocs/v2.php/apps/app_api/api/v1/ui/script  ocs.app_api.ocsui.setexappscript  appinfo/routes.php:132 ocs",
+        "  DELETE /ocs/v2.php/apps/app_api/api/v1/ui/script  ocs.app_api.ocsui.deleteexappscript  appinfo/routes.php:133 ocs",
+        "  GET /ocs/v2.php/apps/app_api/api/v1/ui/script  ocs.app_api.ocsui.getexappscript  appinfo/routes.php:134 ocs",
+        "  POST /ocs/v2.php/apps/app_api/api/v1/ui/style  ocs.app_api.ocsui.setexappstyle  appinfo/routes.php:135 ocs",
+        "  DELETE /ocs/v2.php/apps/app_api/api/v1/ui/style  ocs.app_api.ocsui.deleteexappstyle  appinfo/routes.php:136 ocs",
+        "  GET /ocs/v2.php/apps/app_api/api/v1/ui/style  ocs.app_api.ocsui.getexappstyle  appinfo/routes.php:137 ocs",
+        "  POST /ocs/v2.php/apps/app_api/api/v1/ui/settings  ocs.app_api.ocssettings.registerform  appinfo/routes.php:140 ocs",
+        "  DELETE /ocs/v2.php/apps/app_api/api/v1/ui/settings  ocs.app_api.ocssettings.unregisterform  appinfo/routes.php:141 ocs",
+        "  GET /ocs/v2.php/apps/app_api/api/v1/ui/settings  ocs.app_api.ocssettings.getform  appinfo/routes.php:142 ocs",
+        "  POST /ocs/v2.php/apps/app_api/api/v1/ai_provider/task_processing  ocs.app_api.taskprocessing.registerprovider  appinfo/routes.php:145 ocs",
+        "  DELETE /ocs/v2.php/apps/app_api/api/v1/ai_provider/task_processing  ocs.app_api.taskprocessing.unregisterprovider  appinfo/routes.php:146 ocs",
+        "  GET /ocs/v2.php/apps/app_api/api/v1/ai_provider/task_processing  ocs.app_api.taskprocessing.getprovider  appinfo/routes.php:147 ocs",
+        "  POST /ocs/v2.php/apps/app_api/api/v1/setup_check  ocs.app_api.setupcheck.registerchecks  appinfo/routes.php:150 ocs",
+        "  DELETE /ocs/v2.php/apps/app_api/api/v1/setup_check  ocs.app_api.setupcheck.unregisterchecks  appinfo/routes.php:151 ocs"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 45
+        }
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version035000Date20260529130000.php:52 dropTable() on a table whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version035000Date20260529130000.php:52 dropTable() on a table whose name is no constant"
+      ]
+    }
+  ],
+  "endpoints": 81,
+  "endpointList": [
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/app_api/admin-config",
+      "target": "OCA\\AppAPI\\Controller\\ConfigController::setAdminConfig",
+      "openapi": [
+        "administration"
+      ],
+      "source": "appinfo/routes.php:13 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/app_api/apps/categories",
+      "target": "OCA\\AppAPI\\Controller\\ExAppsPageController::listCategories",
+      "openapi": [
+        "administration"
+      ],
+      "source": "appinfo/routes.php:35 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/app_api/apps/deploy-options/{appId}",
+      "target": "OCA\\AppAPI\\Controller\\ExAppsPageController::getAppDeployOptions",
+      "openapi": [
+        "administration"
+      ],
+      "source": "appinfo/routes.php:41 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/app_api/apps/disable/{appId}",
+      "target": "OCA\\AppAPI\\Controller\\ExAppsPageController::disableApp",
+      "openapi": [
+        "administration"
+      ],
+      "source": "appinfo/routes.php:42 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/app_api/apps/enable/{appId}/{daemonId}",
+      "target": "OCA\\AppAPI\\Controller\\ExAppsPageController::enableApp",
+      "openapi": [
+        "administration"
+      ],
+      "source": "appinfo/routes.php:37 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/app_api/apps/enable/{appId}/{daemonId}",
+      "target": "OCA\\AppAPI\\Controller\\ExAppsPageController::enableApp",
+      "openapi": [
+        "administration"
+      ],
+      "source": "appinfo/routes.php:38 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/app_api/apps/force",
+      "target": "OCA\\AppAPI\\Controller\\ExAppsPageController::force",
+      "openapi": [
+        "administration"
+      ],
+      "source": "appinfo/routes.php:45 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/app_api/apps/list",
+      "target": "OCA\\AppAPI\\Controller\\ExAppsPageController::listApps",
+      "openapi": [
+        "administration"
+      ],
+      "source": "appinfo/routes.php:36 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/app_api/apps/logs/{appId}",
+      "target": "OCA\\AppAPI\\Controller\\ExAppsPageController::getAppLogs",
+      "openapi": [
+        "administration"
+      ],
+      "source": "appinfo/routes.php:40 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/app_api/apps/status/{appId}",
+      "target": "OCA\\AppAPI\\Controller\\ExAppsPageController::getAppStatus",
+      "openapi": [
+        "administration"
+      ],
+      "source": "appinfo/routes.php:39 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/app_api/apps/uninstall/{appId}",
+      "target": "OCA\\AppAPI\\Controller\\ExAppsPageController::uninstallApp",
+      "openapi": [
+        "administration"
+      ],
+      "source": "appinfo/routes.php:44 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/app_api/apps/update/{appId}",
+      "target": "OCA\\AppAPI\\Controller\\ExAppsPageController::updateApp",
+      "openapi": [
+        "administration"
+      ],
+      "source": "appinfo/routes.php:43 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/app_api/daemons",
+      "target": "OCA\\AppAPI\\Controller\\DaemonConfigController::getAllDaemonConfigs",
+      "openapi": [
+        "administration"
+      ],
+      "source": "appinfo/routes.php:48 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/app_api/daemons",
+      "target": "OCA\\AppAPI\\Controller\\DaemonConfigController::registerDaemonConfig",
+      "openapi": [
+        "administration"
+      ],
+      "source": "appinfo/routes.php:49 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/app_api/daemons/{name}",
+      "target": "OCA\\AppAPI\\Controller\\DaemonConfigController::unregisterDaemonConfig",
+      "openapi": [
+        "administration"
+      ],
+      "source": "appinfo/routes.php:50 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/app_api/daemons/{name}",
+      "target": "OCA\\AppAPI\\Controller\\DaemonConfigController::updateDaemonConfig",
+      "openapi": [
+        "administration"
+      ],
+      "source": "appinfo/routes.php:53 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/app_api/daemons/{name}/add-registry",
+      "target": "OCA\\AppAPI\\Controller\\DaemonConfigController::addDaemonDockerRegistry",
+      "openapi": [
+        "administration"
+      ],
+      "source": "appinfo/routes.php:54 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/app_api/daemons/{name}/check",
+      "target": "OCA\\AppAPI\\Controller\\DaemonConfigController::verifyDaemonConnection",
+      "openapi": [
+        "administration"
+      ],
+      "source": "appinfo/routes.php:51 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/app_api/daemons/{name}/remove-registry",
+      "target": "OCA\\AppAPI\\Controller\\DaemonConfigController::removeDaemonDockerRegistry",
+      "openapi": [
+        "administration"
+      ],
+      "source": "appinfo/routes.php:55 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/app_api/daemons/{name}/test_deploy",
+      "target": "OCA\\AppAPI\\Controller\\DaemonConfigController::stopTestDeploy",
+      "openapi": [
+        "administration"
+      ],
+      "source": "appinfo/routes.php:59 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/app_api/daemons/{name}/test_deploy",
+      "target": "OCA\\AppAPI\\Controller\\DaemonConfigController::startTestDeploy",
+      "openapi": [
+        "administration"
+      ],
+      "source": "appinfo/routes.php:58 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/app_api/daemons/{name}/test_deploy/status",
+      "target": "OCA\\AppAPI\\Controller\\DaemonConfigController::getTestDeployStatus",
+      "openapi": [
+        "administration"
+      ],
+      "source": "appinfo/routes.php:60 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/app_api/daemons/verify_connection",
+      "target": "OCA\\AppAPI\\Controller\\DaemonConfigController::checkDaemonConnection",
+      "openapi": [
+        "administration"
+      ],
+      "source": "appinfo/routes.php:52 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/app_api/embedded/{appId}/{name}/{other}",
+      "target": "OCA\\AppAPI\\Controller\\TopMenuController::viewExAppPage",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:16 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/app_api/harp/exapp-meta",
+      "target": "OCA\\AppAPI\\Controller\\HarpController::getExAppMetadata",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:63 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/app_api/harp/user-info",
+      "target": "OCA\\AppAPI\\Controller\\HarpController::getUserInfo",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:64 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/app_api/proxy/{appId}/{other}",
+      "target": "OCA\\AppAPI\\Controller\\ExAppProxyController::ExAppDelete",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:30 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/app_api/proxy/{appId}/{other}",
+      "target": "OCA\\AppAPI\\Controller\\ExAppProxyController::ExAppGet",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:21 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/app_api/proxy/{appId}/{other}",
+      "target": "OCA\\AppAPI\\Controller\\ExAppProxyController::ExAppPost",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:24 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/app_api/proxy/{appId}/{other}",
+      "target": "OCA\\AppAPI\\Controller\\ExAppProxyController::ExAppPut",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:27 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ai_provider/task_processing",
+      "target": "OCA\\AppAPI\\Controller\\TaskProcessingController::unregisterProvider",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:146 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ai_provider/task_processing",
+      "target": "OCA\\AppAPI\\Controller\\TaskProcessingController::getProvider",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:147 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ai_provider/task_processing",
+      "target": "OCA\\AppAPI\\Controller\\TaskProcessingController::registerProvider",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:145 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ex-app/{appId}/enabled",
+      "target": "OCA\\AppAPI\\Controller\\OCSExAppController::setExAppEnabled",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:86 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ex-app/{list}",
+      "target": "OCA\\AppAPI\\Controller\\OCSExAppController::getExAppsList",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:78 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ex-app/config",
+      "target": "OCA\\AppAPI\\Controller\\AppConfigController::deleteAppConfigValues",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:93 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ex-app/config",
+      "target": "OCA\\AppAPI\\Controller\\AppConfigController::setAppConfigValue",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:91 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ex-app/config/get-values",
+      "target": "OCA\\AppAPI\\Controller\\AppConfigController::getAppConfigValues",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:92 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ex-app/info/{appId}",
+      "target": "OCA\\AppAPI\\Controller\\OCSExAppController::getExApp",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:79 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ex-app/preference",
+      "target": "OCA\\AppAPI\\Controller\\PreferencesController::deleteUserConfigValues",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:100 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ex-app/preference",
+      "target": "OCA\\AppAPI\\Controller\\PreferencesController::setUserConfigValue",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:98 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ex-app/preference/get-values",
+      "target": "OCA\\AppAPI\\Controller\\PreferencesController::getUserConfigValues",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:99 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ex-app/request/{appId}/",
+      "target": "OCA\\AppAPI\\Controller\\OCSExAppController::requestToExApp",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:82 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ex-app/request/{appId}/{$userId}",
+      "target": "OCA\\AppAPI\\Controller\\OCSExAppController::aeRequestToExApp",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:83 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/info/nextcloud_url",
+      "target": "OCA\\AppAPI\\Controller\\OCSExAppController::getNextcloudUrl",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:77 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/info/nextcloud_url/absolute",
+      "target": "OCA\\AppAPI\\Controller\\OCSApiController::getNextcloudAbsoluteUrl",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:74 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/log",
+      "target": "OCA\\AppAPI\\Controller\\OCSApiController::log",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:68 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/notification",
+      "target": "OCA\\AppAPI\\Controller\\NotificationsController::sendNotification",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:103 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/occ_command",
+      "target": "OCA\\AppAPI\\Controller\\OccCommandController::unregisterCommand",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:107 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/occ_command",
+      "target": "OCA\\AppAPI\\Controller\\OccCommandController::getCommand",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:108 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/occ_command",
+      "target": "OCA\\AppAPI\\Controller\\OccCommandController::registerCommand",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:106 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/setup_check",
+      "target": "OCA\\AppAPI\\Controller\\SetupCheckController::unregisterChecks",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:151 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/setup_check",
+      "target": "OCA\\AppAPI\\Controller\\SetupCheckController::registerChecks",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:150 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/talk_bot",
+      "target": "OCA\\AppAPI\\Controller\\TalkBotController::unregisterExAppTalkBot",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:112 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/talk_bot",
+      "target": "OCA\\AppAPI\\Controller\\TalkBotController::registerExAppTalkBot",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:111 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/talk_proxy/{appId}/{route}",
+      "target": "OCA\\AppAPI\\Controller\\TalkBotController::proxyTalkMessage",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:113 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ui/files-actions-menu",
+      "target": "OCA\\AppAPI\\Controller\\OCSUiController::unregisterFileActionMenu",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:120 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ui/files-actions-menu",
+      "target": "OCA\\AppAPI\\Controller\\OCSUiController::getFileActionMenu",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:121 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ui/files-actions-menu",
+      "target": "OCA\\AppAPI\\Controller\\OCSUiController::registerFileActionMenu",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:118 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ui/initial-state",
+      "target": "OCA\\AppAPI\\Controller\\OCSUiController::deleteExAppInitialState",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:130 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ui/initial-state",
+      "target": "OCA\\AppAPI\\Controller\\OCSUiController::getExAppInitialState",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:131 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ui/initial-state",
+      "target": "OCA\\AppAPI\\Controller\\OCSUiController::setExAppInitialState",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:129 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ui/script",
+      "target": "OCA\\AppAPI\\Controller\\OCSUiController::deleteExAppScript",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:133 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ui/script",
+      "target": "OCA\\AppAPI\\Controller\\OCSUiController::getExAppScript",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:134 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ui/script",
+      "target": "OCA\\AppAPI\\Controller\\OCSUiController::setExAppScript",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:132 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ui/settings",
+      "target": "OCA\\AppAPI\\Controller\\OCSSettingsController::unregisterForm",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:141 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ui/settings",
+      "target": "OCA\\AppAPI\\Controller\\OCSSettingsController::getForm",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:142 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ui/settings",
+      "target": "OCA\\AppAPI\\Controller\\OCSSettingsController::registerForm",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:140 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ui/style",
+      "target": "OCA\\AppAPI\\Controller\\OCSUiController::deleteExAppStyle",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:136 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ui/style",
+      "target": "OCA\\AppAPI\\Controller\\OCSUiController::getExAppStyle",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:137 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ui/style",
+      "target": "OCA\\AppAPI\\Controller\\OCSUiController::setExAppStyle",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:135 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ui/top-menu",
+      "target": "OCA\\AppAPI\\Controller\\OCSUiController::unregisterExAppMenuEntry",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:125 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ui/top-menu",
+      "target": "OCA\\AppAPI\\Controller\\OCSUiController::getExAppMenuEntry",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:126 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/ui/top-menu",
+      "target": "OCA\\AppAPI\\Controller\\OCSUiController::registerExAppMenuEntry",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:124 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/app_api/api/v1/users",
+      "target": "OCA\\AppAPI\\Controller\\OCSApiController::getNCUsersList",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:70 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/app_api/api/v2/ui/files-actions-menu",
+      "target": "OCA\\AppAPI\\Controller\\OCSUiController::registerFileActionMenuV2",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:119 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/app_api/apps/status/{appId}",
+      "target": "OCA\\AppAPI\\Controller\\OCSApiController::setAppInitProgressDeprecated",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:71 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/app_api/ex-app/state",
+      "target": "OCA\\AppAPI\\Controller\\OCSApiController::getEnabledState",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:73 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/app_api/ex-app/status",
+      "target": "OCA\\AppAPI\\Controller\\OCSApiController::setAppInitProgress",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:72 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/capabilities",
+      "target": "OCA\\AppAPI\\Capabilities",
+      "openapi": [],
+      "source": "lib/AppInfo/Application.php:64",
+      "kind": "capability"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/capabilities",
+      "target": "OCA\\AppAPI\\PublicCapabilities",
+      "openapi": [],
+      "source": "lib/AppInfo/Application.php:65",
+      "kind": "capability"
+    }
+  ]
+}

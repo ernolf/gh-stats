@@ -1,0 +1,451 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Jukebox\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Service/MusicScannerService.php:65",
+        "lib/Service/RadioSourcesService.php:63",
+        "lib/Service/VideoScannerService.php:65"
+      ],
+      "lines": [
+        "3 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Service/MusicScannerService.php:65",
+        "  lib/Service/RadioSourcesService.php:63",
+        "  lib/Service/VideoScannerService.php:65"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/Cron/FetchPodcastEpisodesTask.php OCA\\Jukebox\\Cron\\FetchPodcastEpisodesTask"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/Cron/FetchPodcastEpisodesTask.php OCA\\Jukebox\\Cron\\FetchPodcastEpisodesTask"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/PodcastController.php:123 new DateTime()",
+        "lib/Controller/RadioController.php:119 time()",
+        "lib/Controller/RadioController.php:181 time()",
+        "lib/Controller/RadioController.php:266 time()",
+        "lib/Controller/RadioController.php:369 time()",
+        "lib/Service/PodcastSubscriptionWriterService.php:29 new DateTime()",
+        "lib/Service/RadioSourcesService.php:86 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 7 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/PodcastController.php:123 new DateTime()",
+        "  lib/Controller/RadioController.php:119 time()",
+        "  lib/Controller/RadioController.php:181 time()",
+        "  lib/Controller/RadioController.php:266 time()",
+        "  lib/Controller/RadioController.php:369 time()",
+        "  lib/Service/PodcastSubscriptionWriterService.php:29 new DateTime()",
+        "  lib/Service/RadioSourcesService.php:86 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/MusicScannerService.php:68 getValueString()",
+        "lib/Service/SettingsService.php:28 setValueString()",
+        "lib/Service/SettingsService.php:33 getValueString()",
+        "lib/Service/SettingsService.php:38 setValueBool()",
+        "lib/Service/SettingsService.php:43 getValueBool()",
+        "lib/Service/VideoScannerService.php:68 getValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 6 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/MusicScannerService.php:68 getValueString()",
+        "  lib/Service/SettingsService.php:28 setValueString()",
+        "  lib/Service/SettingsService.php:33 getValueString()",
+        "  lib/Service/SettingsService.php:38 setValueBool()",
+        "  lib/Service/SettingsService.php:43 getValueBool()",
+        "  lib/Service/VideoScannerService.php:68 getValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/jukebox/api/music/tracks  ocs.jukebox.music.listtracks  lib/Controller/MusicController.php:49",
+        "GET /ocs/v2.php/apps/jukebox/api/music/tracks/{id}/stream  ocs.jukebox.music.streamtrack  lib/Controller/MusicController.php:77",
+        "GET /ocs/v2.php/apps/jukebox/api/music/albums  ocs.jukebox.music.listalbums  lib/Controller/MusicController.php:119",
+        "GET /ocs/v2.php/apps/jukebox/api/music/albums/{artist}/{album}  ocs.jukebox.music.getalbumbyid  lib/Controller/MusicController.php:170",
+        "GET /ocs/v2.php/apps/jukebox/api/music/artists  ocs.jukebox.music.listartists  lib/Controller/MusicController.php:226",
+        "GET /ocs/v2.php/apps/jukebox/api/music/artists/{id}  ocs.jukebox.music.getartistbyid  lib/Controller/MusicController.php:258",
+        "GET /ocs/v2.php/apps/jukebox/api/podcasts/subscriptions  ocs.jukebox.podcast.getsubscriptions  lib/Controller/PodcastController.php:70",
+        "POST /ocs/v2.php/apps/jukebox/api/podcasts/subscriptions  ocs.jukebox.podcast.subscribe  lib/Controller/PodcastController.php:104",
+        "POST /ocs/v2.php/apps/jukebox/api/podcasts/track  ocs.jukebox.podcast.trackaction  lib/Controller/PodcastController.php:180",
+        "GET /ocs/v2.php/apps/jukebox/api/podcasts/next  ocs.jukebox.podcast.getnextepisodes  lib/Controller/PodcastController.php:233",
+        "GET /ocs/v2.php/apps/jukebox/api/podcasts/subscriptions/{id}  ocs.jukebox.podcast.getsubscription  lib/Controller/PodcastController.php:293",
+        "GET /ocs/v2.php/apps/jukebox/api/podcasts/subscriptions/{id}/episodes  ocs.jukebox.podcast.getepisodesforsubscription  lib/Controller/PodcastController.php:322",
+        "GET /ocs/v2.php/apps/jukebox/api/podcasts/episodes/{id}/stream  ocs.jukebox.podcast.streamepisode  lib/Controller/PodcastController.php:377",
+        "GET /ocs/v2.php/apps/jukebox/api/podcasts/episodes/{id}/position  ocs.jukebox.podcast.getepisodeposition  lib/Controller/PodcastController.php:570",
+        "GET /ocs/v2.php/apps/jukebox/api/radio/stations  ocs.jukebox.radio.index  lib/Controller/RadioController.php:51",
+        "GET /ocs/v2.php/apps/jukebox/api/radio/favorites  ocs.jukebox.radio.favorites  lib/Controller/RadioController.php:72",
+        "GET /ocs/v2.php/apps/jukebox/api/radio/search/{name}  ocs.jukebox.radio.search  lib/Controller/RadioController.php:92",
+        "GET /ocs/v2.php/apps/jukebox/api/radio/{uuid}  ocs.jukebox.radio.getbyuuid  lib/Controller/RadioController.php:141",
+        "POST /ocs/v2.php/apps/jukebox/api/radio/stations  ocs.jukebox.radio.addbyuuid  lib/Controller/RadioController.php:161",
+        "PUT /ocs/v2.php/apps/jukebox/api/radio/stations/{uuid}  ocs.jukebox.radio.updatebyuuid  lib/Controller/RadioController.php:207",
+        "DELETE /ocs/v2.php/apps/jukebox/api/radio/stations/{uuid}  ocs.jukebox.radio.deletebyuuid  lib/Controller/RadioController.php:289",
+        "GET /ocs/v2.php/apps/jukebox/api/radio/{uuid}/stream  ocs.jukebox.radio.streambyuuid  lib/Controller/RadioController.php:324",
+        "PUT /ocs/v2.php/apps/jukebox/api/settings  ocs.jukebox.settings.savesettings  lib/Controller/SettingsController.php:39",
+        "GET /ocs/v2.php/apps/jukebox/api/settings  ocs.jukebox.settings.getsettings  lib/Controller/SettingsController.php:72",
+        "GET /ocs/v2.php/apps/jukebox/api/video  ocs.jukebox.video.index  lib/Controller/VideoController.php:51",
+        "GET /ocs/v2.php/apps/jukebox/api/video/{id}  ocs.jukebox.video.show  lib/Controller/VideoController.php:74"
+      ],
+      "lines": [
+        "Nothing in the app calls 26 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/jukebox/api/music/tracks  ocs.jukebox.music.listtracks  lib/Controller/MusicController.php:49",
+        "  GET /ocs/v2.php/apps/jukebox/api/music/tracks/{id}/stream  ocs.jukebox.music.streamtrack  lib/Controller/MusicController.php:77",
+        "  GET /ocs/v2.php/apps/jukebox/api/music/albums  ocs.jukebox.music.listalbums  lib/Controller/MusicController.php:119",
+        "  GET /ocs/v2.php/apps/jukebox/api/music/albums/{artist}/{album}  ocs.jukebox.music.getalbumbyid  lib/Controller/MusicController.php:170",
+        "  GET /ocs/v2.php/apps/jukebox/api/music/artists  ocs.jukebox.music.listartists  lib/Controller/MusicController.php:226",
+        "  GET /ocs/v2.php/apps/jukebox/api/music/artists/{id}  ocs.jukebox.music.getartistbyid  lib/Controller/MusicController.php:258",
+        "  GET /ocs/v2.php/apps/jukebox/api/podcasts/subscriptions  ocs.jukebox.podcast.getsubscriptions  lib/Controller/PodcastController.php:70",
+        "  POST /ocs/v2.php/apps/jukebox/api/podcasts/subscriptions  ocs.jukebox.podcast.subscribe  lib/Controller/PodcastController.php:104",
+        "  POST /ocs/v2.php/apps/jukebox/api/podcasts/track  ocs.jukebox.podcast.trackaction  lib/Controller/PodcastController.php:180",
+        "  GET /ocs/v2.php/apps/jukebox/api/podcasts/next  ocs.jukebox.podcast.getnextepisodes  lib/Controller/PodcastController.php:233",
+        "  GET /ocs/v2.php/apps/jukebox/api/podcasts/subscriptions/{id}  ocs.jukebox.podcast.getsubscription  lib/Controller/PodcastController.php:293",
+        "  GET /ocs/v2.php/apps/jukebox/api/podcasts/subscriptions/{id}/episodes  ocs.jukebox.podcast.getepisodesforsubscription  lib/Controller/PodcastController.php:322",
+        "  GET /ocs/v2.php/apps/jukebox/api/podcasts/episodes/{id}/stream  ocs.jukebox.podcast.streamepisode  lib/Controller/PodcastController.php:377",
+        "  GET /ocs/v2.php/apps/jukebox/api/podcasts/episodes/{id}/position  ocs.jukebox.podcast.getepisodeposition  lib/Controller/PodcastController.php:570",
+        "  GET /ocs/v2.php/apps/jukebox/api/radio/stations  ocs.jukebox.radio.index  lib/Controller/RadioController.php:51",
+        "  GET /ocs/v2.php/apps/jukebox/api/radio/favorites  ocs.jukebox.radio.favorites  lib/Controller/RadioController.php:72",
+        "  GET /ocs/v2.php/apps/jukebox/api/radio/search/{name}  ocs.jukebox.radio.search  lib/Controller/RadioController.php:92",
+        "  GET /ocs/v2.php/apps/jukebox/api/radio/{uuid}  ocs.jukebox.radio.getbyuuid  lib/Controller/RadioController.php:141",
+        "  POST /ocs/v2.php/apps/jukebox/api/radio/stations  ocs.jukebox.radio.addbyuuid  lib/Controller/RadioController.php:161",
+        "  PUT /ocs/v2.php/apps/jukebox/api/radio/stations/{uuid}  ocs.jukebox.radio.updatebyuuid  lib/Controller/RadioController.php:207",
+        "  DELETE /ocs/v2.php/apps/jukebox/api/radio/stations/{uuid}  ocs.jukebox.radio.deletebyuuid  lib/Controller/RadioController.php:289",
+        "  GET /ocs/v2.php/apps/jukebox/api/radio/{uuid}/stream  ocs.jukebox.radio.streambyuuid  lib/Controller/RadioController.php:324",
+        "  PUT /ocs/v2.php/apps/jukebox/api/settings  ocs.jukebox.settings.savesettings  lib/Controller/SettingsController.php:39",
+        "  GET /ocs/v2.php/apps/jukebox/api/settings  ocs.jukebox.settings.getsettings  lib/Controller/SettingsController.php:72",
+        "  GET /ocs/v2.php/apps/jukebox/api/video  ocs.jukebox.video.index  lib/Controller/VideoController.php:51",
+        "  GET /ocs/v2.php/apps/jukebox/api/video/{id}  ocs.jukebox.video.show  lib/Controller/VideoController.php:74"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 23
+        }
+      ]
+    }
+  ],
+  "endpoints": 28,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/jukebox/",
+      "target": "OCA\\Jukebox\\Controller\\PageController::index",
+      "openapi": [],
+      "source": "lib/Controller/PageController.php:35",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/jukebox/api/music/albums",
+      "target": "OCA\\Jukebox\\Controller\\MusicController::listAlbums",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/MusicController.php:119",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/jukebox/api/music/albums/{artist}/{album}",
+      "target": "OCA\\Jukebox\\Controller\\MusicController::getAlbumById",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/MusicController.php:170",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/jukebox/api/music/artists",
+      "target": "OCA\\Jukebox\\Controller\\MusicController::listArtists",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/MusicController.php:226",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/jukebox/api/music/artists/{id}",
+      "target": "OCA\\Jukebox\\Controller\\MusicController::getArtistById",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/MusicController.php:258",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/jukebox/api/music/tracks",
+      "target": "OCA\\Jukebox\\Controller\\MusicController::listTracks",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/MusicController.php:49",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/jukebox/api/music/tracks/{id}/stream",
+      "target": "OCA\\Jukebox\\Controller\\MusicController::streamTrack",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/MusicController.php:77",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/jukebox/api/podcasts/episodes/{id}/position",
+      "target": "OCA\\Jukebox\\Controller\\PodcastController::getEpisodePosition",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/PodcastController.php:570",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/jukebox/api/podcasts/episodes/{id}/stream",
+      "target": "OCA\\Jukebox\\Controller\\PodcastController::streamEpisode",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/PodcastController.php:377",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/jukebox/api/podcasts/next",
+      "target": "OCA\\Jukebox\\Controller\\PodcastController::getNextEpisodes",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/PodcastController.php:233",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/jukebox/api/podcasts/subscriptions",
+      "target": "OCA\\Jukebox\\Controller\\PodcastController::getSubscriptions",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/PodcastController.php:70",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/jukebox/api/podcasts/subscriptions",
+      "target": "OCA\\Jukebox\\Controller\\PodcastController::subscribe",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/PodcastController.php:104",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/jukebox/api/podcasts/subscriptions/{id}",
+      "target": "OCA\\Jukebox\\Controller\\PodcastController::getSubscription",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/PodcastController.php:293",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/jukebox/api/podcasts/subscriptions/{id}/episodes",
+      "target": "OCA\\Jukebox\\Controller\\PodcastController::getEpisodesForSubscription",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/PodcastController.php:322",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/jukebox/api/podcasts/track",
+      "target": "OCA\\Jukebox\\Controller\\PodcastController::trackAction",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/PodcastController.php:180",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/jukebox/api/radio/{uuid}",
+      "target": "OCA\\Jukebox\\Controller\\RadioController::getByUuid",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/RadioController.php:141",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/jukebox/api/radio/{uuid}/stream",
+      "target": "OCA\\Jukebox\\Controller\\RadioController::streamByUuid",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/RadioController.php:324",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/jukebox/api/radio/favorites",
+      "target": "OCA\\Jukebox\\Controller\\RadioController::favorites",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/RadioController.php:72",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/jukebox/api/radio/search/{name}",
+      "target": "OCA\\Jukebox\\Controller\\RadioController::search",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/RadioController.php:92",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/jukebox/api/radio/stations",
+      "target": "OCA\\Jukebox\\Controller\\RadioController::index",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/RadioController.php:51",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/jukebox/api/radio/stations",
+      "target": "OCA\\Jukebox\\Controller\\RadioController::addByUuid",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/RadioController.php:161",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/jukebox/api/radio/stations/{uuid}",
+      "target": "OCA\\Jukebox\\Controller\\RadioController::deleteByUuid",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/RadioController.php:289",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/jukebox/api/radio/stations/{uuid}",
+      "target": "OCA\\Jukebox\\Controller\\RadioController::updateByUuid",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/RadioController.php:207",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/jukebox/api/settings",
+      "target": "OCA\\Jukebox\\Controller\\SettingsController::getSettings",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SettingsController.php:72",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/jukebox/api/settings",
+      "target": "OCA\\Jukebox\\Controller\\SettingsController::saveSettings",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/SettingsController.php:39",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/jukebox/api/video",
+      "target": "OCA\\Jukebox\\Controller\\VideoController::index",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/VideoController.php:51",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/jukebox/api/video/{id}",
+      "target": "OCA\\Jukebox\\Controller\\VideoController::show",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/VideoController.php:74",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/jukebox/api/video/{id}/stream",
+      "target": "OCA\\Jukebox\\Controller\\VideoController::streamVideo",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/VideoController.php:100",
+      "kind": "OCS"
+    }
+  ]
+}

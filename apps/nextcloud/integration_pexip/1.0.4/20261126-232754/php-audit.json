@@ -1,0 +1,116 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Pexip\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Service/PexipService.php:30 OC\\Collaboration\\Reference\\ReferenceManager"
+      ],
+      "lines": [
+        "1 use of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Service/PexipService.php:30 OC\\Collaboration\\Reference\\ReferenceManager"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "PUT /index.php/apps/integration_pexip/config  integration_pexip.config.setconfig  appinfo/routes.php:14 routes",
+        "GET /index.php/apps/integration_pexip/policy/v1/service/configuration  integration_pexip.pexipapi.checkcall  appinfo/routes.php:16 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 8 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  PUT /index.php/apps/integration_pexip/config  integration_pexip.config.setconfig  appinfo/routes.php:14 routes",
+        "  GET /index.php/apps/integration_pexip/policy/v1/service/configuration  integration_pexip.pexipapi.checkcall  appinfo/routes.php:16 routes"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/Cron/CleanupCalls.php OCA\\Pexip\\Cron\\CleanupCalls"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/Cron/CleanupCalls.php OCA\\Pexip\\Cron\\CleanupCalls"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Db/CallMapper.php:149 new DateTime()",
+        "lib/Db/CallMapper.php:166 new DateTime()",
+        "lib/Db/CallMapper.php:206 new DateTime()",
+        "lib/Service/PexipService.php:114 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 4 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Db/CallMapper.php:149 new DateTime()",
+        "  lib/Db/CallMapper.php:166 new DateTime()",
+        "  lib/Db/CallMapper.php:206 new DateTime()",
+        "  lib/Service/PexipService.php:114 new DateTime()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "endpoints": 6,
+  "endpointList": [
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/integration_pexip/admin-config",
+      "target": "OCA\\Pexip\\Controller\\ConfigController::setAdminConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_pexip/calls",
+      "target": "OCA\\Pexip\\Controller\\PexipAPIController::getUserCalls",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/integration_pexip/calls",
+      "target": "OCA\\Pexip\\Controller\\PexipAPIController::createCall",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/integration_pexip/calls/{pexipId}",
+      "target": "OCA\\Pexip\\Controller\\PexipAPIController::deleteCall",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/integration_pexip/config",
+      "target": "OCA\\Pexip\\Controller\\ConfigController::setConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_pexip/policy/v1/service/configuration",
+      "target": "OCA\\Pexip\\Controller\\PexipAPIController::checkCall",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

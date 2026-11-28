@@ -1,0 +1,144 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Pexip\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "PUT /index.php/apps/integration_pexip/config  integration_pexip.config.setconfig  appinfo/routes.php:11 routes",
+        "GET /index.php/apps/integration_pexip/policy/v1/service/configuration  integration_pexip.pexipapi.checkcall  appinfo/routes.php:13 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 8 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  PUT /index.php/apps/integration_pexip/config  integration_pexip.config.setconfig  appinfo/routes.php:11 routes",
+        "  GET /index.php/apps/integration_pexip/policy/v1/service/configuration  integration_pexip.pexipapi.checkcall  appinfo/routes.php:13 routes"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/Cron/CleanupCalls.php OCA\\Pexip\\Cron\\CleanupCalls"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/Cron/CleanupCalls.php OCA\\Pexip\\Cron\\CleanupCalls"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Db/CallMapper.php:136 new DateTime()",
+        "lib/Db/CallMapper.php:153 new DateTime()",
+        "lib/Db/CallMapper.php:193 new DateTime()",
+        "lib/Service/PexipService.php:110 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 4 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Db/CallMapper.php:136 new DateTime()",
+        "  lib/Db/CallMapper.php:153 new DateTime()",
+        "  lib/Db/CallMapper.php:193 new DateTime()",
+        "  lib/Service/PexipService.php:110 new DateTime()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:35 getValueString()",
+        "lib/Controller/ConfigController.php:39 setValueString()",
+        "lib/Controller/ConfigController.php:52 setValueString()",
+        "lib/Reference/PexipReferenceProvider.php:117 getValueString()",
+        "lib/Service/PexipService.php:82 getValueString()",
+        "lib/Service/PexipService.php:118 getValueString()",
+        "lib/Service/PexipService.php:153 getValueString()",
+        "lib/Settings/Admin.php:28 getValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 8 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/AppInfo/Application.php:35 getValueString()",
+        "  lib/Controller/ConfigController.php:39 setValueString()",
+        "  lib/Controller/ConfigController.php:52 setValueString()",
+        "  lib/Reference/PexipReferenceProvider.php:117 getValueString()",
+        "  lib/Service/PexipService.php:82 getValueString()",
+        "  lib/Service/PexipService.php:118 getValueString()",
+        "  lib/Service/PexipService.php:153 getValueString()",
+        "  lib/Settings/Admin.php:28 getValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 5
+        }
+      ]
+    }
+  ],
+  "endpoints": 6,
+  "endpointList": [
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/integration_pexip/admin-config",
+      "target": "OCA\\Pexip\\Controller\\ConfigController::setAdminConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_pexip/calls",
+      "target": "OCA\\Pexip\\Controller\\PexipAPIController::getUserCalls",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/integration_pexip/calls",
+      "target": "OCA\\Pexip\\Controller\\PexipAPIController::createCall",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/integration_pexip/calls/{pexipId}",
+      "target": "OCA\\Pexip\\Controller\\PexipAPIController::deleteCall",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/integration_pexip/config",
+      "target": "OCA\\Pexip\\Controller\\ConfigController::setConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_pexip/policy/v1/service/configuration",
+      "target": "OCA\\Pexip\\Controller\\PexipAPIController::checkCall",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

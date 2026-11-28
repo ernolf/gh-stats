@@ -1,0 +1,517 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Groceries\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/PageController.php:187 OC\\Security\\CSP\\ContentSecurityPolicyNonceManager"
+      ],
+      "lines": [
+        "1 use of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/PageController.php:187 OC\\Security\\CSP\\ContentSecurityPolicyNonceManager"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/PageController.php:104 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Service/ListService.php:80 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ListService.php:102 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "lines": [
+        "3 uses in 2 files of the public API that is deprecated in Nextcloud 30 to 33. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/PageController.php:104 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Service/ListService.php:80 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ListService.php:102 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/personal.php:8 style= attribute",
+        "templates/personal.php:10 style= attribute",
+        "templates/personal.php:17 style= attribute",
+        "templates/personal.php:23 style= attribute"
+      ],
+      "lines": [
+        "4 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/personal.php:8 style= attribute",
+        "  templates/personal.php:10 style= attribute",
+        "  templates/personal.php:17 style= attribute",
+        "  templates/personal.php:23 style= attribute"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Service/EventService.php:113"
+      ],
+      "lines": [
+        "1 transaction is opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Service/EventService.php:113"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Db/ListMapper.php:86 time()",
+        "lib/Service/EventService.php:40 time()",
+        "lib/Service/ItemService.php:181 time()",
+        "lib/Service/ItemService.php:192 time()",
+        "lib/Service/ItemService.php:245 time()",
+        "lib/Service/ItemService.php:410 time()",
+        "lib/Service/ItemService.php:486 time()",
+        "lib/Service/ItemService.php:507 time()",
+        "lib/Service/ItemService.php:536 time()",
+        "lib/Service/ItemService.php:586 time()",
+        "lib/Service/LibraryService.php:375 time()",
+        "lib/Service/ListService.php:121 time()",
+        "lib/Service/ListService.php:122 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 13 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Db/ListMapper.php:86 time()",
+        "  lib/Service/EventService.php:40 time()",
+        "  lib/Service/ItemService.php:181 time()",
+        "  lib/Service/ItemService.php:192 time()",
+        "  lib/Service/ItemService.php:245 time()",
+        "  lib/Service/ItemService.php:410 time()",
+        "  lib/Service/ItemService.php:486 time()",
+        "  lib/Service/ItemService.php:507 time()",
+        "  lib/Service/ItemService.php:536 time()",
+        "  lib/Service/ItemService.php:586 time()",
+        "  lib/Service/LibraryService.php:375 time()",
+        "  lib/Service/ListService.php:121 time()",
+        "  lib/Service/ListService.php:122 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 10
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/groceries/api/v1/lists  ocs.groceries.list_api.index  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/groceries/api/v1/lists  ocs.groceries.list_api.create  appinfo/routes.php:5 ocs",
+        "PUT /ocs/v2.php/apps/groceries/api/v1/lists/{listId}  ocs.groceries.list_api.update  appinfo/routes.php:5 ocs",
+        "DELETE /ocs/v2.php/apps/groceries/api/v1/lists/{listId}  ocs.groceries.list_api.destroy  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/members  ocs.groceries.list_api.members  appinfo/routes.php:5 ocs",
+        "PUT /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/members  ocs.groceries.list_api.setmembers  appinfo/routes.php:5 ocs",
+        "DELETE /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/members/me  ocs.groceries.list_api.leave  appinfo/routes.php:5 ocs",
+        "PUT /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/prefs  ocs.groceries.list_api.setprefs  appinfo/routes.php:5 ocs",
+        "PUT /ocs/v2.php/apps/groceries/api/v1/list-order  ocs.groceries.list_api.setorder  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/groceries/api/v1/principals  ocs.groceries.list_api.searchprincipals  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/changes  ocs.groceries.item_api.changes  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/items  ocs.groceries.item_api.create  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/items/bulk  ocs.groceries.item_api.bulk  appinfo/routes.php:5 ocs",
+        "PATCH /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/items/{itemId}  ocs.groceries.item_api.update  appinfo/routes.php:5 ocs",
+        "DELETE /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/items/{itemId}  ocs.groceries.item_api.destroy  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/checkout  ocs.groceries.item_api.checkout  appinfo/routes.php:5 ocs",
+        "DELETE /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/sources/{source}/{sourceRef}  ocs.groceries.item_api.removesource  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/history  ocs.groceries.item_api.history  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/events  ocs.groceries.item_api.events  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/events  ocs.groceries.item_api.importevents  appinfo/routes.php:5 ocs",
+        "DELETE /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/history/{historyId}  ocs.groceries.item_api.forget  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/stores  ocs.groceries.store_api.create  appinfo/routes.php:5 ocs",
+        "PUT /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/stores/{storeId}  ocs.groceries.store_api.update  appinfo/routes.php:5 ocs",
+        "DELETE /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/stores/{storeId}  ocs.groceries.store_api.destroy  appinfo/routes.php:5 ocs",
+        "PUT /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/stores/{storeId}/order  ocs.groceries.store_api.setorder  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/categories  ocs.groceries.store_api.createcategory  appinfo/routes.php:5 ocs",
+        "DELETE /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/categories/{categoryKey}  ocs.groceries.store_api.deletecategory  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/groceries/api/v1/library  ocs.groceries.library_api.export  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/groceries/api/v1/library  ocs.groceries.library_api.import  appinfo/routes.php:5 ocs",
+        "GET /ocs/v2.php/apps/groceries/api/v1/catalog  ocs.groceries.catalog_api.catalog  appinfo/routes.php:5 ocs",
+        "POST /ocs/v2.php/apps/groceries/api/v1/parse  ocs.groceries.catalog_api.parse  appinfo/routes.php:5 ocs"
+      ],
+      "lines": [
+        "Nothing in the app calls 31 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/groceries/api/v1/lists  ocs.groceries.list_api.index  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/groceries/api/v1/lists  ocs.groceries.list_api.create  appinfo/routes.php:5 ocs",
+        "  PUT /ocs/v2.php/apps/groceries/api/v1/lists/{listId}  ocs.groceries.list_api.update  appinfo/routes.php:5 ocs",
+        "  DELETE /ocs/v2.php/apps/groceries/api/v1/lists/{listId}  ocs.groceries.list_api.destroy  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/members  ocs.groceries.list_api.members  appinfo/routes.php:5 ocs",
+        "  PUT /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/members  ocs.groceries.list_api.setmembers  appinfo/routes.php:5 ocs",
+        "  DELETE /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/members/me  ocs.groceries.list_api.leave  appinfo/routes.php:5 ocs",
+        "  PUT /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/prefs  ocs.groceries.list_api.setprefs  appinfo/routes.php:5 ocs",
+        "  PUT /ocs/v2.php/apps/groceries/api/v1/list-order  ocs.groceries.list_api.setorder  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/groceries/api/v1/principals  ocs.groceries.list_api.searchprincipals  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/changes  ocs.groceries.item_api.changes  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/items  ocs.groceries.item_api.create  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/items/bulk  ocs.groceries.item_api.bulk  appinfo/routes.php:5 ocs",
+        "  PATCH /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/items/{itemId}  ocs.groceries.item_api.update  appinfo/routes.php:5 ocs",
+        "  DELETE /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/items/{itemId}  ocs.groceries.item_api.destroy  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/checkout  ocs.groceries.item_api.checkout  appinfo/routes.php:5 ocs",
+        "  DELETE /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/sources/{source}/{sourceRef}  ocs.groceries.item_api.removesource  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/history  ocs.groceries.item_api.history  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/events  ocs.groceries.item_api.events  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/events  ocs.groceries.item_api.importevents  appinfo/routes.php:5 ocs",
+        "  DELETE /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/history/{historyId}  ocs.groceries.item_api.forget  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/stores  ocs.groceries.store_api.create  appinfo/routes.php:5 ocs",
+        "  PUT /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/stores/{storeId}  ocs.groceries.store_api.update  appinfo/routes.php:5 ocs",
+        "  DELETE /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/stores/{storeId}  ocs.groceries.store_api.destroy  appinfo/routes.php:5 ocs",
+        "  PUT /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/stores/{storeId}/order  ocs.groceries.store_api.setorder  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/categories  ocs.groceries.store_api.createcategory  appinfo/routes.php:5 ocs",
+        "  DELETE /ocs/v2.php/apps/groceries/api/v1/lists/{listId}/categories/{categoryKey}  ocs.groceries.store_api.deletecategory  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/groceries/api/v1/library  ocs.groceries.library_api.export  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/groceries/api/v1/library  ocs.groceries.library_api.import  appinfo/routes.php:5 ocs",
+        "  GET /ocs/v2.php/apps/groceries/api/v1/catalog  ocs.groceries.catalog_api.catalog  appinfo/routes.php:5 ocs",
+        "  POST /ocs/v2.php/apps/groceries/api/v1/parse  ocs.groceries.catalog_api.parse  appinfo/routes.php:5 ocs"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 28
+        }
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 31 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 35,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/groceries/",
+      "target": "OCA\\Groceries\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/groceries/manifest.webmanifest",
+      "target": "OCA\\Groceries\\Controller\\PageController::manifest",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/groceries/sw.js",
+      "target": "OCA\\Groceries\\Controller\\PageController::serviceWorker",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/catalog",
+      "target": "OCA\\Groceries\\Controller\\CatalogApiController::catalog",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/library",
+      "target": "OCA\\Groceries\\Controller\\LibraryApiController::export",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/library",
+      "target": "OCA\\Groceries\\Controller\\LibraryApiController::import",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/list-order",
+      "target": "OCA\\Groceries\\Controller\\ListApiController::setOrder",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/lists",
+      "target": "OCA\\Groceries\\Controller\\ListApiController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/lists",
+      "target": "OCA\\Groceries\\Controller\\ListApiController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/lists/{listId}",
+      "target": "OCA\\Groceries\\Controller\\ListApiController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/lists/{listId}",
+      "target": "OCA\\Groceries\\Controller\\ListApiController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/lists/{listId}/categories",
+      "target": "OCA\\Groceries\\Controller\\StoreApiController::createCategory",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/lists/{listId}/categories/{categoryKey}",
+      "target": "OCA\\Groceries\\Controller\\StoreApiController::deleteCategory",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/lists/{listId}/changes",
+      "target": "OCA\\Groceries\\Controller\\ItemApiController::changes",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/lists/{listId}/checkout",
+      "target": "OCA\\Groceries\\Controller\\ItemApiController::checkout",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/lists/{listId}/events",
+      "target": "OCA\\Groceries\\Controller\\ItemApiController::events",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/lists/{listId}/events",
+      "target": "OCA\\Groceries\\Controller\\ItemApiController::importEvents",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/lists/{listId}/history",
+      "target": "OCA\\Groceries\\Controller\\ItemApiController::history",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/lists/{listId}/history/{historyId}",
+      "target": "OCA\\Groceries\\Controller\\ItemApiController::forget",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/lists/{listId}/items",
+      "target": "OCA\\Groceries\\Controller\\ItemApiController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/lists/{listId}/items/{itemId}",
+      "target": "OCA\\Groceries\\Controller\\ItemApiController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/lists/{listId}/items/{itemId}",
+      "target": "OCA\\Groceries\\Controller\\ItemApiController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/lists/{listId}/items/bulk",
+      "target": "OCA\\Groceries\\Controller\\ItemApiController::bulk",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/lists/{listId}/members",
+      "target": "OCA\\Groceries\\Controller\\ListApiController::members",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/lists/{listId}/members",
+      "target": "OCA\\Groceries\\Controller\\ListApiController::setMembers",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/lists/{listId}/members/me",
+      "target": "OCA\\Groceries\\Controller\\ListApiController::leave",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/lists/{listId}/prefs",
+      "target": "OCA\\Groceries\\Controller\\ListApiController::setPrefs",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/lists/{listId}/sources/{source}/{sourceRef}",
+      "target": "OCA\\Groceries\\Controller\\ItemApiController::removeSource",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/lists/{listId}/stores",
+      "target": "OCA\\Groceries\\Controller\\StoreApiController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/lists/{listId}/stores/{storeId}",
+      "target": "OCA\\Groceries\\Controller\\StoreApiController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/lists/{listId}/stores/{storeId}",
+      "target": "OCA\\Groceries\\Controller\\StoreApiController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/lists/{listId}/stores/{storeId}/order",
+      "target": "OCA\\Groceries\\Controller\\StoreApiController::setOrder",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/parse",
+      "target": "OCA\\Groceries\\Controller\\CatalogApiController::parse",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/groceries/api/v1/principals",
+      "target": "OCA\\Groceries\\Controller\\ListApiController::searchPrincipals",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/capabilities",
+      "target": "OCA\\Groceries\\Capabilities",
+      "openapi": [],
+      "kind": "capability"
+    }
+  ]
+}

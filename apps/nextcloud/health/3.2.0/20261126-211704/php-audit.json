@@ -1,0 +1,451 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Health\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/health/pwa/service-worker.js  health.page.serviceworker  lib/Controller/PageController.php:111"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 route outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 67 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/health/pwa/service-worker.js  health.page.serviceworker  lib/Controller/PageController.php:111"
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Service/RoutineService.php:34"
+      ],
+      "lines": [
+        "1 transaction is opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Service/RoutineService.php:34"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/GoalReminderJob.php OCA\\Health\\BackgroundJob\\GoalReminderJob"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/GoalReminderJob.php OCA\\Health\\BackgroundJob\\GoalReminderJob"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/DailyNoteService.php:53 new DateTimeImmutable()",
+        "lib/Service/DailyValueService.php:50 new DateTimeImmutable()",
+        "lib/Service/EntryService.php:84 new DateTimeImmutable()",
+        "lib/Service/EntryService.php:138 new DateTimeImmutable()",
+        "lib/Service/GoalProgressService.php:77 new DateTimeImmutable()",
+        "lib/Service/GoalProgressService.php:92 new DateTimeImmutable()",
+        "lib/Service/GoalService.php:52 new DateTimeImmutable()",
+        "lib/Service/GoalService.php:91 new DateTimeImmutable()",
+        "lib/Service/GoalService.php:110 new DateTimeImmutable()",
+        "lib/Service/GoalService.php:149 new DateTimeImmutable()",
+        "lib/Service/MeasurementService.php:124 new DateTimeImmutable()",
+        "lib/Service/MeasurementService.php:135 new DateTimeImmutable()",
+        "lib/Service/MeasurementService.php:152 new DateTimeImmutable()",
+        "lib/Service/SavedStatisticsViewService.php:50 new DateTimeImmutable()",
+        "lib/Service/SavedStatisticsViewService.php:71 new DateTimeImmutable()",
+        "lib/Service/StatisticsService.php:154 new DateTimeImmutable()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 16 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/DailyNoteService.php:53 new DateTimeImmutable()",
+        "  lib/Service/DailyValueService.php:50 new DateTimeImmutable()",
+        "  lib/Service/EntryService.php:84 new DateTimeImmutable()",
+        "  lib/Service/EntryService.php:138 new DateTimeImmutable()",
+        "  lib/Service/GoalProgressService.php:77 new DateTimeImmutable()",
+        "  lib/Service/GoalProgressService.php:92 new DateTimeImmutable()",
+        "  lib/Service/GoalService.php:52 new DateTimeImmutable()",
+        "  lib/Service/GoalService.php:91 new DateTimeImmutable()",
+        "  lib/Service/GoalService.php:110 new DateTimeImmutable()",
+        "  lib/Service/GoalService.php:149 new DateTimeImmutable()",
+        "  lib/Service/MeasurementService.php:124 new DateTimeImmutable()",
+        "  lib/Service/MeasurementService.php:135 new DateTimeImmutable()",
+        "  lib/Service/MeasurementService.php:152 new DateTimeImmutable()",
+        "  lib/Service/SavedStatisticsViewService.php:50 new DateTimeImmutable()",
+        "  lib/Service/SavedStatisticsViewService.php:71 new DateTimeImmutable()",
+        "  lib/Service/StatisticsService.php:154 new DateTimeImmutable()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 13
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/health/api/v2/statistics/views/{id}  ocs.health.savedstatisticsviews.show  lib/Controller/SavedStatisticsViewsController.php:64",
+        "PUT /ocs/v2.php/apps/health/api/v2/statistics/views/{id}  ocs.health.savedstatisticsviews.update  lib/Controller/SavedStatisticsViewsController.php:115",
+        "DELETE /ocs/v2.php/apps/health/api/v2/statistics/views/{id}  ocs.health.savedstatisticsviews.destroy  lib/Controller/SavedStatisticsViewsController.php:138"
+      ],
+      "lines": [
+        "Nothing in the app calls 3 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/health/api/v2/statistics/views/{id}  ocs.health.savedstatisticsviews.show  lib/Controller/SavedStatisticsViewsController.php:64",
+        "  PUT /ocs/v2.php/apps/health/api/v2/statistics/views/{id}  ocs.health.savedstatisticsviews.update  lib/Controller/SavedStatisticsViewsController.php:115",
+        "  DELETE /ocs/v2.php/apps/health/api/v2/statistics/views/{id}  ocs.health.savedstatisticsviews.destroy  lib/Controller/SavedStatisticsViewsController.php:138"
+      ]
+    }
+  ],
+  "endpoints": 38,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/health/",
+      "target": "OCA\\Health\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/health/donate",
+      "target": "OCA\\Health\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/health/goals",
+      "target": "OCA\\Health\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/health/journal/{date}",
+      "target": "OCA\\Health\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/health/pwa/",
+      "target": "OCA\\Health\\Controller\\PageController::pwa",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/health/pwa/manifest.webmanifest",
+      "target": "OCA\\Health\\Controller\\PageController::manifest",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/health/pwa/service-worker.js",
+      "target": "OCA\\Health\\Controller\\PageController::serviceWorker",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/health/settings",
+      "target": "OCA\\Health\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/health/statistics",
+      "target": "OCA\\Health\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/health/statistics/views/{id}",
+      "target": "OCA\\Health\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/health/api/v2/configuration",
+      "target": "OCA\\Health\\Controller\\ConfigurationController::show",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/health/api/v2/configuration",
+      "target": "OCA\\Health\\Controller\\ConfigurationController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/health/api/v2/daily-notes/{date}",
+      "target": "OCA\\Health\\Controller\\DailyNotesController::show",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/health/api/v2/daily-notes/{date}",
+      "target": "OCA\\Health\\Controller\\DailyNotesController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/health/api/v2/daily-values",
+      "target": "OCA\\Health\\Controller\\DailyValuesController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/health/api/v2/daily-values/{metricKey}/{date}",
+      "target": "OCA\\Health\\Controller\\DailyValuesController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/health/api/v2/daily-values/{metricKey}/{date}",
+      "target": "OCA\\Health\\Controller\\DailyValuesController::upsert",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/health/api/v2/entries",
+      "target": "OCA\\Health\\Controller\\EntriesController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/health/api/v2/entries",
+      "target": "OCA\\Health\\Controller\\EntriesController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/health/api/v2/entries/{id}",
+      "target": "OCA\\Health\\Controller\\EntriesController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/health/api/v2/entries/{id}",
+      "target": "OCA\\Health\\Controller\\EntriesController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/health/api/v2/goals",
+      "target": "OCA\\Health\\Controller\\GoalsController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/health/api/v2/goals",
+      "target": "OCA\\Health\\Controller\\GoalsController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/health/api/v2/goals/{id}",
+      "target": "OCA\\Health\\Controller\\GoalsController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/health/api/v2/goals/{id}",
+      "target": "OCA\\Health\\Controller\\GoalsController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/health/api/v2/goals/progress",
+      "target": "OCA\\Health\\Controller\\GoalsController::progress",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/health/api/v2/measurements",
+      "target": "OCA\\Health\\Controller\\MeasurementsController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/health/api/v2/measurements",
+      "target": "OCA\\Health\\Controller\\MeasurementsController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/health/api/v2/measurements/{id}",
+      "target": "OCA\\Health\\Controller\\MeasurementsController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/health/api/v2/measurements/{id}",
+      "target": "OCA\\Health\\Controller\\MeasurementsController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/health/api/v2/routines/{context}",
+      "target": "OCA\\Health\\Controller\\RoutinesController::submit",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/health/api/v2/statistics",
+      "target": "OCA\\Health\\Controller\\StatisticsController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/health/api/v2/statistics/views",
+      "target": "OCA\\Health\\Controller\\SavedStatisticsViewsController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/health/api/v2/statistics/views",
+      "target": "OCA\\Health\\Controller\\SavedStatisticsViewsController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/health/api/v2/statistics/views/{id}",
+      "target": "OCA\\Health\\Controller\\SavedStatisticsViewsController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/health/api/v2/statistics/views/{id}",
+      "target": "OCA\\Health\\Controller\\SavedStatisticsViewsController::show",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/health/api/v2/statistics/views/{id}",
+      "target": "OCA\\Health\\Controller\\SavedStatisticsViewsController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/capabilities",
+      "target": "OCA\\Health\\AppInfo\\Capabilities",
+      "openapi": [],
+      "kind": "capability"
+    }
+  ]
+}

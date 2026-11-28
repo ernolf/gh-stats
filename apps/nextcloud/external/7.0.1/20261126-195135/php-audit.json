@@ -1,0 +1,234 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\External\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:42 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:42 injectFn()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/external/  external.site.showdefaultpage  appinfo/routes.php:13 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 route outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 2 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/external/  external.site.showdefaultpage  appinfo/routes.php:13 routes"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/IconController.php:158 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Controller/SiteController.php:127 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Migration/JWTTokenPrivateKeySensitive.php:28 OCP\\IAppConfig::getKeys(): deprecated since Nextcloud 13; use method getAppKeys of \\OCP\\IConfig  This function gets all keys of an app. Please note that the values are not returned."
+      ],
+      "lines": [
+        "3 uses in 3 files of the public API that is deprecated in Nextcloud 32. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/IconController.php:158 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Controller/SiteController.php:127 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Migration/JWTTokenPrivateKeySensitive.php:28 OCP\\IAppConfig::getKeys(): deprecated since Nextcloud 13; use method getAppKeys of \\OCP\\IConfig  This function gets all keys of an app. Please note that the values are not returned."
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Vendor/Firebase/JWT/JWT.php:102 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 1 place. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Vendor/Firebase/JWT/JWT.php:102 time()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/JWTManager.php:61 getValueString()",
+        "lib/JWTManager.php:70 getValueString()",
+        "lib/JWTManager.php:74 getValueString()",
+        "lib/JWTManager.php:108 setValueString()",
+        "lib/JWTManager.php:109 setValueString()",
+        "lib/JWTManager.php:113 getValueString()",
+        "lib/Migration/JWTTokenPrivateKeySensitive.php:28 getKeys()",
+        "lib/Migration/JWTTokenPrivateKeySensitive.php:33 getValueString()",
+        "lib/Migration/JWTTokenPrivateKeySensitive.php:34 setValueString()",
+        "lib/SitesManager.php:158 getValueString()",
+        "lib/SitesManager.php:201 getValueInt()",
+        "lib/SitesManager.php:266 setValueString()",
+        "lib/SitesManager.php:267 setValueInt()",
+        "lib/SitesManager.php:351 setValueString()",
+        "lib/SitesManager.php:363 setValueString()",
+        "lib/SitesManager.php:382 setValueString()",
+        "lib/SitesManager.php:383 setValueInt()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 17 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/JWTManager.php:61 getValueString()",
+        "  lib/JWTManager.php:70 getValueString()",
+        "  lib/JWTManager.php:74 getValueString()",
+        "  lib/JWTManager.php:108 setValueString()",
+        "  lib/JWTManager.php:109 setValueString()",
+        "  lib/JWTManager.php:113 getValueString()",
+        "  lib/Migration/JWTTokenPrivateKeySensitive.php:28 getKeys()",
+        "  lib/Migration/JWTTokenPrivateKeySensitive.php:33 getValueString()",
+        "  lib/Migration/JWTTokenPrivateKeySensitive.php:34 setValueString()",
+        "  lib/SitesManager.php:158 getValueString()",
+        "  lib/SitesManager.php:201 getValueInt()",
+        "  lib/SitesManager.php:266 setValueString()",
+        "  lib/SitesManager.php:267 setValueInt()",
+        "  lib/SitesManager.php:351 setValueString()",
+        "  lib/SitesManager.php:363 setValueString()",
+        "  lib/SitesManager.php:382 setValueString()",
+        "  lib/SitesManager.php:383 setValueInt()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 14
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/external/api/{apiVersion}  ocs.external.api.get  appinfo/routes.php:20 ocs",
+        "PUT /ocs/v2.php/apps/external/api/{apiVersion}/sites/{id}  ocs.external.api.update  appinfo/routes.php:23 ocs",
+        "DELETE /ocs/v2.php/apps/external/api/{apiVersion}/sites/{id}  ocs.external.api.delete  appinfo/routes.php:24 ocs"
+      ],
+      "lines": [
+        "Nothing in the app calls 3 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/external/api/{apiVersion}  ocs.external.api.get  appinfo/routes.php:20 ocs",
+        "  PUT /ocs/v2.php/apps/external/api/{apiVersion}/sites/{id}  ocs.external.api.update  appinfo/routes.php:23 ocs",
+        "  DELETE /ocs/v2.php/apps/external/api/{apiVersion}/sites/{id}  ocs.external.api.delete  appinfo/routes.php:24 ocs"
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 5 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 11,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/external/",
+      "target": "OCA\\External\\Controller\\SiteController::showDefaultPage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/external/{id}/{path}",
+      "target": "OCA\\External\\Controller\\SiteController::showPage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/external/icons",
+      "target": "OCA\\External\\Controller\\IconController::uploadIcon",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/external/icons/{icon}",
+      "target": "OCA\\External\\Controller\\IconController::deleteIcon",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/external/icons/{icon}",
+      "target": "OCA\\External\\Controller\\IconController::showIcon",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/external/api/{apiVersion}",
+      "target": "OCA\\External\\Controller\\APIController::get",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/external/api/{apiVersion}/sites",
+      "target": "OCA\\External\\Controller\\APIController::getAdmin",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/external/api/{apiVersion}/sites",
+      "target": "OCA\\External\\Controller\\APIController::add",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/external/api/{apiVersion}/sites/{id}",
+      "target": "OCA\\External\\Controller\\APIController::delete",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/external/api/{apiVersion}/sites/{id}",
+      "target": "OCA\\External\\Controller\\APIController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/capabilities",
+      "target": "OCA\\External\\Capabilities",
+      "openapi": [],
+      "kind": "capability"
+    }
+  ]
+}

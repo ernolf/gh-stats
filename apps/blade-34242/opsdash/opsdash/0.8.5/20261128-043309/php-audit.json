@@ -1,0 +1,392 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Opsdash\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "namespace-mismatch",
+      "level": "warn",
+      "places": [
+        "lib/Service/DeckSeedService.php:13 OCA\\Opsdash\\Service\\DeckSeedException, by its path OCA\\Opsdash\\Service\\DeckSeedService"
+      ],
+      "lines": [
+        "1 class in lib/ whose name does not follow PSR-4 below OCA\\Opsdash, the namespace the server derives from <namespace> of info.xml. The loader of the server does not find such a class.",
+        "  lib/Service/DeckSeedService.php:13 OCA\\Opsdash\\Service\\DeckSeedException, by its path OCA\\Opsdash\\Service\\DeckSeedService"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "appinfo/navigation.php:8 OC::$server"
+      ],
+      "lines": [
+        "1 use of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  appinfo/navigation.php:8 OC::$server"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:28 get()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:28 get()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/opsdash/overview/load  opsdash.overview.load  appinfo/routes.php:6 routes",
+        "POST /index.php/apps/opsdash/overview/load  opsdash.overview.loaddata  appinfo/routes.php:7 routes",
+        "POST /index.php/apps/opsdash/overview/persist  opsdash.persist.persist  appinfo/routes.php:8 routes",
+        "GET /index.php/apps/opsdash/overview/ping  opsdash.overview.ping  appinfo/routes.php:9 routes",
+        "GET /index.php/apps/opsdash/overview/presets  opsdash.presets.presetslist  appinfo/routes.php:10 routes",
+        "POST /index.php/apps/opsdash/overview/presets  opsdash.presets.presetssave  appinfo/routes.php:11 routes",
+        "GET /index.php/apps/opsdash/overview/presets/{name}  opsdash.presets.presetsload  appinfo/routes.php:12 routes",
+        "DELETE /index.php/apps/opsdash/overview/presets/{name}  opsdash.presets.presetsdelete  appinfo/routes.php:13 routes",
+        "POST /index.php/apps/opsdash/overview/report/test-send  opsdash.report.testsend  appinfo/routes.php:18 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 9 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 105 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/opsdash/overview/load  opsdash.overview.load  appinfo/routes.php:6 routes",
+        "  POST /index.php/apps/opsdash/overview/load  opsdash.overview.loaddata  appinfo/routes.php:7 routes",
+        "  POST /index.php/apps/opsdash/overview/persist  opsdash.persist.persist  appinfo/routes.php:8 routes",
+        "  GET /index.php/apps/opsdash/overview/ping  opsdash.overview.ping  appinfo/routes.php:9 routes",
+        "  GET /index.php/apps/opsdash/overview/presets  opsdash.presets.presetslist  appinfo/routes.php:10 routes",
+        "  POST /index.php/apps/opsdash/overview/presets  opsdash.presets.presetssave  appinfo/routes.php:11 routes",
+        "  GET /index.php/apps/opsdash/overview/presets/{name}  opsdash.presets.presetsload  appinfo/routes.php:12 routes",
+        "  DELETE /index.php/apps/opsdash/overview/presets/{name}  opsdash.presets.presetsdelete  appinfo/routes.php:13 routes",
+        "  POST /index.php/apps/opsdash/overview/report/test-send  opsdash.report.testsend  appinfo/routes.php:18 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 6
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Command/RemoveNotesCommand.php:40 OCP\\IConfig::getUserKeys(): deprecated since Nextcloud 33; use IUserConfig::getKeys directly",
+        "lib/Command/RemoveNotesCommand.php:50 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/OverviewController.php:73 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/OverviewController.php:104 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/PersistController.php:74 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/PersistController.php:88 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/PersistController.php:110 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/PersistController.php:122 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/PersistController.php:139 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/PersistController.php:145 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/PersistController.php:161 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/PersistController.php:163 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/PersistController.php:181 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/PersistController.php:185 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/PersistController.php:208 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/PersistController.php:218 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/PersistController.php:312 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/CalendarAccessService.php:34 OCP\\Calendar\\IManager::getCalendars(): deprecated since Nextcloud 23; use \\OCP\\Calendar\\IManager::getCalendarsForPrincipal",
+        "lib/Service/CalendarAccessService.php:87 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/CalendarAccessService.php:104 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/CalendarAccessService.php:110 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/DeckDataService.php:247 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Service/DeckDataService.php:267 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/DeckDataService.php:283 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/DeckSeedService.php:124 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "lib/Service/OverviewLoadCacheService.php:31 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OverviewLoadCacheService.php:47 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OverviewLoadCacheService.php:140 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OverviewLoadCacheService.php:342 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OverviewLoadContextService.php:69 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OverviewLoadContextService.php:112 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OverviewLoadContextService.php:123 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OverviewLoadContextService.php:124 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OverviewLoadContextService.php:171 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OverviewLoadContextService.php:201 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OverviewLoadContextService.php:307 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ReportScheduleService.php:262 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ReportScheduleService.php:278 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ReportSummaryService.php:49 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ReportSummaryService.php:94 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ReportSummaryService.php:287 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/ReportSummaryService.php:326 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/UserConfigService.php:27 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/UserConfigService.php:40 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/UserConfigService.php:53 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/UserConfigService.php:73 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/UserConfigService.php:90 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/UserPresetsService.php:20 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/UserPresetsService.php:52 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "lines": [
+        "49 uses in 12 files of the public API that is deprecated in Nextcloud 31 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Command/RemoveNotesCommand.php:40 OCP\\IConfig::getUserKeys(): deprecated since Nextcloud 33; use IUserConfig::getKeys directly",
+        "  lib/Command/RemoveNotesCommand.php:50 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/OverviewController.php:73 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/OverviewController.php:104 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/PersistController.php:74 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/PersistController.php:88 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/PersistController.php:110 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/PersistController.php:122 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/PersistController.php:139 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/PersistController.php:145 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/PersistController.php:161 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/PersistController.php:163 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/PersistController.php:181 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/PersistController.php:185 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/PersistController.php:208 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/PersistController.php:218 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/PersistController.php:312 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/CalendarAccessService.php:34 OCP\\Calendar\\IManager::getCalendars(): deprecated since Nextcloud 23; use \\OCP\\Calendar\\IManager::getCalendarsForPrincipal",
+        "  lib/Service/CalendarAccessService.php:87 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/CalendarAccessService.php:104 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/CalendarAccessService.php:110 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/DeckDataService.php:247 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Service/DeckDataService.php:267 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/DeckDataService.php:283 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/DeckSeedService.php:124 OCP\\App\\IAppManager::isInstalled(): deprecated since Nextcloud 32; Use either self::isEnabledForUser or self::isEnabledForAnyone",
+        "  lib/Service/OverviewLoadCacheService.php:31 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OverviewLoadCacheService.php:47 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OverviewLoadCacheService.php:140 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OverviewLoadCacheService.php:342 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OverviewLoadContextService.php:69 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OverviewLoadContextService.php:112 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OverviewLoadContextService.php:123 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OverviewLoadContextService.php:124 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OverviewLoadContextService.php:171 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OverviewLoadContextService.php:201 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OverviewLoadContextService.php:307 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ReportScheduleService.php:262 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ReportScheduleService.php:278 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ReportSummaryService.php:49 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ReportSummaryService.php:94 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ReportSummaryService.php:287 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/ReportSummaryService.php:326 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/UserConfigService.php:27 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/UserConfigService.php:40 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/UserConfigService.php:53 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/UserConfigService.php:73 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/UserConfigService.php:90 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/UserPresetsService.php:20 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/UserPresetsService.php:52 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 46
+        }
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/overview.php:19 <style> with content"
+      ],
+      "lines": [
+        "1 inline style in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/overview.php:19 <style> with content"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/OverviewController.php:110 time()",
+        "lib/Controller/PresetsController.php:76 new DateTimeImmutable()",
+        "lib/Service/CalendarAccessService.php:64 new DateTimeImmutable()",
+        "lib/Service/CalendarAccessService.php:64 new DateTimeImmutable()",
+        "lib/Service/LoadRateLimiter.php:39 time()",
+        "lib/Service/OverviewAggregationService.php:83 new DateTimeImmutable()",
+        "lib/Service/OverviewDataService.php:77 new DateTimeImmutable()",
+        "lib/Service/OverviewLoadCacheService.php:122 time()",
+        "lib/Service/OverviewLoadCacheService.php:274 time()",
+        "lib/Service/ReportScheduleService.php:28 new DateTimeImmutable()",
+        "lib/Service/ReportSummaryService.php:251 new DateTimeImmutable()",
+        "lib/Service/ReportSummaryService.php:316 new DateTimeImmutable()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 12 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/OverviewController.php:110 time()",
+        "  lib/Controller/PresetsController.php:76 new DateTimeImmutable()",
+        "  lib/Service/CalendarAccessService.php:64 new DateTimeImmutable()",
+        "  lib/Service/CalendarAccessService.php:64 new DateTimeImmutable()",
+        "  lib/Service/LoadRateLimiter.php:39 time()",
+        "  lib/Service/OverviewAggregationService.php:83 new DateTimeImmutable()",
+        "  lib/Service/OverviewDataService.php:77 new DateTimeImmutable()",
+        "  lib/Service/OverviewLoadCacheService.php:122 time()",
+        "  lib/Service/OverviewLoadCacheService.php:274 time()",
+        "  lib/Service/ReportScheduleService.php:28 new DateTimeImmutable()",
+        "  lib/Service/ReportSummaryService.php:251 new DateTimeImmutable()",
+        "  lib/Service/ReportSummaryService.php:316 new DateTimeImmutable()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 9
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Controller/OverviewController.php:73 getAppValue()",
+        "lib/Controller/OverviewController.php:104 getAppValue()",
+        "lib/Service/DeckDataService.php:267 getAppValue()",
+        "lib/Service/DeckDataService.php:283 getAppValue()",
+        "lib/Service/OverviewLoadCacheService.php:31 getAppValue()",
+        "lib/Service/OverviewLoadCacheService.php:47 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 6 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Controller/OverviewController.php:73 getAppValue()",
+        "  lib/Controller/OverviewController.php:104 getAppValue()",
+        "  lib/Service/DeckDataService.php:267 getAppValue()",
+        "  lib/Service/DeckDataService.php:283 getAppValue()",
+        "  lib/Service/OverviewLoadCacheService.php:31 getAppValue()",
+        "  lib/Service/OverviewLoadCacheService.php:47 getAppValue()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    }
+  ],
+  "endpoints": 14,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/opsdash/overview",
+      "target": "OCA\\Opsdash\\Controller\\OverviewController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:5 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/opsdash/overview/deck/boards",
+      "target": "OCA\\Opsdash\\Controller\\DeckController::boards",
+      "openapi": [],
+      "source": "appinfo/routes.php:14 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/opsdash/overview/deck/cards",
+      "target": "OCA\\Opsdash\\Controller\\DeckController::cards",
+      "openapi": [],
+      "source": "appinfo/routes.php:16 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/opsdash/overview/deck/cards",
+      "target": "OCA\\Opsdash\\Controller\\DeckController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:17 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/opsdash/overview/deck/stacks",
+      "target": "OCA\\Opsdash\\Controller\\DeckController::stacks",
+      "openapi": [],
+      "source": "appinfo/routes.php:15 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/opsdash/overview/load",
+      "target": "OCA\\Opsdash\\Controller\\OverviewController::load",
+      "openapi": [],
+      "source": "appinfo/routes.php:6 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/opsdash/overview/load",
+      "target": "OCA\\Opsdash\\Controller\\OverviewController::loadData",
+      "openapi": [],
+      "source": "appinfo/routes.php:7 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/opsdash/overview/persist",
+      "target": "OCA\\Opsdash\\Controller\\PersistController::persist",
+      "openapi": [],
+      "source": "appinfo/routes.php:8 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/opsdash/overview/ping",
+      "target": "OCA\\Opsdash\\Controller\\OverviewController::ping",
+      "openapi": [],
+      "source": "appinfo/routes.php:9 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/opsdash/overview/presets",
+      "target": "OCA\\Opsdash\\Controller\\PresetsController::presetsList",
+      "openapi": [],
+      "source": "appinfo/routes.php:10 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/opsdash/overview/presets",
+      "target": "OCA\\Opsdash\\Controller\\PresetsController::presetsSave",
+      "openapi": [],
+      "source": "appinfo/routes.php:11 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/opsdash/overview/presets/{name}",
+      "target": "OCA\\Opsdash\\Controller\\PresetsController::presetsDelete",
+      "openapi": [],
+      "source": "appinfo/routes.php:13 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/opsdash/overview/presets/{name}",
+      "target": "OCA\\Opsdash\\Controller\\PresetsController::presetsLoad",
+      "openapi": [],
+      "source": "appinfo/routes.php:12 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/opsdash/overview/report/test-send",
+      "target": "OCA\\Opsdash\\Controller\\ReportController::testSend",
+      "openapi": [],
+      "source": "appinfo/routes.php:18 routes",
+      "kind": "route"
+    }
+  ]
+}

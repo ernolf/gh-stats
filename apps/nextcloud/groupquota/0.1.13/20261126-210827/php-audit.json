@@ -1,0 +1,131 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\GroupQuota\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:64 OC\\Files\\Filesystem",
+        "lib/AppInfo/Application.php:73 OC::$server",
+        "lib/Command/GetQuota.php:34 OC\\Core\\Command\\Base",
+        "lib/Command/GetQuota.php:68 OC_Helper",
+        "lib/Command/GetUsed.php:33 OC\\Core\\Command\\Base",
+        "lib/Command/GetUsed.php:66 OC_Helper",
+        "lib/Command/QuotaList.php:32 OC\\Core\\Command\\Base",
+        "lib/Command/QuotaList.php:60 OC_Helper",
+        "lib/Command/SetQuota.php:34 OC\\Core\\Command\\Base",
+        "lib/Command/SetQuota.php:67 OC_Helper",
+        "lib/Controller/QuotaController.php:55 OC_Helper",
+        "lib/Wrapper/GroupQuotaWrapper.php:26 OC\\Files\\Storage\\Wrapper\\Quota",
+        "lib/Wrapper/GroupUsedSpaceCacheWrapper.php:27 OC\\Files\\Cache\\Wrapper\\CacheWrapper"
+      ],
+      "lines": [
+        "13 uses of the private API of the server in 8 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/AppInfo/Application.php:64 OC\\Files\\Filesystem",
+        "  lib/AppInfo/Application.php:73 OC::$server",
+        "  lib/Command/GetQuota.php:34 OC\\Core\\Command\\Base",
+        "  lib/Command/GetQuota.php:68 OC_Helper",
+        "  lib/Command/GetUsed.php:33 OC\\Core\\Command\\Base",
+        "  lib/Command/GetUsed.php:66 OC_Helper",
+        "  lib/Command/QuotaList.php:32 OC\\Core\\Command\\Base",
+        "  lib/Command/QuotaList.php:60 OC_Helper",
+        "  lib/Command/SetQuota.php:34 OC\\Core\\Command\\Base",
+        "  lib/Command/SetQuota.php:67 OC_Helper",
+        "  lib/Controller/QuotaController.php:55 OC_Helper",
+        "  lib/Wrapper/GroupQuotaWrapper.php:26 OC\\Files\\Storage\\Wrapper\\Quota",
+        "  lib/Wrapper/GroupUsedSpaceCacheWrapper.php:27 OC\\Files\\Cache\\Wrapper\\CacheWrapper"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 10
+        }
+      ]
+    },
+    {
+      "id": "legacy-hook",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:46 OC_Filesystem::preSetup: the manual names no replacement event"
+      ],
+      "lines": [
+        "1 connection to a legacy hook of the server. A hook the server removed is never emitted, and the listener never runs; the typed events of OCP\\EventDispatcher replace the hooks.",
+        "OCP\\Util::connectHook() is deprecated since Nextcloud 21: use \\OCP\\EventDispatcher\\IEventDispatcher::addListener. ocp-deprecated leaves these calls to this finding.",
+        "  lib/AppInfo/Application.php:46 OC_Filesystem::preSetup: the manual names no replacement event"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "POST /index.php/apps/groupquota/quota/{groupId}  groupquota.quota.setquota  appinfo/routes.php:5 routes",
+        "GET /index.php/apps/groupquota/quota/{groupId}  groupquota.quota.getquota  appinfo/routes.php:6 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  POST /index.php/apps/groupquota/quota/{groupId}  groupquota.quota.setquota  appinfo/routes.php:5 routes",
+        "  GET /index.php/apps/groupquota/quota/{groupId}  groupquota.quota.getquota  appinfo/routes.php:6 routes"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "psalm/phar, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:73 OCP\\ILogger: deprecated since Nextcloud 20; use the PSR-3 logger \\Psr\\Log\\LoggerInterface",
+        "lib/AppInfo/Application.php:73 OCP\\ILogger::DEBUG: deprecated since Nextcloud 20",
+        "lib/Quota/QuotaManager.php:43 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Quota/QuotaManager.php:60 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Quota/QuotaManager.php:64 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Quota/QuotaManager.php:77 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "lines": [
+        "6 uses in 2 files of the public API that is deprecated in Nextcloud 25 to 29. The text of the tag names the replacement where it has one.",
+        "  lib/AppInfo/Application.php:73 OCP\\ILogger: deprecated since Nextcloud 20; use the PSR-3 logger \\Psr\\Log\\LoggerInterface",
+        "  lib/AppInfo/Application.php:73 OCP\\ILogger::DEBUG: deprecated since Nextcloud 20",
+        "  lib/Quota/QuotaManager.php:43 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Quota/QuotaManager.php:60 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Quota/QuotaManager.php:64 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Quota/QuotaManager.php:77 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    }
+  ],
+  "endpoints": 2,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/groupquota/quota/{groupId}",
+      "target": "OCA\\GroupQuota\\Controller\\QuotaController::getQuota",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/groupquota/quota/{groupId}",
+      "target": "OCA\\GroupQuota\\Controller\\QuotaController::setQuota",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

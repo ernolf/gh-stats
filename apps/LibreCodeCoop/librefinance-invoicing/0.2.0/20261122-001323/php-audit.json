@@ -1,0 +1,135 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\LibreFinanceInvoicing\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Service/InvoiceService.php:141 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/Service/InvoiceService.php:211 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/Service/TaxService.php:114 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId"
+      ],
+      "lines": [
+        "3 uses in 2 files of the public API that is deprecated in Nextcloud 36. The text of the tag names the replacement where it has one.",
+        "  lib/Service/InvoiceService.php:141 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/Service/InvoiceService.php:211 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/Service/TaxService.php:114 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId"
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Service/InvoiceService.php:130",
+        "lib/Service/InvoiceService.php:163",
+        "lib/Service/InvoiceService.php:181",
+        "lib/Service/TaxService.php:65"
+      ],
+      "lines": [
+        "4 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Service/InvoiceService.php:130",
+        "  lib/Service/InvoiceService.php:163",
+        "  lib/Service/InvoiceService.php:181",
+        "  lib/Service/TaxService.php:65"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/InvoiceService.php:139 time()",
+        "lib/Service/InvoiceService.php:198 time()",
+        "lib/Service/InvoiceService.php:231 time()",
+        "lib/Service/InvoiceService.php:258 time()",
+        "lib/Service/TaxService.php:106 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 5 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/InvoiceService.php:139 time()",
+        "  lib/Service/InvoiceService.php:198 time()",
+        "  lib/Service/InvoiceService.php:231 time()",
+        "  lib/Service/InvoiceService.php:258 time()",
+        "  lib/Service/TaxService.php:106 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    }
+  ],
+  "endpoints": 8,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/librefinance_invoicing/api/spaces/{spaceId}/invoices",
+      "target": "OCA\\LibreFinanceInvoicing\\Controller\\InvoiceController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/librefinance_invoicing/api/spaces/{spaceId}/invoices",
+      "target": "OCA\\LibreFinanceInvoicing\\Controller\\InvoiceController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/librefinance_invoicing/api/spaces/{spaceId}/invoices/{invoiceId}",
+      "target": "OCA\\LibreFinanceInvoicing\\Controller\\InvoiceController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/librefinance_invoicing/api/spaces/{spaceId}/invoices/{invoiceId}/allocations",
+      "target": "OCA\\LibreFinanceInvoicing\\Controller\\InvoiceController::allocate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/librefinance_invoicing/api/spaces/{spaceId}/invoices/{invoiceId}/issue",
+      "target": "OCA\\LibreFinanceInvoicing\\Controller\\InvoiceController::issue",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/librefinance_invoicing/api/spaces/{spaceId}/tax-rules",
+      "target": "OCA\\LibreFinanceInvoicing\\Controller\\TaxController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/librefinance_invoicing/api/spaces/{spaceId}/tax-rules",
+      "target": "OCA\\LibreFinanceInvoicing\\Controller\\TaxController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/librefinance_invoicing/spaces/{spaceId}",
+      "target": "OCA\\LibreFinanceInvoicing\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

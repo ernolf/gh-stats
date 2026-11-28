@@ -1,0 +1,151 @@
+<?xml version="1.0"?>
+<!--
+  - SPDX-FileCopyrightText: 2024 LaunchPad Contributors
+  - SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	  xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>mydash</id>
+	<name lang="en">LaunchPad</name>
+	<name lang="nl">LaunchPad</name>
+	<summary lang="en">Drag-and-drop dashboards with templates, tiles, and smart visibility</summary>
+	<summary lang="nl">Drag-and-drop dashboards met templates, tegels en slimme zichtbaarheid</summary>
+	<description lang="en"><![CDATA[> ⚠️ **Active development — not for production use yet.** This app is under active development. Although it may carry a stable release status, **please do not use it in production environments before 17 June 2026.** See the [app page on conduction.nl](https://conduction.nl/apps/launchpad) for release planning and what this app does.
+
+LaunchPad supercharges the Nextcloud dashboard. Create personalized workspaces with drag-and-drop widgets, custom shortcut tiles, and smart visibility rules — then let admins roll out templates to entire teams.
+
+**Key Features**
+
+- **Drag-and-drop grid layout** — Position and resize widgets freely on a flexible grid
+- **Multiple dashboards** — Create as many dashboards as you need and switch between them
+- **Custom tiles** — Add shortcut cards with icons, colors, and links to your most-used tools
+- **Admin templates** — Pre-configure dashboards and distribute them to user groups with one click
+- **Permission levels** — Choose view-only, add-only, or full customization per template
+- **Conditional visibility** — Show or hide widgets based on group membership, time of day, or date
+- **Widget styling** — Customize colors, borders, and titles for each individual widget
+- **Compulsory widgets** — Admins can pin important widgets that users cannot remove
+- **Full Nextcloud compatibility** — Works with every existing Nextcloud dashboard widget out of the box
+
+Perfect for organizations that want consistent, curated dashboards for their teams while still giving users freedom to personalize.
+
+Free and open source under the EUPL-1.2 license.
+    ]]></description>
+	<description lang="nl"><![CDATA[> ⚠️ **In actieve ontwikkeling — nog niet voor productiegebruik.** Deze app is volop in ontwikkeling. Hoewel de app een stabiele release-status kan hebben, **gebruik deze nog niet in productieomgevingen vóór 17 juni 2026.** Zie de [app-pagina op conduction.nl](https://conduction.nl/apps/launchpad) voor release-planning en het doel van deze app.
+
+LaunchPad geeft het Nextcloud-dashboard superkrachten. Maak persoonlijke werkruimtes met drag-and-drop widgets, eigen snelkoppelingstegels en slimme zichtbaarheidsregels — en laat beheerders templates uitrollen naar hele teams.
+
+**Belangrijkste functies**
+
+- **Drag-and-drop grid layout** — Positioneer en schaal widgets vrij op een flexibel raster
+- **Meerdere dashboards** — Maak zoveel dashboards als je nodig hebt en wissel ertussen
+- **Eigen tegels** — Voeg snelkoppelingskaarten toe met iconen, kleuren en links naar je meestgebruikte tools
+- **Beheerdertemplates** — Configureer dashboards vooraf en distribueer ze met een klik naar gebruikersgroepen
+- **Rechtenniveaus** — Kies tussen alleen bekijken, toevoegen, of volledige aanpassing per template
+- **Conditionele zichtbaarheid** — Toon of verberg widgets op basis van groepslidmaatschap, tijdstip of datum
+- **Widget-styling** — Pas kleuren, randen en titels aan voor elke individuele widget
+- **Verplichte widgets** — Beheerders kunnen belangrijke widgets vastzetten die gebruikers niet kunnen verwijderen
+- **Volledige Nextcloud-compatibiliteit** — Werkt direct met elke bestaande Nextcloud dashboard-widget
+
+Ideaal voor organisaties die consistente, samengestelde dashboards willen voor hun teams, terwijl gebruikers de vrijheid houden om te personaliseren.
+
+Vrij en open source onder de EUPL-1.2-licentie.
+    ]]></description>
+	<version>1.0.5-unstable.8</version>
+	<licence>agpl</licence>
+	<author mail="info@conduction.nl" homepage="https://www.conduction.nl/">Conduction</author>
+	<namespace>LaunchPad</namespace>
+	<documentation>
+		<user>https://github.com/ConductionNL/launchpad</user>
+		<admin>https://github.com/ConductionNL/launchpad</admin>
+		<developer>https://github.com/ConductionNL/launchpad</developer>
+	</documentation>
+	<category>customization</category>
+	<category>organization</category>
+	<category>dashboard</category>
+	<website>https://github.com/ConductionNL/launchpad</website>
+	<discussion>https://github.com/ConductionNL/launchpad/discussions</discussion>
+	<bugs>https://github.com/ConductionNL/launchpad/issues</bugs>
+	<repository>https://github.com/ConductionNL/launchpad</repository>
+
+	<screenshot>https://raw.githubusercontent.com/ConductionNL/launchpad/main/img/app-store.svg</screenshot>
+	<screenshot>https://raw.githubusercontent.com/ConductionNL/launchpad/main/img/screenshot.png</screenshot>
+
+	<dependencies>
+		<php min-version="8.3"/>
+		<nextcloud min-version="29" max-version="34"/>
+		<app>openregister</app>
+	</dependencies>
+
+	<!-- Surface dashboards, widget content, and metadata in NC unified search. REQ-SRCH-001. -->
+	<types>
+		<search/>
+	</types>
+
+	<background-jobs>
+		<job>OCA\LaunchPad\BackgroundJob\OrphanedDataCleanupJob</job>
+	</background-jobs>
+
+	<repair-steps>
+		<!-- ADR-023: seed the action-authorization matrix (default admin-only). -->
+		<install>
+			<step>OCA\LaunchPad\Repair\InitializeActions</step>
+			<!-- role-based-content task-2: seed default role-feature permissions. -->
+			<step>OCA\LaunchPad\Repair\SeedRolePermissions</step>
+		</install>
+		<post-migration>
+			<step>OCA\LaunchPad\Repair\InitializeActions</step>
+			<!-- C4: purge orphaned cascade rows from deleted dashboards (REQ-CSC-003). -->
+			<step>OCA\LaunchPad\Repair\PurgeOrphanedCascadeData</step>
+		</post-migration>
+	</repair-steps>
+
+	<settings>
+		<admin>OCA\LaunchPad\Settings\LaunchPadAdmin</admin>
+		<admin-section>OCA\LaunchPad\Settings\LaunchPadAdminSection</admin-section>
+	</settings>
+
+	<commands>
+		<!-- REQ-EXIM-010: dashboard export / import via `php occ`. -->
+		<command>OCA\LaunchPad\Command\ExportCommand</command>
+		<command>OCA\LaunchPad\Command\ImportCommand</command>
+		<!-- REQ-CFLI-011: Confluence HTML export importer via `php occ`. -->
+		<command>OCA\LaunchPad\Command\ImportConfluenceCommand</command>
+		<!-- REQ-CLI-001..011: shared `launchpad:` CLI suite (cli-commands). -->
+		<command>OCA\LaunchPad\Command\DashboardListCommand</command>
+		<command>OCA\LaunchPad\Command\DashboardShowCommand</command>
+		<command>OCA\LaunchPad\Command\DashboardDeleteCommand</command>
+		<command>OCA\LaunchPad\Command\DashboardDebugShareCommand</command>
+		<command>OCA\LaunchPad\Command\UserRevokeFeedTokenCommand</command>
+		<command>OCA\LaunchPad\Command\I18nExportStringsCommand</command>
+		<command>OCA\LaunchPad\Command\I18nMigrateLanguageStructureCommand</command>
+		<command>OCA\LaunchPad\Command\I18nCopyNavigationCommand</command>
+		<!-- REQ-OCLN-001..009: orphaned-data cleanup CLI. -->
+		<command>OCA\LaunchPad\Command\CleanupScanCommand</command>
+		<command>OCA\LaunchPad\Command\CleanupPurgeCommand</command>
+		<!-- REQ-DEMO-009: bundled demo showcase install / list. -->
+		<command>OCA\LaunchPad\Command\DemoShowcasesInstallCommand</command>
+		<command>OCA\LaunchPad\Command\DemoShowcasesListCommand</command>
+		<!-- REQ-WIZ-010: setup wizard via `php occ mydash:setup`. -->
+		<command>OCA\LaunchPad\Command\SetupCommand</command>
+		<!-- REQ-GFSB-008: one-time DB→GroupFolder content migration. -->
+		<command>OCA\LaunchPad\Command\MigrateStorageToGroupFolder</command>
+		<!-- REQ-GFSB-010: toggle the active storage backend. -->
+		<command>OCA\LaunchPad\Command\ToggleStorageSetting</command>
+	</commands>
+
+	<navigations>
+		<navigation>
+			<name>LaunchPad</name>
+			<route>mydash.page.index</route>
+			<icon>app.svg</icon>
+			<order>-5</order>
+		</navigation>
+	</navigations>
+
+	<activity>
+		<!-- REQ-ACT-001: register the LaunchPad Activity provider that
+		     surfaces the 13-event catalogue defined in
+		     OCA\LaunchPad\Activity\Extension. -->
+		<provider>OCA\LaunchPad\Activity\Extension</provider>
+	</activity>
+</info>

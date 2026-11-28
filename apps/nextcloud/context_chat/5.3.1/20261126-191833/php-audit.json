@@ -1,0 +1,293 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\ContextChat\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/BackgroundJobs/FileSystemListenerJob.php:82 OC\\Files\\SetupManager",
+        "lib/BackgroundJobs/IndexerJob.php:116 OC_Util",
+        "lib/BackgroundJobs/RotateLogsJob.php:30 OC",
+        "lib/Logger.php:36 OC",
+        "lib/Service/MetadataService.php:170 OC\\Files\\SetupManager",
+        "lib/Service/StorageService.php:346 OC\\Files\\Cache\\CacheQueryBuilder"
+      ],
+      "lines": [
+        "6 uses of the private API of the server in 6 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/BackgroundJobs/FileSystemListenerJob.php:82 OC\\Files\\SetupManager",
+        "  lib/BackgroundJobs/IndexerJob.php:116 OC_Util",
+        "  lib/BackgroundJobs/RotateLogsJob.php:30 OC",
+        "  lib/Logger.php:36 OC",
+        "  lib/Service/MetadataService.php:170 OC\\Files\\SetupManager",
+        "  lib/Service/StorageService.php:346 OC\\Files\\Cache\\CacheQueryBuilder"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "PUT /index.php/apps/context_chat/config  context_chat.config.setconfig  appinfo/routes.php:10 routes",
+        "PUT /index.php/apps/context_chat/admin-config  context_chat.config.setadminconfig  appinfo/routes.php:11 routes",
+        "GET /index.php/apps/context_chat/providers  context_chat.provider.getproviders  appinfo/routes.php:13 routes",
+        "GET /index.php/apps/context_chat/default-provider-key  context_chat.provider.getdefaultproviderkey  appinfo/routes.php:14 routes",
+        "POST /index.php/apps/context_chat/sources-metadata  context_chat.provider.getmetadatafor  appinfo/routes.php:15 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 5 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 4 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  PUT /index.php/apps/context_chat/config  context_chat.config.setconfig  appinfo/routes.php:10 routes",
+        "  PUT /index.php/apps/context_chat/admin-config  context_chat.config.setadminconfig  appinfo/routes.php:11 routes",
+        "  GET /index.php/apps/context_chat/providers  context_chat.provider.getproviders  appinfo/routes.php:13 routes",
+        "  GET /index.php/apps/context_chat/default-provider-key  context_chat.provider.getdefaultproviderkey  appinfo/routes.php:14 routes",
+        "  POST /index.php/apps/context_chat/sources-metadata  context_chat.provider.getmetadatafor  appinfo/routes.php:15 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "vimeo/psalm, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Db/FsEventMapper.php:38",
+        "lib/Db/FsEventMapper.php:126"
+      ],
+      "lines": [
+        "2 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Db/FsEventMapper.php:38",
+        "  lib/Db/FsEventMapper.php:126"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJobs/ActionJob.php OCA\\ContextChat\\BackgroundJobs\\ActionJob",
+        "lib/BackgroundJobs/FileSystemListenerJob.php OCA\\ContextChat\\BackgroundJobs\\FileSystemListenerJob",
+        "lib/BackgroundJobs/RotateLogsJob.php OCA\\ContextChat\\BackgroundJobs\\RotateLogsJob"
+      ],
+      "lines": [
+        "3 timed jobs do not say whether they are time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJobs/ActionJob.php OCA\\ContextChat\\BackgroundJobs\\ActionJob",
+        "  lib/BackgroundJobs/FileSystemListenerJob.php OCA\\ContextChat\\BackgroundJobs\\FileSystemListenerJob",
+        "  lib/BackgroundJobs/RotateLogsJob.php OCA\\ContextChat\\BackgroundJobs\\RotateLogsJob"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJobs/IndexerJob.php:175 time()",
+        "lib/BackgroundJobs/IndexerJob.php:186 time()",
+        "lib/BackgroundJobs/IndexerJob.php:248 time()",
+        "lib/BackgroundJobs/IndexerJob.php:255 time()",
+        "lib/Repair/AppInstallStep.php:39 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 5 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/BackgroundJobs/IndexerJob.php:175 time()",
+        "  lib/BackgroundJobs/IndexerJob.php:186 time()",
+        "  lib/BackgroundJobs/IndexerJob.php:248 time()",
+        "  lib/BackgroundJobs/IndexerJob.php:255 time()",
+        "  lib/Repair/AppInstallStep.php:39 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJobs/ActionJob.php:41 getAppValueString()",
+        "lib/BackgroundJobs/FileSystemListenerJob.php:51 getAppValueString()",
+        "lib/BackgroundJobs/IndexerJob.php:94 getAppValueString()",
+        "lib/BackgroundJobs/IndexerJob.php:152 getAppValueInt()",
+        "lib/BackgroundJobs/IndexerJob.php:156 getAppValueInt()",
+        "lib/BackgroundJobs/IndexerJob.php:160 getAppValueInt()",
+        "lib/BackgroundJobs/IndexerJob.php:164 getAppValueInt()",
+        "lib/BackgroundJobs/IndexerJob.php:324 getAppValueInt()",
+        "lib/BackgroundJobs/IndexerJob.php:348 setAppValueInt()",
+        "lib/BackgroundJobs/RotateLogsJob.php:31 getAppValueString()",
+        "lib/BackgroundJobs/SchedulerJob.php:37 setAppValueString()",
+        "lib/BackgroundJobs/SchedulerJob.php:38 setAppValueInt()",
+        "lib/BackgroundJobs/StorageCrawlJob.php:93 setAppValueInt()",
+        "lib/BackgroundJobs/StorageCrawlJob.php:102 getAppValueInt()",
+        "lib/BackgroundJobs/SubmitContentJob.php:66 getAppValueInt()",
+        "lib/Command/Statistics.php:45 getAppValueInt()",
+        "lib/Command/Statistics.php:48 getAppValueInt()",
+        "lib/Command/Statistics.php:49 getAppValueInt()",
+        "lib/Command/Statistics.php:69 getAppValueString()",
+        "lib/Controller/ConfigController.php:41 setUserValue()",
+        "lib/Controller/ConfigController.php:54 setAppValueString()",
+        "lib/Logger.php:37 getAppValueString()",
+        "lib/Migration/Version004000000Date20241217110041.php:98 setAppValueString()",
+        "lib/Migration/Version005000001Date20251124093628.php:55 getAppKeys()",
+        "lib/Migration/Version005000001Date20251124093628.php:62 getAppValueInt()",
+        "lib/Migration/Version005000001Date20251124093628.php:63 setAppValueInt()",
+        "lib/Migration/Version005000001Date20251124093628.php:71 getAppValueString()",
+        "lib/Migration/Version005000001Date20251124093628.php:72 setAppValueString()",
+        "lib/Migration/Version4000Date20241108004215.php:79 setAppValueString()",
+        "lib/Public/ContentManager.php:48 getAppValueString()",
+        "lib/Repair/AppInstallStep.php:37 getAppValueInt()",
+        "lib/Repair/AppInstallStep.php:39 setAppValueInt()",
+        "lib/Service/DiagnosticService.php:65 setAppValueString()",
+        "lib/Service/DiagnosticService.php:69 getAppValueString()",
+        "lib/Service/LangRopeService.php:69 getAppValueString()",
+        "lib/Service/LangRopeService.php:91 setAppValueString()",
+        "lib/Service/LangRopeService.php:93 setAppValueString()",
+        "lib/Service/LangRopeService.php:98 getAppValueString()",
+        "lib/Service/ProviderConfigService.php:81 getAppValueString()",
+        "lib/Service/ProviderConfigService.php:88 setAppValueString()",
+        "lib/Service/ProviderConfigService.php:112 setAppValueString()",
+        "lib/Service/ProviderConfigService.php:132 setAppValueString()",
+        "lib/Service/ScanService.php:52 getAppValueInt()",
+        "lib/Settings/AdminSettings.php:44 getAppValueInt()",
+        "lib/Settings/AdminSettings.php:45 getAppValueInt()",
+        "lib/Settings/AdminSettings.php:49 getAppValueInt()",
+        "lib/Settings/AdminSettings.php:59 getAppValueString()",
+        "lib/TaskProcessing/ContextChatProvider.php:255 getAppValueInt()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 48 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/BackgroundJobs/ActionJob.php:41 getAppValueString()",
+        "  lib/BackgroundJobs/FileSystemListenerJob.php:51 getAppValueString()",
+        "  lib/BackgroundJobs/IndexerJob.php:94 getAppValueString()",
+        "  lib/BackgroundJobs/IndexerJob.php:152 getAppValueInt()",
+        "  lib/BackgroundJobs/IndexerJob.php:156 getAppValueInt()",
+        "  lib/BackgroundJobs/IndexerJob.php:160 getAppValueInt()",
+        "  lib/BackgroundJobs/IndexerJob.php:164 getAppValueInt()",
+        "  lib/BackgroundJobs/IndexerJob.php:324 getAppValueInt()",
+        "  lib/BackgroundJobs/IndexerJob.php:348 setAppValueInt()",
+        "  lib/BackgroundJobs/RotateLogsJob.php:31 getAppValueString()",
+        "  lib/BackgroundJobs/SchedulerJob.php:37 setAppValueString()",
+        "  lib/BackgroundJobs/SchedulerJob.php:38 setAppValueInt()",
+        "  lib/BackgroundJobs/StorageCrawlJob.php:93 setAppValueInt()",
+        "  lib/BackgroundJobs/StorageCrawlJob.php:102 getAppValueInt()",
+        "  lib/BackgroundJobs/SubmitContentJob.php:66 getAppValueInt()",
+        "  lib/Command/Statistics.php:45 getAppValueInt()",
+        "  lib/Command/Statistics.php:48 getAppValueInt()",
+        "  lib/Command/Statistics.php:49 getAppValueInt()",
+        "  lib/Command/Statistics.php:69 getAppValueString()",
+        "  lib/Controller/ConfigController.php:41 setUserValue()",
+        "  lib/Controller/ConfigController.php:54 setAppValueString()",
+        "  lib/Logger.php:37 getAppValueString()",
+        "  lib/Migration/Version004000000Date20241217110041.php:98 setAppValueString()",
+        "  lib/Migration/Version005000001Date20251124093628.php:55 getAppKeys()",
+        "  lib/Migration/Version005000001Date20251124093628.php:62 getAppValueInt()",
+        "  lib/Migration/Version005000001Date20251124093628.php:63 setAppValueInt()",
+        "  lib/Migration/Version005000001Date20251124093628.php:71 getAppValueString()",
+        "  lib/Migration/Version005000001Date20251124093628.php:72 setAppValueString()",
+        "  lib/Migration/Version4000Date20241108004215.php:79 setAppValueString()",
+        "  lib/Public/ContentManager.php:48 getAppValueString()",
+        "  lib/Repair/AppInstallStep.php:37 getAppValueInt()",
+        "  lib/Repair/AppInstallStep.php:39 setAppValueInt()",
+        "  lib/Service/DiagnosticService.php:65 setAppValueString()",
+        "  lib/Service/DiagnosticService.php:69 getAppValueString()",
+        "  lib/Service/LangRopeService.php:69 getAppValueString()",
+        "  lib/Service/LangRopeService.php:91 setAppValueString()",
+        "  lib/Service/LangRopeService.php:93 setAppValueString()",
+        "  lib/Service/LangRopeService.php:98 getAppValueString()",
+        "  lib/Service/ProviderConfigService.php:81 getAppValueString()",
+        "  lib/Service/ProviderConfigService.php:88 setAppValueString()",
+        "  lib/Service/ProviderConfigService.php:112 setAppValueString()",
+        "  lib/Service/ProviderConfigService.php:132 setAppValueString()",
+        "  lib/Service/ScanService.php:52 getAppValueInt()",
+        "  lib/Settings/AdminSettings.php:44 getAppValueInt()",
+        "  lib/Settings/AdminSettings.php:45 getAppValueInt()",
+        "  lib/Settings/AdminSettings.php:49 getAppValueInt()",
+        "  lib/Settings/AdminSettings.php:59 getAppValueString()",
+        "  lib/TaskProcessing/ContextChatProvider.php:255 getAppValueInt()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 45
+        }
+      ]
+    }
+  ],
+  "endpoints": 6,
+  "endpointList": [
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/context_chat/admin-config",
+      "target": "OCA\\ContextChat\\Controller\\ConfigController::setAdminConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/context_chat/config",
+      "target": "OCA\\ContextChat\\Controller\\ConfigController::setConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/context_chat/default-provider-key",
+      "target": "OCA\\ContextChat\\Controller\\ProviderController::getDefaultProviderKey",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/context_chat/download-logs-nextcloud",
+      "target": "OCA\\ContextChat\\Controller\\LogController::getNextcloudLogs",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/context_chat/providers",
+      "target": "OCA\\ContextChat\\Controller\\ProviderController::getProviders",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/context_chat/sources-metadata",
+      "target": "OCA\\ContextChat\\Controller\\ProviderController::getMetadataFor",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

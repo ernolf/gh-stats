@@ -1,0 +1,588 @@
+{
+  "findings": [
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Command/BaseCommand.php:21 OC\\Core\\Command\\Base",
+        "lib/Controller/BaseController.php:22 OC::$server",
+        "lib/Dav/PermissionsPlugin.php:143 OC\\Files\\FileInfo",
+        "lib/Security/OrganizationFolderVoter.php:137 OC::$server",
+        "lib/Service/OrganizationFolderService.php:307 OC::$server",
+        "lib/Service/OrganizationFolderService.php:344 OC::$server"
+      ],
+      "lines": [
+        "6 uses of the private API of the server in 5 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Command/BaseCommand.php:21 OC\\Core\\Command\\Base",
+        "  lib/Controller/BaseController.php:22 OC::$server",
+        "  lib/Dav/PermissionsPlugin.php:143 OC\\Files\\FileInfo",
+        "  lib/Security/OrganizationFolderVoter.php:137 OC::$server",
+        "  lib/Service/OrganizationFolderService.php:307 OC::$server",
+        "  lib/Service/OrganizationFolderService.php:344 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "dav-without-preload",
+      "level": "warn",
+      "places": [
+        "lib/Dav/PropFindPlugin.php:43 OCA\\OrganizationFolders\\Dav\\PropFindPlugin"
+      ],
+      "lines": [
+        "1 DAV plugin listens to propFind and not to preloadCollection, which the server emits from Nextcloud 32 on before it reads the children of a collection. Without that listener a PROPFIND with Depth above 0 runs the queries of the plugin once per child.",
+        "  lib/Dav/PropFindPlugin.php:43 OCA\\OrganizationFolders\\Dav\\PropFindPlugin"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:59 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:59 injectFn()"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/ResourceController.php:404 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "lib/Groups/GroupBackend.php:308 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "lib/Manager/GroupfolderManager.php:32 OCP\\Constants::PERMISSION_ALL: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_ALL instead",
+        "lib/Manager/PathManager.php:37 OCP\\Constants::PERMISSION_ALL: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_ALL instead",
+        "lib/Service/OrganizationFolderService.php:363 OCP\\Constants::PERMISSION_ALL: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_ALL instead",
+        "lib/Service/ResourceMemberService.php:291 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead"
+      ],
+      "lines": [
+        "6 uses in 6 files of the public API that is deprecated in Nextcloud 32. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/ResourceController.php:404 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "  lib/Groups/GroupBackend.php:308 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead",
+        "  lib/Manager/GroupfolderManager.php:32 OCP\\Constants::PERMISSION_ALL: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_ALL instead",
+        "  lib/Manager/PathManager.php:37 OCP\\Constants::PERMISSION_ALL: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_ALL instead",
+        "  lib/Service/OrganizationFolderService.php:363 OCP\\Constants::PERMISSION_ALL: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_ALL instead",
+        "  lib/Service/ResourceMemberService.php:291 OCP\\IUserManager::search(): deprecated since Nextcloud 31; use searchDisplayName instead"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/OrganizationFolderMemberService.php:98 time()",
+        "lib/Service/OrganizationFolderMemberService.php:126 time()",
+        "lib/Service/ResourceMemberService.php:177 time()",
+        "lib/Service/ResourceMemberService.php:232 time()",
+        "lib/Service/ResourceService.php:269 time()",
+        "lib/Service/ResourceService.php:270 time()",
+        "lib/Service/ResourceService.php:383 time()",
+        "lib/Service/ResourceService.php:476 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 8 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/OrganizationFolderMemberService.php:98 time()",
+        "  lib/Service/OrganizationFolderMemberService.php:126 time()",
+        "  lib/Service/ResourceMemberService.php:177 time()",
+        "  lib/Service/ResourceMemberService.php:232 time()",
+        "  lib/Service/ResourceService.php:269 time()",
+        "  lib/Service/ResourceService.php:270 time()",
+        "  lib/Service/ResourceService.php:383 time()",
+        "  lib/Service/ResourceService.php:476 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/SettingsService.php:36 getValueString()",
+        "lib/Service/SettingsService.php:38 getValueBool()",
+        "lib/Service/SettingsService.php:54 getValueString()",
+        "lib/Service/SettingsService.php:56 getValueBool()",
+        "lib/Service/SettingsService.php:71 setValueString()",
+        "lib/Service/SettingsService.php:73 setValueBool()",
+        "lib/SetupChecks/InheritPerUserModeSetupCheck.php:27 getValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 7 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/SettingsService.php:36 getValueString()",
+        "  lib/Service/SettingsService.php:38 getValueBool()",
+        "  lib/Service/SettingsService.php:54 getValueString()",
+        "  lib/Service/SettingsService.php:56 getValueBool()",
+        "  lib/Service/SettingsService.php:71 setValueString()",
+        "  lib/Service/SettingsService.php:73 setValueBool()",
+        "  lib/SetupChecks/InheritPerUserModeSetupCheck.php:27 getValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version000000Date20241014120000.php:29 createTable() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241014120000.php:30 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241014120000.php:34 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241014120000.php:37 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241014120000.php:41 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241014120000.php:45 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241014120000.php:49 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241014120000.php:52 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241014120000.php:55 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241014120000.php:59 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241014120000.php:60 addForeignKeyConstraint() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241014120000.php:66 addForeignKeyConstraint() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241014120000.php:75 addUniqueConstraint() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241014120000.php:79 createTable() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241014120000.php:80 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241014120000.php:83 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241014120000.php:87 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241014120000.php:91 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241014120000.php:95 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241014120000.php:99 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241014120000.php:100 addForeignKeyConstraint() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241014120000.php:106 addIndex() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241025120000.php:29 createTable() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241025120000.php:30 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241025120000.php:34 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241025120000.php:39 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241025120000.php:45 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241025120000.php:51 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241025120000.php:55 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241025120000.php:58 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241025120000.php:62 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241025120000.php:63 addForeignKeyConstraint() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241025120000.php:69 addIndex() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241025120000.php:70 addUniqueConstraint() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241113213000.php:28 createTable() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241113213000.php:29 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241113213000.php:33 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241113213000.php:40 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241113213000.php:45 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241113213000.php:50 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241113213000.php:54 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241113213000.php:57 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241113213000.php:61 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241113213000.php:62 addForeignKeyConstraint() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241113213000.php:68 addIndex() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20241113213000.php:69 addUniqueConstraint() on a table whose name is no constant",
+        "lib/Migration/Version000003Date20250627001000.php:28 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version000003Date20250627001000.php:29 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version010100Date20251217130000.php:28 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version010100Date20251217130000.php:29 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version010100Date20251217130000.php:37 addIndex() on a table whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version000000Date20241014120000.php:29 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241014120000.php:30 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241014120000.php:34 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241014120000.php:37 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241014120000.php:41 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241014120000.php:45 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241014120000.php:49 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241014120000.php:52 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241014120000.php:55 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241014120000.php:59 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241014120000.php:60 addForeignKeyConstraint() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241014120000.php:66 addForeignKeyConstraint() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241014120000.php:75 addUniqueConstraint() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241014120000.php:79 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241014120000.php:80 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241014120000.php:83 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241014120000.php:87 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241014120000.php:91 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241014120000.php:95 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241014120000.php:99 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241014120000.php:100 addForeignKeyConstraint() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241014120000.php:106 addIndex() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241025120000.php:29 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241025120000.php:30 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241025120000.php:34 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241025120000.php:39 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241025120000.php:45 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241025120000.php:51 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241025120000.php:55 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241025120000.php:58 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241025120000.php:62 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241025120000.php:63 addForeignKeyConstraint() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241025120000.php:69 addIndex() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241025120000.php:70 addUniqueConstraint() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241113213000.php:28 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241113213000.php:29 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241113213000.php:33 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241113213000.php:40 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241113213000.php:45 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241113213000.php:50 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241113213000.php:54 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241113213000.php:57 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241113213000.php:61 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241113213000.php:62 addForeignKeyConstraint() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241113213000.php:68 addIndex() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20241113213000.php:69 addUniqueConstraint() on a table whose name is no constant",
+        "  lib/Migration/Version000003Date20250627001000.php:28 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000003Date20250627001000.php:29 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version010100Date20251217130000.php:28 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version010100Date20251217130000.php:29 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version010100Date20251217130000.php:37 addIndex() on a table whose name is no constant"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 48
+        }
+      ]
+    }
+  ],
+  "endpoints": 41,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/organization_folders/adminSettings",
+      "target": "OCA\\OrganizationFolders\\Controller\\AdminSettingsController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:58 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/organization_folders/adminSettings/{key}",
+      "target": "OCA\\OrganizationFolders\\Controller\\AdminSettingsController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:59 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/index.php/apps/organization_folders/adminSettings/{key}",
+      "target": "OCA\\OrganizationFolders\\Controller\\AdminSettingsController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:60 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/organization_folders/organizationFolders",
+      "target": "OCA\\OrganizationFolders\\Controller\\OrganizationFolderController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:8 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/organization_folders/organizationFolders",
+      "target": "OCA\\OrganizationFolders\\Controller\\OrganizationFolderController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:10 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/organization_folders/organizationFolders/{organizationFolderId}",
+      "target": "OCA\\OrganizationFolders\\Controller\\OrganizationFolderController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:9 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/organization_folders/organizationFolders/{organizationFolderId}",
+      "target": "OCA\\OrganizationFolders\\Controller\\OrganizationFolderController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:11 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/organization_folders/organizationFolders/{organizationFolderId}/groupMemberOptions",
+      "target": "OCA\\OrganizationFolders\\Controller\\OrganizationFolderController::findGroupMemberOptions",
+      "openapi": [],
+      "source": "appinfo/routes.php:13 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/organization_folders/organizationFolders/{organizationFolderId}/members",
+      "target": "OCA\\OrganizationFolders\\Controller\\OrganizationFolderMemberController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:16 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/organization_folders/organizationFolders/{organizationFolderId}/members",
+      "target": "OCA\\OrganizationFolders\\Controller\\OrganizationFolderMemberController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:17 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/organization_folders/organizationFolders/{organizationFolderId}/resources",
+      "target": "OCA\\OrganizationFolders\\Controller\\OrganizationFolderController::resources",
+      "openapi": [],
+      "source": "appinfo/routes.php:12 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/organization_folders/organizationFolders/members/{id}",
+      "target": "OCA\\OrganizationFolders\\Controller\\OrganizationFolderMemberController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:19 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/organization_folders/organizationFolders/members/{id}",
+      "target": "OCA\\OrganizationFolders\\Controller\\OrganizationFolderMemberController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:18 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/organization_folders/organizationProviders",
+      "target": "OCA\\OrganizationFolders\\Controller\\OrganizationController::getOrganizationProviders",
+      "openapi": [],
+      "source": "appinfo/routes.php:51 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/organization_folders/organizationProviders/{organizationProviderId}/organizations/{organizationId}",
+      "target": "OCA\\OrganizationFolders\\Controller\\OrganizationController::getOrganization",
+      "openapi": [],
+      "source": "appinfo/routes.php:52 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/organization_folders/organizationProviders/{organizationProviderId}/organizations/{organizationId}/roles/",
+      "target": "OCA\\OrganizationFolders\\Controller\\OrganizationController::getRoles",
+      "openapi": [],
+      "source": "appinfo/routes.php:55 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/organization_folders/organizationProviders/{organizationProviderId}/organizations/{parentOrganizationId}/subOrganizations",
+      "target": "OCA\\OrganizationFolders\\Controller\\OrganizationController::getSubOrganizations",
+      "openapi": [],
+      "source": "appinfo/routes.php:53 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/organization_folders/organizationProviders/{organizationProviderId}/subOrganizations",
+      "target": "OCA\\OrganizationFolders\\Controller\\OrganizationController::getTopLevelOrganizations",
+      "openapi": [],
+      "source": "appinfo/routes.php:54 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/organization_folders/resources",
+      "target": "OCA\\OrganizationFolders\\Controller\\ResourceController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:23 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/organization_folders/resources/{resourceId}",
+      "target": "OCA\\OrganizationFolders\\Controller\\ResourceController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:26 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/organization_folders/resources/{resourceId}",
+      "target": "OCA\\OrganizationFolders\\Controller\\ResourceController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:22 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/organization_folders/resources/{resourceId}",
+      "target": "OCA\\OrganizationFolders\\Controller\\ResourceController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:24 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/organization_folders/resources/{resourceId}/groupMemberOptions",
+      "target": "OCA\\OrganizationFolders\\Controller\\ResourceController::findGroupMemberOptions",
+      "openapi": [],
+      "source": "appinfo/routes.php:33 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/organization_folders/resources/{resourceId}/members",
+      "target": "OCA\\OrganizationFolders\\Controller\\ResourceMemberController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:37 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/organization_folders/resources/{resourceId}/members",
+      "target": "OCA\\OrganizationFolders\\Controller\\ResourceMemberController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:38 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/organization_folders/resources/{resourceId}/move",
+      "target": "OCA\\OrganizationFolders\\Controller\\ResourceController::move",
+      "openapi": [],
+      "source": "appinfo/routes.php:25 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/organization_folders/resources/{resourceId}/permissionsReport",
+      "target": "OCA\\OrganizationFolders\\Controller\\ResourceController::permissionsReport",
+      "openapi": [],
+      "source": "appinfo/routes.php:30 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/organization_folders/resources/{resourceId}/permissionsReport/{userId}",
+      "target": "OCA\\OrganizationFolders\\Controller\\ResourceController::userPermissionsReport",
+      "openapi": [],
+      "source": "appinfo/routes.php:31 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/organization_folders/resources/{resourceId}/snapshots",
+      "target": "OCA\\OrganizationFolders\\Controller\\ResourceSnapshotController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:43 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/organization_folders/resources/{resourceId}/snapshots/{snapshotId}",
+      "target": "OCA\\OrganizationFolders\\Controller\\ResourceSnapshotController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:44 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/organization_folders/resources/{resourceId}/snapshots/{snapshotId}/diff",
+      "target": "OCA\\OrganizationFolders\\Controller\\ResourceSnapshotDiffController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:45 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/organization_folders/resources/{resourceId}/snapshots/{snapshotId}/diff/{diffTaskId}",
+      "target": "OCA\\OrganizationFolders\\Controller\\ResourceSnapshotDiffController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:46 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/organization_folders/resources/{resourceId}/snapshots/{snapshotId}/diff/{diffTaskId}/{diffTaskResultId}",
+      "target": "OCA\\OrganizationFolders\\Controller\\ResourceSnapshotDiffResultController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:47 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/organization_folders/resources/{resourceId}/snapshots/{snapshotId}/diff/{diffTaskId}/{diffTaskResultId}/revert",
+      "target": "OCA\\OrganizationFolders\\Controller\\ResourceSnapshotDiffResultController::revert",
+      "openapi": [],
+      "source": "appinfo/routes.php:48 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/organization_folders/resources/{resourceId}/subResources",
+      "target": "OCA\\OrganizationFolders\\Controller\\ResourceController::subResources",
+      "openapi": [],
+      "source": "appinfo/routes.php:27 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/organization_folders/resources/{resourceId}/unmanagedSubfolders",
+      "target": "OCA\\OrganizationFolders\\Controller\\ResourceController::unmanagedSubfolders",
+      "openapi": [],
+      "source": "appinfo/routes.php:28 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/organization_folders/resources/{resourceId}/unmanagedSubfolders/{unmanagedSubfolderName}/promote",
+      "target": "OCA\\OrganizationFolders\\Controller\\ResourceController::promoteUnmanagedSubfolder",
+      "openapi": [],
+      "source": "appinfo/routes.php:29 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/organization_folders/resources/{resourceId}/userMemberOptions",
+      "target": "OCA\\OrganizationFolders\\Controller\\ResourceController::findUserMemberOptions",
+      "openapi": [],
+      "source": "appinfo/routes.php:34 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/organization_folders/resources/{resourceId}/userPermissionsReportOptions",
+      "target": "OCA\\OrganizationFolders\\Controller\\ResourceController::findUserPermissionsReportOptions",
+      "openapi": [],
+      "source": "appinfo/routes.php:32 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/organization_folders/resources/members/{id}",
+      "target": "OCA\\OrganizationFolders\\Controller\\ResourceMemberController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:40 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/organization_folders/resources/members/{id}",
+      "target": "OCA\\OrganizationFolders\\Controller\\ResourceMemberController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:39 routes",
+      "kind": "route"
+    }
+  ]
+}

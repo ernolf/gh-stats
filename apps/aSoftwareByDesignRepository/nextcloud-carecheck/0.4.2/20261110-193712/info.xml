@@ -1,0 +1,64 @@
+<?xml version="1.0"?>
+<!--
+  - SPDX-FileCopyrightText: 2026 Alexander Mäule <info@software-by-design.de>
+  - SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>carecheck</id>
+	<name>CareCheck</name>
+	<summary>Mobile care documentation — tours, visit bundles, tamper-evident journal, coverage board</summary>
+	<summary lang="de">Mobile Pflegedokumentation — Touren, Besuchsprotokolle, manipulationssicheres Journal, Zentrale-Tagesübersicht</summary>
+	<description><![CDATA[
+# CareCheck — tour, visit & care documentation
+
+Ambulatory care documentation on your own Nextcloud: recurring tour templates that materialize into daily tours, offline-first visit bundles with plan snapshots and signatures, an append-only hash-chained journal with external timestamp anchoring, audited break-glass cover access, and encrypted client records.
+
+**Free AGPL web app.** The native companion (worker & paired-member modes) is licensed separately (`CCK2`). The web is never paywalled.
+	]]></description>
+	<version>0.4.2</version>
+	<licence>agpl</licence>
+	<author mail="info@software-by-design.de" homepage="https://nextcloud.software-by-design.de/">Software by Design GbR</author>
+	<namespace>CareCheck</namespace>
+	<category>organization</category>
+	<category>tools</category>
+	<website>https://nextcloud.software-by-design.de/</website>
+	<bugs>https://github.com/aSoftwareByDesignRepository/nextcloud-carecheck/issues</bugs>
+	<dependencies>
+		<nextcloud min-version="32" max-version="35"/>
+		<php min-version="8.2" max-version="8.5"/>
+		<database>pgsql</database>
+		<database>mysql</database>
+	</dependencies>
+	<commands>
+		<command>OCA\CareCheck\Command\UpgradeBackupCommand</command>
+		<command>OCA\CareCheck\Command\VerifyChainCommand</command>
+	</commands>
+	<background-jobs>
+		<job>OCA\CareCheck\Cron\TourGenerateJob</job>
+		<job>OCA\CareCheck\Cron\OverdueDetectionJob</job>
+		<job>OCA\CareCheck\Cron\EscalationJob</job>
+		<job>OCA\CareCheck\Cron\AnchorJob</job>
+		<job>OCA\CareCheck\Cron\RetentionPurgeJob</job>
+		<job>OCA\CareCheck\Cron\AzcAbsenceSyncJob</job>
+		<job>OCA\CareCheck\Cron\DocExpiryJob</job>
+		<job>OCA\CareCheck\Cron\VoiceTranscribeJob</job>
+	</background-jobs>
+	<repair-steps>
+		<install>
+			<step>OCA\CareCheck\Repair\EnsureCareCheckSchema</step>
+		</install>
+		<pre-migration>
+			<step>OCA\CareCheck\Repair\BackupBeforeUpdate</step>
+		</pre-migration>
+
+		<post-migration>
+			<step>OCA\CareCheck\Repair\EnsureCareCheckSchema</step>
+		</post-migration>
+		<uninstall>
+			<step>OCA\CareCheck\Repair\UninstallDropTables</step>
+		</uninstall>
+	</repair-steps>
+	<!-- No <navigation> here: the menu entry is registered conditionally via
+	     NavGate (hasAppAccess) — a static entry would advertise the app to
+	     excluded users when access_mode=restricted. -->
+</info>

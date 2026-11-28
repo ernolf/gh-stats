@@ -1,0 +1,235 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\MediaFrames\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "HEAD /index.php/apps/media_frames/{shareToken}/media  media_frames.page.mediaframemediahead  lib/Controller/PageController.php:424",
+        "GET /index.php/apps/media_frames/{shareToken}/file/{fileId}  media_frames.page.mediaframefile  lib/Controller/PageController.php:494"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 31 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  HEAD /index.php/apps/media_frames/{shareToken}/media  media_frames.page.mediaframemediahead  lib/Controller/PageController.php:424",
+        "  GET /index.php/apps/media_frames/{shareToken}/file/{fileId}  media_frames.page.mediaframefile  lib/Controller/PageController.php:494"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/PageController.php:134 OCP\\Util::callRegister(): deprecated since Nextcloud 32; directly use CsrfTokenManager instead",
+        "lib/Controller/PageController.php:204 OCP\\Util::callRegister(): deprecated since Nextcloud 32; directly use CsrfTokenManager instead",
+        "lib/Controller/PageController.php:627 OCP\\Util::getVersion(): deprecated since Nextcloud 31; Use \\OCP\\ServerVersion::getVersion",
+        "lib/Db/FrameMapper.php:103 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "templates/auth.php:67 OCP\\Util::callRegister(): deprecated since Nextcloud 32; directly use CsrfTokenManager instead"
+      ],
+      "lines": [
+        "5 uses in 3 files of the public API that is deprecated in Nextcloud 29 to 33. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/PageController.php:134 OCP\\Util::callRegister(): deprecated since Nextcloud 32; directly use CsrfTokenManager instead",
+        "  lib/Controller/PageController.php:204 OCP\\Util::callRegister(): deprecated since Nextcloud 32; directly use CsrfTokenManager instead",
+        "  lib/Controller/PageController.php:627 OCP\\Util::getVersion(): deprecated since Nextcloud 31; Use \\OCP\\ServerVersion::getVersion",
+        "  lib/Db/FrameMapper.php:103 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  templates/auth.php:67 OCP\\Util::callRegister(): deprecated since Nextcloud 32; directly use CsrfTokenManager instead"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/auth.php:8 <style> with content",
+        "templates/auth.php:68 style= attribute",
+        "templates/blank.php:6 <style> with content"
+      ],
+      "lines": [
+        "3 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/auth.php:8 <style> with content",
+        "  templates/auth.php:68 style= attribute",
+        "  templates/blank.php:6 <style> with content"
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Db/FrameMapper.php:426"
+      ],
+      "lines": [
+        "1 transaction is opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Db/FrameMapper.php:426"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Db/EntryMapper.php:58 new DateTime()",
+        "lib/Db/FrameMapper.php:372 new DateTime()",
+        "lib/Service/MediaFrameService.php:70 new DateTime()",
+        "lib/Service/MediaFrameService.php:86 new DateTime()",
+        "lib/Service/MediaFrameService.php:115 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 5 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Db/EntryMapper.php:58 new DateTime()",
+        "  lib/Db/FrameMapper.php:372 new DateTime()",
+        "  lib/Service/MediaFrameService.php:70 new DateTime()",
+        "  lib/Service/MediaFrameService.php:86 new DateTime()",
+        "  lib/Service/MediaFrameService.php:115 new DateTime()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    }
+  ],
+  "endpoints": 13,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/media_frames/",
+      "target": "OCA\\MediaFrames\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:94",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/media_frames/",
+      "target": "OCA\\MediaFrames\\Controller\\PageController::create",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:148",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/media_frames/{id}",
+      "target": "OCA\\MediaFrames\\Controller\\PageController::destroy",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:266",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/media_frames/{id}",
+      "target": "OCA\\MediaFrames\\Controller\\PageController::update",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:217",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/media_frames/{id}/edit",
+      "target": "OCA\\MediaFrames\\Controller\\PageController::edit",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:187",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/media_frames/{shareToken}",
+      "target": "OCA\\MediaFrames\\Controller\\PageController::mediaframe",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:322",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/media_frames/{shareToken}/auth",
+      "target": "OCA\\MediaFrames\\Controller\\PageController::mediaframeAuth",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:370",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/media_frames/{shareToken}/auth",
+      "target": "OCA\\MediaFrames\\Controller\\PageController::mediaframeAuthSubmit",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:396",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/media_frames/{shareToken}/file/{fileId}",
+      "target": "OCA\\MediaFrames\\Controller\\PageController::mediaframeFile",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:494",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/media_frames/{shareToken}/media",
+      "target": "OCA\\MediaFrames\\Controller\\PageController::mediaframeMedia",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:433",
+      "kind": "route"
+    },
+    {
+      "verb": "HEAD",
+      "path": "/index.php/apps/media_frames/{shareToken}/media",
+      "target": "OCA\\MediaFrames\\Controller\\PageController::mediaframeMediaHead",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:424",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/media_frames/api/folders",
+      "target": "OCA\\MediaFrames\\Controller\\PageController::folders",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:282",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/media_frames/new",
+      "target": "OCA\\MediaFrames\\Controller\\PageController::new",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:119",
+      "kind": "route"
+    }
+  ]
+}

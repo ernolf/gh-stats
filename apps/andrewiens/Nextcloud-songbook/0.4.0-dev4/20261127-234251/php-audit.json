@@ -1,0 +1,272 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Songbook\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Db/SetlistStore.php:67 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated in Nextcloud 35. The text of the tag names the replacement where it has one.",
+        "  lib/Db/SetlistStore.php:67 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId"
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Db/SetlistStore.php:23"
+      ],
+      "lines": [
+        "1 transaction is opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Db/SetlistStore.php:23"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Db/Catalog.php:73 time()",
+        "lib/Db/Catalog.php:80 time()",
+        "lib/Db/Catalog.php:84 time()",
+        "lib/Db/SetlistStore.php:71 time()",
+        "lib/Db/SetlistStore.php:71 time()",
+        "lib/Db/SetlistStore.php:84 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 6 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Db/Catalog.php:73 time()",
+        "  lib/Db/Catalog.php:80 time()",
+        "  lib/Db/Catalog.php:84 time()",
+        "  lib/Db/SetlistStore.php:71 time()",
+        "  lib/Db/SetlistStore.php:71 time()",
+        "  lib/Db/SetlistStore.php:84 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 17 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version000200Date20261113000000.php:31 a column of songbook_songs whose name is no constant",
+        "lib/Migration/Version000400Date20261126000000.php:30 a column of songbook_setlist_items whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version000200Date20261113000000.php:31 a column of songbook_songs whose name is no constant",
+        "  lib/Migration/Version000400Date20261126000000.php:30 a column of songbook_setlist_items whose name is no constant"
+      ]
+    }
+  ],
+  "endpoints": 18,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/songbook/",
+      "target": "OCA\\Songbook\\Controller\\PageController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:10 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/songbook/api/v1/folders",
+      "target": "OCA\\Songbook\\Controller\\LibraryController::folders",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:20 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/songbook/api/v1/libraries",
+      "target": "OCA\\Songbook\\Controller\\LibraryController::index",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:21 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/songbook/api/v1/libraries",
+      "target": "OCA\\Songbook\\Controller\\LibraryController::create",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:22 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/songbook/api/v1/libraries/{id}/sync",
+      "target": "OCA\\Songbook\\Controller\\LibraryController::sync",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:23 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/songbook/api/v1/setlists",
+      "target": "OCA\\Songbook\\Controller\\SetlistController::index",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:13 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/songbook/api/v1/setlists",
+      "target": "OCA\\Songbook\\Controller\\SetlistController::create",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:14 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/songbook/api/v1/setlists/{id}",
+      "target": "OCA\\Songbook\\Controller\\SetlistController::delete",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:18 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/songbook/api/v1/setlists/{id}",
+      "target": "OCA\\Songbook\\Controller\\SetlistController::show",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:15 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/songbook/api/v1/setlists/{id}",
+      "target": "OCA\\Songbook\\Controller\\SetlistController::update",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:16 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/songbook/api/v1/setlists/{id}/items",
+      "target": "OCA\\Songbook\\Controller\\SetlistController::items",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:17 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/songbook/api/v1/songs",
+      "target": "OCA\\Songbook\\Controller\\LibraryController::songs",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:24 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/songbook/api/v1/songs",
+      "target": "OCA\\Songbook\\Controller\\LibraryController::createSong",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:25 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/songbook/api/v1/songs/{id}",
+      "target": "OCA\\Songbook\\Controller\\LibraryController::show",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:29 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/songbook/api/v1/songs/{id}",
+      "target": "OCA\\Songbook\\Controller\\LibraryController::update",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:26 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/songbook/api/v1/songs/{id}/export",
+      "target": "OCA\\Songbook\\Controller\\LibraryController::export",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:27 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/songbook/api/v1/songs/import",
+      "target": "OCA\\Songbook\\Controller\\LibraryController::import",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:28 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/songbook/api/v1/status",
+      "target": "OCA\\Songbook\\Controller\\StatusController::show",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:19 ocs",
+      "kind": "OCS"
+    }
+  ]
+}

@@ -1,0 +1,613 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Onlyoffice\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/CallbackController.php:121 OC\\Files\\SetupManager",
+        "lib/Controller/CallbackController.php:188 OC_User",
+        "lib/Controller/CallbackController.php:250 OC\\Files\\Node\\File",
+        "lib/FileVersions.php:100 OC\\Files\\View",
+        "lib/FileVersions.php:232 OC\\Files\\Node\\File",
+        "lib/FileVersions.php:375 OC\\User\\Database",
+        "lib/Hooks.php:74 OC\\Files\\Filesystem",
+        "lib/Listeners/FileListener.php:75 OC\\Files\\Node\\Node",
+        "lib/Preview.php:249 OC\\Files\\View"
+      ],
+      "lines": [
+        "9 uses of the private API of the server in 5 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/CallbackController.php:121 OC\\Files\\SetupManager",
+        "  lib/Controller/CallbackController.php:188 OC_User",
+        "  lib/Controller/CallbackController.php:250 OC\\Files\\Node\\File",
+        "  lib/FileVersions.php:100 OC\\Files\\View",
+        "  lib/FileVersions.php:232 OC\\Files\\Node\\File",
+        "  lib/FileVersions.php:375 OC\\User\\Database",
+        "  lib/Hooks.php:74 OC\\Files\\Filesystem",
+        "  lib/Listeners/FileListener.php:75 OC\\Files\\Node\\Node",
+        "  lib/Preview.php:249 OC\\Files\\View"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 6
+        }
+      ]
+    },
+    {
+      "id": "legacy-hook",
+      "level": "warn",
+      "places": [
+        "lib/Hooks.php:51 OCP\\Versions::preDelete: the manual names no replacement event"
+      ],
+      "lines": [
+        "1 connection to a legacy hook of the server. A hook the server removed is never emitted, and the listener never runs; the typed events of OCP\\EventDispatcher replace the hooks.",
+        "OCP\\Util::connectHook() is deprecated since Nextcloud 21: use \\OCP\\EventDispatcher\\IEventDispatcher::addListener. ocp-deprecated leaves these calls to this finding.",
+        "  lib/Hooks.php:51 OCP\\Versions::preDelete: the manual names no replacement event"
+      ]
+    },
+    {
+      "id": "template-inline-script",
+      "level": "warn",
+      "places": [
+        "templates/editor.php:63 <script> with content"
+      ],
+      "lines": [
+        "1 inline script in templates/. The Content Security Policy of the server runs neither a <script> without a source or the nonce of the response nor an event handler attribute, so the browser does not run them. A script added with OCP\\Util::addScript() or addInitScript() runs.",
+        "  templates/editor.php:63 <script> with content"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:126 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:126 injectFn()"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/EditorApiController.php:301 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Controller/EditorApiController.php:348 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Controller/EditorController.php:157 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/Controller/EditorController.php:298 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "lib/Controller/EditorController.php:534 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "lib/Controller/EditorController.php:569 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Controller/EditorController.php:704 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/Controller/EditorController.php:1382 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/DirectEditor.php:196 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/ExtraPermissions.php:349 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "lib/ExtraPermissions.php:361 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/FileUtility.php:120 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Listeners/ContentSecurityPolicyListener.php:61 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Listeners/MailMergeEndedListener.php:79 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "lines": [
+        "14 uses in 7 files of the public API that is deprecated in Nextcloud 33 to 34. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/EditorApiController.php:301 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Controller/EditorApiController.php:348 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Controller/EditorController.php:157 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/Controller/EditorController.php:298 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "  lib/Controller/EditorController.php:534 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "  lib/Controller/EditorController.php:569 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Controller/EditorController.php:704 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/Controller/EditorController.php:1382 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/DirectEditor.php:196 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/ExtraPermissions.php:349 OCP\\Constants::PERMISSION_SHARE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_SHARE instead",
+        "  lib/ExtraPermissions.php:361 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/FileUtility.php:120 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Listeners/ContentSecurityPolicyListener.php:61 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Listeners/MailMergeEndedListener.php:79 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 11
+        }
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/directeditorerror.php:44 style= attribute"
+      ],
+      "lines": [
+        "1 inline style in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/directeditorerror.php:44 style= attribute"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/AppConfig.php:358 new DateTime()",
+        "lib/AppConfig.php:383 new DateTime()",
+        "lib/Controller/EditorApiController.php:513 time()",
+        "lib/Controller/EditorApiController.php:783 new DateTime()",
+        "lib/Controller/EditorController.php:524 new DateTime()",
+        "lib/Controller/EditorController.php:662 time()",
+        "lib/Controller/EditorController.php:1065 time()",
+        "lib/Controller/EditorController.php:1182 time()",
+        "lib/Cron/EditorsCheck.php:139 new DateTime()",
+        "lib/DirectEditor.php:176 time()",
+        "lib/DirectEditor.php:177 time()",
+        "lib/DocumentService.php:182 time()",
+        "lib/DocumentService.php:300 time()",
+        "lib/Listeners/DocumentUnsavedListener.php:82 new DateTime()",
+        "lib/Listeners/MailMergeEndedListener.php:90 new DateTime()",
+        "lib/RemoteInstance.php:103 time()",
+        "lib/RemoteInstance.php:119 time()",
+        "lib/RemoteInstance.php:139 time()",
+        "lib/Vendor/Firebase/JWT/JWT.php:83 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 19 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/AppConfig.php:358 new DateTime()",
+        "  lib/AppConfig.php:383 new DateTime()",
+        "  lib/Controller/EditorApiController.php:513 time()",
+        "  lib/Controller/EditorApiController.php:783 new DateTime()",
+        "  lib/Controller/EditorController.php:524 new DateTime()",
+        "  lib/Controller/EditorController.php:662 time()",
+        "  lib/Controller/EditorController.php:1065 time()",
+        "  lib/Controller/EditorController.php:1182 time()",
+        "  lib/Cron/EditorsCheck.php:139 new DateTime()",
+        "  lib/DirectEditor.php:176 time()",
+        "  lib/DirectEditor.php:177 time()",
+        "  lib/DocumentService.php:182 time()",
+        "  lib/DocumentService.php:300 time()",
+        "  lib/Listeners/DocumentUnsavedListener.php:82 new DateTime()",
+        "  lib/Listeners/MailMergeEndedListener.php:90 new DateTime()",
+        "  lib/RemoteInstance.php:103 time()",
+        "  lib/RemoteInstance.php:119 time()",
+        "  lib/RemoteInstance.php:139 time()",
+        "  lib/Vendor/Firebase/JWT/JWT.php:83 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 16
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/AppConfig.php:361 setValueString()",
+        "lib/AppConfig.php:371 getValueString()",
+        "lib/AppConfig.php:417 setValueString()",
+        "lib/AppConfig.php:432 getValueString()",
+        "lib/AppConfig.php:461 setValueString()",
+        "lib/AppConfig.php:476 getValueString()",
+        "lib/AppConfig.php:533 setValueString()",
+        "lib/AppConfig.php:542 getValueString()",
+        "lib/AppConfig.php:562 setValueString()",
+        "lib/AppConfig.php:577 getValueString()",
+        "lib/AppConfig.php:604 setValueString()",
+        "lib/AppConfig.php:611 getValueString()",
+        "lib/AppConfig.php:627 setValueString()",
+        "lib/AppConfig.php:634 getValueString()",
+        "lib/AppConfig.php:651 setValueString()",
+        "lib/AppConfig.php:658 getValueString()",
+        "lib/AppConfig.php:667 setValueString()",
+        "lib/AppConfig.php:674 getValueString()",
+        "lib/AppConfig.php:683 setValueString()",
+        "lib/AppConfig.php:690 getValueString()",
+        "lib/AppConfig.php:699 setValueString()",
+        "lib/AppConfig.php:706 getValueString()",
+        "lib/AppConfig.php:715 setValueString()",
+        "lib/AppConfig.php:722 getValueString()",
+        "lib/AppConfig.php:731 setValueString()",
+        "lib/AppConfig.php:738 getValueString()",
+        "lib/AppConfig.php:747 setValueString()",
+        "lib/AppConfig.php:754 getValueString()",
+        "lib/AppConfig.php:763 setValueString()",
+        "lib/AppConfig.php:770 getValueString()",
+        "lib/AppConfig.php:779 setValueString()",
+        "lib/AppConfig.php:786 getValueString()",
+        "lib/AppConfig.php:799 setValueString()",
+        "lib/AppConfig.php:806 getValueString()",
+        "lib/AppConfig.php:815 setValueString()",
+        "lib/AppConfig.php:822 getValueString()",
+        "lib/AppConfig.php:831 setValueString()",
+        "lib/AppConfig.php:838 getValueString()",
+        "lib/AppConfig.php:847 setValueString()",
+        "lib/AppConfig.php:854 getValueString()",
+        "lib/AppConfig.php:863 setValueString()",
+        "lib/AppConfig.php:870 getValueString()",
+        "lib/AppConfig.php:879 setValueString()",
+        "lib/AppConfig.php:886 getValueString()",
+        "lib/AppConfig.php:895 setValueString()",
+        "lib/AppConfig.php:902 getValueString()",
+        "lib/AppConfig.php:918 setValueString()",
+        "lib/AppConfig.php:927 getValueString()",
+        "lib/AppConfig.php:973 setValueString()",
+        "lib/AppConfig.php:982 getValueString()",
+        "lib/AppConfig.php:992 setValueString()",
+        "lib/AppConfig.php:996 setValueString()",
+        "lib/AppConfig.php:1014 setValueString()",
+        "lib/AppConfig.php:1027 setValueString()",
+        "lib/AppConfig.php:1036 getValueString()",
+        "lib/AppConfig.php:1053 getValueString()",
+        "lib/AppConfig.php:1064 getValueString()",
+        "lib/AppConfig.php:1078 setValueString()",
+        "lib/AppConfig.php:1085 getValueString()",
+        "lib/AppConfig.php:1143 setValueString()",
+        "lib/AppConfig.php:1150 getValueString()",
+        "lib/AppConfig.php:1182 getValueString()",
+        "lib/AppConfig.php:1203 setValueString()",
+        "lib/AppConfig.php:1217 setValueString()",
+        "lib/AppConfig.php:1224 getValueString()",
+        "lib/AppConfig.php:1266 setValueString()",
+        "lib/AppConfig.php:1273 getValueString()",
+        "lib/AppConfig.php:1284 setValueString()",
+        "lib/AppConfig.php:1291 getValueString()",
+        "lib/Controller/EditorController.php:1525 getValueString()",
+        "lib/Controller/EditorController.php:1526 getValueString()",
+        "lib/ExtraPermissions.php:350 getValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 72 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/AppConfig.php:361 setValueString()",
+        "  lib/AppConfig.php:371 getValueString()",
+        "  lib/AppConfig.php:417 setValueString()",
+        "  lib/AppConfig.php:432 getValueString()",
+        "  lib/AppConfig.php:461 setValueString()",
+        "  lib/AppConfig.php:476 getValueString()",
+        "  lib/AppConfig.php:533 setValueString()",
+        "  lib/AppConfig.php:542 getValueString()",
+        "  lib/AppConfig.php:562 setValueString()",
+        "  lib/AppConfig.php:577 getValueString()",
+        "  lib/AppConfig.php:604 setValueString()",
+        "  lib/AppConfig.php:611 getValueString()",
+        "  lib/AppConfig.php:627 setValueString()",
+        "  lib/AppConfig.php:634 getValueString()",
+        "  lib/AppConfig.php:651 setValueString()",
+        "  lib/AppConfig.php:658 getValueString()",
+        "  lib/AppConfig.php:667 setValueString()",
+        "  lib/AppConfig.php:674 getValueString()",
+        "  lib/AppConfig.php:683 setValueString()",
+        "  lib/AppConfig.php:690 getValueString()",
+        "  lib/AppConfig.php:699 setValueString()",
+        "  lib/AppConfig.php:706 getValueString()",
+        "  lib/AppConfig.php:715 setValueString()",
+        "  lib/AppConfig.php:722 getValueString()",
+        "  lib/AppConfig.php:731 setValueString()",
+        "  lib/AppConfig.php:738 getValueString()",
+        "  lib/AppConfig.php:747 setValueString()",
+        "  lib/AppConfig.php:754 getValueString()",
+        "  lib/AppConfig.php:763 setValueString()",
+        "  lib/AppConfig.php:770 getValueString()",
+        "  lib/AppConfig.php:779 setValueString()",
+        "  lib/AppConfig.php:786 getValueString()",
+        "  lib/AppConfig.php:799 setValueString()",
+        "  lib/AppConfig.php:806 getValueString()",
+        "  lib/AppConfig.php:815 setValueString()",
+        "  lib/AppConfig.php:822 getValueString()",
+        "  lib/AppConfig.php:831 setValueString()",
+        "  lib/AppConfig.php:838 getValueString()",
+        "  lib/AppConfig.php:847 setValueString()",
+        "  lib/AppConfig.php:854 getValueString()",
+        "  lib/AppConfig.php:863 setValueString()",
+        "  lib/AppConfig.php:870 getValueString()",
+        "  lib/AppConfig.php:879 setValueString()",
+        "  lib/AppConfig.php:886 getValueString()",
+        "  lib/AppConfig.php:895 setValueString()",
+        "  lib/AppConfig.php:902 getValueString()",
+        "  lib/AppConfig.php:918 setValueString()",
+        "  lib/AppConfig.php:927 getValueString()",
+        "  lib/AppConfig.php:973 setValueString()",
+        "  lib/AppConfig.php:982 getValueString()",
+        "  lib/AppConfig.php:992 setValueString()",
+        "  lib/AppConfig.php:996 setValueString()",
+        "  lib/AppConfig.php:1014 setValueString()",
+        "  lib/AppConfig.php:1027 setValueString()",
+        "  lib/AppConfig.php:1036 getValueString()",
+        "  lib/AppConfig.php:1053 getValueString()",
+        "  lib/AppConfig.php:1064 getValueString()",
+        "  lib/AppConfig.php:1078 setValueString()",
+        "  lib/AppConfig.php:1085 getValueString()",
+        "  lib/AppConfig.php:1143 setValueString()",
+        "  lib/AppConfig.php:1150 getValueString()",
+        "  lib/AppConfig.php:1182 getValueString()",
+        "  lib/AppConfig.php:1203 setValueString()",
+        "  lib/AppConfig.php:1217 setValueString()",
+        "  lib/AppConfig.php:1224 getValueString()",
+        "  lib/AppConfig.php:1266 setValueString()",
+        "  lib/AppConfig.php:1273 getValueString()",
+        "  lib/AppConfig.php:1284 setValueString()",
+        "  lib/AppConfig.php:1291 getValueString()",
+        "  lib/Controller/EditorController.php:1525 getValueString()",
+        "  lib/Controller/EditorController.php:1526 getValueString()",
+        "  lib/ExtraPermissions.php:350 getValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 69
+        }
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/JobListController.php:106 OCA\\Onlyoffice\\Controller\\JobListController::checkAllJobs()",
+        "lib/Controller/SettingsController.php:73 OCA\\Onlyoffice\\Controller\\SettingsController::index()"
+      ],
+      "lines": [
+        "2 public methods of controllers are reached by no route.",
+        "  lib/Controller/JobListController.php:106 OCA\\Onlyoffice\\Controller\\JobListController::checkAllJobs()",
+        "  lib/Controller/SettingsController.php:73 OCA\\Onlyoffice\\Controller\\SettingsController::index()"
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 6 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 33,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/onlyoffice/{fileId}",
+      "target": "OCA\\Onlyoffice\\Controller\\EditorController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/onlyoffice/ajax/convert",
+      "target": "OCA\\Onlyoffice\\Controller\\EditorController::convert",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/onlyoffice/ajax/emails",
+      "target": "OCA\\Onlyoffice\\Controller\\EditorController::emails",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/onlyoffice/ajax/history",
+      "target": "OCA\\Onlyoffice\\Controller\\EditorController::history",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/onlyoffice/ajax/mention",
+      "target": "OCA\\Onlyoffice\\Controller\\EditorController::mention",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/onlyoffice/ajax/new",
+      "target": "OCA\\Onlyoffice\\Controller\\EditorController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/onlyoffice/ajax/reference",
+      "target": "OCA\\Onlyoffice\\Controller\\EditorController::reference",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/onlyoffice/ajax/restore",
+      "target": "OCA\\Onlyoffice\\Controller\\EditorController::restore",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/onlyoffice/ajax/save",
+      "target": "OCA\\Onlyoffice\\Controller\\EditorController::save",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/onlyoffice/ajax/settings/address",
+      "target": "OCA\\Onlyoffice\\Controller\\SettingsController::saveAddress",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/onlyoffice/ajax/settings/common",
+      "target": "OCA\\Onlyoffice\\Controller\\SettingsController::saveCommon",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/onlyoffice/ajax/settings/history",
+      "target": "OCA\\Onlyoffice\\Controller\\SettingsController::clearHistory",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/onlyoffice/ajax/settings/security",
+      "target": "OCA\\Onlyoffice\\Controller\\SettingsController::saveSecurity",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/onlyoffice/ajax/template",
+      "target": "OCA\\Onlyoffice\\Controller\\TemplateController::deleteTemplate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/onlyoffice/ajax/template",
+      "target": "OCA\\Onlyoffice\\Controller\\TemplateController::getTemplates",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/onlyoffice/ajax/template",
+      "target": "OCA\\Onlyoffice\\Controller\\TemplateController::addTemplate",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/onlyoffice/ajax/url",
+      "target": "OCA\\Onlyoffice\\Controller\\EditorController::url",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/onlyoffice/ajax/userInfo",
+      "target": "OCA\\Onlyoffice\\Controller\\EditorController::userInfo",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/onlyoffice/ajax/users",
+      "target": "OCA\\Onlyoffice\\Controller\\EditorController::users",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/onlyoffice/ajax/version",
+      "target": "OCA\\Onlyoffice\\Controller\\EditorController::version",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/onlyoffice/download",
+      "target": "OCA\\Onlyoffice\\Controller\\CallbackController::download",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/onlyoffice/downloadas",
+      "target": "OCA\\Onlyoffice\\Controller\\EditorController::download",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/onlyoffice/empty",
+      "target": "OCA\\Onlyoffice\\Controller\\CallbackController::emptyfile",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/onlyoffice/new",
+      "target": "OCA\\Onlyoffice\\Controller\\EditorController::createNew",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/onlyoffice/preview",
+      "target": "OCA\\Onlyoffice\\Controller\\TemplateController::preview",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/onlyoffice/s/{shareToken}",
+      "target": "OCA\\Onlyoffice\\Controller\\EditorController::publicPage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/onlyoffice/track",
+      "target": "OCA\\Onlyoffice\\Controller\\CallbackController::track",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/onlyoffice/api/v1/config/{fileId}",
+      "target": "OCA\\Onlyoffice\\Controller\\EditorApiController::config",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/onlyoffice/api/v1/healthcheck",
+      "target": "OCA\\Onlyoffice\\Controller\\FederationController::healthcheck",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/onlyoffice/api/v1/key",
+      "target": "OCA\\Onlyoffice\\Controller\\FederationController::key",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/onlyoffice/api/v1/keylock",
+      "target": "OCA\\Onlyoffice\\Controller\\FederationController::keylock",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/onlyoffice/api/v1/shares",
+      "target": "OCA\\Onlyoffice\\Controller\\SharingApiController::setShares",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/onlyoffice/api/v1/shares/{fileId}",
+      "target": "OCA\\Onlyoffice\\Controller\\SharingApiController::getShares",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

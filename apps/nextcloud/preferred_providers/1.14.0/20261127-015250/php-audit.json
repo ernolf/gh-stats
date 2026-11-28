@@ -1,0 +1,246 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Preferred_Providers\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/PasswordController.php:101 OC\\Authentication\\Token\\IProvider",
+        "lib/Controller/PasswordController.php:189 OC::$server",
+        "lib/Controller/SettingsController.php:124 OC"
+      ],
+      "lines": [
+        "3 uses of the private API of the server in 2 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/PasswordController.php:101 OC\\Authentication\\Token\\IProvider",
+        "  lib/Controller/PasswordController.php:189 OC::$server",
+        "  lib/Controller/SettingsController.php:124 OC"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:55 addListener()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:55 addListener()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/preferred_providers/password/set/{email}/{token}/{ocs}  preferred_providers.password.set_password_ocs  appinfo/routes.php:36 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 route outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 3 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/preferred_providers/password/set/{email}/{token}/{ocs}  preferred_providers.password.set_password_ocs  appinfo/routes.php:36 routes"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "psalm/phar, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/AccountController.php:149 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/AccountController.php:171 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/AccountController.php:172 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/MailController.php:150 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/MailController.php:151 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:135 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:155 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:157 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:70 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:73 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:77 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:78 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:79 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "lines": [
+        "13 uses in 4 files of the public API that is deprecated in Nextcloud 26 to 29. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/AccountController.php:149 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/AccountController.php:171 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/AccountController.php:172 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/MailController.php:150 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/MailController.php:151 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:135 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:155 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:157 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:70 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:73 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:77 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:78 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:79 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 10
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/ExpireUnverifiedAccounts.php OCA\\Preferred_Providers\\BackgroundJob\\ExpireUnverifiedAccounts",
+        "lib/BackgroundJob/NotifyUnsetPassword.php OCA\\Preferred_Providers\\BackgroundJob\\NotifyUnsetPassword"
+      ],
+      "lines": [
+        "2 timed jobs do not say whether they are time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/ExpireUnverifiedAccounts.php OCA\\Preferred_Providers\\BackgroundJob\\ExpireUnverifiedAccounts",
+        "  lib/BackgroundJob/NotifyUnsetPassword.php OCA\\Preferred_Providers\\BackgroundJob\\NotifyUnsetPassword"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/ExpireUnverifiedAccounts.php:81 time()",
+        "lib/BackgroundJob/NotifyUnsetPassword.php:70 time()",
+        "lib/Controller/AccountController.php:209 new DateTime()",
+        "lib/Controller/AccountController.php:238 time()",
+        "lib/Controller/SettingsController.php:204 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 5 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/BackgroundJob/ExpireUnverifiedAccounts.php:81 time()",
+        "  lib/BackgroundJob/NotifyUnsetPassword.php:70 time()",
+        "  lib/Controller/AccountController.php:209 new DateTime()",
+        "  lib/Controller/AccountController.php:238 time()",
+        "  lib/Controller/SettingsController.php:204 new DateTime()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "POST /ocs/v2.php/account/request/{token}  ocs.preferred_providers.account.requestaccount  appinfo/routes.php:28 ocs",
+        "GET /ocs/v2.php/apps/preferred_providers/api/v1/token/new  ocs.preferred_providers.settings.resettoken  appinfo/routes.php:29 ocs",
+        "POST /ocs/v2.php/apps/preferred_providers/api/v1/groups  ocs.preferred_providers.settings.setgroups  appinfo/routes.php:30 ocs",
+        "POST /ocs/v2.php/apps/preferred_providers/api/v1/reactivate  ocs.preferred_providers.settings.reactivate  appinfo/routes.php:31 ocs"
+      ],
+      "lines": [
+        "Nothing in the app calls 4 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  POST /ocs/v2.php/account/request/{token}  ocs.preferred_providers.account.requestaccount  appinfo/routes.php:28 ocs",
+        "  GET /ocs/v2.php/apps/preferred_providers/api/v1/token/new  ocs.preferred_providers.settings.resettoken  appinfo/routes.php:29 ocs",
+        "  POST /ocs/v2.php/apps/preferred_providers/api/v1/groups  ocs.preferred_providers.settings.setgroups  appinfo/routes.php:30 ocs",
+        "  POST /ocs/v2.php/apps/preferred_providers/api/v1/reactivate  ocs.preferred_providers.settings.reactivate  appinfo/routes.php:31 ocs"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 4 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 8,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/preferred_providers/login/confirm/{email}/{token}",
+      "target": "OCA\\Preferred_Providers\\Controller\\MailController::confirmMailAddress",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/preferred_providers/password/set/{email}/{token}",
+      "target": "OCA\\Preferred_Providers\\Controller\\PasswordController::setPassword",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/preferred_providers/password/set/{email}/{token}/{ocs}",
+      "target": "OCA\\Preferred_Providers\\Controller\\PasswordController::setPasswordOcs",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/preferred_providers/password/submit/{token}",
+      "target": "OCA\\Preferred_Providers\\Controller\\PasswordController::submitPassword",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/account/request/{token}",
+      "target": "OCA\\Preferred_Providers\\Controller\\AccountController::requestAccount",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/preferred_providers/api/v1/groups",
+      "target": "OCA\\Preferred_Providers\\Controller\\SettingsController::setGroups",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/preferred_providers/api/v1/reactivate",
+      "target": "OCA\\Preferred_Providers\\Controller\\SettingsController::reactivate",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/preferred_providers/api/v1/token/new",
+      "target": "OCA\\Preferred_Providers\\Controller\\SettingsController::resetToken",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

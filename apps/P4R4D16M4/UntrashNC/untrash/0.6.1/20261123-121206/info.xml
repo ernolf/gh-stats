@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+    <id>untrash</id>
+    <name>UntrashOS</name>
+    <summary>Nextcloud as a member of UntrashMesh: address directory and change feed of UntrashOS NAS</summary>
+    <description><![CDATA[This Nextcloud joins an UntrashMesh (the encrypted network of UntrashOS devices).
+
+* **Directory:** members keep their signed address records here, at the stable internet address of this Nextcloud, and find each other again after their addresses changed.
+* **Change feed:** a linked UntrashOS NAS tells this Nextcloud which files changed in its shares. External storages (WebDAV) on that NAS are updated path by path instead of being scanned, so the NAS disks can sleep.
+* **External storages:** every share a NAS offers this Nextcloud appears as an external storage (WebDAV) by itself; each user signs in with their NAS account once.
+* **Tunnel (optional):** with the root helper untrash-cloud-wg, this server is also a WireGuard peer of the mesh. The NAS connect out to it, so it reaches their WebDAV shares and change feed with no port forwarded at home.
+
+**Privacy:** this Nextcloud stores the signed address records of the mesh members (names, public keys, internet addresses) and gives them only to members. It talks only to the NAS of the mesh: their change feed (paths of changed files in the shares they offer) and their WebDAV shares, with each user's own NAS credentials. Nothing is sent anywhere else.
+
+Setup and the optional tunnel helper: see the README in the repository.]]></description>
+    <version>0.6.1</version>
+    <licence>agpl</licence>
+    <author>UntrashOS</author>
+    <namespace>Untrash</namespace>
+    <category>files</category>
+    <category>integration</category>
+    <website>https://github.com/P4R4D16M4/UntrashNC</website>
+    <bugs>https://github.com/P4R4D16M4/UntrashNC/issues</bugs>
+    <repository type="git">https://github.com/P4R4D16M4/UntrashNC.git</repository>
+    <dependencies>
+        <php min-version="7.4"/>
+        <lib>sodium</lib>
+        <nextcloud min-version="25" max-version="35"/>
+    </dependencies>
+    <background-jobs>
+        <job>OCA\Untrash\BackgroundJob\FeedJob</job>
+    </background-jobs>
+    <repair-steps>
+        <uninstall>
+            <step>OCA\Untrash\Migration\RemoveMounts</step>
+        </uninstall>
+    </repair-steps>
+    <commands>
+        <command>OCA\Untrash\Command\Join</command>
+        <command>OCA\Untrash\Command\Status</command>
+        <command>OCA\Untrash\Command\Feed</command>
+        <command>OCA\Untrash\Command\Nas</command>
+        <command>OCA\Untrash\Command\Tunnel</command>
+        <command>OCA\Untrash\Command\Mounts</command>
+    </commands>
+    <settings>
+        <admin>OCA\Untrash\Settings\Admin</admin>
+        <admin-section>OCA\Untrash\Settings\Section</admin-section>
+    </settings>
+</info>

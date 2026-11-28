@@ -1,0 +1,92 @@
+<?xml version="1.0"?>
+<info xmlns:xsi= "http://www.w3.org/2001/XMLSchema-instance"
+	  xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>bookmarks</id>
+	<name>Bookmarks</name>
+	<summary>Collect and manage bookmarks, synced with all your devices</summary>
+	<description><![CDATA[
+- 📂 Sort bookmarks into folders
+- 🏷 Add tags and personal notes
+- ☠ Find broken links and duplicates
+- 📲 Synchronize with all your browsers and devices
+- 📔 Store archived versions of your links in case they are depublished
+- 🔍 Full-text search on site contents
+- 👪 Share bookmarks with other users, groups and teams or via public links
+- ⚛ Generate RSS feeds of your collections
+- 📈 Stats on how often you access which links
+- 🔒 Automatic backups of your bookmarks collection
+- 💼 Built-in Dashboard widgets for frequent and recent links
+
+Requirements:
+ - PHP extensions:
+   - intl: *
+   - mbstring: *
+]]></description>
+	<version>17.0.1</version>
+	<licence>agpl</licence>
+	<author mail="mklehr@gmx.net" homepage="https://marcelklehr.de">Marcel Klehr</author>
+	<author mail="blizzz@arthur-schiwon.de" homepage="https://www.arthur-schiwon.de">Arthur Schiwon</author>
+	<author>Marvin Thomas Rabe</author>
+	<author>Stefan Klemm</author>
+	<category>organization</category>
+	<website>https://github.com/nextcloud/bookmarks</website>
+	<bugs>https://github.com/nextcloud/bookmarks/issues</bugs>
+	<repository type="git">https://github.com/nextcloud/bookmarks.git</repository>
+	<screenshot small-thumbnail="https://raw.githubusercontent.com/nextcloud/bookmarks/master/screenshots/Bookmarks-small.png">https://raw.githubusercontent.com/nextcloud/bookmarks/master/screenshots/Bookmarks.png</screenshot>
+
+	<dependencies>
+		<database>sqlite</database>
+		<database>mysql</database>
+		<database>pgsql</database>
+		<lib>intl</lib>
+		<lib>mbstring</lib>
+		<nextcloud min-version="35" max-version="35" />
+	</dependencies>
+	<background-jobs>
+		<job>OCA\Bookmarks\BackgroundJobs\CrawlJob</job>
+		<job>OCA\Bookmarks\BackgroundJobs\FileCacheGCJob</job>
+		<job>OCA\Bookmarks\BackgroundJobs\BackupJob</job>
+		<job>OCA\Bookmarks\BackgroundJobs\EmptyTrashbinJob</job>
+	</background-jobs>
+
+	<settings>
+		<admin>OCA\Bookmarks\Settings\AdminSettings</admin>
+		<admin-section>OCA\Bookmarks\Settings\AdminSection</admin-section>
+	</settings>
+
+	<repair-steps>
+		<post-migration>
+			<step>OCA\Bookmarks\Migration\DeduplicateSharedFoldersRepairStep</step>
+			<step>OCA\Bookmarks\Migration\SuperfluousSharedFoldersRepairStep</step>
+			<step>OCA\Bookmarks\Migration\OrphanedSharesRepairStep</step>
+			<step>OCA\Bookmarks\Migration\OrphanedTreeItemsRepairStep</step>
+			<step>OCA\Bookmarks\Migration\GroupSharesUpdateRepairStep</step>
+			<step>OCA\Bookmarks\Migration\CircleSharesUpdateRepairStep</step>
+		</post-migration>
+	</repair-steps>
+
+	<navigations>
+		<navigation>
+			<name>Bookmarks</name>
+			<route>bookmarks.webview.index</route>
+			<icon>bookmarks.svg</icon>
+			<order>10</order>
+		</navigation>
+	</navigations>
+
+	<activity>
+		<settings>
+			<setting>OCA\Bookmarks\Activity\Setting</setting>
+		</settings>
+		<filters>
+			<filter>OCA\Bookmarks\Activity\Filter</filter>
+		</filters>
+		<providers>
+			<provider>OCA\Bookmarks\Activity\Provider</provider>
+		</providers>
+	</activity>
+
+	<commands>
+		<command>OCA\Bookmarks\Command\ClearPreviews</command>
+	</commands>
+</info>

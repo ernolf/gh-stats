@@ -1,0 +1,515 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\GpxPod\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/gpxpod/maptiler/fonts/{fontstack}/{range}.pbf  gpxpod.map.getmaptilerfont  appinfo/routes.php:26 routes",
+        "GET /index.php/apps/gpxpod/maptiler/sprites/{name}/sprite.{ext}  gpxpod.map.getmaptilernamedspritenosize  appinfo/routes.php:32 routes",
+        "GET /index.php/apps/gpxpod/maptiler/sprites/{name}/sprite{size}.{ext}  gpxpod.map.getmaptilernamedsprite  appinfo/routes.php:33 routes",
+        "GET /index.php/apps/gpxpod/openfreemap/{path}  gpxpod.map.getopenfreemapresource  appinfo/routes.php:37 routes",
+        "POST /index.php/apps/gpxpod/getOptionsValues  gpxpod.utils.getoptionsvalues  appinfo/routes.php:68 routes",
+        "PUT /index.php/apps/gpxpod/saveOptionValue  gpxpod.utils.saveoptionvalue  appinfo/routes.php:69 routes",
+        "POST /index.php/apps/gpxpod/cleanDb  gpxpod.utils.cleandb  appinfo/routes.php:71 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 7 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 58 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/gpxpod/maptiler/fonts/{fontstack}/{range}.pbf  gpxpod.map.getmaptilerfont  appinfo/routes.php:26 routes",
+        "  GET /index.php/apps/gpxpod/maptiler/sprites/{name}/sprite.{ext}  gpxpod.map.getmaptilernamedspritenosize  appinfo/routes.php:32 routes",
+        "  GET /index.php/apps/gpxpod/maptiler/sprites/{name}/sprite{size}.{ext}  gpxpod.map.getmaptilernamedsprite  appinfo/routes.php:33 routes",
+        "  GET /index.php/apps/gpxpod/openfreemap/{path}  gpxpod.map.getopenfreemapresource  appinfo/routes.php:37 routes",
+        "  POST /index.php/apps/gpxpod/getOptionsValues  gpxpod.utils.getoptionsvalues  appinfo/routes.php:68 routes",
+        "  PUT /index.php/apps/gpxpod/saveOptionValue  gpxpod.utils.saveoptionvalue  appinfo/routes.php:69 routes",
+        "  POST /index.php/apps/gpxpod/cleanDb  gpxpod.utils.cleandb  appinfo/routes.php:71 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/ComparisonController.php:148 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Controller/PageController.php:152 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Service/MapService.php:44 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ],
+      "lines": [
+        "3 uses in 3 files of the public API that is deprecated in Nextcloud 34 to 36. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/ComparisonController.php:148 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Controller/PageController.php:152 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Service/MapService.php:44 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/ConversionService.php:442 new DateTime()",
+        "lib/Service/KmlConversionService.php:592 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 2 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/ConversionService.php:442 new DateTime()",
+        "  lib/Service/KmlConversionService.php:592 new DateTime()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Controller/ComparisonController.php:122 getValueString()",
+        "lib/Controller/PageController.php:113 getValueString()",
+        "lib/Controller/PageController.php:117 getValueString()",
+        "lib/Controller/PageController.php:261 getValueString()",
+        "lib/Controller/PageController.php:644 getValueString()",
+        "lib/Controller/UtilsController.php:56 setValueString()",
+        "lib/Controller/UtilsController.php:72 setValueString()",
+        "lib/Controller/UtilsController.php:74 setValueString()",
+        "lib/Migration/Version070001Date20241014000239.php:37 getValueString()",
+        "lib/Migration/Version070001Date20241014000239.php:38 setValueString()",
+        "lib/Migration/Version080100Date20250106183919.php:39 getValueString()",
+        "lib/Service/ConversionService.php:151 getValueString()",
+        "lib/Service/MapService.php:418 getValueString()",
+        "lib/Settings/Admin.php:33 getValueString()",
+        "lib/Settings/Admin.php:34 getValueString()",
+        "lib/Settings/Admin.php:35 getValueString()",
+        "lib/Settings/Admin.php:36 getValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 17 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Controller/ComparisonController.php:122 getValueString()",
+        "  lib/Controller/PageController.php:113 getValueString()",
+        "  lib/Controller/PageController.php:117 getValueString()",
+        "  lib/Controller/PageController.php:261 getValueString()",
+        "  lib/Controller/PageController.php:644 getValueString()",
+        "  lib/Controller/UtilsController.php:56 setValueString()",
+        "  lib/Controller/UtilsController.php:72 setValueString()",
+        "  lib/Controller/UtilsController.php:74 setValueString()",
+        "  lib/Migration/Version070001Date20241014000239.php:37 getValueString()",
+        "  lib/Migration/Version070001Date20241014000239.php:38 setValueString()",
+        "  lib/Migration/Version080100Date20250106183919.php:39 getValueString()",
+        "  lib/Service/ConversionService.php:151 getValueString()",
+        "  lib/Service/MapService.php:418 getValueString()",
+        "  lib/Settings/Admin.php:33 getValueString()",
+        "  lib/Settings/Admin.php:34 getValueString()",
+        "  lib/Settings/Admin.php:35 getValueString()",
+        "  lib/Settings/Admin.php:36 getValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 14
+        }
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/PageController.php:856 OCA\\GpxPod\\Controller\\PageController::addDirectoryRecursive()",
+        "lib/Controller/PageController.php:938 OCA\\GpxPod\\Controller\\PageController::getDirectories()",
+        "lib/Controller/UtilsController.php:144 OCA\\GpxPod\\Controller\\UtilsController::deleteOptionsValues()",
+        "lib/Controller/UtilsController.php:289 OCA\\GpxPod\\Controller\\UtilsController::oldAddTileServer()",
+        "lib/Controller/UtilsController.php:354 OCA\\GpxPod\\Controller\\UtilsController::oldDeleteTileServer()"
+      ],
+      "lines": [
+        "5 public methods of controllers are reached by no route.",
+        "  lib/Controller/PageController.php:856 OCA\\GpxPod\\Controller\\PageController::addDirectoryRecursive()",
+        "  lib/Controller/PageController.php:938 OCA\\GpxPod\\Controller\\PageController::getDirectories()",
+        "  lib/Controller/UtilsController.php:144 OCA\\GpxPod\\Controller\\UtilsController::deleteOptionsValues()",
+        "  lib/Controller/UtilsController.php:289 OCA\\GpxPod\\Controller\\UtilsController::oldAddTileServer()",
+        "  lib/Controller/UtilsController.php:354 OCA\\GpxPod\\Controller\\UtilsController::oldDeleteTileServer()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    }
+  ],
+  "endpoints": 45,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gpxpod/",
+      "target": "OCA\\GpxPod\\Controller\\PageController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:18 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/gpxpod/admin-config",
+      "target": "OCA\\GpxPod\\Controller\\UtilsController::setAdminConfig",
+      "openapi": [],
+      "source": "appinfo/routes.php:57 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/gpxpod/admin-config/sensitive",
+      "target": "OCA\\GpxPod\\Controller\\UtilsController::setSensitiveAdminConfig",
+      "openapi": [],
+      "source": "appinfo/routes.php:58 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/gpxpod/admin/tileservers",
+      "target": "OCA\\GpxPod\\Controller\\UtilsController::adminAddTileServer",
+      "openapi": [],
+      "source": "appinfo/routes.php:64 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/gpxpod/admin/tileservers/{id}",
+      "target": "OCA\\GpxPod\\Controller\\UtilsController::AdminDeleteTileServer",
+      "openapi": [],
+      "source": "appinfo/routes.php:66 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/gpxpod/admin/tileservers/{id}",
+      "target": "OCA\\GpxPod\\Controller\\UtilsController::AdminUpdateTileServer",
+      "openapi": [],
+      "source": "appinfo/routes.php:65 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/gpxpod/cleanDb",
+      "target": "OCA\\GpxPod\\Controller\\UtilsController::cleanDb",
+      "openapi": [],
+      "source": "appinfo/routes.php:71 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gpxpod/compare",
+      "target": "OCA\\GpxPod\\Controller\\ComparisonController::comparePageGet",
+      "openapi": [],
+      "source": "appinfo/routes.php:54 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/gpxpod/compare",
+      "target": "OCA\\GpxPod\\Controller\\ComparisonController::comparePagePost",
+      "openapi": [],
+      "source": "appinfo/routes.php:55 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/gpxpod/directories",
+      "target": "OCA\\GpxPod\\Controller\\PageController::addDirectory",
+      "openapi": [],
+      "source": "appinfo/routes.php:40 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gpxpod/directories/{dirId}/kml",
+      "target": "OCA\\GpxPod\\Controller\\PageController::getKml",
+      "openapi": [],
+      "source": "appinfo/routes.php:45 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gpxpod/directories/{dirId}/kmz",
+      "target": "OCA\\GpxPod\\Controller\\PageController::getKmz",
+      "openapi": [],
+      "source": "appinfo/routes.php:46 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/gpxpod/directories/{id}",
+      "target": "OCA\\GpxPod\\Controller\\PageController::deleteDirectory",
+      "openapi": [],
+      "source": "appinfo/routes.php:43 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/gpxpod/directories/{id}",
+      "target": "OCA\\GpxPod\\Controller\\PageController::updateDirectory",
+      "openapi": [],
+      "source": "appinfo/routes.php:41 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gpxpod/directories/{id}/tracks",
+      "target": "OCA\\GpxPod\\Controller\\PageController::getTrackMarkersJson",
+      "openapi": [],
+      "source": "appinfo/routes.php:44 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/gpxpod/directories/{id}/tracks",
+      "target": "OCA\\GpxPod\\Controller\\PageController::updateDirectoryTracks",
+      "openapi": [],
+      "source": "appinfo/routes.php:42 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/gpxpod/getOptionsValues",
+      "target": "OCA\\GpxPod\\Controller\\UtilsController::getOptionsValues",
+      "openapi": [],
+      "source": "appinfo/routes.php:68 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gpxpod/maptiler/fonts/{fontstack}/{range}.pbf",
+      "target": "OCA\\GpxPod\\Controller\\MapController::getMapTilerFont",
+      "openapi": [],
+      "source": "appinfo/routes.php:26 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gpxpod/maptiler/maps/{version}/sprite.{ext}",
+      "target": "OCA\\GpxPod\\Controller\\MapController::getMapTilerSpriteNoSize",
+      "openapi": [],
+      "source": "appinfo/routes.php:30 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gpxpod/maptiler/maps/{version}/sprite{size}.{ext}",
+      "target": "OCA\\GpxPod\\Controller\\MapController::getMapTilerSprite",
+      "openapi": [],
+      "source": "appinfo/routes.php:31 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gpxpod/maptiler/maps/{version}/style.json",
+      "target": "OCA\\GpxPod\\Controller\\MapController::getMapTilerStyle",
+      "openapi": [],
+      "source": "appinfo/routes.php:25 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gpxpod/maptiler/resources/{name}",
+      "target": "OCA\\GpxPod\\Controller\\MapController::getMapTilerResource",
+      "openapi": [],
+      "source": "appinfo/routes.php:34 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gpxpod/maptiler/sprites/{name}/sprite.{ext}",
+      "target": "OCA\\GpxPod\\Controller\\MapController::getMapTilerNamedSpriteNoSize",
+      "openapi": [],
+      "source": "appinfo/routes.php:32 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gpxpod/maptiler/sprites/{name}/sprite{size}.{ext}",
+      "target": "OCA\\GpxPod\\Controller\\MapController::getMapTilerNamedSprite",
+      "openapi": [],
+      "source": "appinfo/routes.php:33 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gpxpod/maptiler/tiles/{version}/{z}/{x}/{y}",
+      "target": "OCA\\GpxPod\\Controller\\MapController::getMapTilerTileNoExt",
+      "openapi": [],
+      "source": "appinfo/routes.php:29 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gpxpod/maptiler/tiles/{version}/{z}/{x}/{y}.{ext}",
+      "target": "OCA\\GpxPod\\Controller\\MapController::getMapTilerTile",
+      "openapi": [],
+      "source": "appinfo/routes.php:28 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gpxpod/maptiler/tiles/{version}/tiles.json",
+      "target": "OCA\\GpxPod\\Controller\\MapController::getMapTilerTiles",
+      "openapi": [],
+      "source": "appinfo/routes.php:27 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gpxpod/nominatim/search",
+      "target": "OCA\\GpxPod\\Controller\\MapController::nominatimSearch",
+      "openapi": [],
+      "source": "appinfo/routes.php:24 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gpxpod/openfreemap/{path}",
+      "target": "OCA\\GpxPod\\Controller\\MapController::getOpenFreeMapResource",
+      "openapi": [],
+      "source": "appinfo/routes.php:37 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gpxpod/openfreemap/styles/{style}",
+      "target": "OCA\\GpxPod\\Controller\\MapController::getOpenFreeMapStyle",
+      "openapi": [],
+      "source": "appinfo/routes.php:36 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gpxpod/s/{shareToken}",
+      "target": "OCA\\GpxPod\\Controller\\PageController::publicIndex",
+      "openapi": [],
+      "source": "appinfo/routes.php:19 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/gpxpod/s/{shareToken}",
+      "target": "OCA\\GpxPod\\Controller\\PageController::publicPasswordIndex",
+      "openapi": [],
+      "source": "appinfo/routes.php:20 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gpxpod/s/{shareToken}/tracks/{trackId}/geojson",
+      "target": "OCA\\GpxPod\\Controller\\PageController::getPublicDirectoryTrackGeojson",
+      "openapi": [],
+      "source": "appinfo/routes.php:21 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/gpxpod/saveOptionValue",
+      "target": "OCA\\GpxPod\\Controller\\UtilsController::saveOptionValue",
+      "openapi": [],
+      "source": "appinfo/routes.php:69 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/gpxpod/saveOptionValues",
+      "target": "OCA\\GpxPod\\Controller\\UtilsController::saveOptionValues",
+      "openapi": [],
+      "source": "appinfo/routes.php:70 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gpxpod/tiles/{service}/{x}/{y}/{z}",
+      "target": "OCA\\GpxPod\\Controller\\MapController::getRasterTile",
+      "openapi": [],
+      "source": "appinfo/routes.php:23 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/gpxpod/tileservers",
+      "target": "OCA\\GpxPod\\Controller\\UtilsController::addTileServer",
+      "openapi": [],
+      "source": "appinfo/routes.php:61 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/gpxpod/tileservers/{id}",
+      "target": "OCA\\GpxPod\\Controller\\UtilsController::deleteTileServer",
+      "openapi": [],
+      "source": "appinfo/routes.php:63 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/gpxpod/tileservers/{id}",
+      "target": "OCA\\GpxPod\\Controller\\UtilsController::updateTileServer",
+      "openapi": [],
+      "source": "appinfo/routes.php:62 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/gpxpod/tracks",
+      "target": "OCA\\GpxPod\\Controller\\PageController::deleteTracks",
+      "openapi": [],
+      "source": "appinfo/routes.php:49 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/gpxpod/tracks/{id}",
+      "target": "OCA\\GpxPod\\Controller\\PageController::deleteTrack",
+      "openapi": [],
+      "source": "appinfo/routes.php:48 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/gpxpod/tracks/{id}",
+      "target": "OCA\\GpxPod\\Controller\\PageController::updateTrack",
+      "openapi": [],
+      "source": "appinfo/routes.php:47 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/gpxpod/tracks/{id}/cut",
+      "target": "OCA\\GpxPod\\Controller\\PageController::cutTrack",
+      "openapi": [],
+      "source": "appinfo/routes.php:50 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gpxpod/tracks/{id}/elevations",
+      "target": "OCA\\GpxPod\\Controller\\PageController::processTrackElevations",
+      "openapi": [],
+      "source": "appinfo/routes.php:52 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gpxpod/tracks/{id}/geojson",
+      "target": "OCA\\GpxPod\\Controller\\PageController::getGeojson",
+      "openapi": [],
+      "source": "appinfo/routes.php:51 routes",
+      "kind": "route"
+    }
+  ]
+}

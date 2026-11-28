@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>user_group_admin</id>
+	<name>Groups</name>
+	<summary>User-managed groups with storage grants and external collaborator invitations</summary>
+	<description>Lets users create and manage their own groups, invite external collaborators by email, and delegate storage to group members from their own quota.</description>
+	<version>1.0.52</version>
+	<licence>agpl</licence>
+	<author mail="fror@dtu.dk">Frederik Orellana, DTU</author>
+	<types>
+		<!-- 'authentication' loads this app on remote.php requests (core loads only
+		     authentication/filesystem/logging app TYPES there). Without it the
+		     GroupBackend registered in boot() is ABSENT on the entire DAV surface:
+		     group memberships resolve to nothing, so group-share mounts don't
+		     exist on /remote.php/dav — observed as a web-UI 404 opening a folder
+		     shared with a group ("Bill's æske"), while OCS (full app load) saw it. -->
+		<authentication/>
+	</types>
+	<namespace>UserGroupAdmin</namespace>
+	<bootstrap>OCA\UserGroupAdmin\AppInfo\Application</bootstrap>
+	<category>organization</category>
+	<dependencies>
+		<nextcloud min-version="28" max-version="35"/>
+		<php min-version="8.2"/>
+	</dependencies>
+	<background-jobs>
+		<job>OCA\UserGroupAdmin\BackgroundJob\GrantFolderUsage</job>
+	</background-jobs>
+	<repair-steps>
+		<post-migration>
+			<step>OCA\UserGroupAdmin\Migration\RemoveGrantSyncRules</step>
+		</post-migration>
+	</repair-steps>
+	<commands>
+		<command>OCA\UserGroupAdmin\Command\MigrateGroups</command>
+	</commands>
+	<remote>
+		<groupadmin>appinfo/remote.php</groupadmin>
+		<user_group_admin>appinfo/grants.php</user_group_admin>
+		<grants>appinfo/grants.php</grants>
+		<grantfolders>appinfo/grants.php</grantfolders>
+		<sponsoredfolders>appinfo/sponsored.php</sponsoredfolders>
+	</remote>
+	<navigations>
+		<navigation>
+			<name>Groups</name>
+			<route>user_group_admin.page.index</route>
+			<icon>nav-icon.svg</icon>
+			<order>5</order>
+		</navigation>
+	</navigations>
+	<settings>
+		<admin>OCA\UserGroupAdmin\Settings\AdminSettings</admin>
+	</settings>
+</info>

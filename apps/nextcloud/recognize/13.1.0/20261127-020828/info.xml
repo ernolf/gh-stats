@@ -1,0 +1,136 @@
+<?xml version="1.0"?>
+<info xmlns:xsi= "http://www.w3.org/2001/XMLSchema-instance"
+	  xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>recognize</id>
+	<name>Recognize</name>
+	<summary>Smart media tagging and face recognition with on-premises machine learning models</summary>
+	<description><![CDATA[
+Smart media tagging and face recognition with on-premises machine learning models.
+This app goes through your media collection and adds fitting tags, automatically categorizing your photos and music.
+
+* 📷 👪 Recognizes faces from contact photos
+* 📷 🏔 Recognizes animals, landscapes, food, vehicles, buildings and other objects
+* 📷 🗼 Recognizes landmarks and monuments
+* 👂 🎵 Recognizes music genres
+* 🎥 🤸 Recognizes human actions on video
+
+⚡ Tagging works via Nextcloud's Collaborative Tags
+  * 👂 listen to your tagged music with the audioplayer app
+  * 📷 view your tagged photos and videos with the photos app
+
+Model sizes:
+
+ * Object recognition: 1GB
+ * Landmark recognition: 300MB
+ * Video action recognition: 50MB
+ * Music genre recognition: 50MB
+
+## Ethical AI Rating
+### Rating for Photo object detection: 🟢
+
+Positive:
+* the software for training and inference of this model is open source
+* the trained model is freely available, and thus can be run on-premises
+* the training data is freely available, making it possible to check or correct for bias or optimise the performance and CO2 usage.
+
+### Rating for Photo face recognition: 🟢
+
+Positive:
+* the software for training and inference of this model is open source
+* the trained model is freely available, and thus can be run on-premises
+* the training data is freely available, making it possible to check or correct for bias or optimise the performance and CO2 usage.
+
+### Rating for Video action recognition: 🟢
+
+Positive:
+* the software for training and inferencing of this model is open source
+* the trained model is freely available, and thus can be ran on-premises
+* the training data is freely available, making it possible to check or correct for bias or optimise the performance and CO2 usage.
+
+## Ethical AI Rating
+### Rating Music genre recognition: 🟡
+
+Positive:
+* the software for training and inference of this model is open source
+* the trained model is freely available, and thus can be run on-premises
+
+Negative:
+* the training data is not freely available, limiting the ability of external parties to check and correct for bias or optimise the model’s performance and CO2 usage.
+
+Learn more about the Nextcloud Ethical AI Rating [in our blog](https://nextcloud.com/blog/nextcloud-ethical-ai-rating/).
+
+After installation, you can enable tagging in the admin settings.
+
+Requirements:
+- php 7.4 and above
+- App "collaborative tags" enabled
+- For native speed:
+  - Processor: x86 64-bit (with support for AVX instructions)
+  - System with glibc (usually the norm on Linux; FreeBSD, Alpine linux and thus also the official Nextcloud Docker container and Nextcloud AIO are *not* such systems)
+- For sub-native speed (using WASM mode)
+  - Processor: x86 64-bit, arm64, armv7l (no AVX needed)
+  - System with glibc or musl (incl. Alpine linux and thus also the official Nextcloud Docker container and also Nextcloud AIO)
+- ~4GB of free RAM (if you're cutting it close, make sure you have some swap available)
+
+The app does not send any sensitive data to cloud providers or similar services. All processing is done on your Nextcloud machine, using Tensorflow.js running in Node.js.
+
+]]></description>
+	<version>13.1.0</version>
+	<licence>agpl</licence>
+	<author mail="mklehr@gmx.net">Marcel Klehr</author>
+	<types>
+		<filesystem/>
+		<dav/>
+	</types>
+	<category>organization</category>
+	<category>search</category>
+	<category>multimedia</category>
+	<category>ai</category>
+	<website>https://github.com/nextcloud/recognize</website>
+	<bugs>https://github.com/nextcloud/recognize/issues</bugs>
+	<repository type="git">https://github.com/nextcloud/recognize.git</repository>
+	<screenshot>https://raw.githubusercontent.com/nextcloud/recognize/main/screenshots/Logo.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/nextcloud/recognize/main/screenshots/imagenet_examples.jpg</screenshot>
+	<dependencies>
+		<nextcloud min-version="35" max-version="36" />
+	</dependencies>
+	<background-jobs>
+		<job>OCA\Recognize\BackgroundJobs\MaintenanceJob</job>
+	</background-jobs>
+
+	<repair-steps>
+		<post-migration>
+			<step>OCA\Recognize\Migration\InstallDeps</step>
+		</post-migration>
+		<live-migration>
+			<step>OCA\Recognize\Migration\RemoveDuplicateFaceDetections</step>
+		</live-migration>
+		<install>
+			<step>OCA\Recognize\Migration\InstallDeps</step>
+		</install>
+	</repair-steps>
+
+	<commands>
+		<command>OCA\Recognize\Command\ResetFaces</command>
+		<command>OCA\Recognize\Command\ResetFaceClusters</command>
+		<command>OCA\Recognize\Command\ResetTags</command>
+		<command>OCA\Recognize\Command\ClearBackgroundJobs</command>
+		<command>OCA\Recognize\Command\RemoveLegacyTags</command>
+		<command>OCA\Recognize\Command\CleanupTags</command>
+		<command>OCA\Recognize\Command\Recrawl</command>
+		<command>OCA\Recognize\Command\DownloadModels</command>
+		<command>OCA\Recognize\Command\Classify</command>
+		<command>OCA\Recognize\Command\ClusterFaces</command>
+	</commands>
+
+	<settings>
+		<admin>OCA\Recognize\Settings\AdminSettings</admin>
+		<admin-section>OCA\Recognize\Settings\AdminSection</admin-section>
+	</settings>
+
+	<sabre>
+		<collections>
+			<collection>OCA\Recognize\Dav\RootCollection</collection>
+		</collections>
+	</sabre>
+</info>

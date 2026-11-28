@@ -1,0 +1,39 @@
+{
+  "root": ".",
+  "app": {
+    "id": "ng_backup",
+    "version": "1.0.2"
+  },
+  "version": "1.0.2",
+  "nightly": false,
+  "prerelease": false,
+  "section": "1.0.2",
+  "store": {
+    "languages": 96,
+    "asOf": "data/appstore.json of ncmake, read 2026-11-04"
+  },
+  "files": [
+    {
+      "name": "CHANGELOG.md",
+      "read": "en",
+      "utf8": true,
+      "bom": false,
+      "headed": true,
+      "body": "### Added\n- A warning on the admin page and in `occ backup:status` when background jobs do not run on a\n  system cron, or the cron stopped, with a link to how to set one up. Backups, also the scheduled\n  ones, need it (#13).\n- Without a working system cron, a backup started with \"Back up now\" moves on while the NG Backup\n  page stays open (#13).\n- `--salvage` for `occ backup:restore` and `occ backup:restore:full`: restore whatever can be\n  read when a backup is damaged. Files that cannot be read or decrypted are left out and listed,\n  and the command exits with code 2. When the database cannot be restored, `backup:restore:full`\n  leaves the fresh database as it is and puts the data directory and config of the backup in\n  `ngb-salvage-<snapshot>` in the data directory, to put back by hand.\n- The trash of restore points has a tab of its own, \"Bin\", instead of being shown below the\n  backups.\n\n### Changed\n- A backup in its database phase shows how far it is, for example \"running (db: 47/183 tables)\",\n  and one that has not moved for 15 minutes says \"waiting for background jobs\" with when it last\n  took a step. Before, it only said \"running (db)\", which looked the same as being stuck (#13).\n- Full restores from S3 read the packs ahead, eight ranges at a time, as restores over SFTP do\n  since 1.0.0-rc.4. Over SMB the packs are read in 8 MiB reads instead of 1 MiB: over a line with\n  a 130 ms round trip, reading was four times faster in a test (18 instead of 4.5 MiB/s).\n- Over SMB the index files, which a new server reads in `backup:target:add`, take fewer round\n  trips: from Canada to a Hetzner Storage Box (130 ms), 0.66 instead of 1.05 s per file, so about\n  5 instead of 8 hours for the 27,000 index files of a 1 TB repository.\n- `occ backup:restore:full` that runs again after it stopped (`--force`) goes on where it was: data\n  files already in place with the size and modification time of the backup are left, and only\n  the rest is read from the location. Before, a stopped restore of 1 TB started over.\n\n### Fixed\n- A full restore over SMB could hang at 100% CPU when the connection to the server dropped: a\n  failed read was counted as data. It is now read again over a new connection. Found in a\n  disaster recovery test of 1 TB from Canada to a Hetzner Storage Box, after 392 GiB.\n- The read-ahead folder of a restore that was killed while it wrote is removed by the next run;\n  it kept one file of up to 8 MiB.\n- `occ backup:target:add` only estimates the time left for reading the index once enough of it\n  is in. The first file also carries the time to connect, which made it say \"about 642 min left\"\n  for something done within a minute.\n- A restore that stops because a file is gone from the location now points at `--salvage`, as it\n  already did for damaged data.\n\n### Known issues\n- Empty folders are not backed up or restored; to be fixed in 1.0.3 (#27).",
+      "own": {
+        "headed": true,
+        "body": "### Added\n- A warning on the admin page and in `occ backup:status` when background jobs do not run on a\n  system cron, or the cron stopped, with a link to how to set one up. Backups, also the scheduled\n  ones, need it (#13).\n- Without a working system cron, a backup started with \"Back up now\" moves on while the NG Backup\n  page stays open (#13).\n- `--salvage` for `occ backup:restore` and `occ backup:restore:full`: restore whatever can be\n  read when a backup is damaged. Files that cannot be read or decrypted are left out and listed,\n  and the command exits with code 2. When the database cannot be restored, `backup:restore:full`\n  leaves the fresh database as it is and puts the data directory and config of the backup in\n  `ngb-salvage-<snapshot>` in the data directory, to put back by hand.\n- The trash of restore points has a tab of its own, \"Bin\", instead of being shown below the\n  backups.\n\n### Changed\n- A backup in its database phase shows how far it is, for example \"running (db: 47/183 tables)\",\n  and one that has not moved for 15 minutes says \"waiting for background jobs\" with when it last\n  took a step. Before, it only said \"running (db)\", which looked the same as being stuck (#13).\n- Full restores from S3 read the packs ahead, eight ranges at a time, as restores over SFTP do\n  since 1.0.0-rc.4. Over SMB the packs are read in 8 MiB reads instead of 1 MiB: over a line with\n  a 130 ms round trip, reading was four times faster in a test (18 instead of 4.5 MiB/s).\n- Over SMB the index files, which a new server reads in `backup:target:add`, take fewer round\n  trips: from Canada to a Hetzner Storage Box (130 ms), 0.66 instead of 1.05 s per file, so about\n  5 instead of 8 hours for the 27,000 index files of a 1 TB repository.\n- `occ backup:restore:full` that runs again after it stopped (`--force`) goes on where it was: data\n  files already in place with the size and modification time of the backup are left, and only\n  the rest is read from the location. Before, a stopped restore of 1 TB started over.\n\n### Fixed\n- A full restore over SMB could hang at 100% CPU when the connection to the server dropped: a\n  failed read was counted as data. It is now read again over a new connection. Found in a\n  disaster recovery test of 1 TB from Canada to a Hetzner Storage Box, after 392 GiB.\n- The read-ahead folder of a restore that was killed while it wrote is removed by the next run;\n  it kept one file of up to 8 MiB.\n- `occ backup:target:add` only estimates the time left for reading the index once enough of it\n  is in. The first file also carries the time to connect, which made it say \"about 642 min left\"\n  for something done within a minute.\n- A restore that stops because a file is gone from the location now points at `--salvage`, as it\n  already did for damaged data.\n\n### Known issues\n- Empty folders are not backed up or restored; to be fixed in 1.0.3 (#27)."
+      }
+    }
+  ],
+  "findings": [
+    {
+      "level": "ok",
+      "id": "changelog-section",
+      "lines": [
+        "The App Store finds the section for 1.0.2 in 1 changelog.",
+        "  CHANGELOG.md (en): 42 lines"
+      ]
+    }
+  ]
+}

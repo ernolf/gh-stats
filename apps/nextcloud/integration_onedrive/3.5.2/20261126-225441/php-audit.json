@@ -1,0 +1,436 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Onedrive\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "brick/math 0.18.0, in 3rdparty/ of Nextcloud 33 to 35",
+        "php-http/promise 1.2.2, in 3rdparty/ of Nextcloud 33 to 35",
+        "psr/container 2.0.2, in 3rdparty/ of Nextcloud 33 to 35",
+        "psr/http-client 1.0.3, in 3rdparty/ of Nextcloud 33 to 35",
+        "psr/http-factory 1.1.0, in 3rdparty/ of Nextcloud 33 to 35",
+        "psr/http-message 2.0, in 3rdparty/ of Nextcloud 33 to 35",
+        "psr/log 3.0.2, in 3rdparty/ of Nextcloud 33 to 35",
+        "symfony/deprecation-contracts v3.7.0, in 3rdparty/ of Nextcloud 33 to 35",
+        "symfony/service-contracts v3.7.0, in 3rdparty/ of Nextcloud 33 to 35"
+      ],
+      "lines": [
+        "vendor/ ships 9 packages that the server ships itself in a major of Nextcloud 33 to 35. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  brick/math 0.18.0, in 3rdparty/ of Nextcloud 33 to 35",
+        "  php-http/promise 1.2.2, in 3rdparty/ of Nextcloud 33 to 35",
+        "  psr/container 2.0.2, in 3rdparty/ of Nextcloud 33 to 35",
+        "  psr/http-client 1.0.3, in 3rdparty/ of Nextcloud 33 to 35",
+        "  psr/http-factory 1.1.0, in 3rdparty/ of Nextcloud 33 to 35",
+        "  psr/http-message 2.0, in 3rdparty/ of Nextcloud 33 to 35",
+        "  psr/log 3.0.2, in 3rdparty/ of Nextcloud 33 to 35",
+        "  symfony/deprecation-contracts v3.7.0, in 3rdparty/ of Nextcloud 33 to 35",
+        "  symfony/service-contracts v3.7.0, in 3rdparty/ of Nextcloud 33 to 35"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 6
+        }
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Service/UserScopeService.php:51 OC_Util"
+      ],
+      "lines": [
+        "1 use of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Service/UserScopeService.php:51 OC_Util"
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:39 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:39 injectFn()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/integration_onedrive/local-addressbooks  integration_onedrive.config.getlocaladdressbooks  appinfo/routes.php:22 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 route outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 7 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/integration_onedrive/local-addressbooks  integration_onedrive.config.getlocaladdressbooks  appinfo/routes.php:22 routes"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "psalm/phar, friendsofphp/php-cs-fixer are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:50 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Command/Setup.php:36 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Command/Setup.php:39 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Command/SetupUser.php:38 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Command/SetupUser.php:40 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Command/SetupUser.php:42 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Command/SetupUser.php:44 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ConfigController.php:66 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ConfigController.php:71 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/ConfigController.php:72 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/ConfigController.php:73 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/ConfigController.php:74 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/ConfigController.php:75 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/ConfigController.php:76 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Controller/ConfigController.php:98 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:109 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:131 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:133 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:137 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ConfigController.php:140 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ConfigController.php:153 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ConfigController.php:156 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ConfigController.php:157 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ConfigController.php:161 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ConfigController.php:164 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ConfigController.php:166 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/ConfigController.php:168 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ConfigController.php:206 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "lib/Controller/OnedriveAPIController.php:37 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/OnedriveAPIController.php:77 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/OnedriveAPIController.php:78 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/OnedriveAPIController.php:79 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/OnedriveAPIController.php:80 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Controller/OnedriveAPIController.php:81 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Migration/Version3300Date202410151354.php:43 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Migration/Version3300Date202410151354.php:47 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OnedriveAPIService.php:122 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveAPIService.php:245 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveAPIService.php:247 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveAPIService.php:261 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OnedriveAPIService.php:263 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/OnedriveAPIService.php:265 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveAPIService.php:266 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveAPIService.php:281 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveAPIService.php:285 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveStorageAPIService.php:110 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveStorageAPIService.php:113 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveStorageAPIService.php:128 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveStorageAPIService.php:129 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveStorageAPIService.php:130 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveStorageAPIService.php:131 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/OnedriveStorageAPIService.php:148 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveStorageAPIService.php:152 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveStorageAPIService.php:155 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveStorageAPIService.php:161 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveStorageAPIService.php:162 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveStorageAPIService.php:165 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveStorageAPIService.php:182 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveStorageAPIService.php:186 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveStorageAPIService.php:187 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveStorageAPIService.php:196 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveStorageAPIService.php:197 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveStorageAPIService.php:198 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveStorageAPIService.php:199 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveStorageAPIService.php:201 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "lib/Service/OnedriveStorageAPIService.php:209 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveStorageAPIService.php:211 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveStorageAPIService.php:214 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveStorageAPIService.php:329 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveStorageAPIService.php:330 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Service/OnedriveStorageAPIService.php:331 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Settings/Admin.php:29 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:31 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Admin.php:33 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Personal.php:33 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Settings/Personal.php:34 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Settings/Personal.php:35 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Settings/Personal.php:39 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Personal.php:41 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Personal.php:43 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Personal.php:50 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "lines": [
+        "81 uses in 10 files of the public API that is deprecated in Nextcloud 33 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/AppInfo/Application.php:50 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Command/Setup.php:36 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Command/Setup.php:39 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Command/SetupUser.php:38 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Command/SetupUser.php:40 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Command/SetupUser.php:42 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Command/SetupUser.php:44 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ConfigController.php:66 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ConfigController.php:71 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/ConfigController.php:72 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/ConfigController.php:73 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/ConfigController.php:74 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/ConfigController.php:75 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/ConfigController.php:76 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Controller/ConfigController.php:98 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:109 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:131 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:133 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:137 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ConfigController.php:140 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ConfigController.php:153 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ConfigController.php:156 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ConfigController.php:157 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ConfigController.php:161 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ConfigController.php:164 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ConfigController.php:166 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/ConfigController.php:168 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ConfigController.php:206 OCP\\Constants::PERMISSION_CREATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_CREATE instead",
+        "  lib/Controller/OnedriveAPIController.php:37 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/OnedriveAPIController.php:77 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/OnedriveAPIController.php:78 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/OnedriveAPIController.php:79 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/OnedriveAPIController.php:80 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Controller/OnedriveAPIController.php:81 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Migration/Version3300Date202410151354.php:43 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Migration/Version3300Date202410151354.php:47 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OnedriveAPIService.php:122 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveAPIService.php:245 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveAPIService.php:247 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveAPIService.php:261 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OnedriveAPIService.php:263 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/OnedriveAPIService.php:265 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveAPIService.php:266 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveAPIService.php:281 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveAPIService.php:285 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveStorageAPIService.php:110 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveStorageAPIService.php:113 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveStorageAPIService.php:128 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveStorageAPIService.php:129 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveStorageAPIService.php:130 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveStorageAPIService.php:131 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/OnedriveStorageAPIService.php:148 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveStorageAPIService.php:152 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveStorageAPIService.php:155 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveStorageAPIService.php:161 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveStorageAPIService.php:162 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveStorageAPIService.php:165 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveStorageAPIService.php:182 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveStorageAPIService.php:186 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveStorageAPIService.php:187 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveStorageAPIService.php:196 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveStorageAPIService.php:197 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveStorageAPIService.php:198 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveStorageAPIService.php:199 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveStorageAPIService.php:201 OCP\\IConfig::deleteUserValue(): deprecated since Nextcloud 33; use IUserConfig::deleteUserConfig directly",
+        "  lib/Service/OnedriveStorageAPIService.php:209 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveStorageAPIService.php:211 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveStorageAPIService.php:214 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveStorageAPIService.php:329 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveStorageAPIService.php:330 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Service/OnedriveStorageAPIService.php:331 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Settings/Admin.php:29 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:31 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Admin.php:33 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Personal.php:33 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Settings/Personal.php:34 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Settings/Personal.php:35 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Settings/Personal.php:39 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Personal.php:41 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Personal.php:43 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Personal.php:50 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 78
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/ConfigController.php:159 new DateTime()",
+        "lib/Service/OnedriveAPIService.php:68 new DateTime()",
+        "lib/Service/OnedriveAPIService.php:249 new DateTime()",
+        "lib/Service/OnedriveAPIService.php:283 new DateTime()",
+        "lib/Service/OnedriveStorageAPIService.php:153 new DateTime()",
+        "lib/Service/OnedriveStorageAPIService.php:210 new DateTime()",
+        "lib/Service/OnedriveStorageAPIService.php:331 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 7 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/ConfigController.php:159 new DateTime()",
+        "  lib/Service/OnedriveAPIService.php:68 new DateTime()",
+        "  lib/Service/OnedriveAPIService.php:249 new DateTime()",
+        "  lib/Service/OnedriveAPIService.php:283 new DateTime()",
+        "  lib/Service/OnedriveStorageAPIService.php:153 new DateTime()",
+        "  lib/Service/OnedriveStorageAPIService.php:210 new DateTime()",
+        "  lib/Service/OnedriveStorageAPIService.php:331 new DateTime()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Command/Setup.php:36 setAppValue()",
+        "lib/Command/Setup.php:39 setAppValue()",
+        "lib/Controller/ConfigController.php:98 setAppValue()",
+        "lib/Controller/ConfigController.php:109 setAppValue()",
+        "lib/Controller/ConfigController.php:131 getAppValue()",
+        "lib/Controller/ConfigController.php:133 getAppValue()",
+        "lib/Controller/ConfigController.php:168 getAppValue()",
+        "lib/Migration/Version3300Date202410151354.php:43 getAppValue()",
+        "lib/Migration/Version3300Date202410151354.php:47 setAppValue()",
+        "lib/Service/OnedriveAPIService.php:261 getAppValue()",
+        "lib/Service/OnedriveAPIService.php:263 getAppValue()",
+        "lib/Settings/Admin.php:29 getAppValue()",
+        "lib/Settings/Admin.php:31 getAppValue()",
+        "lib/Settings/Admin.php:33 getAppValue()",
+        "lib/Settings/Personal.php:39 getAppValue()",
+        "lib/Settings/Personal.php:41 getAppValue()",
+        "lib/Settings/Personal.php:43 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 17 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Command/Setup.php:36 setAppValue()",
+        "  lib/Command/Setup.php:39 setAppValue()",
+        "  lib/Controller/ConfigController.php:98 setAppValue()",
+        "  lib/Controller/ConfigController.php:109 setAppValue()",
+        "  lib/Controller/ConfigController.php:131 getAppValue()",
+        "  lib/Controller/ConfigController.php:133 getAppValue()",
+        "  lib/Controller/ConfigController.php:168 getAppValue()",
+        "  lib/Migration/Version3300Date202410151354.php:43 getAppValue()",
+        "  lib/Migration/Version3300Date202410151354.php:47 setAppValue()",
+        "  lib/Service/OnedriveAPIService.php:261 getAppValue()",
+        "  lib/Service/OnedriveAPIService.php:263 getAppValue()",
+        "  lib/Settings/Admin.php:29 getAppValue()",
+        "  lib/Settings/Admin.php:31 getAppValue()",
+        "  lib/Settings/Admin.php:33 getAppValue()",
+        "  lib/Settings/Personal.php:39 getAppValue()",
+        "  lib/Settings/Personal.php:41 getAppValue()",
+        "  lib/Settings/Personal.php:43 getAppValue()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 14
+        }
+      ]
+    }
+  ],
+  "endpoints": 13,
+  "endpointList": [
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/integration_onedrive/admin-config",
+      "target": "OCA\\Onedrive\\Controller\\ConfigController::setAdminConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_onedrive/calendars",
+      "target": "OCA\\Onedrive\\Controller\\OnedriveAPIController::getCalendarList",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/integration_onedrive/config",
+      "target": "OCA\\Onedrive\\Controller\\ConfigController::setConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_onedrive/contact-number",
+      "target": "OCA\\Onedrive\\Controller\\OnedriveAPIController::getContactNumber",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_onedrive/import-calendar",
+      "target": "OCA\\Onedrive\\Controller\\OnedriveAPIController::importCalendar",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_onedrive/import-contacts",
+      "target": "OCA\\Onedrive\\Controller\\OnedriveAPIController::importContacts",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_onedrive/import-files",
+      "target": "OCA\\Onedrive\\Controller\\OnedriveAPIController::importOnedrive",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_onedrive/import-files-info",
+      "target": "OCA\\Onedrive\\Controller\\OnedriveAPIController::getImportOnedriveInformation",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_onedrive/local-addressbooks",
+      "target": "OCA\\Onedrive\\Controller\\ConfigController::getLocalAddressBooks",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_onedrive/oauth-redirect",
+      "target": "OCA\\Onedrive\\Controller\\ConfigController::oauthRedirect",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_onedrive/popup-success",
+      "target": "OCA\\Onedrive\\Controller\\ConfigController::popupSuccessPage",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/integration_onedrive/sensitive-admin-config",
+      "target": "OCA\\Onedrive\\Controller\\ConfigController::setSensitiveAdminConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/integration_onedrive/storage-size",
+      "target": "OCA\\Onedrive\\Controller\\OnedriveAPIController::getStorageSize",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

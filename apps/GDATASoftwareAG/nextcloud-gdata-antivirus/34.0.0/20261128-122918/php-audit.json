@@ -1,0 +1,406 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\GDataVaas\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "psr/http-factory 1.1.0, in 3rdparty/ of Nextcloud 34",
+        "psr/http-message 2.0, in 3rdparty/ of Nextcloud 34",
+        "psr/log 3.0.2, in 3rdparty/ of Nextcloud 34",
+        "symfony/deprecation-contracts v3.8.1, in 3rdparty/ of Nextcloud 34",
+        "symfony/translation v7.4.24, in 3rdparty/ of Nextcloud 34",
+        "symfony/translation-contracts v3.8.1, in 3rdparty/ of Nextcloud 34"
+      ],
+      "lines": [
+        "vendor/ ships 6 packages that the server ships itself in a major of Nextcloud 34. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  psr/http-factory 1.1.0, in 3rdparty/ of Nextcloud 34",
+        "  psr/http-message 2.0, in 3rdparty/ of Nextcloud 34",
+        "  psr/log 3.0.2, in 3rdparty/ of Nextcloud 34",
+        "  symfony/deprecation-contracts v3.8.1, in 3rdparty/ of Nextcloud 34",
+        "  symfony/translation v7.4.24, in 3rdparty/ of Nextcloud 34",
+        "  symfony/translation-contracts v3.8.1, in 3rdparty/ of Nextcloud 34"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Service/FileService.php:147 OC::$server",
+        "lib/SystemTag/SystemTagObjectMapperWithoutActivityFactory.php:22 OC\\SystemTag\\SystemTagObjectMapper"
+      ],
+      "lines": [
+        "2 uses of the private API of the server in 2 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Service/FileService.php:147 OC::$server",
+        "  lib/SystemTag/SystemTagObjectMapperWithoutActivityFactory.php:22 OC\\SystemTag\\SystemTagObjectMapper"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/gdatavaas/getAuthMethod  gdatavaas.settings.getauthmethod  appinfo/routes.php:26 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 route outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 4 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/gdatavaas/getAuthMethod  gdatavaas.settings.getauthmethod  appinfo/routes.php:26 routes"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "psalm/phar, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/SettingsController.php:90 OCP\\Mail\\IMailer::validateMailAddress(): deprecated since Nextcloud 32; use IEmailValidator::isValid() instead"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated in Nextcloud 34. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/SettingsController.php:90 OCP\\Mail\\IMailer::validateMailAddress(): deprecated since Nextcloud 32; use IEmailValidator::isValid() instead"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/ScanService.php:56 time()",
+        "lib/Service/ScanService.php:88 time()",
+        "lib/Service/ScanService.php:116 time()",
+        "lib/Service/ScanService.php:147 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 4 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/ScanService.php:56 time()",
+        "  lib/Service/ScanService.php:88 time()",
+        "  lib/Service/ScanService.php:116 time()",
+        "  lib/Service/ScanService.php:147 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJobs/ScanJob.php:38 getValueBool()",
+        "lib/Controller/ScanController.php:68 getValueInt()",
+        "lib/Controller/SettingsController.php:62 setValueString()",
+        "lib/Controller/SettingsController.php:63 setValueString()",
+        "lib/Controller/SettingsController.php:64 setValueString()",
+        "lib/Controller/SettingsController.php:65 setValueString()",
+        "lib/Controller/SettingsController.php:66 setValueString()",
+        "lib/Controller/SettingsController.php:67 setValueInt()",
+        "lib/Controller/SettingsController.php:68 setValueInt()",
+        "lib/Controller/SettingsController.php:69 setValueBool()",
+        "lib/Controller/SettingsController.php:70 setValueBool()",
+        "lib/Controller/SettingsController.php:75 setValueString()",
+        "lib/Controller/SettingsController.php:76 setValueString()",
+        "lib/Controller/SettingsController.php:95 setValueString()",
+        "lib/Controller/SettingsController.php:96 setValueString()",
+        "lib/Controller/SettingsController.php:97 setValueString()",
+        "lib/Controller/SettingsController.php:98 setValueString()",
+        "lib/Controller/SettingsController.php:104 setValueBool()",
+        "lib/Controller/SettingsController.php:110 getValueBool()",
+        "lib/Controller/SettingsController.php:115 setValueBool()",
+        "lib/Controller/SettingsController.php:121 getValueBool()",
+        "lib/Controller/SettingsController.php:125 getValueString()",
+        "lib/Controller/SettingsController.php:130 setValueBool()",
+        "lib/Controller/SettingsController.php:136 getValueBool()",
+        "lib/Controller/SettingsController.php:164 getValueBool()",
+        "lib/Controller/SettingsController.php:170 setValueBool()",
+        "lib/Controller/SettingsController.php:199 getValueBool()",
+        "lib/Controller/SettingsController.php:203 getValueBool()",
+        "lib/EventListener/FileEventsListener.php:71 getValueBool()",
+        "lib/EventListener/FileEventsListener.php:88 getValueBool()",
+        "lib/Service/FileService.php:59 getValueBool()",
+        "lib/Service/FileService.php:118 getValueString()",
+        "lib/Service/MailService.php:69 getValueString()",
+        "lib/Service/ScanService.php:75 getValueInt()",
+        "lib/Service/ScanService.php:104 getValueBool()",
+        "lib/Service/TagUnscannedService.php:47 getValueBool()",
+        "lib/Service/VerdictService.php:55 getValueString()",
+        "lib/Service/VerdictService.php:58 getValueString()",
+        "lib/Service/VerdictService.php:63 getValueString()",
+        "lib/Service/VerdictService.php:66 getValueString()",
+        "lib/Service/VerdictService.php:67 getValueString()",
+        "lib/Service/VerdictService.php:68 getValueString()",
+        "lib/Service/VerdictService.php:69 getValueString()",
+        "lib/Service/VerdictService.php:116 getValueInt()",
+        "lib/Service/VerdictService.php:149 getValueString()",
+        "lib/Service/VerdictService.php:171 getValueString()",
+        "lib/Service/VerdictService.php:210 getValueBool()",
+        "lib/Service/VerdictService.php:211 getValueBool()",
+        "lib/Service/VerdictService.php:213 getValueInt()",
+        "lib/Service/VerdictService.php:258 getValueBool()",
+        "lib/Settings/VaasAdmin.php:25 getValueString()",
+        "lib/Settings/VaasAdmin.php:26 getValueString()",
+        "lib/Settings/VaasAdmin.php:27 getValueString()",
+        "lib/Settings/VaasAdmin.php:28 getValueString()",
+        "lib/Settings/VaasAdmin.php:30 getValueString()",
+        "lib/Settings/VaasAdmin.php:34 getValueString()",
+        "lib/Settings/VaasAdmin.php:40 getValueString()",
+        "lib/Settings/VaasAdmin.php:46 getValueInt()",
+        "lib/Settings/VaasAdmin.php:47 getValueInt()",
+        "lib/Settings/VaasAdmin.php:48 getValueBool()",
+        "lib/Settings/VaasAdmin.php:49 getValueBool()",
+        "lib/Settings/VaasOperator.php:29 getValueString()",
+        "lib/Settings/VaasOperator.php:30 getValueBool()",
+        "lib/Settings/VaasOperator.php:32 getValueBool()",
+        "lib/Settings/VaasOperator.php:33 getValueBool()",
+        "lib/Settings/VaasOperator.php:34 getValueString()",
+        "lib/Settings/VaasOperator.php:35 getValueString()",
+        "lib/Settings/VaasOperator.php:36 getValueString()",
+        "lib/Settings/VaasOperator.php:38 getValueBool()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 69 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/BackgroundJobs/ScanJob.php:38 getValueBool()",
+        "  lib/Controller/ScanController.php:68 getValueInt()",
+        "  lib/Controller/SettingsController.php:62 setValueString()",
+        "  lib/Controller/SettingsController.php:63 setValueString()",
+        "  lib/Controller/SettingsController.php:64 setValueString()",
+        "  lib/Controller/SettingsController.php:65 setValueString()",
+        "  lib/Controller/SettingsController.php:66 setValueString()",
+        "  lib/Controller/SettingsController.php:67 setValueInt()",
+        "  lib/Controller/SettingsController.php:68 setValueInt()",
+        "  lib/Controller/SettingsController.php:69 setValueBool()",
+        "  lib/Controller/SettingsController.php:70 setValueBool()",
+        "  lib/Controller/SettingsController.php:75 setValueString()",
+        "  lib/Controller/SettingsController.php:76 setValueString()",
+        "  lib/Controller/SettingsController.php:95 setValueString()",
+        "  lib/Controller/SettingsController.php:96 setValueString()",
+        "  lib/Controller/SettingsController.php:97 setValueString()",
+        "  lib/Controller/SettingsController.php:98 setValueString()",
+        "  lib/Controller/SettingsController.php:104 setValueBool()",
+        "  lib/Controller/SettingsController.php:110 getValueBool()",
+        "  lib/Controller/SettingsController.php:115 setValueBool()",
+        "  lib/Controller/SettingsController.php:121 getValueBool()",
+        "  lib/Controller/SettingsController.php:125 getValueString()",
+        "  lib/Controller/SettingsController.php:130 setValueBool()",
+        "  lib/Controller/SettingsController.php:136 getValueBool()",
+        "  lib/Controller/SettingsController.php:164 getValueBool()",
+        "  lib/Controller/SettingsController.php:170 setValueBool()",
+        "  lib/Controller/SettingsController.php:199 getValueBool()",
+        "  lib/Controller/SettingsController.php:203 getValueBool()",
+        "  lib/EventListener/FileEventsListener.php:71 getValueBool()",
+        "  lib/EventListener/FileEventsListener.php:88 getValueBool()",
+        "  lib/Service/FileService.php:59 getValueBool()",
+        "  lib/Service/FileService.php:118 getValueString()",
+        "  lib/Service/MailService.php:69 getValueString()",
+        "  lib/Service/ScanService.php:75 getValueInt()",
+        "  lib/Service/ScanService.php:104 getValueBool()",
+        "  lib/Service/TagUnscannedService.php:47 getValueBool()",
+        "  lib/Service/VerdictService.php:55 getValueString()",
+        "  lib/Service/VerdictService.php:58 getValueString()",
+        "  lib/Service/VerdictService.php:63 getValueString()",
+        "  lib/Service/VerdictService.php:66 getValueString()",
+        "  lib/Service/VerdictService.php:67 getValueString()",
+        "  lib/Service/VerdictService.php:68 getValueString()",
+        "  lib/Service/VerdictService.php:69 getValueString()",
+        "  lib/Service/VerdictService.php:116 getValueInt()",
+        "  lib/Service/VerdictService.php:149 getValueString()",
+        "  lib/Service/VerdictService.php:171 getValueString()",
+        "  lib/Service/VerdictService.php:210 getValueBool()",
+        "  lib/Service/VerdictService.php:211 getValueBool()",
+        "  lib/Service/VerdictService.php:213 getValueInt()",
+        "  lib/Service/VerdictService.php:258 getValueBool()",
+        "  lib/Settings/VaasAdmin.php:25 getValueString()",
+        "  lib/Settings/VaasAdmin.php:26 getValueString()",
+        "  lib/Settings/VaasAdmin.php:27 getValueString()",
+        "  lib/Settings/VaasAdmin.php:28 getValueString()",
+        "  lib/Settings/VaasAdmin.php:30 getValueString()",
+        "  lib/Settings/VaasAdmin.php:34 getValueString()",
+        "  lib/Settings/VaasAdmin.php:40 getValueString()",
+        "  lib/Settings/VaasAdmin.php:46 getValueInt()",
+        "  lib/Settings/VaasAdmin.php:47 getValueInt()",
+        "  lib/Settings/VaasAdmin.php:48 getValueBool()",
+        "  lib/Settings/VaasAdmin.php:49 getValueBool()",
+        "  lib/Settings/VaasOperator.php:29 getValueString()",
+        "  lib/Settings/VaasOperator.php:30 getValueBool()",
+        "  lib/Settings/VaasOperator.php:32 getValueBool()",
+        "  lib/Settings/VaasOperator.php:33 getValueBool()",
+        "  lib/Settings/VaasOperator.php:34 getValueString()",
+        "  lib/Settings/VaasOperator.php:35 getValueString()",
+        "  lib/Settings/VaasOperator.php:36 getValueString()",
+        "  lib/Settings/VaasOperator.php:38 getValueBool()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 66
+        }
+      ]
+    }
+  ],
+  "endpoints": 18,
+  "endpointList": [
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/gdatavaas/adminSettings",
+      "target": "OCA\\GDataVaas\\Controller\\SettingsController::setAdminSettings",
+      "openapi": [],
+      "source": "appinfo/routes.php:24 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gdatavaas/getAuthMethod",
+      "target": "OCA\\GDataVaas\\Controller\\SettingsController::getAuthMethod",
+      "openapi": [],
+      "source": "appinfo/routes.php:26 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gdatavaas/getAutoScan",
+      "target": "OCA\\GDataVaas\\Controller\\SettingsController::getAutoScan",
+      "openapi": [],
+      "source": "appinfo/routes.php:17 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gdatavaas/getCache",
+      "target": "OCA\\GDataVaas\\Controller\\SettingsController::getCache",
+      "openapi": [],
+      "source": "appinfo/routes.php:29 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gdatavaas/getCounters",
+      "target": "OCA\\GDataVaas\\Controller\\SettingsController::getCounters",
+      "openapi": [],
+      "source": "appinfo/routes.php:22 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gdatavaas/getDisableUnscannedTag",
+      "target": "OCA\\GDataVaas\\Controller\\SettingsController::getDisableUnscannedTag",
+      "openapi": [],
+      "source": "appinfo/routes.php:21 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gdatavaas/getHashlookup",
+      "target": "OCA\\GDataVaas\\Controller\\SettingsController::getHashlookup",
+      "openapi": [],
+      "source": "appinfo/routes.php:30 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gdatavaas/getPrefixMalicious",
+      "target": "OCA\\GDataVaas\\Controller\\SettingsController::getPrefixMalicious",
+      "openapi": [],
+      "source": "appinfo/routes.php:19 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/gdatavaas/getSendMailOnVirusUpload",
+      "target": "OCA\\GDataVaas\\Controller\\SettingsController::getSendMailOnVirusUpload",
+      "openapi": [],
+      "source": "appinfo/routes.php:14 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/gdatavaas/operatorSettings",
+      "target": "OCA\\GDataVaas\\Controller\\SettingsController::setOperatorSettings",
+      "openapi": [],
+      "source": "appinfo/routes.php:13 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/gdatavaas/resetalltags",
+      "target": "OCA\\GDataVaas\\Controller\\SettingsController::resetAllTags",
+      "openapi": [],
+      "source": "appinfo/routes.php:27 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/gdatavaas/scan",
+      "target": "OCA\\GDataVaas\\Controller\\ScanController::scan",
+      "openapi": [],
+      "source": "appinfo/routes.php:11 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/gdatavaas/setAdvancedConfig",
+      "target": "OCA\\GDataVaas\\Controller\\SettingsController::setAdvancedConfig",
+      "openapi": [],
+      "source": "appinfo/routes.php:25 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/gdatavaas/setAutoScan",
+      "target": "OCA\\GDataVaas\\Controller\\SettingsController::setAutoScan",
+      "openapi": [],
+      "source": "appinfo/routes.php:16 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/gdatavaas/setDisableUnscannedTag",
+      "target": "OCA\\GDataVaas\\Controller\\SettingsController::setDisableUnscannedTag",
+      "openapi": [],
+      "source": "appinfo/routes.php:20 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/gdatavaas/setPrefixMalicious",
+      "target": "OCA\\GDataVaas\\Controller\\SettingsController::setPrefixMalicious",
+      "openapi": [],
+      "source": "appinfo/routes.php:18 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/gdatavaas/setSendMailOnVirusUpload",
+      "target": "OCA\\GDataVaas\\Controller\\SettingsController::setSendMailOnVirusUpload",
+      "openapi": [],
+      "source": "appinfo/routes.php:15 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/gdatavaas/testsettings",
+      "target": "OCA\\GDataVaas\\Controller\\SettingsController::testsettings",
+      "openapi": [],
+      "source": "appinfo/routes.php:28 routes",
+      "kind": "route"
+    }
+  ]
+}

@@ -1,0 +1,2497 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\OpsSuite\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/AltofleetController.php:419 OC",
+        "lib/Controller/SettingsController.php:101 OC::$server",
+        "lib/Migration/SeedFailureModes.php:99 OC\\DB\\Connection",
+        "lib/Migration/SeedFailureModes.php:104 OC\\DB\\SchemaWrapper",
+        "templates/index.php:6 OC::$server",
+        "templates/index.php:7 OC::$server",
+        "templates/index.php:8 OC::$server",
+        "templates/index.php:28 OC::$server"
+      ],
+      "lines": [
+        "8 uses of the private API of the server in 4 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/AltofleetController.php:419 OC",
+        "  lib/Controller/SettingsController.php:101 OC::$server",
+        "  lib/Migration/SeedFailureModes.php:99 OC\\DB\\Connection",
+        "  lib/Migration/SeedFailureModes.php:104 OC\\DB\\SchemaWrapper",
+        "  templates/index.php:6 OC::$server",
+        "  templates/index.php:7 OC::$server",
+        "  templates/index.php:8 OC::$server",
+        "  templates/index.php:28 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:48 get()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:48 get()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "POST /index.php/apps/ops_suite/api/failure-modes/seed  ops_suite.failure_mode.seed  appinfo/routes.php:250 routes",
+        "GET /index.php/apps/ops_suite/api/altofleet/agent/download  ops_suite.altofleet.agentdownload  appinfo/routes.php:323 routes",
+        "POST /index.php/apps/ops_suite/api/altofleet/agent/upload  ops_suite.altofleet.agentupload  appinfo/routes.php:324 routes",
+        "GET /index.php/apps/ops_suite/api/altofleet/agent/version  ops_suite.altofleet.agentversion  appinfo/routes.php:325 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 4 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 2 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  POST /index.php/apps/ops_suite/api/failure-modes/seed  ops_suite.failure_mode.seed  appinfo/routes.php:250 routes",
+        "  GET /index.php/apps/ops_suite/api/altofleet/agent/download  ops_suite.altofleet.agentdownload  appinfo/routes.php:323 routes",
+        "  POST /index.php/apps/ops_suite/api/altofleet/agent/upload  ops_suite.altofleet.agentupload  appinfo/routes.php:324 routes",
+        "  GET /index.php/apps/ops_suite/api/altofleet/agent/version  ops_suite.altofleet.agentversion  appinfo/routes.php:325 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "migration-name-length",
+      "level": "warn",
+      "places": [
+        "lib/Migration/Version2170Date20260619000000.php:82 the primary key of ops_manpower_requirements, named after the table: 25 characters and the prefix oc_, in Nextcloud 27 to 32",
+        "lib/Migration/Version2180Date20260619000000.php:35 the primary key of ops_training_requirements, named after the table: 25 characters and the prefix oc_, in Nextcloud 27 to 32"
+      ],
+      "lines": [
+        "2 names in the migrations are longer than the server allows, so it stops the install or the update of the app with an exception. The table names are counted with the default prefix oc_.",
+        "  Up to Nextcloud 32 the server checks this only where info.xml lists no database, or lists oci among them.",
+        "  lib/Migration/Version2170Date20260619000000.php:82 the primary key of ops_manpower_requirements, named after the table: 25 characters and the prefix oc_, in Nextcloud 27 to 32",
+        "  lib/Migration/Version2180Date20260619000000.php:35 the primary key of ops_training_requirements, named after the table: 25 characters and the prefix oc_, in Nextcloud 27 to 32"
+      ]
+    },
+    {
+      "id": "migration-bool-notnull",
+      "level": "warn",
+      "places": [
+        "lib/Migration/Version2060Date20260618000000.php:29 ops_canvases.is_live, in Nextcloud 27 to 32",
+        "lib/Migration/Version2190Date20260620000000.php:22 ops_canvases.revision_required, in Nextcloud 27 to 32",
+        "lib/Migration/Version2230Date20260620000000.php:24 ops_software_catalog.auto_approve, in Nextcloud 27 to 32",
+        "lib/Migration/Version2230Date20260620000000.php:25 ops_software_catalog.enabled, in Nextcloud 27 to 32",
+        "lib/Migration/Version2240Date20260620000000.php:48 ops_cve_scan_results.resolved, in Nextcloud 27 to 32",
+        "lib/Migration/Version2250Date20260621000000.php:24 ops_altofleet_nodes.force_scan, in Nextcloud 27 to 32",
+        "lib/Migration/Version2250Date20260621000000.php:27 ops_altofleet_nodes.pending_update, in Nextcloud 27 to 32",
+        "lib/Migration/Version2280Date20260622000000.php:45 ops_documents.dmc_review_flag, in Nextcloud 27 to 32",
+        "lib/Migration/Version2300Date20260622000000.php:32 ops_publications.re_issue_required, in Nextcloud 27 to 32",
+        "lib/Migration/Version2310Date20260622000000.php:26 ops_procedures.dmc_review_flag, in Nextcloud 27 to 32",
+        "lib/Migration/Version2320Date20260623000000.php:27 ops_documents.re_issue_required, in Nextcloud 27 to 32"
+      ],
+      "lines": [
+        "11 boolean columns are NotNull. Oracle cannot store false in such a column, so the server stops the migration with an exception. A boolean column needs notnull false.",
+        "  Up to Nextcloud 32 the server checks this only where info.xml lists no database, or lists oci among them. From Nextcloud 33 on the server makes the column nullable on Oracle itself.",
+        "  lib/Migration/Version2060Date20260618000000.php:29 ops_canvases.is_live, in Nextcloud 27 to 32",
+        "  lib/Migration/Version2190Date20260620000000.php:22 ops_canvases.revision_required, in Nextcloud 27 to 32",
+        "  lib/Migration/Version2230Date20260620000000.php:24 ops_software_catalog.auto_approve, in Nextcloud 27 to 32",
+        "  lib/Migration/Version2230Date20260620000000.php:25 ops_software_catalog.enabled, in Nextcloud 27 to 32",
+        "  lib/Migration/Version2240Date20260620000000.php:48 ops_cve_scan_results.resolved, in Nextcloud 27 to 32",
+        "  lib/Migration/Version2250Date20260621000000.php:24 ops_altofleet_nodes.force_scan, in Nextcloud 27 to 32",
+        "  lib/Migration/Version2250Date20260621000000.php:27 ops_altofleet_nodes.pending_update, in Nextcloud 27 to 32",
+        "  lib/Migration/Version2280Date20260622000000.php:45 ops_documents.dmc_review_flag, in Nextcloud 27 to 32",
+        "  lib/Migration/Version2300Date20260622000000.php:32 ops_publications.re_issue_required, in Nextcloud 27 to 32",
+        "  lib/Migration/Version2310Date20260622000000.php:26 ops_procedures.dmc_review_flag, in Nextcloud 27 to 32",
+        "  lib/Migration/Version2320Date20260623000000.php:27 ops_documents.re_issue_required, in Nextcloud 27 to 32"
+      ],
+      "folds": [
+        {
+          "at": 5,
+          "count": 8
+        }
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/AltofleetController.php:251 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/AltofleetController.php:427 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/AltofleetController.php:478 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/AltofleetController.php:496 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/ReportController.php:725 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "lib/Controller/SettingsController.php:35 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:38 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:41 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:43 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:59 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:64 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:68 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:74 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/DocumentationSeeder.php:544 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/Service/DocumentationSeeder.php:598 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/Service/DocumentationSeeder.php:631 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/Service/PermissionService.php:99 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/PermissionService.php:109 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "lines": [
+        "18 uses in 5 files of the public API that is deprecated in Nextcloud 27 to 33. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/AltofleetController.php:251 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/AltofleetController.php:427 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/AltofleetController.php:478 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/AltofleetController.php:496 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/ReportController.php:725 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "  lib/Controller/SettingsController.php:35 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:38 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:41 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:43 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:59 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:64 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:68 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:74 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/DocumentationSeeder.php:544 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/Service/DocumentationSeeder.php:598 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/Service/DocumentationSeeder.php:631 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/Service/PermissionService.php:99 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/PermissionService.php:109 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 15
+        }
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/index.php:16 style= attribute",
+        "templates/index.php:17 style= attribute",
+        "templates/index.php:25 style= attribute"
+      ],
+      "lines": [
+        "3 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/index.php:16 style= attribute",
+        "  templates/index.php:17 style= attribute",
+        "  templates/index.php:25 style= attribute"
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Db/ConfigChangeMapper.php:44",
+        "lib/Service/AssetCodeService.php:92"
+      ],
+      "lines": [
+        "2 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Db/ConfigChangeMapper.php:44",
+        "  lib/Service/AssetCodeService.php:92"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/AltofleetOfflineCheck.php OCA\\OpsSuite\\BackgroundJob\\AltofleetOfflineCheck"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/AltofleetOfflineCheck.php OCA\\OpsSuite\\BackgroundJob\\AltofleetOfflineCheck"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/AltofleetOfflineCheck.php:37 time()",
+        "lib/BackgroundJob/AltofleetOfflineCheck.php:47 new DateTime()",
+        "lib/Controller/AltofleetController.php:63 time()",
+        "lib/Controller/AltofleetController.php:65 time()",
+        "lib/Controller/AltofleetController.php:239 time()",
+        "lib/Controller/AltofleetController.php:605 new DateTime()",
+        "lib/Controller/ReportController.php:71 new DateTime()",
+        "lib/Controller/ReportController.php:96 new DateTime()",
+        "lib/Controller/ReportController.php:141 new DateTime()",
+        "lib/Controller/ReportController.php:174 new DateTime()",
+        "lib/Controller/ReportController.php:264 time()",
+        "lib/Controller/ReportController.php:339 time()",
+        "lib/Controller/ReportController.php:363 time()",
+        "lib/Controller/ReportController.php:424 time()",
+        "lib/Controller/ReportController.php:454 time()",
+        "lib/Db/AltofleetNodeMapper.php:55 time()",
+        "lib/Db/Procedure.php:91 new DateTime()",
+        "lib/Service/HealthReportService.php:34 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 18 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/BackgroundJob/AltofleetOfflineCheck.php:37 time()",
+        "  lib/BackgroundJob/AltofleetOfflineCheck.php:47 new DateTime()",
+        "  lib/Controller/AltofleetController.php:63 time()",
+        "  lib/Controller/AltofleetController.php:65 time()",
+        "  lib/Controller/AltofleetController.php:239 time()",
+        "  lib/Controller/AltofleetController.php:605 new DateTime()",
+        "  lib/Controller/ReportController.php:71 new DateTime()",
+        "  lib/Controller/ReportController.php:96 new DateTime()",
+        "  lib/Controller/ReportController.php:141 new DateTime()",
+        "  lib/Controller/ReportController.php:174 new DateTime()",
+        "  lib/Controller/ReportController.php:264 time()",
+        "  lib/Controller/ReportController.php:339 time()",
+        "  lib/Controller/ReportController.php:363 time()",
+        "  lib/Controller/ReportController.php:424 time()",
+        "  lib/Controller/ReportController.php:454 time()",
+        "  lib/Db/AltofleetNodeMapper.php:55 time()",
+        "  lib/Db/Procedure.php:91 new DateTime()",
+        "  lib/Service/HealthReportService.php:34 new DateTime()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 15
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Controller/AltofleetController.php:251 getAppValue()",
+        "lib/Controller/AltofleetController.php:427 getAppValue()",
+        "lib/Controller/AltofleetController.php:478 setAppValue()",
+        "lib/Controller/AltofleetController.php:496 getAppValue()",
+        "lib/Controller/SettingsController.php:35 getAppValue()",
+        "lib/Controller/SettingsController.php:38 getAppValue()",
+        "lib/Controller/SettingsController.php:41 getAppValue()",
+        "lib/Controller/SettingsController.php:43 getAppValue()",
+        "lib/Controller/SettingsController.php:59 setAppValue()",
+        "lib/Controller/SettingsController.php:64 setAppValue()",
+        "lib/Controller/SettingsController.php:68 setAppValue()",
+        "lib/Controller/SettingsController.php:74 setAppValue()",
+        "lib/Service/PermissionService.php:99 getAppValue()",
+        "lib/Service/PermissionService.php:109 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 14 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Controller/AltofleetController.php:251 getAppValue()",
+        "  lib/Controller/AltofleetController.php:427 getAppValue()",
+        "  lib/Controller/AltofleetController.php:478 setAppValue()",
+        "  lib/Controller/AltofleetController.php:496 getAppValue()",
+        "  lib/Controller/SettingsController.php:35 getAppValue()",
+        "  lib/Controller/SettingsController.php:38 getAppValue()",
+        "  lib/Controller/SettingsController.php:41 getAppValue()",
+        "  lib/Controller/SettingsController.php:43 getAppValue()",
+        "  lib/Controller/SettingsController.php:59 setAppValue()",
+        "  lib/Controller/SettingsController.php:64 setAppValue()",
+        "  lib/Controller/SettingsController.php:68 setAppValue()",
+        "  lib/Controller/SettingsController.php:74 setAppValue()",
+        "  lib/Service/PermissionService.php:99 getAppValue()",
+        "  lib/Service/PermissionService.php:109 getAppValue()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 11
+        }
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/ChangeController.php:51 OCA\\OpsSuite\\Controller\\ChangeController::index()",
+        "lib/Controller/ChangeController.php:61 OCA\\OpsSuite\\Controller\\ChangeController::show()",
+        "lib/Controller/ChangeController.php:74 OCA\\OpsSuite\\Controller\\ChangeController::create()",
+        "lib/Controller/ChangeController.php:111 OCA\\OpsSuite\\Controller\\ChangeController::update()",
+        "lib/Controller/ChangeController.php:189 OCA\\OpsSuite\\Controller\\ChangeController::destroy()",
+        "lib/Controller/ChangeController.php:205 OCA\\OpsSuite\\Controller\\ChangeController::addAsset()",
+        "lib/Controller/ChangeController.php:221 OCA\\OpsSuite\\Controller\\ChangeController::updateAsset()",
+        "lib/Controller/ChangeController.php:239 OCA\\OpsSuite\\Controller\\ChangeController::removeAsset()"
+      ],
+      "lines": [
+        "8 public methods of controllers are reached by no route.",
+        "  lib/Controller/ChangeController.php:51 OCA\\OpsSuite\\Controller\\ChangeController::index()",
+        "  lib/Controller/ChangeController.php:61 OCA\\OpsSuite\\Controller\\ChangeController::show()",
+        "  lib/Controller/ChangeController.php:74 OCA\\OpsSuite\\Controller\\ChangeController::create()",
+        "  lib/Controller/ChangeController.php:111 OCA\\OpsSuite\\Controller\\ChangeController::update()",
+        "  lib/Controller/ChangeController.php:189 OCA\\OpsSuite\\Controller\\ChangeController::destroy()",
+        "  lib/Controller/ChangeController.php:205 OCA\\OpsSuite\\Controller\\ChangeController::addAsset()",
+        "  lib/Controller/ChangeController.php:221 OCA\\OpsSuite\\Controller\\ChangeController::updateAsset()",
+        "  lib/Controller/ChangeController.php:239 OCA\\OpsSuite\\Controller\\ChangeController::removeAsset()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version1030Date20260509000000.php:40 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version1030Date20260509000000.php:41 addColumn() on a table whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version1030Date20260509000000.php:40 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version1030Date20260509000000.php:41 addColumn() on a table whose name is no constant"
+      ]
+    }
+  ],
+  "endpoints": 267,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/",
+      "target": "OCA\\OpsSuite\\Controller\\PageController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:6 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/altofleet/agent/download",
+      "target": "OCA\\OpsSuite\\Controller\\AltofleetController::agentDownload",
+      "openapi": [],
+      "source": "appinfo/routes.php:323 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/altofleet/agent/upload",
+      "target": "OCA\\OpsSuite\\Controller\\AltofleetController::agentUpload",
+      "openapi": [],
+      "source": "appinfo/routes.php:324 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/altofleet/agent/version",
+      "target": "OCA\\OpsSuite\\Controller\\AltofleetController::agentVersion",
+      "openapi": [],
+      "source": "appinfo/routes.php:325 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/altofleet/checkin",
+      "target": "OCA\\OpsSuite\\Controller\\AltofleetController::checkin",
+      "openapi": [],
+      "source": "appinfo/routes.php:318 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/altofleet/heartbeat",
+      "target": "OCA\\OpsSuite\\Controller\\AltofleetController::heartbeat",
+      "openapi": [],
+      "source": "appinfo/routes.php:319 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/altofleet/nodes",
+      "target": "OCA\\OpsSuite\\Controller\\AltofleetController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:313 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/altofleet/nodes/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\AltofleetController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:316 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/altofleet/nodes/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\AltofleetController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:314 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/altofleet/nodes/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\AltofleetController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:315 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/altofleet/nodes/{id}/cves",
+      "target": "OCA\\OpsSuite\\Controller\\AltofleetController::nodeCves",
+      "openapi": [],
+      "source": "appinfo/routes.php:320 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/altofleet/nodes/{id}/force-scan",
+      "target": "OCA\\OpsSuite\\Controller\\AltofleetController::forceScan",
+      "openapi": [],
+      "source": "appinfo/routes.php:321 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/altofleet/nodes/{id}/schedule-update",
+      "target": "OCA\\OpsSuite\\Controller\\AltofleetController::scheduleUpdate",
+      "openapi": [],
+      "source": "appinfo/routes.php:322 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/altofleet/register",
+      "target": "OCA\\OpsSuite\\Controller\\AltofleetController::register",
+      "openapi": [],
+      "source": "appinfo/routes.php:317 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/assets",
+      "target": "OCA\\OpsSuite\\Controller\\AssetController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:26 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/assets",
+      "target": "OCA\\OpsSuite\\Controller\\AssetController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:28 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/assets/{assetId}/models",
+      "target": "OCA\\OpsSuite\\Controller\\ModelController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:174 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/assets/{assetId}/models",
+      "target": "OCA\\OpsSuite\\Controller\\ModelController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:176 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/assets/{assetId}/models/{modelId}",
+      "target": "OCA\\OpsSuite\\Controller\\ModelController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:178 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/assets/{assetId}/models/{modelId}",
+      "target": "OCA\\OpsSuite\\Controller\\ModelController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:175 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/assets/{assetId}/models/{modelId}",
+      "target": "OCA\\OpsSuite\\Controller\\ModelController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:177 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/assets/{assetId}/models/{modelId}/hotspots",
+      "target": "OCA\\OpsSuite\\Controller\\ModelController::addHotspot",
+      "openapi": [],
+      "source": "appinfo/routes.php:179 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/assets/{assetId}/models/{modelId}/hotspots/{hotspotId}",
+      "target": "OCA\\OpsSuite\\Controller\\ModelController::deleteHotspot",
+      "openapi": [],
+      "source": "appinfo/routes.php:181 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/assets/{assetId}/models/{modelId}/hotspots/{hotspotId}",
+      "target": "OCA\\OpsSuite\\Controller\\ModelController::updateHotspot",
+      "openapi": [],
+      "source": "appinfo/routes.php:180 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/assets/{assetId}/photos",
+      "target": "OCA\\OpsSuite\\Controller\\PhotoController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:168 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/assets/{assetId}/photos",
+      "target": "OCA\\OpsSuite\\Controller\\PhotoController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:169 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/assets/{assetId}/photos/{photoId}",
+      "target": "OCA\\OpsSuite\\Controller\\PhotoController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:171 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/assets/{assetId}/photos/{photoId}",
+      "target": "OCA\\OpsSuite\\Controller\\PhotoController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:170 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/assets/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\AssetController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:30 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/assets/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\AssetController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:27 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/assets/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\AssetController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:29 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/assets/{id}/criticality",
+      "target": "OCA\\OpsSuite\\Controller\\AssetController::setCriticality",
+      "openapi": [],
+      "source": "appinfo/routes.php:32 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/assets/{id}/readiness",
+      "target": "OCA\\OpsSuite\\Controller\\AssetController::readiness",
+      "openapi": [],
+      "source": "appinfo/routes.php:31 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/avail-projects",
+      "target": "OCA\\OpsSuite\\Controller\\AvailProjectController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:103 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/avail-projects",
+      "target": "OCA\\OpsSuite\\Controller\\AvailProjectController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:105 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/avail-projects/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\AvailProjectController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:107 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/avail-projects/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\AvailProjectController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:104 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/avail-projects/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\AvailProjectController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:106 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/avail-projects/{id}/items",
+      "target": "OCA\\OpsSuite\\Controller\\AvailProjectController::addItem",
+      "openapi": [],
+      "source": "appinfo/routes.php:108 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/avail-projects/{id}/items/{itemId}",
+      "target": "OCA\\OpsSuite\\Controller\\AvailProjectController::deleteItem",
+      "openapi": [],
+      "source": "appinfo/routes.php:110 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/avail-projects/{id}/items/{itemId}",
+      "target": "OCA\\OpsSuite\\Controller\\AvailProjectController::updateItem",
+      "openapi": [],
+      "source": "appinfo/routes.php:109 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/budget",
+      "target": "OCA\\OpsSuite\\Controller\\MmbpBudgetController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:11 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/budget",
+      "target": "OCA\\OpsSuite\\Controller\\MmbpBudgetController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:13 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/budget/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\MmbpBudgetController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:15 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/budget/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\MmbpBudgetController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:12 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/budget/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\MmbpBudgetController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:14 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/budget/{id}/lines",
+      "target": "OCA\\OpsSuite\\Controller\\MmbpBudgetController::indexLines",
+      "openapi": [],
+      "source": "appinfo/routes.php:275 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/budget/{id}/lines",
+      "target": "OCA\\OpsSuite\\Controller\\MmbpBudgetController::createLine",
+      "openapi": [],
+      "source": "appinfo/routes.php:276 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/budget/{id}/lines/{lineId}",
+      "target": "OCA\\OpsSuite\\Controller\\MmbpBudgetController::destroyLine",
+      "openapi": [],
+      "source": "appinfo/routes.php:278 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/budget/{id}/lines/{lineId}",
+      "target": "OCA\\OpsSuite\\Controller\\MmbpBudgetController::updateLine",
+      "openapi": [],
+      "source": "appinfo/routes.php:277 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/budget/drilldown",
+      "target": "OCA\\OpsSuite\\Controller\\MmbpBudgetController::drilldown",
+      "openapi": [],
+      "source": "appinfo/routes.php:274 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/budget/summary",
+      "target": "OCA\\OpsSuite\\Controller\\MmbpBudgetController::summary",
+      "openapi": [],
+      "source": "appinfo/routes.php:16 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/budget/ufr-export",
+      "target": "OCA\\OpsSuite\\Controller\\MmbpBudgetController::ufrExport",
+      "openapi": [],
+      "source": "appinfo/routes.php:273 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/canvases",
+      "target": "OCA\\OpsSuite\\Controller\\CanvasController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:193 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/canvases",
+      "target": "OCA\\OpsSuite\\Controller\\CanvasController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:195 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/canvases/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\CanvasController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:197 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/canvases/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\CanvasController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:194 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/canvases/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\CanvasController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:196 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/canvases/{id}/publish",
+      "target": "OCA\\OpsSuite\\Controller\\CanvasController::publish",
+      "openapi": [],
+      "source": "appinfo/routes.php:199 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/canvases/{id}/status",
+      "target": "OCA\\OpsSuite\\Controller\\CanvasController::status",
+      "openapi": [],
+      "source": "appinfo/routes.php:198 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/component-library",
+      "target": "OCA\\OpsSuite\\Controller\\ComponentLibraryController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:222 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/component-library",
+      "target": "OCA\\OpsSuite\\Controller\\ComponentLibraryController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:224 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/component-library/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\ComponentLibraryController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:226 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/component-library/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\ComponentLibraryController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:223 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/component-library/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\ComponentLibraryController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:225 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/dashboard/mystats",
+      "target": "OCA\\OpsSuite\\Controller\\DashboardController::myStats",
+      "openapi": [],
+      "source": "appinfo/routes.php:56 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/dashboard/stats",
+      "target": "OCA\\OpsSuite\\Controller\\DashboardController::stats",
+      "openapi": [],
+      "source": "appinfo/routes.php:55 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/deficiencies",
+      "target": "OCA\\OpsSuite\\Controller\\DeficiencyController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:43 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/deficiencies",
+      "target": "OCA\\OpsSuite\\Controller\\DeficiencyController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:45 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/deficiencies/{deficiencyId}/history",
+      "target": "OCA\\OpsSuite\\Controller\\DeficiencyHistoryController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:50 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/deficiencies/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\DeficiencyController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:47 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/deficiencies/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\DeficiencyController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:44 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/deficiencies/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\DeficiencyController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:46 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/documents",
+      "target": "OCA\\OpsSuite\\Controller\\DocumentController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:139 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/documents",
+      "target": "OCA\\OpsSuite\\Controller\\DocumentController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:141 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/documents/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\DocumentController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:143 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/documents/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\DocumentController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:140 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/documents/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\DocumentController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:142 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/documents/{id}/pub-dms",
+      "target": "OCA\\OpsSuite\\Controller\\DocumentController::listPubDms",
+      "openapi": [],
+      "source": "appinfo/routes.php:152 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/documents/{id}/pub-dms",
+      "target": "OCA\\OpsSuite\\Controller\\DocumentController::addPubDm",
+      "openapi": [],
+      "source": "appinfo/routes.php:153 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/documents/{id}/pub-dms/{dmId}",
+      "target": "OCA\\OpsSuite\\Controller\\DocumentController::removePubDm",
+      "openapi": [],
+      "source": "appinfo/routes.php:155 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/documents/{id}/pub-dms/{dmId}",
+      "target": "OCA\\OpsSuite\\Controller\\DocumentController::updatePubDm",
+      "openapi": [],
+      "source": "appinfo/routes.php:154 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/documents/{id}/pub-dms/reorder",
+      "target": "OCA\\OpsSuite\\Controller\\DocumentController::reorderPubDms",
+      "openapi": [],
+      "source": "appinfo/routes.php:156 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/documents/{id}/release",
+      "target": "OCA\\OpsSuite\\Controller\\DocumentController::releasePub",
+      "openapi": [],
+      "source": "appinfo/routes.php:157 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/documents/{id}/revisions",
+      "target": "OCA\\OpsSuite\\Controller\\DocumentController::getRevisions",
+      "openapi": [],
+      "source": "appinfo/routes.php:144 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/documents/{id}/revisions",
+      "target": "OCA\\OpsSuite\\Controller\\DocumentController::addRevision",
+      "openapi": [],
+      "source": "appinfo/routes.php:145 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/documents/{id}/revisions/{revId}",
+      "target": "OCA\\OpsSuite\\Controller\\DocumentController::deleteRevision",
+      "openapi": [],
+      "source": "appinfo/routes.php:147 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/documents/{id}/revisions/{revId}",
+      "target": "OCA\\OpsSuite\\Controller\\DocumentController::updateRevision",
+      "openapi": [],
+      "source": "appinfo/routes.php:146 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/documents/{id}/steps",
+      "target": "OCA\\OpsSuite\\Controller\\DocumentController::getSteps",
+      "openapi": [],
+      "source": "appinfo/routes.php:148 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/documents/{id}/steps",
+      "target": "OCA\\OpsSuite\\Controller\\DocumentController::saveSteps",
+      "openapi": [],
+      "source": "appinfo/routes.php:149 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/energy-sources",
+      "target": "OCA\\OpsSuite\\Controller\\EnergySourceController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:266 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/energy-sources",
+      "target": "OCA\\OpsSuite\\Controller\\EnergySourceController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:268 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/energy-sources/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\EnergySourceController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:270 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/energy-sources/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\EnergySourceController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:267 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/energy-sources/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\EnergySourceController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:269 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/failure-modes",
+      "target": "OCA\\OpsSuite\\Controller\\FailureModeController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:245 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/failure-modes",
+      "target": "OCA\\OpsSuite\\Controller\\FailureModeController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:247 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/failure-modes/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\FailureModeController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:249 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/failure-modes/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\FailureModeController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:246 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/failure-modes/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\FailureModeController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:248 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/failure-modes/seed",
+      "target": "OCA\\OpsSuite\\Controller\\FailureModeController::seed",
+      "openapi": [],
+      "source": "appinfo/routes.php:250 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/files/ensure-folders",
+      "target": "OCA\\OpsSuite\\Controller\\FilesController::ensureFolders",
+      "openapi": [],
+      "source": "appinfo/routes.php:190 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/files/list",
+      "target": "OCA\\OpsSuite\\Controller\\FilesController::listFolder",
+      "openapi": [],
+      "source": "appinfo/routes.php:188 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/files/open-url",
+      "target": "OCA\\OpsSuite\\Controller\\FilesController::openUrl",
+      "openapi": [],
+      "source": "appinfo/routes.php:189 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/files/serve",
+      "target": "OCA\\OpsSuite\\Controller\\FilesController::serveFile",
+      "openapi": [],
+      "source": "appinfo/routes.php:185 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/files/sop",
+      "target": "OCA\\OpsSuite\\Controller\\FilesController::sopFolder",
+      "openapi": [],
+      "source": "appinfo/routes.php:184 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/files/tdp",
+      "target": "OCA\\OpsSuite\\Controller\\FilesController::getTdpContents",
+      "openapi": [],
+      "source": "appinfo/routes.php:186 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/files/tdp",
+      "target": "OCA\\OpsSuite\\Controller\\FilesController::createTdpFolder",
+      "openapi": [],
+      "source": "appinfo/routes.php:187 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/fmea/worksheets",
+      "target": "OCA\\OpsSuite\\Controller\\FmeaController::indexWorksheets",
+      "openapi": [],
+      "source": "appinfo/routes.php:202 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/fmea/worksheets/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\FmeaController::destroyWorksheet",
+      "openapi": [],
+      "source": "appinfo/routes.php:206 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/fmea/worksheets/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\FmeaController::showWorksheet",
+      "openapi": [],
+      "source": "appinfo/routes.php:204 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/fmea/worksheets/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\FmeaController::updateWorksheet",
+      "openapi": [],
+      "source": "appinfo/routes.php:205 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/fmea/worksheets/{id}/publish",
+      "target": "OCA\\OpsSuite\\Controller\\FmeaController::publishWorksheet",
+      "openapi": [],
+      "source": "appinfo/routes.php:207 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/fmea/worksheets/{id}/sync-from-dm",
+      "target": "OCA\\OpsSuite\\Controller\\FmeaController::syncFromDm",
+      "openapi": [],
+      "source": "appinfo/routes.php:212 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/fmea/worksheets/{worksheetId}/entries",
+      "target": "OCA\\OpsSuite\\Controller\\FmeaController::indexEntries",
+      "openapi": [],
+      "source": "appinfo/routes.php:208 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/fmea/worksheets/{worksheetId}/entries",
+      "target": "OCA\\OpsSuite\\Controller\\FmeaController::createEntry",
+      "openapi": [],
+      "source": "appinfo/routes.php:209 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/fmea/worksheets/{worksheetId}/entries/{entryId}",
+      "target": "OCA\\OpsSuite\\Controller\\FmeaController::destroyEntry",
+      "openapi": [],
+      "source": "appinfo/routes.php:211 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/fmea/worksheets/{worksheetId}/entries/{entryId}",
+      "target": "OCA\\OpsSuite\\Controller\\FmeaController::updateEntry",
+      "openapi": [],
+      "source": "appinfo/routes.php:210 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/fmea/worksheets/find-or-create",
+      "target": "OCA\\OpsSuite\\Controller\\FmeaController::findOrCreate",
+      "openapi": [],
+      "source": "appinfo/routes.php:203 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/groups",
+      "target": "OCA\\OpsSuite\\Controller\\UserController::groups",
+      "openapi": [],
+      "source": "appinfo/routes.php:62 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/health-report",
+      "target": "OCA\\OpsSuite\\Controller\\HealthReportController::generate",
+      "openapi": [],
+      "source": "appinfo/routes.php:253 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/imports",
+      "target": "OCA\\OpsSuite\\Controller\\ImportController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:256 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/imports",
+      "target": "OCA\\OpsSuite\\Controller\\ImportController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:258 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/imports/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\ImportController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:261 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/imports/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\ImportController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:257 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/imports/{id}/execute",
+      "target": "OCA\\OpsSuite\\Controller\\ImportController::execute",
+      "openapi": [],
+      "source": "appinfo/routes.php:260 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/imports/{id}/map",
+      "target": "OCA\\OpsSuite\\Controller\\ImportController::map",
+      "openapi": [],
+      "source": "appinfo/routes.php:259 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/imports/fields",
+      "target": "OCA\\OpsSuite\\Controller\\ImportController::fields",
+      "openapi": [],
+      "source": "appinfo/routes.php:262 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/imports/profiles",
+      "target": "OCA\\OpsSuite\\Controller\\ImportController::profiles",
+      "openapi": [],
+      "source": "appinfo/routes.php:263 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/interfaces",
+      "target": "OCA\\OpsSuite\\Controller\\MbseController::indexInterfaces",
+      "openapi": [],
+      "source": "appinfo/routes.php:132 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/interfaces",
+      "target": "OCA\\OpsSuite\\Controller\\MbseController::createInterface",
+      "openapi": [],
+      "source": "appinfo/routes.php:134 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/interfaces/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\MbseController::destroyInterface",
+      "openapi": [],
+      "source": "appinfo/routes.php:136 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/interfaces/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\MbseController::showInterface",
+      "openapi": [],
+      "source": "appinfo/routes.php:133 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/interfaces/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\MbseController::updateInterface",
+      "openapi": [],
+      "source": "appinfo/routes.php:135 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/loto",
+      "target": "OCA\\OpsSuite\\Controller\\LotoController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:229 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/loto",
+      "target": "OCA\\OpsSuite\\Controller\\LotoController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:231 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/loto/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\LotoController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:235 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/loto/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\LotoController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:230 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/loto/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\LotoController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:232 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/loto/{id}/release",
+      "target": "OCA\\OpsSuite\\Controller\\LotoController::release",
+      "openapi": [],
+      "source": "appinfo/routes.php:233 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/loto/{id}/verify",
+      "target": "OCA\\OpsSuite\\Controller\\LotoController::verify",
+      "openapi": [],
+      "source": "appinfo/routes.php:234 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/loto/devices",
+      "target": "OCA\\OpsSuite\\Controller\\LotoController::indexDevices",
+      "openapi": [],
+      "source": "appinfo/routes.php:238 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/loto/devices",
+      "target": "OCA\\OpsSuite\\Controller\\LotoController::createDevice",
+      "openapi": [],
+      "source": "appinfo/routes.php:239 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/loto/devices/{deviceId}",
+      "target": "OCA\\OpsSuite\\Controller\\LotoController::destroyDevice",
+      "openapi": [],
+      "source": "appinfo/routes.php:242 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/loto/devices/{deviceId}",
+      "target": "OCA\\OpsSuite\\Controller\\LotoController::showDevice",
+      "openapi": [],
+      "source": "appinfo/routes.php:240 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/loto/devices/{deviceId}",
+      "target": "OCA\\OpsSuite\\Controller\\LotoController::updateDevice",
+      "openapi": [],
+      "source": "appinfo/routes.php:241 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/manpower/personnel",
+      "target": "OCA\\OpsSuite\\Controller\\ManpowerController::indexPersonnel",
+      "openapi": [],
+      "source": "appinfo/routes.php:281 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/manpower/personnel",
+      "target": "OCA\\OpsSuite\\Controller\\ManpowerController::createPersonnel",
+      "openapi": [],
+      "source": "appinfo/routes.php:283 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/manpower/personnel/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\ManpowerController::destroyPersonnel",
+      "openapi": [],
+      "source": "appinfo/routes.php:285 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/manpower/personnel/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\ManpowerController::showPersonnel",
+      "openapi": [],
+      "source": "appinfo/routes.php:282 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/manpower/personnel/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\ManpowerController::updatePersonnel",
+      "openapi": [],
+      "source": "appinfo/routes.php:284 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/manpower/personnel/{id}/skills",
+      "target": "OCA\\OpsSuite\\Controller\\ManpowerController::indexPersonnelSkills",
+      "openapi": [],
+      "source": "appinfo/routes.php:286 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/manpower/personnel/{id}/skills",
+      "target": "OCA\\OpsSuite\\Controller\\ManpowerController::addPersonnelSkill",
+      "openapi": [],
+      "source": "appinfo/routes.php:287 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/manpower/personnel/{id}/skills/{skillLinkId}",
+      "target": "OCA\\OpsSuite\\Controller\\ManpowerController::removePersonnelSkill",
+      "openapi": [],
+      "source": "appinfo/routes.php:289 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/manpower/personnel/{id}/skills/{skillLinkId}",
+      "target": "OCA\\OpsSuite\\Controller\\ManpowerController::updatePersonnelSkill",
+      "openapi": [],
+      "source": "appinfo/routes.php:288 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/manpower/requirements",
+      "target": "OCA\\OpsSuite\\Controller\\ManpowerController::indexRequirements",
+      "openapi": [],
+      "source": "appinfo/routes.php:295 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/manpower/requirements",
+      "target": "OCA\\OpsSuite\\Controller\\ManpowerController::createRequirement",
+      "openapi": [],
+      "source": "appinfo/routes.php:296 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/manpower/requirements/{reqId}",
+      "target": "OCA\\OpsSuite\\Controller\\ManpowerController::destroyRequirement",
+      "openapi": [],
+      "source": "appinfo/routes.php:298 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/manpower/requirements/{reqId}",
+      "target": "OCA\\OpsSuite\\Controller\\ManpowerController::updateRequirement",
+      "openapi": [],
+      "source": "appinfo/routes.php:297 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/manpower/skills",
+      "target": "OCA\\OpsSuite\\Controller\\ManpowerController::indexSkills",
+      "openapi": [],
+      "source": "appinfo/routes.php:290 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/manpower/skills",
+      "target": "OCA\\OpsSuite\\Controller\\ManpowerController::createSkill",
+      "openapi": [],
+      "source": "appinfo/routes.php:292 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/manpower/skills/{skillId}",
+      "target": "OCA\\OpsSuite\\Controller\\ManpowerController::destroySkill",
+      "openapi": [],
+      "source": "appinfo/routes.php:294 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/manpower/skills/{skillId}",
+      "target": "OCA\\OpsSuite\\Controller\\ManpowerController::showSkill",
+      "openapi": [],
+      "source": "appinfo/routes.php:291 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/manpower/skills/{skillId}",
+      "target": "OCA\\OpsSuite\\Controller\\ManpowerController::updateSkill",
+      "openapi": [],
+      "source": "appinfo/routes.php:293 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/modernizations",
+      "target": "OCA\\OpsSuite\\Controller\\ModernizationController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:113 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/modernizations",
+      "target": "OCA\\OpsSuite\\Controller\\ModernizationController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:115 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/modernizations/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\ModernizationController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:117 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/modernizations/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\ModernizationController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:114 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/modernizations/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\ModernizationController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:116 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/modernizations/{id}/assets",
+      "target": "OCA\\OpsSuite\\Controller\\ModernizationController::addAsset",
+      "openapi": [],
+      "source": "appinfo/routes.php:118 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/modernizations/{id}/assets/{assetEntryId}",
+      "target": "OCA\\OpsSuite\\Controller\\ModernizationController::removeAsset",
+      "openapi": [],
+      "source": "appinfo/routes.php:120 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/modernizations/{id}/assets/{assetEntryId}",
+      "target": "OCA\\OpsSuite\\Controller\\ModernizationController::updateAsset",
+      "openapi": [],
+      "source": "appinfo/routes.php:119 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/platforms",
+      "target": "OCA\\OpsSuite\\Controller\\PlatformController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:160 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/platforms",
+      "target": "OCA\\OpsSuite\\Controller\\PlatformController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:163 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/platforms/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\PlatformController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:165 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/platforms/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\PlatformController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:162 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/platforms/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\PlatformController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:164 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/platforms/mine",
+      "target": "OCA\\OpsSuite\\Controller\\PlatformController::myPlatforms",
+      "openapi": [],
+      "source": "appinfo/routes.php:161 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/procedures",
+      "target": "OCA\\OpsSuite\\Controller\\ProcedureController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:35 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/procedures",
+      "target": "OCA\\OpsSuite\\Controller\\ProcedureController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:37 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/procedures/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\ProcedureController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:40 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/procedures/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\ProcedureController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:36 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/procedures/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\ProcedureController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:38 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/procedures/{id}/complete",
+      "target": "OCA\\OpsSuite\\Controller\\ProcedureController::complete",
+      "openapi": [],
+      "source": "appinfo/routes.php:39 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/rcm/decisions",
+      "target": "OCA\\OpsSuite\\Controller\\RcmController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:215 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/rcm/decisions",
+      "target": "OCA\\OpsSuite\\Controller\\RcmController::upsert",
+      "openapi": [],
+      "source": "appinfo/routes.php:217 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/rcm/decisions/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\RcmController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:218 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/rcm/decisions/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\RcmController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:216 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/rcm/decisions/{id}/generate-pm",
+      "target": "OCA\\OpsSuite\\Controller\\RcmController::generatePm",
+      "openapi": [],
+      "source": "appinfo/routes.php:219 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/reports/cyber-readiness",
+      "target": "OCA\\OpsSuite\\Controller\\ReportController::cyberReadiness",
+      "openapi": [],
+      "source": "appinfo/routes.php:351 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/reports/dashboards",
+      "target": "OCA\\OpsSuite\\Controller\\ReportController::indexDashboards",
+      "openapi": [],
+      "source": "appinfo/routes.php:342 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/reports/dashboards",
+      "target": "OCA\\OpsSuite\\Controller\\ReportController::createDashboard",
+      "openapi": [],
+      "source": "appinfo/routes.php:343 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/reports/dashboards/{dashboardId}/widgets",
+      "target": "OCA\\OpsSuite\\Controller\\ReportController::createWidget",
+      "openapi": [],
+      "source": "appinfo/routes.php:347 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/reports/dashboards/{dashboardId}/widgets/{widgetId}",
+      "target": "OCA\\OpsSuite\\Controller\\ReportController::destroyWidget",
+      "openapi": [],
+      "source": "appinfo/routes.php:349 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/reports/dashboards/{dashboardId}/widgets/{widgetId}",
+      "target": "OCA\\OpsSuite\\Controller\\ReportController::updateWidget",
+      "openapi": [],
+      "source": "appinfo/routes.php:348 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/reports/dashboards/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\ReportController::destroyDashboard",
+      "openapi": [],
+      "source": "appinfo/routes.php:346 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/reports/dashboards/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\ReportController::showDashboard",
+      "openapi": [],
+      "source": "appinfo/routes.php:344 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/reports/dashboards/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\ReportController::updateDashboard",
+      "openapi": [],
+      "source": "appinfo/routes.php:345 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/reports/data/{metric}",
+      "target": "OCA\\OpsSuite\\Controller\\ReportController::widgetData",
+      "openapi": [],
+      "source": "appinfo/routes.php:350 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/reports/fields",
+      "target": "OCA\\OpsSuite\\Controller\\ReportController::fieldRegistry",
+      "openapi": [],
+      "source": "appinfo/routes.php:352 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/reports/query",
+      "target": "OCA\\OpsSuite\\Controller\\ReportController::genericData",
+      "openapi": [],
+      "source": "appinfo/routes.php:353 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/requirements",
+      "target": "OCA\\OpsSuite\\Controller\\MbseController::indexRequirements",
+      "openapi": [],
+      "source": "appinfo/routes.php:123 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/requirements",
+      "target": "OCA\\OpsSuite\\Controller\\MbseController::createRequirement",
+      "openapi": [],
+      "source": "appinfo/routes.php:125 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/requirements/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\MbseController::destroyRequirement",
+      "openapi": [],
+      "source": "appinfo/routes.php:127 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/requirements/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\MbseController::showRequirement",
+      "openapi": [],
+      "source": "appinfo/routes.php:124 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/requirements/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\MbseController::updateRequirement",
+      "openapi": [],
+      "source": "appinfo/routes.php:126 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/requirements/{id}/traces",
+      "target": "OCA\\OpsSuite\\Controller\\MbseController::addTrace",
+      "openapi": [],
+      "source": "appinfo/routes.php:128 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/requirements/{id}/traces/{traceId}",
+      "target": "OCA\\OpsSuite\\Controller\\MbseController::deleteTrace",
+      "openapi": [],
+      "source": "appinfo/routes.php:129 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/settings",
+      "target": "OCA\\OpsSuite\\Controller\\SettingsController::get",
+      "openapi": [],
+      "source": "appinfo/routes.php:65 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/settings",
+      "target": "OCA\\OpsSuite\\Controller\\SettingsController::save",
+      "openapi": [],
+      "source": "appinfo/routes.php:67 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/settings/me",
+      "target": "OCA\\OpsSuite\\Controller\\SettingsController::me",
+      "openapi": [],
+      "source": "appinfo/routes.php:66 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/settings/seed",
+      "target": "OCA\\OpsSuite\\Controller\\SettingsController::seed",
+      "openapi": [],
+      "source": "appinfo/routes.php:68 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/settings/seed-docs",
+      "target": "OCA\\OpsSuite\\Controller\\SettingsController::seedDocs",
+      "openapi": [],
+      "source": "appinfo/routes.php:69 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/shops",
+      "target": "OCA\\OpsSuite\\Controller\\ShopController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:19 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/shops",
+      "target": "OCA\\OpsSuite\\Controller\\ShopController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:21 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/shops/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\ShopController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:23 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/shops/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\ShopController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:20 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/shops/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\ShopController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:22 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/shops/{id}/users",
+      "target": "OCA\\OpsSuite\\Controller\\ShopController::indexUsers",
+      "openapi": [],
+      "source": "appinfo/routes.php:308 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/shops/{id}/users",
+      "target": "OCA\\OpsSuite\\Controller\\ShopController::addUser",
+      "openapi": [],
+      "source": "appinfo/routes.php:309 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/shops/{id}/users/{userId}",
+      "target": "OCA\\OpsSuite\\Controller\\ShopController::removeUser",
+      "openapi": [],
+      "source": "appinfo/routes.php:310 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/software/catalog",
+      "target": "OCA\\OpsSuite\\Controller\\SoftwareCatalogController::catalogIndex",
+      "openapi": [],
+      "source": "appinfo/routes.php:328 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/software/catalog",
+      "target": "OCA\\OpsSuite\\Controller\\SoftwareCatalogController::catalogCreate",
+      "openapi": [],
+      "source": "appinfo/routes.php:329 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/software/catalog/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\SoftwareCatalogController::catalogDelete",
+      "openapi": [],
+      "source": "appinfo/routes.php:331 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/software/catalog/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\SoftwareCatalogController::catalogUpdate",
+      "openapi": [],
+      "source": "appinfo/routes.php:330 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/software/repology",
+      "target": "OCA\\OpsSuite\\Controller\\SoftwareCatalogController::repologyCheck",
+      "openapi": [],
+      "source": "appinfo/routes.php:338 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/software/requests",
+      "target": "OCA\\OpsSuite\\Controller\\SoftwareCatalogController::requestIndex",
+      "openapi": [],
+      "source": "appinfo/routes.php:332 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/software/requests",
+      "target": "OCA\\OpsSuite\\Controller\\SoftwareCatalogController::requestCreate",
+      "openapi": [],
+      "source": "appinfo/routes.php:333 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/software/requests/{id}/approve",
+      "target": "OCA\\OpsSuite\\Controller\\SoftwareCatalogController::requestApprove",
+      "openapi": [],
+      "source": "appinfo/routes.php:334 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/software/requests/{id}/confirm",
+      "target": "OCA\\OpsSuite\\Controller\\SoftwareCatalogController::requestConfirm",
+      "openapi": [],
+      "source": "appinfo/routes.php:336 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/software/requests/{id}/reject",
+      "target": "OCA\\OpsSuite\\Controller\\SoftwareCatalogController::requestReject",
+      "openapi": [],
+      "source": "appinfo/routes.php:335 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/software/requests/custom",
+      "target": "OCA\\OpsSuite\\Controller\\SoftwareCatalogController::customRequestCreate",
+      "openapi": [],
+      "source": "appinfo/routes.php:337 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/software/search",
+      "target": "OCA\\OpsSuite\\Controller\\SoftwareCatalogController::packageSearch",
+      "openapi": [],
+      "source": "appinfo/routes.php:339 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/supply/inventory",
+      "target": "OCA\\OpsSuite\\Controller\\SupplyController::indexInventory",
+      "openapi": [],
+      "source": "appinfo/routes.php:82 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/supply/inventory",
+      "target": "OCA\\OpsSuite\\Controller\\SupplyController::createInventory",
+      "openapi": [],
+      "source": "appinfo/routes.php:84 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/supply/inventory/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\SupplyController::showInventory",
+      "openapi": [],
+      "source": "appinfo/routes.php:83 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/supply/inventory/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\SupplyController::updateInventory",
+      "openapi": [],
+      "source": "appinfo/routes.php:85 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/supply/inventory/{id}/transact",
+      "target": "OCA\\OpsSuite\\Controller\\SupplyController::transactInventory",
+      "openapi": [],
+      "source": "appinfo/routes.php:86 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/supply/requests",
+      "target": "OCA\\OpsSuite\\Controller\\SupplyController::indexRequests",
+      "openapi": [],
+      "source": "appinfo/routes.php:74 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/supply/requests",
+      "target": "OCA\\OpsSuite\\Controller\\SupplyController::createRequest",
+      "openapi": [],
+      "source": "appinfo/routes.php:76 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/supply/requests/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\SupplyController::destroyRequest",
+      "openapi": [],
+      "source": "appinfo/routes.php:78 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/supply/requests/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\SupplyController::showRequest",
+      "openapi": [],
+      "source": "appinfo/routes.php:75 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/supply/requests/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\SupplyController::updateRequest",
+      "openapi": [],
+      "source": "appinfo/routes.php:77 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/supply/requests/{id}/items",
+      "target": "OCA\\OpsSuite\\Controller\\SupplyController::addRequestItem",
+      "openapi": [],
+      "source": "appinfo/routes.php:79 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/supply/requests/{id}/items/{itemId}",
+      "target": "OCA\\OpsSuite\\Controller\\SupplyController::deleteRequestItem",
+      "openapi": [],
+      "source": "appinfo/routes.php:81 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/supply/requests/{id}/items/{itemId}",
+      "target": "OCA\\OpsSuite\\Controller\\SupplyController::updateRequestItem",
+      "openapi": [],
+      "source": "appinfo/routes.php:80 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/training",
+      "target": "OCA\\OpsSuite\\Controller\\TrainingController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:301 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/training",
+      "target": "OCA\\OpsSuite\\Controller\\TrainingController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:303 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/training/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\TrainingController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:305 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/training/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\TrainingController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:302 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/training/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\TrainingController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:304 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/users",
+      "target": "OCA\\OpsSuite\\Controller\\UserController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:59 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/work-packages",
+      "target": "OCA\\OpsSuite\\Controller\\WorkPackageController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:89 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/work-packages",
+      "target": "OCA\\OpsSuite\\Controller\\WorkPackageController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:91 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/work-packages/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\WorkPackageController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:93 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/work-packages/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\WorkPackageController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:90 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/work-packages/{id}",
+      "target": "OCA\\OpsSuite\\Controller\\WorkPackageController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:92 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/work-packages/{id}/award",
+      "target": "OCA\\OpsSuite\\Controller\\WorkPackageController::award",
+      "openapi": [],
+      "source": "appinfo/routes.php:100 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/work-packages/{id}/items",
+      "target": "OCA\\OpsSuite\\Controller\\WorkPackageController::addItem",
+      "openapi": [],
+      "source": "appinfo/routes.php:94 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/work-packages/{id}/items/{itemId}",
+      "target": "OCA\\OpsSuite\\Controller\\WorkPackageController::removeItem",
+      "openapi": [],
+      "source": "appinfo/routes.php:95 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/api/work-packages/{id}/quotes",
+      "target": "OCA\\OpsSuite\\Controller\\WorkPackageController::indexQuotes",
+      "openapi": [],
+      "source": "appinfo/routes.php:96 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/ops_suite/api/work-packages/{id}/quotes",
+      "target": "OCA\\OpsSuite\\Controller\\WorkPackageController::createQuote",
+      "openapi": [],
+      "source": "appinfo/routes.php:97 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/ops_suite/api/work-packages/{id}/quotes/{quoteId}",
+      "target": "OCA\\OpsSuite\\Controller\\WorkPackageController::destroyQuote",
+      "openapi": [],
+      "source": "appinfo/routes.php:99 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/ops_suite/api/work-packages/{id}/quotes/{quoteId}",
+      "target": "OCA\\OpsSuite\\Controller\\WorkPackageController::updateQuote",
+      "openapi": [],
+      "source": "appinfo/routes.php:98 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/manifest.json",
+      "target": "OCA\\OpsSuite\\Controller\\PageController::manifest",
+      "openapi": [],
+      "source": "appinfo/routes.php:8 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/sw.js",
+      "target": "OCA\\OpsSuite\\Controller\\PageController::swJs",
+      "openapi": [],
+      "source": "appinfo/routes.php:7 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/ops_suite/user-manual",
+      "target": "OCA\\OpsSuite\\Controller\\PageController::manual",
+      "openapi": [],
+      "source": "appinfo/routes.php:71 routes",
+      "kind": "route"
+    }
+  ]
+}

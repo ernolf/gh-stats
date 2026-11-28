@@ -1,0 +1,155 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\KiltNextcloudLogin\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "namespace-mismatch",
+      "level": "warn",
+      "places": [
+        "lib/Provider/CustomDiscourse.php:45 OCA\\KiltNextCloudLogin\\Provider\\HybridauthDiscourse, by its path OCA\\KiltNextcloudLogin\\Provider\\CustomDiscourse",
+        "lib/Provider/CustomDiscourse.php:228 OCA\\KiltNextCloudLogin\\Provider\\CustomDiscourse, by its path OCA\\KiltNextcloudLogin\\Provider\\CustomDiscourse",
+        "lib/Provider/Kilt.php:49 OCA\\KiltNextcloudLogin\\Provider\\HybridauthKilt, by its path OCA\\KiltNextcloudLogin\\Provider\\Kilt"
+      ],
+      "lines": [
+        "3 classes in lib/ whose name does not follow PSR-4 below OCA\\KiltNextcloudLogin, the namespace the server derives from <namespace> of info.xml. The loader of the server does not find such a class.",
+        "  lib/Provider/CustomDiscourse.php:45 OCA\\KiltNextCloudLogin\\Provider\\HybridauthDiscourse, by its path OCA\\KiltNextcloudLogin\\Provider\\CustomDiscourse",
+        "  lib/Provider/CustomDiscourse.php:228 OCA\\KiltNextCloudLogin\\Provider\\CustomDiscourse, by its path OCA\\KiltNextcloudLogin\\Provider\\CustomDiscourse",
+        "  lib/Provider/Kilt.php:49 OCA\\KiltNextcloudLogin\\Provider\\HybridauthKilt, by its path OCA\\KiltNextcloudLogin\\Provider\\Kilt"
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "beberlei/assert v3.3.2, in 3rdparty/ of Nextcloud 25",
+        "psr/http-factory 1.0.1, in 3rdparty/ of Nextcloud 25",
+        "psr/http-message 1.0.1, in 3rdparty/ of Nextcloud 25",
+        "psr/log 1.1.4, in 3rdparty/ of Nextcloud 25",
+        "symfony/polyfill-php80 v1.27.0, in 3rdparty/ of Nextcloud 25",
+        "symfony/process v5.4.19, in 3rdparty/ of Nextcloud 25"
+      ],
+      "lines": [
+        "vendor/ ships 6 packages that the server ships itself in a major of Nextcloud 25. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  beberlei/assert v3.3.2, in 3rdparty/ of Nextcloud 25",
+        "  psr/http-factory 1.0.1, in 3rdparty/ of Nextcloud 25",
+        "  psr/http-message 1.0.1, in 3rdparty/ of Nextcloud 25",
+        "  psr/log 1.1.4, in 3rdparty/ of Nextcloud 25",
+        "  symfony/polyfill-php80 v1.27.0, in 3rdparty/ of Nextcloud 25",
+        "  symfony/process v5.4.19, in 3rdparty/ of Nextcloud 25"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/LoginController.php:65 OC\\User\\LoginException",
+        "lib/Service/ProviderService.php:220 OC\\Authentication\\Token\\IProvider",
+        "lib/Service/ProviderService.php:329 OC\\User\\LoginException",
+        "lib/Service/ProviderService.php:610 OC::$server"
+      ],
+      "lines": [
+        "4 uses of the private API of the server in 2 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/LoginController.php:65 OC\\User\\LoginException",
+        "  lib/Service/ProviderService.php:220 OC\\Authentication\\Token\\IProvider",
+        "  lib/Service/ProviderService.php:329 OC\\User\\LoginException",
+        "  lib/Service/ProviderService.php:610 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:73 addListener()",
+        "lib/AppInfo/Application.php:83 addListener()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 2 places. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:73 addListener()",
+        "  lib/AppInfo/Application.php:83 addListener()"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/AlternativeLogin/TelegramLogin.php:65 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated in Nextcloud 25. The text of the tag names the replacement where it has one.",
+        "  lib/AlternativeLogin/TelegramLogin.php:65 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/AppInfo/Application.php:80 time()",
+        "lib/Service/ProviderService.php:621 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 2 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/AppInfo/Application.php:80 time()",
+        "  lib/Service/ProviderService.php:621 time()"
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/ApiController.php:55 OCA\\KiltNextcloudLogin\\Controller\\ApiController::setConfig()",
+        "lib/Controller/LinkController.php:61 OCA\\KiltNextcloudLogin\\Controller\\LinkController::connectSocialLogin()",
+        "lib/Controller/LinkController.php:72 OCA\\KiltNextcloudLogin\\Controller\\LinkController::disconnectSocialLogin()",
+        "lib/Controller/LoginController.php:52 OCA\\KiltNextcloudLogin\\Controller\\LoginController::oauth()",
+        "lib/Controller/SettingsController.php:73 OCA\\KiltNextcloudLogin\\Controller\\SettingsController::saveAdmin()",
+        "lib/Controller/SettingsController.php:120 OCA\\KiltNextcloudLogin\\Controller\\SettingsController::savePersonal()",
+        "lib/Controller/SettingsController.php:130 OCA\\KiltNextcloudLogin\\Controller\\SettingsController::disconnectSocialLogin()"
+      ],
+      "lines": [
+        "7 public methods of controllers are reached by no route.",
+        "  lib/Controller/ApiController.php:55 OCA\\KiltNextcloudLogin\\Controller\\ApiController::setConfig()",
+        "  lib/Controller/LinkController.php:61 OCA\\KiltNextcloudLogin\\Controller\\LinkController::connectSocialLogin()",
+        "  lib/Controller/LinkController.php:72 OCA\\KiltNextcloudLogin\\Controller\\LinkController::disconnectSocialLogin()",
+        "  lib/Controller/LoginController.php:52 OCA\\KiltNextcloudLogin\\Controller\\LoginController::oauth()",
+        "  lib/Controller/SettingsController.php:73 OCA\\KiltNextcloudLogin\\Controller\\SettingsController::saveAdmin()",
+        "  lib/Controller/SettingsController.php:120 OCA\\KiltNextcloudLogin\\Controller\\SettingsController::savePersonal()",
+        "  lib/Controller/SettingsController.php:130 OCA\\KiltNextcloudLogin\\Controller\\SettingsController::disconnectSocialLogin()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    }
+  ],
+  "endpoints": 1,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/kiltnextcloudlogin/{type}/{provider}",
+      "target": "OCA\\KiltNextcloudLogin\\Controller\\LoginController::custom",
+      "openapi": [],
+      "source": "appinfo/routes.php:39 routes",
+      "kind": "route"
+    }
+  ]
+}

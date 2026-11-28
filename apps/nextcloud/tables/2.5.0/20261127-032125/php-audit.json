@@ -1,0 +1,1671 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Tables\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "symfony/polyfill-uuid v1.37.0, in 3rdparty/ of Nextcloud 33 to 35",
+        "symfony/uid v6.4.48, in 3rdparty/ of Nextcloud 33 to 35"
+      ],
+      "lines": [
+        "vendor/ ships 2 packages that the server ships itself in a major of Nextcloud 33 to 35. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  symfony/polyfill-uuid v1.37.0, in 3rdparty/ of Nextcloud 33 to 35",
+        "  symfony/uid v6.4.48, in 3rdparty/ of Nextcloud 33 to 35"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:95 OC\\OCM\\OCMSignatoryManager",
+        "lib/Command/ListContexts.php:23 OC\\Core\\Command\\Base",
+        "lib/Command/ShowContext.php:23 OC\\Core\\Command\\Base",
+        "lib/Controller/NavigationController.php:24 OC\\Core\\Controller\\NavigationController",
+        "lib/Federation/FederationProxy.php:103 OC\\Http\\Client\\Response",
+        "lib/Reference/ContentReferenceHelper.php:39 OC\\Collaboration\\Reference\\LinkReferenceProvider",
+        "lib/Reference/ContentReferenceProvider.php:15 OC\\Collaboration\\Reference\\ReferenceManager",
+        "lib/Reference/ReferenceHelper.php:30 OC\\Collaboration\\Reference\\LinkReferenceProvider",
+        "lib/Reference/ReferenceProvider.php:19 OC\\Collaboration\\Reference\\ReferenceManager",
+        "lib/Service/ImportService.php:146 OC\\User\\NoUserException"
+      ],
+      "lines": [
+        "10 uses of the private API of the server in 10 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/AppInfo/Application.php:95 OC\\OCM\\OCMSignatoryManager",
+        "  lib/Command/ListContexts.php:23 OC\\Core\\Command\\Base",
+        "  lib/Command/ShowContext.php:23 OC\\Core\\Command\\Base",
+        "  lib/Controller/NavigationController.php:24 OC\\Core\\Controller\\NavigationController",
+        "  lib/Federation/FederationProxy.php:103 OC\\Http\\Client\\Response",
+        "  lib/Reference/ContentReferenceHelper.php:39 OC\\Collaboration\\Reference\\LinkReferenceProvider",
+        "  lib/Reference/ContentReferenceProvider.php:15 OC\\Collaboration\\Reference\\ReferenceManager",
+        "  lib/Reference/ReferenceHelper.php:30 OC\\Collaboration\\Reference\\LinkReferenceProvider",
+        "  lib/Reference/ReferenceProvider.php:19 OC\\Collaboration\\Reference\\ReferenceManager",
+        "  lib/Service/ImportService.php:146 OC\\User\\NoUserException"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "implements-consumable",
+      "level": "warn",
+      "places": [
+        "lib/Share/SharePageShareDataDecorator.php:25 OCA\\Tables\\Share\\SharePageShareDataDecorator implements OCP\\Share\\IShare"
+      ],
+      "lines": [
+        "1 class implements or extends what the public API marks #[Consumable] in a major of Nextcloud 33 to 35: an app calls it, and the server may add a method to it in any release, which breaks a class that implements it.",
+        "  lib/Share/SharePageShareDataDecorator.php:25 OCA\\Tables\\Share\\SharePageShareDataDecorator implements OCP\\Share\\IShare"
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:99 OCP\\Share\\ShareReview\\RegisterShareReviewSourceEvent: there since Nextcloud 34, the app declares from 33",
+        "lib/Migration/Version000700Date20230916000000.php:113 OCP\\DB\\Schema\\ITable: there since Nextcloud 35, the app declares from 33",
+        "lib/Migration/Version000800Date20240213123743.php:43 OCP\\DB\\Schema\\ITable: there since Nextcloud 35, the app declares from 33",
+        "lib/ShareReview/ShareReviewListener.php:22 OCP\\Share\\ShareReview\\RegisterShareReviewSourceEvent: there since Nextcloud 34, the app declares from 33",
+        "lib/ShareReview/ShareReviewSource.php:28 OCP\\Share\\ShareReview\\IShareReviewSource: there since Nextcloud 34, the app declares from 33",
+        "lib/ShareReview/ShareReviewSource.php:110 OCP\\Share\\ShareReview\\Events\\ShareReviewAccessCheckEvent: there since Nextcloud 34, the app declares from 33",
+        "lib/ShareReview/ShareReviewSource.php:113 OCP\\Share\\ShareReview\\Events\\ShareReviewAccessCheckEvent::isHandled(): there since Nextcloud 34, the app declares from 33",
+        "lib/ShareReview/ShareReviewSource.php:113 OCP\\Share\\ShareReview\\Events\\ShareReviewAccessCheckEvent::isGranted(): there since Nextcloud 34, the app declares from 33",
+        "lib/ShareReview/ShareReviewSource.php:134 OCP\\Share\\ShareReview\\ShareReviewEntry: there since Nextcloud 34, the app declares from 33",
+        "lib/ShareReview/ShareReviewSource.php:245 OCP\\Share\\ShareReview\\ShareReviewPermission: there since Nextcloud 34, the app declares from 33"
+      ],
+      "lines": [
+        "10 uses in 5 files of the public API that the oldest majors of Nextcloud 33 to 35 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/AppInfo/Application.php:99 OCP\\Share\\ShareReview\\RegisterShareReviewSourceEvent: there since Nextcloud 34, the app declares from 33",
+        "  lib/Migration/Version000700Date20230916000000.php:113 OCP\\DB\\Schema\\ITable: there since Nextcloud 35, the app declares from 33",
+        "  lib/Migration/Version000800Date20240213123743.php:43 OCP\\DB\\Schema\\ITable: there since Nextcloud 35, the app declares from 33",
+        "  lib/ShareReview/ShareReviewListener.php:22 OCP\\Share\\ShareReview\\RegisterShareReviewSourceEvent: there since Nextcloud 34, the app declares from 33",
+        "  lib/ShareReview/ShareReviewSource.php:28 OCP\\Share\\ShareReview\\IShareReviewSource: there since Nextcloud 34, the app declares from 33",
+        "  lib/ShareReview/ShareReviewSource.php:110 OCP\\Share\\ShareReview\\Events\\ShareReviewAccessCheckEvent: there since Nextcloud 34, the app declares from 33",
+        "  lib/ShareReview/ShareReviewSource.php:113 OCP\\Share\\ShareReview\\Events\\ShareReviewAccessCheckEvent::isHandled(): there since Nextcloud 34, the app declares from 33",
+        "  lib/ShareReview/ShareReviewSource.php:113 OCP\\Share\\ShareReview\\Events\\ShareReviewAccessCheckEvent::isGranted(): there since Nextcloud 34, the app declares from 33",
+        "  lib/ShareReview/ShareReviewSource.php:134 OCP\\Share\\ShareReview\\ShareReviewEntry: there since Nextcloud 34, the app declares from 33",
+        "  lib/ShareReview/ShareReviewSource.php:245 OCP\\Share\\ShareReview\\ShareReviewPermission: there since Nextcloud 34, the app declares from 33"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:131 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:131 injectFn()"
+      ]
+    },
+    {
+      "id": "route-target-missing",
+      "level": "warn",
+      "places": [
+        "OPTIONS /index.php/apps/tables/api/2/{path}  tables.api2.preflighted_cors  appinfo/routes.php:13 routes: no class OCA\\Tables\\Controller\\Api2Controller"
+      ],
+      "lines": [
+        "1 route names a controller class or a method that does not exist, or a method that is not public. A request to such a route ends in an error.",
+        "  OPTIONS /index.php/apps/tables/api/2/{path}  tables.api2.preflighted_cors  appinfo/routes.php:13 routes: no class OCA\\Tables\\Controller\\Api2Controller"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "psalm/phar, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Db/ContextMapper.php:342 OCP\\DB\\QueryBuilder\\IQueryBuilder::getQueryPart(): deprecated since Nextcloud 30; This function is going to be removed with the next Doctrine/DBAL update and we can not fix this in our wrapper. Please track the details you need, outside the object.",
+        "lib/Db/Row2Mapper.php:675 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Db/Row2Mapper.php:677 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Middleware/PermissionMiddleware.php:29 OCP\\AppFramework\\Utility\\IControllerMethodReflector: deprecated since Nextcloud 22; will be obsolete with native attributes in PHP8",
+        "lib/Middleware/PermissionMiddleware.php:204 OCP\\AppFramework\\Utility\\IControllerMethodReflector::hasAnnotation(): deprecated since Nextcloud 22; will be obsolete with native attributes in PHP8",
+        "lib/Middleware/PermissionMiddleware.php:229 OCP\\AppFramework\\Utility\\IControllerMethodReflector::hasAnnotation(): deprecated since Nextcloud 22; will be obsolete with native attributes in PHP8",
+        "lib/Migration/DbRowSleeveSequence.php:44 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "lib/Migration/Version001000Date20250720000000.php:34 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Migration/Version2400Date20260901000000.php:38 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "lib/Service/RowService.php:1031 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/Share/SharePageShareDataDecorator.php:78 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead"
+      ],
+      "lines": [
+        "11 uses in 8 files of the public API that is deprecated in Nextcloud 33 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Db/ContextMapper.php:342 OCP\\DB\\QueryBuilder\\IQueryBuilder::getQueryPart(): deprecated since Nextcloud 30; This function is going to be removed with the next Doctrine/DBAL update and we can not fix this in our wrapper. Please track the details you need, outside the object.",
+        "  lib/Db/Row2Mapper.php:675 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Db/Row2Mapper.php:677 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Middleware/PermissionMiddleware.php:29 OCP\\AppFramework\\Utility\\IControllerMethodReflector: deprecated since Nextcloud 22; will be obsolete with native attributes in PHP8",
+        "  lib/Middleware/PermissionMiddleware.php:204 OCP\\AppFramework\\Utility\\IControllerMethodReflector::hasAnnotation(): deprecated since Nextcloud 22; will be obsolete with native attributes in PHP8",
+        "  lib/Middleware/PermissionMiddleware.php:229 OCP\\AppFramework\\Utility\\IControllerMethodReflector::hasAnnotation(): deprecated since Nextcloud 22; will be obsolete with native attributes in PHP8",
+        "  lib/Migration/DbRowSleeveSequence.php:44 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "  lib/Migration/Version001000Date20250720000000.php:34 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Migration/Version2400Date20260901000000.php:38 OCP\\DB\\Types::JSON: deprecated since Nextcloud 33; JSON fields can not properly be used in WHERE statements of Oracle and MySQL. It is recommended to use a simple STRING field and handle JSON within PHP",
+        "  lib/Service/RowService.php:1031 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/Share/SharePageShareDataDecorator.php:78 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 8
+        }
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Controller/ApiTablesController.php:149",
+        "lib/Controller/ApiTablesController.php:343",
+        "lib/Controller/ContextController.php:352",
+        "lib/Db/Row2Mapper.php:53",
+        "lib/Migration/Version2020Date20260513185340.php:121",
+        "lib/Migration/Version2020Date20260513185340.php:141",
+        "lib/Migration/Version2020Date20260513185340.php:168",
+        "lib/Migration/Version2020Date20260513185340.php:186",
+        "lib/Migration/Version2200Date20260819000000.php:65",
+        "lib/Migration/Version2200Date20260819000000.php:74",
+        "lib/Migration/Version2202Date20260825184226.php:59",
+        "lib/Migration/Version2202Date20260825184226.php:67",
+        "lib/UserMigration/TablesMigrator.php:194"
+      ],
+      "lines": [
+        "13 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Controller/ApiTablesController.php:149",
+        "  lib/Controller/ApiTablesController.php:343",
+        "  lib/Controller/ContextController.php:352",
+        "  lib/Db/Row2Mapper.php:53",
+        "  lib/Migration/Version2020Date20260513185340.php:121",
+        "  lib/Migration/Version2020Date20260513185340.php:141",
+        "  lib/Migration/Version2020Date20260513185340.php:168",
+        "  lib/Migration/Version2020Date20260513185340.php:186",
+        "  lib/Migration/Version2200Date20260819000000.php:65",
+        "  lib/Migration/Version2200Date20260819000000.php:74",
+        "  lib/Migration/Version2202Date20260825184226.php:59",
+        "  lib/Migration/Version2202Date20260825184226.php:67",
+        "  lib/UserMigration/TablesMigrator.php:194"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 10
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Activity/ActivityManager.php:242 time()",
+        "lib/Db/Row2Mapper.php:949 new DateTime()",
+        "lib/Federation/FederationProvider.php:149 new DateTime()",
+        "lib/Federation/FederationProvider.php:174 new DateTime()",
+        "lib/Notification/NotificationHelper.php:436 new DateTime()",
+        "lib/Service/ColumnService.php:631 new DateTime()",
+        "lib/Service/ShareService.php:386 new DateTime()",
+        "lib/Service/ShareService.php:598 new DateTime()",
+        "lib/Service/TableService.php:296 new DateTime()",
+        "lib/Service/TableService.php:541 new DateTime()",
+        "lib/Service/TableService.php:648 new DateTime()",
+        "lib/Service/ViewService.php:203 new DateTime()",
+        "lib/Service/ViewService.php:324 new DateTime()",
+        "lib/Vendor/PhpOffice/PhpSpreadsheet/Calculation/DateTimeExcel/Current.php:29 new DateTimeImmutable()",
+        "lib/Vendor/PhpOffice/PhpSpreadsheet/Calculation/DateTimeExcel/Current.php:52 new DateTimeImmutable()",
+        "lib/Vendor/PhpOffice/PhpSpreadsheet/Calculation/DateTimeExcel/DateValue.php:58 new DateTimeImmutable()",
+        "lib/Vendor/PhpOffice/PhpSpreadsheet/Document/Properties.php:120 new DateTime()",
+        "lib/Vendor/PhpOffice/PhpSpreadsheet/Shared/Date.php:446 new DateTime()",
+        "lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:433 new DateTime()",
+        "lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:442 new DateTime()",
+        "lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:453 new DateTime()",
+        "lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:472 new DateTime()",
+        "lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:486 new DateTime()",
+        "lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:495 new DateTime()",
+        "lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:517 new DateTime()",
+        "lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:531 new DateTime()",
+        "lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:540 new DateTime()",
+        "lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:560 new DateTime()",
+        "lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:574 new DateTime()",
+        "lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:583 new DateTime()",
+        "lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:592 new DateTime()",
+        "lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:602 new DateTime()",
+        "lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:611 new DateTime()",
+        "lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/MemoryDrawing.php:48 time()",
+        "lib/Vendor/PhpOffice/PhpSpreadsheet/Writer/Xlsx/Rels.php:198 time()",
+        "lib/Vendor/ZipStream/ZipStream.php:291 new DateTimeImmutable()",
+        "lib/Vendor/ZipStream/ZipStream.php:484 new DateTimeImmutable()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 37 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Activity/ActivityManager.php:242 time()",
+        "  lib/Db/Row2Mapper.php:949 new DateTime()",
+        "  lib/Federation/FederationProvider.php:149 new DateTime()",
+        "  lib/Federation/FederationProvider.php:174 new DateTime()",
+        "  lib/Notification/NotificationHelper.php:436 new DateTime()",
+        "  lib/Service/ColumnService.php:631 new DateTime()",
+        "  lib/Service/ShareService.php:386 new DateTime()",
+        "  lib/Service/ShareService.php:598 new DateTime()",
+        "  lib/Service/TableService.php:296 new DateTime()",
+        "  lib/Service/TableService.php:541 new DateTime()",
+        "  lib/Service/TableService.php:648 new DateTime()",
+        "  lib/Service/ViewService.php:203 new DateTime()",
+        "  lib/Service/ViewService.php:324 new DateTime()",
+        "  lib/Vendor/PhpOffice/PhpSpreadsheet/Calculation/DateTimeExcel/Current.php:29 new DateTimeImmutable()",
+        "  lib/Vendor/PhpOffice/PhpSpreadsheet/Calculation/DateTimeExcel/Current.php:52 new DateTimeImmutable()",
+        "  lib/Vendor/PhpOffice/PhpSpreadsheet/Calculation/DateTimeExcel/DateValue.php:58 new DateTimeImmutable()",
+        "  lib/Vendor/PhpOffice/PhpSpreadsheet/Document/Properties.php:120 new DateTime()",
+        "  lib/Vendor/PhpOffice/PhpSpreadsheet/Shared/Date.php:446 new DateTime()",
+        "  lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:433 new DateTime()",
+        "  lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:442 new DateTime()",
+        "  lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:453 new DateTime()",
+        "  lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:472 new DateTime()",
+        "  lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:486 new DateTime()",
+        "  lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:495 new DateTime()",
+        "  lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:517 new DateTime()",
+        "  lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:531 new DateTime()",
+        "  lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:540 new DateTime()",
+        "  lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:560 new DateTime()",
+        "  lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:574 new DateTime()",
+        "  lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:583 new DateTime()",
+        "  lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:592 new DateTime()",
+        "  lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:602 new DateTime()",
+        "  lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/AutoFilter.php:611 new DateTime()",
+        "  lib/Vendor/PhpOffice/PhpSpreadsheet/Worksheet/MemoryDrawing.php:48 time()",
+        "  lib/Vendor/PhpOffice/PhpSpreadsheet/Writer/Xlsx/Rels.php:198 time()",
+        "  lib/Vendor/ZipStream/ZipStream.php:291 new DateTimeImmutable()",
+        "  lib/Vendor/ZipStream/ZipStream.php:484 new DateTimeImmutable()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 34
+        }
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version000000Date20210921000000.php:34 createTable() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:35 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:39 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:43 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:47 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:51 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:54 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:58 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:61 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:65 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:67 addIndex() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:72 createTable() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:75 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:79 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:82 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:86 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:90 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:93 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:97 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:100 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:104 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:108 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:112 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:115 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:121 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:124 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:128 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:131 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:137 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:140 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:143 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:146 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:150 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:154 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:160 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:163 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:168 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:173 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:177 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:181 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:185 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:189 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:193 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:198 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:200 addIndex() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:205 createTable() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:206 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:210 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:213 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:217 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:220 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:224 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:229 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:232 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:237 createTable() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:238 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:242 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:246 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:249 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:253 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:256 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:260 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000000Date20210921000000.php:264 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20220428000000.php:34 createTable() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20220428000000.php:35 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20220428000000.php:39 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20220428000000.php:43 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20220428000000.php:47 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20220428000000.php:51 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20220428000000.php:54 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20220428000000.php:58 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20220428000000.php:62 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20220428000000.php:67 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20220428000000.php:71 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20220428000000.php:75 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20220428000000.php:79 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20220428000000.php:83 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20220428000000.php:88 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20220428000000.php:91 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20220428000000.php:94 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20220428000000.php:95 addIndex() on a table whose name is no constant",
+        "lib/Migration/Version000200Date20220428000000.php:96 addIndex() on a table whose name is no constant",
+        "lib/Migration/Version000203Date20230124000000.php:35 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000400Date20230406000000.php:38 getColumn() on a table whose name is no constant",
+        "lib/Migration/Version000400Date20230406000000.php:39 setLength() on a table whose name is no constant",
+        "lib/Migration/Version000400Date20230406000000.php:41 setType() on a table whose name is no constant",
+        "lib/Migration/Version000400Date20230406000000.php:43 getColumn() on a table whose name is no constant",
+        "lib/Migration/Version000400Date20230406000000.php:44 setLength() on a table whose name is no constant",
+        "lib/Migration/Version000400Date20230406000000.php:46 setType() on a table whose name is no constant",
+        "lib/Migration/Version000400Date20230406000000.php:48 getColumn() on a table whose name is no constant",
+        "lib/Migration/Version000400Date20230406000000.php:49 setLength() on a table whose name is no constant",
+        "lib/Migration/Version000400Date20230406000000.php:51 setType() on a table whose name is no constant",
+        "lib/Migration/Version000600Date20230703000000.php:36 createTable() on a table whose name is no constant",
+        "lib/Migration/Version000600Date20230703000000.php:37 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000600Date20230703000000.php:41 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000600Date20230703000000.php:44 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000600Date20230703000000.php:48 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000600Date20230703000000.php:52 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000600Date20230703000000.php:55 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000600Date20230703000000.php:59 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000600Date20230703000000.php:62 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000600Date20230703000000.php:66 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000600Date20230703000000.php:69 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000600Date20230703000000.php:72 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000600Date20230703000000.php:75 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version000600Date20230703000000.php:78 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version000900Date20250710000000.php:33 hasIndex() on a table whose name is no constant",
+        "lib/Migration/Version000900Date20250710000000.php:34 addIndex() on a table whose name is no constant",
+        "lib/Migration/Version000900Date20250710000000.php:37 hasIndex() on a table whose name is no constant",
+        "lib/Migration/Version000900Date20250710000000.php:38 addIndex() on a table whose name is no constant",
+        "lib/Migration/Version1000Date20251208192653.php:31 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version1000Date20251208192653.php:32 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version1000Date20251208192653.php:38 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version1000Date20251208192653.php:39 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version1000Date20251208192653.php:45 hasIndex() on a table whose name is no constant",
+        "lib/Migration/Version1000Date20251208192653.php:46 addIndex() on a table whose name is no constant",
+        "lib/Migration/Version2400Date20260901000000.php:31 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version2400Date20260901000000.php:32 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version2400Date20260901000000.php:37 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version2400Date20260901000000.php:38 addColumn() on a table whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version000000Date20210921000000.php:34 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:35 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:39 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:43 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:47 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:51 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:54 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:58 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:61 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:65 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:67 addIndex() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:72 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:75 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:79 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:82 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:86 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:90 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:93 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:97 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:100 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:104 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:108 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:112 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:115 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:121 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:124 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:128 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:131 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:137 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:140 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:143 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:146 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:150 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:154 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:160 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:163 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:168 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:173 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:177 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:181 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:185 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:189 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:193 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:198 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:200 addIndex() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:205 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:206 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:210 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:213 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:217 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:220 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:224 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:229 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:232 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:237 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:238 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:242 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:246 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:249 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:253 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:256 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:260 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000000Date20210921000000.php:264 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20220428000000.php:34 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20220428000000.php:35 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20220428000000.php:39 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20220428000000.php:43 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20220428000000.php:47 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20220428000000.php:51 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20220428000000.php:54 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20220428000000.php:58 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20220428000000.php:62 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20220428000000.php:67 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20220428000000.php:71 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20220428000000.php:75 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20220428000000.php:79 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20220428000000.php:83 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20220428000000.php:88 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20220428000000.php:91 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20220428000000.php:94 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20220428000000.php:95 addIndex() on a table whose name is no constant",
+        "  lib/Migration/Version000200Date20220428000000.php:96 addIndex() on a table whose name is no constant",
+        "  lib/Migration/Version000203Date20230124000000.php:35 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000400Date20230406000000.php:38 getColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000400Date20230406000000.php:39 setLength() on a table whose name is no constant",
+        "  lib/Migration/Version000400Date20230406000000.php:41 setType() on a table whose name is no constant",
+        "  lib/Migration/Version000400Date20230406000000.php:43 getColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000400Date20230406000000.php:44 setLength() on a table whose name is no constant",
+        "  lib/Migration/Version000400Date20230406000000.php:46 setType() on a table whose name is no constant",
+        "  lib/Migration/Version000400Date20230406000000.php:48 getColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000400Date20230406000000.php:49 setLength() on a table whose name is no constant",
+        "  lib/Migration/Version000400Date20230406000000.php:51 setType() on a table whose name is no constant",
+        "  lib/Migration/Version000600Date20230703000000.php:36 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version000600Date20230703000000.php:37 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000600Date20230703000000.php:41 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000600Date20230703000000.php:44 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000600Date20230703000000.php:48 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000600Date20230703000000.php:52 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000600Date20230703000000.php:55 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000600Date20230703000000.php:59 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000600Date20230703000000.php:62 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000600Date20230703000000.php:66 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000600Date20230703000000.php:69 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000600Date20230703000000.php:72 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000600Date20230703000000.php:75 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version000600Date20230703000000.php:78 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version000900Date20250710000000.php:33 hasIndex() on a table whose name is no constant",
+        "  lib/Migration/Version000900Date20250710000000.php:34 addIndex() on a table whose name is no constant",
+        "  lib/Migration/Version000900Date20250710000000.php:37 hasIndex() on a table whose name is no constant",
+        "  lib/Migration/Version000900Date20250710000000.php:38 addIndex() on a table whose name is no constant",
+        "  lib/Migration/Version1000Date20251208192653.php:31 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version1000Date20251208192653.php:32 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version1000Date20251208192653.php:38 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version1000Date20251208192653.php:39 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version1000Date20251208192653.php:45 hasIndex() on a table whose name is no constant",
+        "  lib/Migration/Version1000Date20251208192653.php:46 addIndex() on a table whose name is no constant",
+        "  lib/Migration/Version2400Date20260901000000.php:31 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2400Date20260901000000.php:32 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2400Date20260901000000.php:37 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version2400Date20260901000000.php:38 addColumn() on a table whose name is no constant"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 117
+        }
+      ]
+    }
+  ],
+  "endpoints": 132,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/",
+      "target": "OCA\\Tables\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/tables/api/1/{path}",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::preflightedCors",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tables/api/1/columns",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::createColumn",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/tables/api/1/columns/{columnId}",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::deleteColumn",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/api/1/columns/{columnId}",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::getColumn",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/tables/api/1/columns/{columnId}",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::updateColumn",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tables/api/1/import/table/{tableId}",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::importInTable",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tables/api/1/import/views/{viewId}",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::importInView",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/tables/api/1/rows/{rowId}",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::deleteRow",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/api/1/rows/{rowId}",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::getRow",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/tables/api/1/rows/{rowId}",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::updateRow",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tables/api/1/shares",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::createShare",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/tables/api/1/shares/{shareId}",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::deleteShare",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/api/1/shares/{shareId}",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::getShare",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/tables/api/1/shares/{shareId}",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::updateSharePermissions",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/tables/api/1/shares/{shareId}/display-mode",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::updateShareDisplayMode",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/api/1/tables",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tables/api/1/tables",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::createTable",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/tables/api/1/tables/{tableId}",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::deleteTable",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/api/1/tables/{tableId}",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::getTable",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/tables/api/1/tables/{tableId}",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::updateTable",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/api/1/tables/{tableId}/columns",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::indexTableColumns",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tables/api/1/tables/{tableId}/columns",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::createTableColumn",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/api/1/tables/{tableId}/relations",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::indexTableRelations",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/api/1/tables/{tableId}/rows",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::indexTableRows",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tables/api/1/tables/{tableId}/rows",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::createRowInTable",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/api/1/tables/{tableId}/rows/simple",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::indexTableRowsSimple",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/api/1/tables/{tableId}/scheme",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::showScheme",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/api/1/tables/{tableId}/shares",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::indexTableShares",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tables/api/1/tables/{tableId}/shares",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::createTableShare",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/api/1/tables/{tableId}/views",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::indexViews",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tables/api/1/tables/{tableId}/views",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::createView",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/tables/api/1/views/{viewId}",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::deleteView",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/api/1/views/{viewId}",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::getView",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/tables/api/1/views/{viewId}",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::updateView",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/api/1/views/{viewId}/columns",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::indexViewColumns",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/api/1/views/{viewId}/relations",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::indexViewRelations",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/api/1/views/{viewId}/rows",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::indexViewRows",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tables/api/1/views/{viewId}/rows",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::createRowInView",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/tables/api/1/views/{viewId}/rows/{rowId}",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::deleteRowByView",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/api/1/views/{viewId}/shares",
+      "target": "OCA\\Tables\\Controller\\Api1Controller::indexViewShares",
+      "openapi": [
+        "default"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/tables/api/2/{path}",
+      "target": "OCA\\Tables\\Controller\\Api2Controller::preflightedCors",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/app/{contextId}",
+      "target": "OCA\\Tables\\Controller\\PageController::context",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tables/import-preview/table/{tableId}",
+      "target": "OCA\\Tables\\Controller\\ImportController::previewImportTable",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tables/import-preview/view/{viewId}",
+      "target": "OCA\\Tables\\Controller\\ImportController::previewImportView",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tables/import/table/{tableId}",
+      "target": "OCA\\Tables\\Controller\\ImportController::importInTable",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tables/import/view/{viewId}",
+      "target": "OCA\\Tables\\Controller\\ImportController::importInView",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tables/importupload-preview/table/{tableId}",
+      "target": "OCA\\Tables\\Controller\\ImportController::previewUploadImportTable",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tables/importupload-preview/view/{viewId}",
+      "target": "OCA\\Tables\\Controller\\ImportController::previewUploadImportView",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tables/importupload/table/{tableId}",
+      "target": "OCA\\Tables\\Controller\\ImportController::importUploadInTable",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tables/importupload/view/{viewId}",
+      "target": "OCA\\Tables\\Controller\\ImportController::importUploadInView",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/tables/row/{id}",
+      "target": "OCA\\Tables\\Controller\\RowController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/row/{id}",
+      "target": "OCA\\Tables\\Controller\\RowController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/tables/row/{id}",
+      "target": "OCA\\Tables\\Controller\\RowController::updateSet",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/tables/row/{id}/column/{columnId}",
+      "target": "OCA\\Tables\\Controller\\RowController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/row/table/{tableId}",
+      "target": "OCA\\Tables\\Controller\\RowController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/row/view/{viewId}",
+      "target": "OCA\\Tables\\Controller\\RowController::indexView",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/s/{token}",
+      "target": "OCA\\Tables\\Controller\\PublicSharePageController::showShare",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/s/{token}/authenticate",
+      "target": "OCA\\Tables\\Controller\\PublicSharePageController::showAuthenticate",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tables/s/{token}/authenticate",
+      "target": "OCA\\Tables\\Controller\\PublicSharePageController::authenticate",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/search/all",
+      "target": "OCA\\Tables\\Controller\\SearchController::all",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tables/share",
+      "target": "OCA\\Tables\\Controller\\ShareController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/tables/share/{id}",
+      "target": "OCA\\Tables\\Controller\\ShareController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/share/{id}",
+      "target": "OCA\\Tables\\Controller\\ShareController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/tables/share/{id}/display-mode",
+      "target": "OCA\\Tables\\Controller\\ShareController::updateDisplayMode",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/tables/share/{id}/permission",
+      "target": "OCA\\Tables\\Controller\\ShareController::updatePermission",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/tables/share/{id}/permissions",
+      "target": "OCA\\Tables\\Controller\\ShareController::updatePermissions",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/share/policy",
+      "target": "OCA\\Tables\\Controller\\ShareController::sharePolicy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/share/table/{tableId}",
+      "target": "OCA\\Tables\\Controller\\ShareController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/share/view/{viewId}",
+      "target": "OCA\\Tables\\Controller\\ShareController::indexView",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/table",
+      "target": "OCA\\Tables\\Controller\\TableController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tables/table",
+      "target": "OCA\\Tables\\Controller\\TableController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/tables/table/{id}",
+      "target": "OCA\\Tables\\Controller\\TableController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/table/{id}",
+      "target": "OCA\\Tables\\Controller\\TableController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/tables/table/{id}",
+      "target": "OCA\\Tables\\Controller\\TableController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/table/templates",
+      "target": "OCA\\Tables\\Controller\\TableTemplateController::list",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tables/v2/import/table/{tableId}",
+      "target": "OCA\\Tables\\Controller\\ImportController::importV2InTable",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tables/v2/import/view/{viewId}",
+      "target": "OCA\\Tables\\Controller\\ImportController::importV2InView",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tables/v2/importupload/table/{tableId}",
+      "target": "OCA\\Tables\\Controller\\ImportController::importV2UploadInTable",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tables/v2/importupload/view/{viewId}",
+      "target": "OCA\\Tables\\Controller\\ImportController::importV2UploadInView",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/view",
+      "target": "OCA\\Tables\\Controller\\ViewController::indexSharedWithMe",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/tables/view",
+      "target": "OCA\\Tables\\Controller\\ViewController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/tables/view/{id}",
+      "target": "OCA\\Tables\\Controller\\ViewController::destroy",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/view/{id}",
+      "target": "OCA\\Tables\\Controller\\ViewController::show",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/tables/view/{id}",
+      "target": "OCA\\Tables\\Controller\\ViewController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/tables/view/{viewId}/row/{id}",
+      "target": "OCA\\Tables\\Controller\\RowController::destroyByView",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/view/{viewId}/row/{id}/present",
+      "target": "OCA\\Tables\\Controller\\RowController::presentInView",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/tables/view/table/{tableId}",
+      "target": "OCA\\Tables\\Controller\\ViewController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/tables/api/2/{nodeCollection}/{nodeId}/rows",
+      "target": "OCA\\Tables\\Controller\\RowOCSController::createRow",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/tables/api/2/{nodeCollection}/{nodeId}/rows/{rowId}",
+      "target": "OCA\\Tables\\Controller\\RowOCSController::deleteRow",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/tables/api/2/{nodeCollection}/{nodeId}/rows/{rowId}",
+      "target": "OCA\\Tables\\Controller\\RowOCSController::updateRow",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/tables/api/2/{nodeCollection}/{nodeId}/share",
+      "target": "OCA\\Tables\\Controller\\ShareOCSController::createLinkShare",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/tables/api/2/columns/{id}",
+      "target": "OCA\\Tables\\Controller\\ApiColumnsController::show",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/tables/api/2/columns/{nodeType}/{nodeId}",
+      "target": "OCA\\Tables\\Controller\\ApiColumnsController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/tables/api/2/columns/datetime",
+      "target": "OCA\\Tables\\Controller\\ApiColumnsController::createDatetimeColumn",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/tables/api/2/columns/number",
+      "target": "OCA\\Tables\\Controller\\ApiColumnsController::createNumberColumn",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/tables/api/2/columns/selection",
+      "target": "OCA\\Tables\\Controller\\ApiColumnsController::createSelectionColumn",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/tables/api/2/columns/text",
+      "target": "OCA\\Tables\\Controller\\ApiColumnsController::createTextColumn",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/tables/api/2/columns/usergroup",
+      "target": "OCA\\Tables\\Controller\\ApiColumnsController::createUsergroupColumn",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/tables/api/2/config/{key}",
+      "target": "OCA\\Tables\\Controller\\ConfigController::setValue",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/tables/api/2/config/table/{id}",
+      "target": "OCA\\Tables\\Controller\\ConfigController::getTableConfig",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/tables/api/2/config/view/{id}",
+      "target": "OCA\\Tables\\Controller\\ConfigController::getViewConfig",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/tables/api/2/contexts",
+      "target": "OCA\\Tables\\Controller\\ContextController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/tables/api/2/contexts",
+      "target": "OCA\\Tables\\Controller\\ContextController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/tables/api/2/contexts/{contextId}",
+      "target": "OCA\\Tables\\Controller\\ContextController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/tables/api/2/contexts/{contextId}",
+      "target": "OCA\\Tables\\Controller\\ContextController::show",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/tables/api/2/contexts/{contextId}",
+      "target": "OCA\\Tables\\Controller\\ContextController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/tables/api/2/contexts/{contextId}/pages/{pageId}",
+      "target": "OCA\\Tables\\Controller\\ContextController::updateContentOrder",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/tables/api/2/contexts/{contextId}/scheme/export",
+      "target": "OCA\\Tables\\Controller\\ContextController::exportScheme",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/tables/api/2/contexts/{contextId}/scheme/import",
+      "target": "OCA\\Tables\\Controller\\ContextController::importScheme",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/tables/api/2/contexts/{contextId}/scheme/preview-changes",
+      "target": "OCA\\Tables\\Controller\\ContextController::previewSchemeChanges",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/tables/api/2/contexts/{contextId}/transfer",
+      "target": "OCA\\Tables\\Controller\\ContextController::transfer",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/tables/api/2/favorites/{nodeType}/{nodeId}",
+      "target": "OCA\\Tables\\Controller\\ApiFavoriteController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/tables/api/2/favorites/{nodeType}/{nodeId}",
+      "target": "OCA\\Tables\\Controller\\ApiFavoriteController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/tables/api/2/init",
+      "target": "OCA\\Tables\\Controller\\ApiGeneralController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/tables/api/2/public/{token}/columns",
+      "target": "OCA\\Tables\\Controller\\ApiPublicColumnsController::indexByPublicLink",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/tables/api/2/public/{token}/rows",
+      "target": "OCA\\Tables\\Controller\\PublicRowOCSController::getRows",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/tables/api/2/public/{token}/rows",
+      "target": "OCA\\Tables\\Controller\\PublicRowOCSController::createRow",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/tables/api/2/public/{token}/rows/{rowId}",
+      "target": "OCA\\Tables\\Controller\\PublicRowOCSController::deleteRow",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/tables/api/2/public/{token}/rows/{rowId}",
+      "target": "OCA\\Tables\\Controller\\PublicRowOCSController::updateRow",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/tables/api/2/tables",
+      "target": "OCA\\Tables\\Controller\\ApiTablesController::index",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/tables/api/2/tables",
+      "target": "OCA\\Tables\\Controller\\ApiTablesController::create",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/tables/api/2/tables/{id}",
+      "target": "OCA\\Tables\\Controller\\ApiTablesController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/tables/api/2/tables/{id}",
+      "target": "OCA\\Tables\\Controller\\ApiTablesController::show",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/tables/api/2/tables/{id}",
+      "target": "OCA\\Tables\\Controller\\ApiTablesController::update",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/tables/api/2/tables/{id}/scheme/import",
+      "target": "OCA\\Tables\\Controller\\ApiTablesController::importScheme",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/tables/api/2/tables/{id}/scheme/preview-changes",
+      "target": "OCA\\Tables\\Controller\\ApiTablesController::previewSchemeChanges",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/tables/api/2/tables/{id}/transfer",
+      "target": "OCA\\Tables\\Controller\\ApiTablesController::transfer",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/tables/api/2/tables/scheme",
+      "target": "OCA\\Tables\\Controller\\ApiTablesController::createFromScheme",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/tables/api/2/tables/scheme/{id}",
+      "target": "OCA\\Tables\\Controller\\ApiTablesController::showScheme",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/tables/navigation",
+      "target": "OCA\\Tables\\Controller\\NavigationController::getAppsNavigation",
+      "openapi": [
+        "ignore"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/capabilities",
+      "target": "OCA\\Tables\\Capabilities",
+      "openapi": [],
+      "kind": "capability"
+    }
+  ]
+}

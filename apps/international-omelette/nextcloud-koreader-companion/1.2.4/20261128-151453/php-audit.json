@@ -1,0 +1,490 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\KoreaderCompanion\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "symfony/polyfill-mbstring v1.33.0, in 3rdparty/ of Nextcloud 30 to 31"
+      ],
+      "lines": [
+        "vendor/ ships 1 package that the server ships itself in a major of Nextcloud 30 to 31. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  symfony/polyfill-mbstring v1.33.0, in 3rdparty/ of Nextcloud 30 to 31"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "appinfo/register_command.php:9 OC::$server",
+        "lib/Controller/OpdsController.php:65 OC\\Security\\Throttle\\MaxDelayReached",
+        "lib/Controller/OpdsController.php:352 OC::$server",
+        "lib/Controller/OpdsController.php:357 OC::$server",
+        "lib/Controller/OpdsController.php:362 OC::$server",
+        "lib/Controller/OpdsController.php:377 OC::$server",
+        "lib/Controller/SettingsController.php:320 OC::$server",
+        "templates/page.php:139 OC::$server",
+        "templates/page.php:139 OC::$server",
+        "templates/page.php:165 OC::$server",
+        "templates/page.php:165 OC::$server"
+      ],
+      "lines": [
+        "11 uses of the private API of the server in 4 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  appinfo/register_command.php:9 OC::$server",
+        "  lib/Controller/OpdsController.php:65 OC\\Security\\Throttle\\MaxDelayReached",
+        "  lib/Controller/OpdsController.php:352 OC::$server",
+        "  lib/Controller/OpdsController.php:357 OC::$server",
+        "  lib/Controller/OpdsController.php:362 OC::$server",
+        "  lib/Controller/OpdsController.php:377 OC::$server",
+        "  lib/Controller/SettingsController.php:320 OC::$server",
+        "  templates/page.php:139 OC::$server",
+        "  templates/page.php:139 OC::$server",
+        "  templates/page.php:165 OC::$server",
+        "  templates/page.php:165 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 8
+        }
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:47 get()",
+        "lib/AppInfo/Application.php:48 get()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 2 places. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:47 get()",
+        "  lib/AppInfo/Application.php:48 get()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/koreader_companion/opds/books/{id}/download/{format}  koreader_companion.opds.download  appinfo/routes.php:22 routes",
+        "GET /index.php/apps/koreader_companion/opds/books/{id}/thumb  koreader_companion.opds.thumbnail  appinfo/routes.php:23 routes",
+        "GET /index.php/apps/koreader_companion/opds/authors  koreader_companion.opds.authors  appinfo/routes.php:26 routes",
+        "GET /index.php/apps/koreader_companion/opds/authors/{author}  koreader_companion.opds.authorbooks  appinfo/routes.php:27 routes",
+        "GET /index.php/apps/koreader_companion/opds/series  koreader_companion.opds.series  appinfo/routes.php:28 routes",
+        "GET /index.php/apps/koreader_companion/opds/series/{seriesName}  koreader_companion.opds.seriesbooks  appinfo/routes.php:29 routes",
+        "GET /index.php/apps/koreader_companion/opds/genres  koreader_companion.opds.genres  appinfo/routes.php:30 routes",
+        "GET /index.php/apps/koreader_companion/opds/genres/{genre}  koreader_companion.opds.genrebooks  appinfo/routes.php:31 routes",
+        "GET /index.php/apps/koreader_companion/opds/formats  koreader_companion.opds.formats  appinfo/routes.php:32 routes",
+        "GET /index.php/apps/koreader_companion/opds/formats/{format}  koreader_companion.opds.formatbooks  appinfo/routes.php:33 routes",
+        "GET /index.php/apps/koreader_companion/opds/languages  koreader_companion.opds.languages  appinfo/routes.php:34 routes",
+        "GET /index.php/apps/koreader_companion/opds/languages/{language}  koreader_companion.opds.languagebooks  appinfo/routes.php:35 routes",
+        "GET /index.php/apps/koreader_companion/sync/users/auth  koreader_companion.koreader.authuser  appinfo/routes.php:38 routes",
+        "PUT /index.php/apps/koreader_companion/sync/syncs/progress  koreader_companion.koreader.updateprogress  appinfo/routes.php:39 routes",
+        "GET /index.php/apps/koreader_companion/sync/syncs/progress/{document}  koreader_companion.koreader.getprogress  appinfo/routes.php:40 routes",
+        "GET /index.php/apps/koreader_companion/sync/healthcheck  koreader_companion.koreader.healthcheck  appinfo/routes.php:41 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 16 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 2 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/koreader_companion/opds/books/{id}/download/{format}  koreader_companion.opds.download  appinfo/routes.php:22 routes",
+        "  GET /index.php/apps/koreader_companion/opds/books/{id}/thumb  koreader_companion.opds.thumbnail  appinfo/routes.php:23 routes",
+        "  GET /index.php/apps/koreader_companion/opds/authors  koreader_companion.opds.authors  appinfo/routes.php:26 routes",
+        "  GET /index.php/apps/koreader_companion/opds/authors/{author}  koreader_companion.opds.authorbooks  appinfo/routes.php:27 routes",
+        "  GET /index.php/apps/koreader_companion/opds/series  koreader_companion.opds.series  appinfo/routes.php:28 routes",
+        "  GET /index.php/apps/koreader_companion/opds/series/{seriesName}  koreader_companion.opds.seriesbooks  appinfo/routes.php:29 routes",
+        "  GET /index.php/apps/koreader_companion/opds/genres  koreader_companion.opds.genres  appinfo/routes.php:30 routes",
+        "  GET /index.php/apps/koreader_companion/opds/genres/{genre}  koreader_companion.opds.genrebooks  appinfo/routes.php:31 routes",
+        "  GET /index.php/apps/koreader_companion/opds/formats  koreader_companion.opds.formats  appinfo/routes.php:32 routes",
+        "  GET /index.php/apps/koreader_companion/opds/formats/{format}  koreader_companion.opds.formatbooks  appinfo/routes.php:33 routes",
+        "  GET /index.php/apps/koreader_companion/opds/languages  koreader_companion.opds.languages  appinfo/routes.php:34 routes",
+        "  GET /index.php/apps/koreader_companion/opds/languages/{language}  koreader_companion.opds.languagebooks  appinfo/routes.php:35 routes",
+        "  GET /index.php/apps/koreader_companion/sync/users/auth  koreader_companion.koreader.authuser  appinfo/routes.php:38 routes",
+        "  PUT /index.php/apps/koreader_companion/sync/syncs/progress  koreader_companion.koreader.updateprogress  appinfo/routes.php:39 routes",
+        "  GET /index.php/apps/koreader_companion/sync/syncs/progress/{document}  koreader_companion.koreader.getprogress  appinfo/routes.php:40 routes",
+        "  GET /index.php/apps/koreader_companion/sync/healthcheck  koreader_companion.koreader.healthcheck  appinfo/routes.php:41 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 13
+        }
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Command/GenerateBookHashesCommand.php:411 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Command/GenerateBookHashesCommand.php:433 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Controller/KoreaderController.php:456 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "lib/Service/BookService.php:333 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId"
+      ],
+      "lines": [
+        "4 uses in 3 files of the public API that is deprecated in Nextcloud 30 to 31. The text of the tag names the replacement where it has one.",
+        "  lib/Command/GenerateBookHashesCommand.php:411 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Command/GenerateBookHashesCommand.php:433 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Controller/KoreaderController.php:456 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId",
+        "  lib/Service/BookService.php:333 OCP\\IDBConnection::lastInsertId(): deprecated since Nextcloud 21; use \\OCP\\DB\\QueryBuilder\\IQueryBuilder::getLastInsertId"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/page.php:61 style= attribute",
+        "templates/page.php:148 style= attribute",
+        "templates/page.php:226 style= attribute",
+        "templates/page.php:247 style= attribute",
+        "templates/page.php:261 style= attribute",
+        "templates/page.php:263 style= attribute",
+        "templates/page.php:305 style= attribute",
+        "templates/page.php:319 style= attribute",
+        "templates/page.php:336 style= attribute",
+        "templates/page.php:425 style= attribute",
+        "templates/page.php:434 style= attribute",
+        "templates/page.php:437 style= attribute",
+        "templates/page.php:448 style= attribute",
+        "templates/page.php:500 style= attribute",
+        "templates/page.php:535 style= attribute"
+      ],
+      "lines": [
+        "15 inline styles in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/page.php:61 style= attribute",
+        "  templates/page.php:148 style= attribute",
+        "  templates/page.php:226 style= attribute",
+        "  templates/page.php:247 style= attribute",
+        "  templates/page.php:261 style= attribute",
+        "  templates/page.php:263 style= attribute",
+        "  templates/page.php:305 style= attribute",
+        "  templates/page.php:319 style= attribute",
+        "  templates/page.php:336 style= attribute",
+        "  templates/page.php:425 style= attribute",
+        "  templates/page.php:434 style= attribute",
+        "  templates/page.php:437 style= attribute",
+        "  templates/page.php:448 style= attribute",
+        "  templates/page.php:500 style= attribute",
+        "  templates/page.php:535 style= attribute"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 12
+        }
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Command/GenerateBookHashesCommand.php:160",
+        "lib/Controller/SettingsController.php:290",
+        "lib/Listener/FileDeleteListener.php:91",
+        "lib/Service/BookService.php:1626"
+      ],
+      "lines": [
+        "4 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Command/GenerateBookHashesCommand.php:160",
+        "  lib/Controller/SettingsController.php:290",
+        "  lib/Listener/FileDeleteListener.php:91",
+        "  lib/Service/BookService.php:1626"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Command/GenerateBookHashesCommand.php:392 new DateTime()",
+        "lib/Controller/OpdsController.php:316 time()",
+        "lib/Controller/PageController.php:259 time()",
+        "lib/Controller/PageController.php:350 time()",
+        "lib/Controller/SettingsController.php:250 time()",
+        "lib/Controller/SettingsController.php:276 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 6 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Command/GenerateBookHashesCommand.php:392 new DateTime()",
+        "  lib/Controller/OpdsController.php:316 time()",
+        "  lib/Controller/PageController.php:259 time()",
+        "  lib/Controller/PageController.php:350 time()",
+        "  lib/Controller/SettingsController.php:250 time()",
+        "  lib/Controller/SettingsController.php:276 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    }
+  ],
+  "endpoints": 31,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/koreader_companion/",
+      "target": "OCA\\KoreaderCompanion\\Controller\\PageController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:5 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/koreader_companion/books/{id}",
+      "target": "OCA\\KoreaderCompanion\\Controller\\PageController::deleteBook",
+      "openapi": [],
+      "source": "appinfo/routes.php:11 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/koreader_companion/books/{id}/metadata",
+      "target": "OCA\\KoreaderCompanion\\Controller\\PageController::updateMetadata",
+      "openapi": [],
+      "source": "appinfo/routes.php:10 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/koreader_companion/extract-metadata",
+      "target": "OCA\\KoreaderCompanion\\Controller\\PageController::extractMetadata",
+      "openapi": [],
+      "source": "appinfo/routes.php:9 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/koreader_companion/opds",
+      "target": "OCA\\KoreaderCompanion\\Controller\\OpdsController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:19 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/koreader_companion/opds/authors",
+      "target": "OCA\\KoreaderCompanion\\Controller\\OpdsController::authors",
+      "openapi": [],
+      "source": "appinfo/routes.php:26 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/koreader_companion/opds/authors/{author}",
+      "target": "OCA\\KoreaderCompanion\\Controller\\OpdsController::authorBooks",
+      "openapi": [],
+      "source": "appinfo/routes.php:27 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/koreader_companion/opds/books/{id}/download/{format}",
+      "target": "OCA\\KoreaderCompanion\\Controller\\OpdsController::download",
+      "openapi": [],
+      "source": "appinfo/routes.php:22 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/koreader_companion/opds/books/{id}/thumb",
+      "target": "OCA\\KoreaderCompanion\\Controller\\OpdsController::thumbnail",
+      "openapi": [],
+      "source": "appinfo/routes.php:23 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/koreader_companion/opds/formats",
+      "target": "OCA\\KoreaderCompanion\\Controller\\OpdsController::formats",
+      "openapi": [],
+      "source": "appinfo/routes.php:32 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/koreader_companion/opds/formats/{format}",
+      "target": "OCA\\KoreaderCompanion\\Controller\\OpdsController::formatBooks",
+      "openapi": [],
+      "source": "appinfo/routes.php:33 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/koreader_companion/opds/genres",
+      "target": "OCA\\KoreaderCompanion\\Controller\\OpdsController::genres",
+      "openapi": [],
+      "source": "appinfo/routes.php:30 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/koreader_companion/opds/genres/{genre}",
+      "target": "OCA\\KoreaderCompanion\\Controller\\OpdsController::genreBooks",
+      "openapi": [],
+      "source": "appinfo/routes.php:31 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/koreader_companion/opds/languages",
+      "target": "OCA\\KoreaderCompanion\\Controller\\OpdsController::languages",
+      "openapi": [],
+      "source": "appinfo/routes.php:34 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/koreader_companion/opds/languages/{language}",
+      "target": "OCA\\KoreaderCompanion\\Controller\\OpdsController::languageBooks",
+      "openapi": [],
+      "source": "appinfo/routes.php:35 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/koreader_companion/opds/opensearch.xml",
+      "target": "OCA\\KoreaderCompanion\\Controller\\OpdsController::opensearch",
+      "openapi": [],
+      "source": "appinfo/routes.php:20 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/koreader_companion/opds/search",
+      "target": "OCA\\KoreaderCompanion\\Controller\\OpdsController::search",
+      "openapi": [],
+      "source": "appinfo/routes.php:21 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/koreader_companion/opds/series",
+      "target": "OCA\\KoreaderCompanion\\Controller\\OpdsController::series",
+      "openapi": [],
+      "source": "appinfo/routes.php:28 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/koreader_companion/opds/series/{seriesName}",
+      "target": "OCA\\KoreaderCompanion\\Controller\\OpdsController::seriesBooks",
+      "openapi": [],
+      "source": "appinfo/routes.php:29 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/koreader_companion/settings",
+      "target": "OCA\\KoreaderCompanion\\Controller\\SettingsController::getSettings",
+      "openapi": [],
+      "source": "appinfo/routes.php:12 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/koreader_companion/settings/auto-rename",
+      "target": "OCA\\KoreaderCompanion\\Controller\\SettingsController::setAutoRename",
+      "openapi": [],
+      "source": "appinfo/routes.php:14 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/koreader_companion/settings/batch-rename",
+      "target": "OCA\\KoreaderCompanion\\Controller\\SettingsController::batchRename",
+      "openapi": [],
+      "source": "appinfo/routes.php:15 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/koreader_companion/settings/batch-rename-progress",
+      "target": "OCA\\KoreaderCompanion\\Controller\\SettingsController::getBatchRenameProgress",
+      "openapi": [],
+      "source": "appinfo/routes.php:16 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/koreader_companion/settings/folder",
+      "target": "OCA\\KoreaderCompanion\\Controller\\SettingsController::setFolder",
+      "openapi": [],
+      "source": "appinfo/routes.php:13 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/koreader_companion/settings/koreader-password",
+      "target": "OCA\\KoreaderCompanion\\Controller\\PageController::getKoreaderPassword",
+      "openapi": [],
+      "source": "appinfo/routes.php:6 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/koreader_companion/settings/koreader-password",
+      "target": "OCA\\KoreaderCompanion\\Controller\\PageController::setKoreaderPassword",
+      "openapi": [],
+      "source": "appinfo/routes.php:7 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/koreader_companion/sync/healthcheck",
+      "target": "OCA\\KoreaderCompanion\\Controller\\KoreaderController::healthcheck",
+      "openapi": [],
+      "source": "appinfo/routes.php:41 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/koreader_companion/sync/syncs/progress",
+      "target": "OCA\\KoreaderCompanion\\Controller\\KoreaderController::updateProgress",
+      "openapi": [],
+      "source": "appinfo/routes.php:39 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/koreader_companion/sync/syncs/progress/{document}",
+      "target": "OCA\\KoreaderCompanion\\Controller\\KoreaderController::getProgress",
+      "openapi": [],
+      "source": "appinfo/routes.php:40 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/koreader_companion/sync/users/auth",
+      "target": "OCA\\KoreaderCompanion\\Controller\\KoreaderController::authUser",
+      "openapi": [],
+      "source": "appinfo/routes.php:38 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/koreader_companion/upload",
+      "target": "OCA\\KoreaderCompanion\\Controller\\PageController::uploadBook",
+      "openapi": [],
+      "source": "appinfo/routes.php:8 routes",
+      "kind": "route"
+    }
+  ]
+}

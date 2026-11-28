@@ -1,0 +1,395 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Recognize\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "psr/log 3.0.2, in 3rdparty/ of Nextcloud 35 to 36",
+        "symfony/deprecation-contracts v3.7.1, in 3rdparty/ of Nextcloud 35 to 36"
+      ],
+      "lines": [
+        "vendor/ ships 2 packages that the server ships itself in a major of Nextcloud 35 to 36. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  psr/log 3.0.2, in 3rdparty/ of Nextcloud 35 to 36",
+        "  symfony/deprecation-contracts v3.7.1, in 3rdparty/ of Nextcloud 35 to 36"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/BackgroundJobs/ClassifierJob.php:74 OC_Util",
+        "lib/Command/Classify.php:98 OC_Util",
+        "lib/Controller/AdminController.php:285 OC::$server",
+        "lib/Service/FsActionService.php:92 OC\\Files\\SetupManager",
+        "lib/Service/FsActionService.php:97 OC\\User\\NoUserException",
+        "lib/Service/IgnoreService.php:45 OC\\Files\\Cache\\CacheQueryBuilder",
+        "lib/Service/StorageService.php:70 OC\\Files\\Cache\\CacheQueryBuilder"
+      ],
+      "lines": [
+        "7 uses of the private API of the server in 6 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/BackgroundJobs/ClassifierJob.php:74 OC_Util",
+        "  lib/Command/Classify.php:98 OC_Util",
+        "  lib/Controller/AdminController.php:285 OC::$server",
+        "  lib/Service/FsActionService.php:92 OC\\Files\\SetupManager",
+        "  lib/Service/FsActionService.php:97 OC\\User\\NoUserException",
+        "  lib/Service/IgnoreService.php:45 OC\\Files\\Cache\\CacheQueryBuilder",
+        "  lib/Service/StorageService.php:70 OC\\Files\\Cache\\CacheQueryBuilder"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:77 get()",
+        "lib/AppInfo/Application.php:78 addListener()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 2 places. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:77 get()",
+        "  lib/AppInfo/Application.php:78 addListener()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/recognize/admin/count  recognize.admin.count  appinfo/routes.php:21 routes",
+        "GET /index.php/apps/recognize/admin/countMissed  recognize.admin.count_missed  appinfo/routes.php:21 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 22 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/recognize/admin/count  recognize.admin.count  appinfo/routes.php:21 routes",
+        "  GET /index.php/apps/recognize/admin/countMissed  recognize.admin.count_missed  appinfo/routes.php:21 routes"
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/AdminController.php:287 OCP\\AppFramework\\QueryException: deprecated since Nextcloud 20; catch \\Psr\\Container\\ContainerExceptionInterface",
+        "lib/Helper/TAR.php:284 OCP\\Files: deprecated since Nextcloud 14",
+        "lib/Helper/TAR.php:284 OCP\\Files::rmdirr(): deprecated since Nextcloud 14",
+        "lib/Helper/TAR.php:354 OCP\\Files::rmdirr(): deprecated since Nextcloud 14"
+      ],
+      "lines": [
+        "4 uses in 2 files of the public API that is deprecated in Nextcloud 35 to 36. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/AdminController.php:287 OCP\\AppFramework\\QueryException: deprecated since Nextcloud 20; catch \\Psr\\Container\\ContainerExceptionInterface",
+        "  lib/Helper/TAR.php:284 OCP\\Files: deprecated since Nextcloud 14",
+        "  lib/Helper/TAR.php:284 OCP\\Files::rmdirr(): deprecated since Nextcloud 14",
+        "  lib/Helper/TAR.php:354 OCP\\Files::rmdirr(): deprecated since Nextcloud 14"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Db/FsActionMapper.php:235"
+      ],
+      "lines": [
+        "1 transaction is opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Db/FsActionMapper.php:235"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Classifiers/Audio/MusicnnClassifier.php:47 time()",
+        "lib/Classifiers/Classifier.php:76 time()",
+        "lib/Classifiers/Classifier.php:78 time()",
+        "lib/Classifiers/Classifier.php:209 time()",
+        "lib/Classifiers/Images/ClusteringFaceClassifier.php:142 time()",
+        "lib/Classifiers/Images/ImagenetClassifier.php:51 time()",
+        "lib/Classifiers/Images/LandmarksClassifier.php:48 time()",
+        "lib/Classifiers/Video/MovinetClassifier.php:46 time()",
+        "lib/Service/FaceClusterAnalyzer.php:219 time()",
+        "lib/TaskProcessing/TaskResultListener.php:179 time()",
+        "lib/TaskProcessing/TaskResultListener.php:268 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 11 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Classifiers/Audio/MusicnnClassifier.php:47 time()",
+        "  lib/Classifiers/Classifier.php:76 time()",
+        "  lib/Classifiers/Classifier.php:78 time()",
+        "  lib/Classifiers/Classifier.php:209 time()",
+        "  lib/Classifiers/Images/ClusteringFaceClassifier.php:142 time()",
+        "  lib/Classifiers/Images/ImagenetClassifier.php:51 time()",
+        "  lib/Classifiers/Images/LandmarksClassifier.php:48 time()",
+        "  lib/Classifiers/Video/MovinetClassifier.php:46 time()",
+        "  lib/Service/FaceClusterAnalyzer.php:219 time()",
+        "  lib/TaskProcessing/TaskResultListener.php:179 time()",
+        "  lib/TaskProcessing/TaskResultListener.php:268 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 8
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Classifiers/Classifier.php:162 getAppValueString()",
+        "lib/Classifiers/Classifier.php:167 getAppValueString()",
+        "lib/Classifiers/Classifier.php:169 getAppValueString()",
+        "lib/Classifiers/Classifier.php:170 getAppValueString()",
+        "lib/Classifiers/Classifier.php:179 getAppValueString()",
+        "lib/Classifiers/Classifier.php:182 getAppValueString()",
+        "lib/Classifiers/Classifier.php:186 getAppValueString()",
+        "lib/Controller/AdminController.php:180 getAppValueString()",
+        "lib/Controller/AdminController.php:181 getAppValueString()",
+        "lib/Controller/AdminController.php:188 setAppValueString()",
+        "lib/Controller/AdminController.php:190 setAppValueString()",
+        "lib/Controller/AdminController.php:286 getAppValueString()",
+        "lib/Dav/Faces/PropFindPlugin.php:217 getAppValueString()",
+        "lib/Migration/InstallDeps.php:80 getAppValueString()",
+        "lib/Migration/InstallDeps.php:92 getAppValueString()",
+        "lib/Migration/InstallDeps.php:108 getAppValueString()",
+        "lib/Migration/InstallDeps.php:109 getAppValueString()",
+        "lib/Migration/InstallDeps.php:116 setAppValueString()",
+        "lib/Migration/InstallDeps.php:118 setAppValueString()",
+        "lib/Migration/InstallDeps.php:161 setAppValueString()",
+        "lib/Migration/InstallDeps.php:166 setAppValueString()",
+        "lib/Migration/InstallDeps.php:259 getAppValueString()",
+        "lib/Migration/InstallDeps.php:260 getAppValueString()",
+        "lib/Migration/InstallDeps.php:267 setAppValueString()",
+        "lib/Migration/InstallDeps.php:269 setAppValueString()",
+        "lib/Migration/Version011000002Date20260129094821.php:25 hasAppKey()",
+        "lib/Migration/Version011000002Date20260129094821.php:26 getAppValueString()",
+        "lib/Migration/Version011000002Date20260129094821.php:28 setAppValueString()",
+        "lib/Service/QueueService.php:52 getAppValueString()",
+        "lib/Service/SettingsService.php:116 getAppValueString()",
+        "lib/Service/SettingsService.php:120 getAppValueString()",
+        "lib/Service/SettingsService.php:126 getAppValueString()",
+        "lib/Service/SettingsService.php:161 getAppValueString()",
+        "lib/Service/SettingsService.php:187 setAppValueString()",
+        "lib/TaskProcessing/TaskResultListener.php:82 setAppValueString()",
+        "lib/TaskProcessing/TaskResultListener.php:178 setAppValueString()",
+        "lib/TaskProcessing/TaskResultListener.php:179 setAppValueString()",
+        "lib/TaskProcessing/TaskResultListener.php:267 setAppValueString()",
+        "lib/TaskProcessing/TaskResultListener.php:268 setAppValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 39 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Classifiers/Classifier.php:162 getAppValueString()",
+        "  lib/Classifiers/Classifier.php:167 getAppValueString()",
+        "  lib/Classifiers/Classifier.php:169 getAppValueString()",
+        "  lib/Classifiers/Classifier.php:170 getAppValueString()",
+        "  lib/Classifiers/Classifier.php:179 getAppValueString()",
+        "  lib/Classifiers/Classifier.php:182 getAppValueString()",
+        "  lib/Classifiers/Classifier.php:186 getAppValueString()",
+        "  lib/Controller/AdminController.php:180 getAppValueString()",
+        "  lib/Controller/AdminController.php:181 getAppValueString()",
+        "  lib/Controller/AdminController.php:188 setAppValueString()",
+        "  lib/Controller/AdminController.php:190 setAppValueString()",
+        "  lib/Controller/AdminController.php:286 getAppValueString()",
+        "  lib/Dav/Faces/PropFindPlugin.php:217 getAppValueString()",
+        "  lib/Migration/InstallDeps.php:80 getAppValueString()",
+        "  lib/Migration/InstallDeps.php:92 getAppValueString()",
+        "  lib/Migration/InstallDeps.php:108 getAppValueString()",
+        "  lib/Migration/InstallDeps.php:109 getAppValueString()",
+        "  lib/Migration/InstallDeps.php:116 setAppValueString()",
+        "  lib/Migration/InstallDeps.php:118 setAppValueString()",
+        "  lib/Migration/InstallDeps.php:161 setAppValueString()",
+        "  lib/Migration/InstallDeps.php:166 setAppValueString()",
+        "  lib/Migration/InstallDeps.php:259 getAppValueString()",
+        "  lib/Migration/InstallDeps.php:260 getAppValueString()",
+        "  lib/Migration/InstallDeps.php:267 setAppValueString()",
+        "  lib/Migration/InstallDeps.php:269 setAppValueString()",
+        "  lib/Migration/Version011000002Date20260129094821.php:25 hasAppKey()",
+        "  lib/Migration/Version011000002Date20260129094821.php:26 getAppValueString()",
+        "  lib/Migration/Version011000002Date20260129094821.php:28 setAppValueString()",
+        "  lib/Service/QueueService.php:52 getAppValueString()",
+        "  lib/Service/SettingsService.php:116 getAppValueString()",
+        "  lib/Service/SettingsService.php:120 getAppValueString()",
+        "  lib/Service/SettingsService.php:126 getAppValueString()",
+        "  lib/Service/SettingsService.php:161 getAppValueString()",
+        "  lib/Service/SettingsService.php:187 setAppValueString()",
+        "  lib/TaskProcessing/TaskResultListener.php:82 setAppValueString()",
+        "  lib/TaskProcessing/TaskResultListener.php:178 setAppValueString()",
+        "  lib/TaskProcessing/TaskResultListener.php:179 setAppValueString()",
+        "  lib/TaskProcessing/TaskResultListener.php:267 setAppValueString()",
+        "  lib/TaskProcessing/TaskResultListener.php:268 setAppValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 36
+        }
+      ]
+    }
+  ],
+  "endpoints": 21,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/recognize/admin/avx",
+      "target": "OCA\\Recognize\\Controller\\AdminController::avx",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/recognize/admin/clearJobs",
+      "target": "OCA\\Recognize\\Controller\\AdminController::clearAllJobs",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/recognize/admin/count",
+      "target": "OCA\\Recognize\\Controller\\AdminController::count",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/recognize/admin/countMissed",
+      "target": "OCA\\Recognize\\Controller\\AdminController::countMissed",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/recognize/admin/countQueued",
+      "target": "OCA\\Recognize\\Controller\\AdminController::countQueued",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/recognize/admin/cron",
+      "target": "OCA\\Recognize\\Controller\\AdminController::cron",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/recognize/admin/ffmpeg",
+      "target": "OCA\\Recognize\\Controller\\AdminController::ffmpeg",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/recognize/admin/gputensorflow",
+      "target": "OCA\\Recognize\\Controller\\AdminController::gputensorflow",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/recognize/admin/jobs/{task}",
+      "target": "OCA\\Recognize\\Controller\\AdminController::hasJobs",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/recognize/admin/libtensorflow",
+      "target": "OCA\\Recognize\\Controller\\AdminController::libtensorflow",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/recognize/admin/musl",
+      "target": "OCA\\Recognize\\Controller\\AdminController::musl",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/recognize/admin/nice",
+      "target": "OCA\\Recognize\\Controller\\AdminController::nice",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/recognize/admin/nodejs",
+      "target": "OCA\\Recognize\\Controller\\AdminController::nodejs",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/recognize/admin/platform",
+      "target": "OCA\\Recognize\\Controller\\AdminController::platform",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/recognize/admin/recrawl",
+      "target": "OCA\\Recognize\\Controller\\AdminController::recrawl",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/recognize/admin/reset",
+      "target": "OCA\\Recognize\\Controller\\AdminController::reset",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/recognize/admin/resetFaces",
+      "target": "OCA\\Recognize\\Controller\\AdminController::resetFaces",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/recognize/admin/settings/{setting}",
+      "target": "OCA\\Recognize\\Controller\\AdminController::getSetting",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/recognize/admin/settings/{setting}",
+      "target": "OCA\\Recognize\\Controller\\AdminController::setSetting",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/recognize/admin/wasmtensorflow",
+      "target": "OCA\\Recognize\\Controller\\AdminController::wasmtensorflow",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": null,
+      "path": "/remote.php/dav",
+      "target": "OCA\\Recognize\\Dav\\RootCollection",
+      "openapi": [],
+      "kind": "DAV"
+    }
+  ]
+}

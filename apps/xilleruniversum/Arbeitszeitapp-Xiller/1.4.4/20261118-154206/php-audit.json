@@ -1,0 +1,556 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Timesheet\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "psr/http-message 1.1, in 3rdparty/ of Nextcloud 30 to 34"
+      ],
+      "lines": [
+        "vendor/ ships 1 package that the server ships itself in a major of Nextcloud 30 to 34. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  psr/http-message 1.1, in 3rdparty/ of Nextcloud 30 to 34"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/ChangeHistoryController.php:25 OC\\ForbiddenException",
+        "lib/Controller/ConfigController.php:51 OC\\ForbiddenException",
+        "lib/Controller/EntryController.php:222 OC\\ForbiddenException",
+        "lib/Service/ChangeHistoryService.php:35 OC\\ForbiddenException",
+        "lib/Service/EntryService.php:64 OC\\ForbiddenException",
+        "lib/Service/HistoryWriteCoordinator.php:34 OC\\ForbiddenException"
+      ],
+      "lines": [
+        "6 uses of the private API of the server in 6 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/ChangeHistoryController.php:25 OC\\ForbiddenException",
+        "  lib/Controller/ConfigController.php:51 OC\\ForbiddenException",
+        "  lib/Controller/EntryController.php:222 OC\\ForbiddenException",
+        "  lib/Service/ChangeHistoryService.php:35 OC\\ForbiddenException",
+        "  lib/Service/EntryService.php:64 OC\\ForbiddenException",
+        "  lib/Service/HistoryWriteCoordinator.php:34 OC\\ForbiddenException"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "boot-listener",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:52 injectFn()"
+      ],
+      "lines": [
+        "boot() registers a listener or takes a service from the container in 1 place. boot() runs once for every process of the server, so each of them is built on every request. registerEventListener() in register() builds a listener only when its event fires.",
+        "  lib/AppInfo/Application.php:52 injectFn()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/timesheet/api/entries  timesheet.entry.index  appinfo/routes.php:2 routes",
+        "POST /index.php/apps/timesheet/api/entries  timesheet.entry.create  appinfo/routes.php:2 routes",
+        "PUT /index.php/apps/timesheet/api/entries/{id}  timesheet.entry.update  appinfo/routes.php:2 routes",
+        "DELETE /index.php/apps/timesheet/api/entries/{id}  timesheet.entry.delete  appinfo/routes.php:2 routes",
+        "GET /index.php/apps/timesheet/api/entries/export-xlsx  timesheet.entry.exportxlsx  appinfo/routes.php:2 routes",
+        "GET /index.php/apps/timesheet/api/hr/users  timesheet.overview.users  appinfo/routes.php:2 routes",
+        "GET /index.php/apps/timesheet/api/hr/change-history  timesheet.changehistory.index  appinfo/routes.php:2 routes",
+        "GET /index.php/apps/timesheet/api/hr/userlist  timesheet.overview.gethruserlistdata  appinfo/routes.php:2 routes",
+        "GET /index.php/apps/timesheet/api/overtime/summary  timesheet.overview.getovertimesummary  appinfo/routes.php:2 routes",
+        "GET /index.php/apps/timesheet/api/balances/{userId}/{year}/{month}  timesheet.balance.getmonth  appinfo/routes.php:2 routes",
+        "PUT /index.php/apps/timesheet/api/preferences/break-input-mode  timesheet.preferences.setbreakinputmode  appinfo/routes.php:2 routes",
+        "PUT /index.php/apps/timesheet/api/preferences/hr-overview-width  timesheet.preferences.sethroverviewwidth  appinfo/routes.php:2 routes",
+        "PUT /index.php/apps/timesheet/api/preferences/change-history-view  timesheet.preferences.sethistoryview  appinfo/routes.php:2 routes",
+        "PUT /index.php/apps/timesheet/api/preferences/freelancer-mode  timesheet.employmentstatus.setfreelancermode  appinfo/routes.php:2 routes",
+        "POST /index.php/apps/timesheet/api/preferences/tour/complete  timesheet.tour.complete  appinfo/routes.php:2 routes",
+        "POST /index.php/apps/timesheet/api/update-notes  timesheet.updatenotes.load  appinfo/routes.php:2 routes",
+        "POST /index.php/apps/timesheet/api/update-notes/shown  timesheet.updatenotes.shown  appinfo/routes.php:2 routes",
+        "GET /index.php/apps/timesheet/api/hr/config/{userId}  timesheet.config.getuserconfig  appinfo/routes.php:2 routes",
+        "PUT /index.php/apps/timesheet/api/hr/config/{userId}  timesheet.config.setuserconfig  appinfo/routes.php:2 routes",
+        "GET /index.php/apps/timesheet/api/hr/notifications  timesheet.config.gethrnotificationsettings  appinfo/routes.php:2 routes",
+        "PUT /index.php/apps/timesheet/api/hr/notifications  timesheet.config.sethrnotificationsettings  appinfo/routes.php:2 routes",
+        "GET /index.php/apps/timesheet/api/hr/warnings  timesheet.config.gethrwarningthresholds  appinfo/routes.php:2 routes",
+        "PUT /index.php/apps/timesheet/api/hr/warnings  timesheet.config.sethrwarningthresholds  appinfo/routes.php:2 routes",
+        "GET /index.php/apps/timesheet/api/rules/effective  timesheet.config.geteffectiverulesself  appinfo/routes.php:2 routes",
+        "GET /index.php/apps/timesheet/api/rules/effective/{userId}  timesheet.config.geteffectiverulesforuser  appinfo/routes.php:2 routes",
+        "GET /index.php/apps/timesheet/api/holidays  timesheet.holiday.getholidays  appinfo/routes.php:2 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 26 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 15 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/timesheet/api/entries  timesheet.entry.index  appinfo/routes.php:2 routes",
+        "  POST /index.php/apps/timesheet/api/entries  timesheet.entry.create  appinfo/routes.php:2 routes",
+        "  PUT /index.php/apps/timesheet/api/entries/{id}  timesheet.entry.update  appinfo/routes.php:2 routes",
+        "  DELETE /index.php/apps/timesheet/api/entries/{id}  timesheet.entry.delete  appinfo/routes.php:2 routes",
+        "  GET /index.php/apps/timesheet/api/entries/export-xlsx  timesheet.entry.exportxlsx  appinfo/routes.php:2 routes",
+        "  GET /index.php/apps/timesheet/api/hr/users  timesheet.overview.users  appinfo/routes.php:2 routes",
+        "  GET /index.php/apps/timesheet/api/hr/change-history  timesheet.changehistory.index  appinfo/routes.php:2 routes",
+        "  GET /index.php/apps/timesheet/api/hr/userlist  timesheet.overview.gethruserlistdata  appinfo/routes.php:2 routes",
+        "  GET /index.php/apps/timesheet/api/overtime/summary  timesheet.overview.getovertimesummary  appinfo/routes.php:2 routes",
+        "  GET /index.php/apps/timesheet/api/balances/{userId}/{year}/{month}  timesheet.balance.getmonth  appinfo/routes.php:2 routes",
+        "  PUT /index.php/apps/timesheet/api/preferences/break-input-mode  timesheet.preferences.setbreakinputmode  appinfo/routes.php:2 routes",
+        "  PUT /index.php/apps/timesheet/api/preferences/hr-overview-width  timesheet.preferences.sethroverviewwidth  appinfo/routes.php:2 routes",
+        "  PUT /index.php/apps/timesheet/api/preferences/change-history-view  timesheet.preferences.sethistoryview  appinfo/routes.php:2 routes",
+        "  PUT /index.php/apps/timesheet/api/preferences/freelancer-mode  timesheet.employmentstatus.setfreelancermode  appinfo/routes.php:2 routes",
+        "  POST /index.php/apps/timesheet/api/preferences/tour/complete  timesheet.tour.complete  appinfo/routes.php:2 routes",
+        "  POST /index.php/apps/timesheet/api/update-notes  timesheet.updatenotes.load  appinfo/routes.php:2 routes",
+        "  POST /index.php/apps/timesheet/api/update-notes/shown  timesheet.updatenotes.shown  appinfo/routes.php:2 routes",
+        "  GET /index.php/apps/timesheet/api/hr/config/{userId}  timesheet.config.getuserconfig  appinfo/routes.php:2 routes",
+        "  PUT /index.php/apps/timesheet/api/hr/config/{userId}  timesheet.config.setuserconfig  appinfo/routes.php:2 routes",
+        "  GET /index.php/apps/timesheet/api/hr/notifications  timesheet.config.gethrnotificationsettings  appinfo/routes.php:2 routes",
+        "  PUT /index.php/apps/timesheet/api/hr/notifications  timesheet.config.sethrnotificationsettings  appinfo/routes.php:2 routes",
+        "  GET /index.php/apps/timesheet/api/hr/warnings  timesheet.config.gethrwarningthresholds  appinfo/routes.php:2 routes",
+        "  PUT /index.php/apps/timesheet/api/hr/warnings  timesheet.config.sethrwarningthresholds  appinfo/routes.php:2 routes",
+        "  GET /index.php/apps/timesheet/api/rules/effective  timesheet.config.geteffectiverulesself  appinfo/routes.php:2 routes",
+        "  GET /index.php/apps/timesheet/api/rules/effective/{userId}  timesheet.config.geteffectiverulesforuser  appinfo/routes.php:2 routes",
+        "  GET /index.php/apps/timesheet/api/holidays  timesheet.holiday.getholidays  appinfo/routes.php:2 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 23
+        }
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Db/ChangeHistoryAccountQueue.php:21 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Db/ChangeHistoryAccountQueue.php:23 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Db/ChangeHistoryAccountQueue.php:30 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Db/ChangeHistoryRecordingStore.php:26 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Db/ChangeHistoryRecordingStore.php:52 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Db/EmployeeBalanceNotificationStore.php:37 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "lib/Db/EmployeeBalanceNotificationStore.php:50 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Db/EmploymentStatusStore.php:46 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "lib/Db/EmploymentStatusStore.php:125 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "lib/Db/EmploymentStatusStore.php:164 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Db/HrPreferencesStore.php:111 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Db/HrPreferencesStore.php:124 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "lib/Db/MissingEntryReminderStore.php:31 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Db/MissingEntryReminderStore.php:38 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Db/MissingEntryReminderStore.php:51 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Db/MissingEntryReminderStore.php:63 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Db/TourProgressStore.php:40 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Db/TourProgressStore.php:46 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "lib/Db/UpdateNotesStore.php:29 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Db/UpdateNotesStore.php:33 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "lib/Db/UpdateNotesStore.php:49 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Db/UpdateNotesStore.php:77 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "lib/Db/UserPreferencesStore.php:51 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Db/UserPreferencesStore.php:81 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Db/UserPreferencesStore.php:107 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "lib/Db/UserPreferencesStore.php:126 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "lib/Migration/Version0009Date20261103.php:42 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Migration/Version0009Date20261103.php:43 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "lines": [
+        "28 uses in 10 files of the public API that is deprecated in Nextcloud 30 to 34. The text of the tag names the replacement where it has one.",
+        "  lib/Db/ChangeHistoryAccountQueue.php:21 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Db/ChangeHistoryAccountQueue.php:23 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Db/ChangeHistoryAccountQueue.php:30 OCP\\IConfig::deleteAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Db/ChangeHistoryRecordingStore.php:26 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Db/ChangeHistoryRecordingStore.php:52 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Db/EmployeeBalanceNotificationStore.php:37 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "  lib/Db/EmployeeBalanceNotificationStore.php:50 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Db/EmploymentStatusStore.php:46 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "  lib/Db/EmploymentStatusStore.php:125 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "  lib/Db/EmploymentStatusStore.php:164 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Db/HrPreferencesStore.php:111 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Db/HrPreferencesStore.php:124 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "  lib/Db/MissingEntryReminderStore.php:31 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Db/MissingEntryReminderStore.php:38 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Db/MissingEntryReminderStore.php:51 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Db/MissingEntryReminderStore.php:63 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Db/TourProgressStore.php:40 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Db/TourProgressStore.php:46 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "  lib/Db/UpdateNotesStore.php:29 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Db/UpdateNotesStore.php:33 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "  lib/Db/UpdateNotesStore.php:49 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Db/UpdateNotesStore.php:77 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "  lib/Db/UserPreferencesStore.php:51 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Db/UserPreferencesStore.php:81 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Db/UserPreferencesStore.php:107 OCP\\IConfig::setUserValue(): deprecated since Nextcloud 33; use IUserConfig directly",
+        "  lib/Db/UserPreferencesStore.php:126 OCP\\IConfig::getUserValueForUsers(): deprecated since Nextcloud 33; use IUserConfig::getValuesByUsers directly",
+        "  lib/Migration/Version0009Date20261103.php:42 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Migration/Version0009Date20261103.php:43 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 25
+        }
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/main.php:298 style= attribute"
+      ],
+      "lines": [
+        "1 inline style in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/main.php:298 style= attribute"
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Db/HrPreferencesStore.php:104",
+        "lib/Service/HistoryWriteCoordinator.php:50",
+        "lib/Service/HistoryWriteCoordinator.php:99"
+      ],
+      "lines": [
+        "3 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Db/HrPreferencesStore.php:104",
+        "  lib/Service/HistoryWriteCoordinator.php:50",
+        "  lib/Service/HistoryWriteCoordinator.php:99"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/EntryController.php:271 new DateTimeImmutable()",
+        "lib/Db/EntryMapper.php:43 time()",
+        "lib/Db/MonthlyBalanceMapper.php:79 time()",
+        "lib/Db/MonthlyBalanceMapper.php:95 time()",
+        "lib/Db/MonthlyBalanceMapper.php:104 time()",
+        "lib/Service/EntryService.php:34 time()",
+        "lib/Service/EntryService.php:35 time()",
+        "lib/Service/EntryService.php:93 time()",
+        "lib/Service/HolidayService.php:38 time()",
+        "lib/Service/MonthlyBalanceService.php:53 time()",
+        "lib/Service/TimesheetXlsxExporter.php:44 new DateTimeImmutable()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 11 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/EntryController.php:271 new DateTimeImmutable()",
+        "  lib/Db/EntryMapper.php:43 time()",
+        "  lib/Db/MonthlyBalanceMapper.php:79 time()",
+        "  lib/Db/MonthlyBalanceMapper.php:95 time()",
+        "  lib/Db/MonthlyBalanceMapper.php:104 time()",
+        "  lib/Service/EntryService.php:34 time()",
+        "  lib/Service/EntryService.php:35 time()",
+        "  lib/Service/EntryService.php:93 time()",
+        "  lib/Service/HolidayService.php:38 time()",
+        "  lib/Service/MonthlyBalanceService.php:53 time()",
+        "  lib/Service/TimesheetXlsxExporter.php:44 new DateTimeImmutable()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 8
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/HrNotificationJob.php:55 getAppValueString()",
+        "lib/Controller/SettingsController.php:116 getAppValueString()",
+        "lib/Controller/SettingsController.php:134 setAppValueString()",
+        "lib/Controller/SettingsController.php:158 getAppValueString()",
+        "lib/Controller/SettingsController.php:244 getAppValueString()",
+        "lib/Controller/SettingsController.php:402 getAppValueString()",
+        "lib/Controller/SettingsController.php:403 setAppValueString()",
+        "lib/Controller/SettingsController.php:419 getAppValueString()",
+        "lib/Db/ChangeHistoryAccountQueue.php:23 setAppValue()",
+        "lib/Db/ChangeHistoryRecordingStore.php:26 getAppValue()",
+        "lib/Db/ChangeHistoryRecordingStore.php:52 setAppValue()",
+        "lib/Db/MissingEntryReminderStore.php:22 getAppValueString()",
+        "lib/Db/MissingEntryReminderStore.php:26 setAppValueString()",
+        "lib/Migration/Version0009Date20261103.php:42 getAppValue()",
+        "lib/Migration/Version0009Date20261103.php:43 setAppValue()",
+        "lib/Service/GroupRuleService.php:115 getAppValueString()",
+        "lib/Service/HrService.php:144 getAppValueString()",
+        "lib/Service/MonthlyBalanceService.php:190 getAppValueString()",
+        "lib/Service/UpdateNotesService.php:199 getAppValueString()",
+        "lib/Settings/RuleSettingsForm.php:55 getAppValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 20 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/BackgroundJob/HrNotificationJob.php:55 getAppValueString()",
+        "  lib/Controller/SettingsController.php:116 getAppValueString()",
+        "  lib/Controller/SettingsController.php:134 setAppValueString()",
+        "  lib/Controller/SettingsController.php:158 getAppValueString()",
+        "  lib/Controller/SettingsController.php:244 getAppValueString()",
+        "  lib/Controller/SettingsController.php:402 getAppValueString()",
+        "  lib/Controller/SettingsController.php:403 setAppValueString()",
+        "  lib/Controller/SettingsController.php:419 getAppValueString()",
+        "  lib/Db/ChangeHistoryAccountQueue.php:23 setAppValue()",
+        "  lib/Db/ChangeHistoryRecordingStore.php:26 getAppValue()",
+        "  lib/Db/ChangeHistoryRecordingStore.php:52 setAppValue()",
+        "  lib/Db/MissingEntryReminderStore.php:22 getAppValueString()",
+        "  lib/Db/MissingEntryReminderStore.php:26 setAppValueString()",
+        "  lib/Migration/Version0009Date20261103.php:42 getAppValue()",
+        "  lib/Migration/Version0009Date20261103.php:43 setAppValue()",
+        "  lib/Service/GroupRuleService.php:115 getAppValueString()",
+        "  lib/Service/HrService.php:144 getAppValueString()",
+        "  lib/Service/MonthlyBalanceService.php:190 getAppValueString()",
+        "  lib/Service/UpdateNotesService.php:199 getAppValueString()",
+        "  lib/Settings/RuleSettingsForm.php:55 getAppValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 17
+        }
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version0010Date20261112.php:30 a column of ts_user_config whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version0010Date20261112.php:30 a column of ts_user_config whose name is no constant"
+      ]
+    }
+  ],
+  "endpoints": 32,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timesheet/",
+      "target": "OCA\\Timesheet\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timesheet/api/balances/{userId}/{year}/{month}",
+      "target": "OCA\\Timesheet\\Controller\\BalanceController::getMonth",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timesheet/api/entries",
+      "target": "OCA\\Timesheet\\Controller\\EntryController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/timesheet/api/entries",
+      "target": "OCA\\Timesheet\\Controller\\EntryController::create",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/timesheet/api/entries/{id}",
+      "target": "OCA\\Timesheet\\Controller\\EntryController::delete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/timesheet/api/entries/{id}",
+      "target": "OCA\\Timesheet\\Controller\\EntryController::update",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timesheet/api/entries/export-xlsx",
+      "target": "OCA\\Timesheet\\Controller\\EntryController::exportXlsx",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timesheet/api/holidays",
+      "target": "OCA\\Timesheet\\Controller\\HolidayController::getHolidays",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timesheet/api/hr/change-history",
+      "target": "OCA\\Timesheet\\Controller\\ChangeHistoryController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timesheet/api/hr/config/{userId}",
+      "target": "OCA\\Timesheet\\Controller\\ConfigController::getUserConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/timesheet/api/hr/config/{userId}",
+      "target": "OCA\\Timesheet\\Controller\\ConfigController::setUserConfig",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timesheet/api/hr/notifications",
+      "target": "OCA\\Timesheet\\Controller\\ConfigController::getHrNotificationSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/timesheet/api/hr/notifications",
+      "target": "OCA\\Timesheet\\Controller\\ConfigController::setHrNotificationSettings",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timesheet/api/hr/people",
+      "target": "OCA\\Timesheet\\Controller\\SettingsController::searchPeople",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timesheet/api/hr/userlist",
+      "target": "OCA\\Timesheet\\Controller\\OverviewController::getHrUserListData",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timesheet/api/hr/users",
+      "target": "OCA\\Timesheet\\Controller\\OverviewController::users",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timesheet/api/hr/warnings",
+      "target": "OCA\\Timesheet\\Controller\\ConfigController::getHrWarningThresholds",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/timesheet/api/hr/warnings",
+      "target": "OCA\\Timesheet\\Controller\\ConfigController::setHrWarningThresholds",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timesheet/api/overtime/summary",
+      "target": "OCA\\Timesheet\\Controller\\OverviewController::getOvertimeSummary",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/timesheet/api/preferences/break-input-mode",
+      "target": "OCA\\Timesheet\\Controller\\PreferencesController::setBreakInputMode",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/timesheet/api/preferences/change-history-view",
+      "target": "OCA\\Timesheet\\Controller\\PreferencesController::setHistoryView",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/timesheet/api/preferences/freelancer-mode",
+      "target": "OCA\\Timesheet\\Controller\\EmploymentStatusController::setFreelancerMode",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/timesheet/api/preferences/hr-overview-width",
+      "target": "OCA\\Timesheet\\Controller\\PreferencesController::setHrOverviewWidth",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/timesheet/api/preferences/tour/complete",
+      "target": "OCA\\Timesheet\\Controller\\TourController::complete",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timesheet/api/rules/effective",
+      "target": "OCA\\Timesheet\\Controller\\ConfigController::getEffectiveRulesSelf",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timesheet/api/rules/effective/{userId}",
+      "target": "OCA\\Timesheet\\Controller\\ConfigController::getEffectiveRulesForUser",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/timesheet/api/update-notes",
+      "target": "OCA\\Timesheet\\Controller\\UpdateNotesController::load",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/timesheet/api/update-notes/shown",
+      "target": "OCA\\Timesheet\\Controller\\UpdateNotesController::shown",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/timesheet/settings/hr_access_rules",
+      "target": "OCA\\Timesheet\\Controller\\SettingsController::saveHrAccessRules",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/timesheet/settings/hr_policy_rules",
+      "target": "OCA\\Timesheet\\Controller\\SettingsController::saveHrPolicyRules",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/timesheet/settings/specialdays_check",
+      "target": "OCA\\Timesheet\\Controller\\SettingsController::loadSpecialDaysCheck",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/timesheet/settings/specialdays_check",
+      "target": "OCA\\Timesheet\\Controller\\SettingsController::saveSpecialDaysCheck",
+      "openapi": [],
+      "kind": "route"
+    }
+  ]
+}

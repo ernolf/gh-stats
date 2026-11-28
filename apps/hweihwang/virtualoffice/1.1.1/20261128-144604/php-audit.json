@@ -1,0 +1,790 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\VirtualOffice\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "psalm/phar, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Command/Purge.php:50 OCP\\IAppConfig::deleteApp(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig  Removes all keys in appconfig belonging to the app."
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated in Nextcloud 35. The text of the tag names the replacement where it has one.",
+        "  lib/Command/Purge.php:50 OCP\\IAppConfig::deleteApp(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig  Removes all keys in appconfig belonging to the app."
+      ]
+    },
+    {
+      "id": "template-inline-style",
+      "level": "info",
+      "places": [
+        "templates/talk-unavailable.php:8 style= attribute"
+      ],
+      "lines": [
+        "1 inline style in templates/. The default Content Security Policy of the server allows inline style; a response whose policy disallows it drops them. A stylesheet added with OCP\\Util::addStyle() holds in both cases.",
+        "  templates/talk-unavailable.php:8 style= attribute"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/PairRoulette.php OCA\\VirtualOffice\\BackgroundJob\\PairRoulette"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/PairRoulette.php OCA\\VirtualOffice\\BackgroundJob\\PairRoulette"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/OfficeController.php:160 time()",
+        "lib/Controller/OfficeController.php:188 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 2 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/OfficeController.php:160 time()",
+        "  lib/Controller/OfficeController.php:188 time()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/PushService.php:47 getValueString()",
+        "lib/Service/Settings.php:24 getValueInt()",
+        "lib/Service/Settings.php:28 setValueInt()",
+        "lib/Service/Settings.php:32 getValueBool()",
+        "lib/Service/Settings.php:36 setValueBool()",
+        "lib/Service/Settings.php:41 getValueBool()",
+        "lib/Service/Settings.php:45 setValueBool()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 7 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/PushService.php:47 getValueString()",
+        "  lib/Service/Settings.php:24 getValueInt()",
+        "  lib/Service/Settings.php:28 setValueInt()",
+        "  lib/Service/Settings.php:32 getValueBool()",
+        "  lib/Service/Settings.php:36 setValueBool()",
+        "  lib/Service/Settings.php:41 getValueBool()",
+        "  lib/Service/Settings.php:45 setValueBool()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/virtualoffice/api/v1/admin/settings  ocs.virtualoffice.admin.show  lib/Controller/AdminController.php:44",
+        "PUT /ocs/v2.php/apps/virtualoffice/api/v1/admin/settings  ocs.virtualoffice.admin.update  lib/Controller/AdminController.php:49",
+        "GET /ocs/v2.php/apps/virtualoffice/api/v1/admin/offices  ocs.virtualoffice.admin.offices  lib/Controller/AdminController.php:68",
+        "GET /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/desks  ocs.virtualoffice.desk.index  lib/Controller/DeskController.php:40",
+        "PUT /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/desks/{deskId}  ocs.virtualoffice.desk.claim  lib/Controller/DeskController.php:47",
+        "DELETE /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/desks/{deskId}  ocs.virtualoffice.desk.release  lib/Controller/DeskController.php:54",
+        "POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/knocks  ocs.virtualoffice.knock.knock  lib/Controller/KnockController.php:40",
+        "GET /ocs/v2.php/apps/virtualoffice/api/v1/offices  ocs.virtualoffice.office.index  lib/Controller/OfficeController.php:47",
+        "POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/directory  ocs.virtualoffice.office.directory  lib/Controller/OfficeController.php:57",
+        "POST /ocs/v2.php/apps/virtualoffice/api/v1/offices  ocs.virtualoffice.office.create  lib/Controller/OfficeController.php:80",
+        "GET /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}  ocs.virtualoffice.office.show  lib/Controller/OfficeController.php:89",
+        "PATCH /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}  ocs.virtualoffice.office.update  lib/Controller/OfficeController.php:100",
+        "DELETE /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}  ocs.virtualoffice.office.destroy  lib/Controller/OfficeController.php:122",
+        "GET /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/talk-conversations  ocs.virtualoffice.office.talkconversations  lib/Controller/OfficeController.php:131",
+        "POST /ocs/v2.php/apps/virtualoffice/api/v1/summaries  ocs.virtualoffice.office.summaries  lib/Controller/OfficeController.php:170",
+        "POST /ocs/v2.php/apps/virtualoffice/api/v1/conversations/{conversationToken}/office  ocs.virtualoffice.office.conversationoffice  lib/Controller/OfficeController.php:195",
+        "GET /ocs/v2.php/apps/virtualoffice/api/v1/conversations/{conversationToken}/team-offices  ocs.virtualoffice.office.teamoffices  lib/Controller/OfficeController.php:207",
+        "GET /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/resources  ocs.virtualoffice.office.resources  lib/Controller/OfficeController.php:215",
+        "GET /ocs/v2.php/apps/virtualoffice/api/v1/audiences  ocs.virtualoffice.office.audiences  lib/Controller/OfficeController.php:221",
+        "GET /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/people  ocs.virtualoffice.office.people  lib/Controller/OfficeController.php:229",
+        "PUT /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/managers  ocs.virtualoffice.office.addmanager  lib/Controller/OfficeController.php:246",
+        "DELETE /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/managers  ocs.virtualoffice.office.removemanager  lib/Controller/OfficeController.php:255",
+        "PUT /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/removals  ocs.virtualoffice.office.removeperson  lib/Controller/OfficeController.php:264",
+        "DELETE /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/removals  ocs.virtualoffice.office.liftremoval  lib/Controller/OfficeController.php:273",
+        "GET /ocs/v2.php/apps/virtualoffice/api/v1/me/preferences  ocs.virtualoffice.preference.show  lib/Controller/PreferenceController.php:41",
+        "PUT /ocs/v2.php/apps/virtualoffice/api/v1/me/preferences  ocs.virtualoffice.preference.update  lib/Controller/PreferenceController.php:47",
+        "DELETE /ocs/v2.php/apps/virtualoffice/api/v1/me/preferences  ocs.virtualoffice.preference.reset  lib/Controller/PreferenceController.php:53",
+        "GET /ocs/v2.php/apps/virtualoffice/api/v1/me/today  ocs.virtualoffice.preference.today  lib/Controller/PreferenceController.php:62",
+        "PUT /ocs/v2.php/apps/virtualoffice/api/v1/me/today  ocs.virtualoffice.preference.settoday  lib/Controller/PreferenceController.php:70",
+        "POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/enter  ocs.virtualoffice.room.enter  lib/Controller/RoomController.php:40",
+        "GET /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room  ocs.virtualoffice.room.poll  lib/Controller/RoomController.php:47",
+        "POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/move  ocs.virtualoffice.room.move  lib/Controller/RoomController.php:54",
+        "POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/stop  ocs.virtualoffice.room.stop  lib/Controller/RoomController.php:61",
+        "POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/emote  ocs.virtualoffice.room.emote  lib/Controller/RoomController.php:68",
+        "POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/interact  ocs.virtualoffice.room.interact  lib/Controller/RoomController.php:75",
+        "POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/mode  ocs.virtualoffice.room.mode  lib/Controller/RoomController.php:82",
+        "POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/profile  ocs.virtualoffice.room.profile  lib/Controller/RoomController.php:89",
+        "POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/focus  ocs.virtualoffice.room.focus  lib/Controller/RoomController.php:97",
+        "POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/focus/leave  ocs.virtualoffice.room.leavefocus  lib/Controller/RoomController.php:104",
+        "POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/music  ocs.virtualoffice.room.music  lib/Controller/RoomController.php:112",
+        "POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/music/stop  ocs.virtualoffice.room.stopmusic  lib/Controller/RoomController.php:119",
+        "POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/voice  ocs.virtualoffice.room.voice  lib/Controller/RoomController.php:127",
+        "POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/signal  ocs.virtualoffice.room.signal  lib/Controller/RoomController.php:135",
+        "POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/leave  ocs.virtualoffice.room.leave  lib/Controller/RoomController.php:141",
+        "GET /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/roulette  ocs.virtualoffice.roulette.show  lib/Controller/RouletteController.php:40",
+        "PUT /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/roulette  ocs.virtualoffice.roulette.join  lib/Controller/RouletteController.php:47",
+        "DELETE /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/roulette  ocs.virtualoffice.roulette.leave  lib/Controller/RouletteController.php:54",
+        "GET /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/watch  ocs.virtualoffice.watch.show  lib/Controller/WatchController.php:40",
+        "PUT /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/watch  ocs.virtualoffice.watch.update  lib/Controller/WatchController.php:48",
+        "DELETE /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/watch  ocs.virtualoffice.watch.destroy  lib/Controller/WatchController.php:54"
+      ],
+      "lines": [
+        "Nothing in the app calls 50 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/virtualoffice/api/v1/admin/settings  ocs.virtualoffice.admin.show  lib/Controller/AdminController.php:44",
+        "  PUT /ocs/v2.php/apps/virtualoffice/api/v1/admin/settings  ocs.virtualoffice.admin.update  lib/Controller/AdminController.php:49",
+        "  GET /ocs/v2.php/apps/virtualoffice/api/v1/admin/offices  ocs.virtualoffice.admin.offices  lib/Controller/AdminController.php:68",
+        "  GET /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/desks  ocs.virtualoffice.desk.index  lib/Controller/DeskController.php:40",
+        "  PUT /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/desks/{deskId}  ocs.virtualoffice.desk.claim  lib/Controller/DeskController.php:47",
+        "  DELETE /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/desks/{deskId}  ocs.virtualoffice.desk.release  lib/Controller/DeskController.php:54",
+        "  POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/knocks  ocs.virtualoffice.knock.knock  lib/Controller/KnockController.php:40",
+        "  GET /ocs/v2.php/apps/virtualoffice/api/v1/offices  ocs.virtualoffice.office.index  lib/Controller/OfficeController.php:47",
+        "  POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/directory  ocs.virtualoffice.office.directory  lib/Controller/OfficeController.php:57",
+        "  POST /ocs/v2.php/apps/virtualoffice/api/v1/offices  ocs.virtualoffice.office.create  lib/Controller/OfficeController.php:80",
+        "  GET /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}  ocs.virtualoffice.office.show  lib/Controller/OfficeController.php:89",
+        "  PATCH /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}  ocs.virtualoffice.office.update  lib/Controller/OfficeController.php:100",
+        "  DELETE /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}  ocs.virtualoffice.office.destroy  lib/Controller/OfficeController.php:122",
+        "  GET /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/talk-conversations  ocs.virtualoffice.office.talkconversations  lib/Controller/OfficeController.php:131",
+        "  POST /ocs/v2.php/apps/virtualoffice/api/v1/summaries  ocs.virtualoffice.office.summaries  lib/Controller/OfficeController.php:170",
+        "  POST /ocs/v2.php/apps/virtualoffice/api/v1/conversations/{conversationToken}/office  ocs.virtualoffice.office.conversationoffice  lib/Controller/OfficeController.php:195",
+        "  GET /ocs/v2.php/apps/virtualoffice/api/v1/conversations/{conversationToken}/team-offices  ocs.virtualoffice.office.teamoffices  lib/Controller/OfficeController.php:207",
+        "  GET /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/resources  ocs.virtualoffice.office.resources  lib/Controller/OfficeController.php:215",
+        "  GET /ocs/v2.php/apps/virtualoffice/api/v1/audiences  ocs.virtualoffice.office.audiences  lib/Controller/OfficeController.php:221",
+        "  GET /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/people  ocs.virtualoffice.office.people  lib/Controller/OfficeController.php:229",
+        "  PUT /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/managers  ocs.virtualoffice.office.addmanager  lib/Controller/OfficeController.php:246",
+        "  DELETE /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/managers  ocs.virtualoffice.office.removemanager  lib/Controller/OfficeController.php:255",
+        "  PUT /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/removals  ocs.virtualoffice.office.removeperson  lib/Controller/OfficeController.php:264",
+        "  DELETE /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/removals  ocs.virtualoffice.office.liftremoval  lib/Controller/OfficeController.php:273",
+        "  GET /ocs/v2.php/apps/virtualoffice/api/v1/me/preferences  ocs.virtualoffice.preference.show  lib/Controller/PreferenceController.php:41",
+        "  PUT /ocs/v2.php/apps/virtualoffice/api/v1/me/preferences  ocs.virtualoffice.preference.update  lib/Controller/PreferenceController.php:47",
+        "  DELETE /ocs/v2.php/apps/virtualoffice/api/v1/me/preferences  ocs.virtualoffice.preference.reset  lib/Controller/PreferenceController.php:53",
+        "  GET /ocs/v2.php/apps/virtualoffice/api/v1/me/today  ocs.virtualoffice.preference.today  lib/Controller/PreferenceController.php:62",
+        "  PUT /ocs/v2.php/apps/virtualoffice/api/v1/me/today  ocs.virtualoffice.preference.settoday  lib/Controller/PreferenceController.php:70",
+        "  POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/enter  ocs.virtualoffice.room.enter  lib/Controller/RoomController.php:40",
+        "  GET /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room  ocs.virtualoffice.room.poll  lib/Controller/RoomController.php:47",
+        "  POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/move  ocs.virtualoffice.room.move  lib/Controller/RoomController.php:54",
+        "  POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/stop  ocs.virtualoffice.room.stop  lib/Controller/RoomController.php:61",
+        "  POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/emote  ocs.virtualoffice.room.emote  lib/Controller/RoomController.php:68",
+        "  POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/interact  ocs.virtualoffice.room.interact  lib/Controller/RoomController.php:75",
+        "  POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/mode  ocs.virtualoffice.room.mode  lib/Controller/RoomController.php:82",
+        "  POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/profile  ocs.virtualoffice.room.profile  lib/Controller/RoomController.php:89",
+        "  POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/focus  ocs.virtualoffice.room.focus  lib/Controller/RoomController.php:97",
+        "  POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/focus/leave  ocs.virtualoffice.room.leavefocus  lib/Controller/RoomController.php:104",
+        "  POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/music  ocs.virtualoffice.room.music  lib/Controller/RoomController.php:112",
+        "  POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/music/stop  ocs.virtualoffice.room.stopmusic  lib/Controller/RoomController.php:119",
+        "  POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/voice  ocs.virtualoffice.room.voice  lib/Controller/RoomController.php:127",
+        "  POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/signal  ocs.virtualoffice.room.signal  lib/Controller/RoomController.php:135",
+        "  POST /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/leave  ocs.virtualoffice.room.leave  lib/Controller/RoomController.php:141",
+        "  GET /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/roulette  ocs.virtualoffice.roulette.show  lib/Controller/RouletteController.php:40",
+        "  PUT /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/roulette  ocs.virtualoffice.roulette.join  lib/Controller/RouletteController.php:47",
+        "  DELETE /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/roulette  ocs.virtualoffice.roulette.leave  lib/Controller/RouletteController.php:54",
+        "  GET /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/watch  ocs.virtualoffice.watch.show  lib/Controller/WatchController.php:40",
+        "  PUT /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/watch  ocs.virtualoffice.watch.update  lib/Controller/WatchController.php:48",
+        "  DELETE /ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/watch  ocs.virtualoffice.watch.destroy  lib/Controller/WatchController.php:54"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 47
+        }
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 52 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 58,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/virtualoffice/",
+      "target": "OCA\\VirtualOffice\\Controller\\PageController::index",
+      "openapi": [],
+      "source": "lib/Controller/PageController.php:52",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/virtualoffice/beacon/leave/{token}",
+      "target": "OCA\\VirtualOffice\\Controller\\PageController::leaveBeacon",
+      "openapi": [],
+      "source": "lib/Controller/PageController.php:104",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/virtualoffice/o/{token}",
+      "target": "OCA\\VirtualOffice\\Controller\\PageController::office",
+      "openapi": [],
+      "source": "lib/Controller/PageController.php:60",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/virtualoffice/o/{token}/music/{index}",
+      "target": "OCA\\VirtualOffice\\Controller\\MusicController::stream",
+      "openapi": [],
+      "source": "lib/Controller/MusicController.php:40",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/virtualoffice/o/{token}/talk",
+      "target": "OCA\\VirtualOffice\\Controller\\PageController::talk",
+      "openapi": [],
+      "source": "lib/Controller/PageController.php:79",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/virtualoffice/talk/{conversationToken}",
+      "target": "OCA\\VirtualOffice\\Controller\\PageController::conversation",
+      "openapi": [],
+      "source": "lib/Controller/PageController.php:71",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/admin/offices",
+      "target": "OCA\\VirtualOffice\\Controller\\AdminController::offices",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/AdminController.php:68",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/admin/settings",
+      "target": "OCA\\VirtualOffice\\Controller\\AdminController::show",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/AdminController.php:44",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/admin/settings",
+      "target": "OCA\\VirtualOffice\\Controller\\AdminController::update",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/AdminController.php:49",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/audiences",
+      "target": "OCA\\VirtualOffice\\Controller\\OfficeController::audiences",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/OfficeController.php:221",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/conversations/{conversationToken}/office",
+      "target": "OCA\\VirtualOffice\\Controller\\OfficeController::conversationOffice",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/OfficeController.php:195",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/conversations/{conversationToken}/team-offices",
+      "target": "OCA\\VirtualOffice\\Controller\\OfficeController::teamOffices",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/OfficeController.php:207",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/knocks/{id}",
+      "target": "OCA\\VirtualOffice\\Controller\\KnockController::answer",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/KnockController.php:48",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/me/preferences",
+      "target": "OCA\\VirtualOffice\\Controller\\PreferenceController::reset",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/PreferenceController.php:53",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/me/preferences",
+      "target": "OCA\\VirtualOffice\\Controller\\PreferenceController::show",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/PreferenceController.php:41",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/me/preferences",
+      "target": "OCA\\VirtualOffice\\Controller\\PreferenceController::update",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/PreferenceController.php:47",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/me/today",
+      "target": "OCA\\VirtualOffice\\Controller\\PreferenceController::today",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/PreferenceController.php:62",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/me/today",
+      "target": "OCA\\VirtualOffice\\Controller\\PreferenceController::setToday",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/PreferenceController.php:70",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices",
+      "target": "OCA\\VirtualOffice\\Controller\\OfficeController::index",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/OfficeController.php:47",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices",
+      "target": "OCA\\VirtualOffice\\Controller\\OfficeController::create",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/OfficeController.php:80",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}",
+      "target": "OCA\\VirtualOffice\\Controller\\OfficeController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/OfficeController.php:122",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}",
+      "target": "OCA\\VirtualOffice\\Controller\\OfficeController::show",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/OfficeController.php:89",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}",
+      "target": "OCA\\VirtualOffice\\Controller\\OfficeController::update",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/OfficeController.php:100",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/card",
+      "target": "OCA\\VirtualOffice\\Controller\\OfficeController::card",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/OfficeController.php:143",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/desks",
+      "target": "OCA\\VirtualOffice\\Controller\\DeskController::index",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/DeskController.php:40",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/desks/{deskId}",
+      "target": "OCA\\VirtualOffice\\Controller\\DeskController::release",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/DeskController.php:54",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/desks/{deskId}",
+      "target": "OCA\\VirtualOffice\\Controller\\DeskController::claim",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/DeskController.php:47",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/knocks",
+      "target": "OCA\\VirtualOffice\\Controller\\KnockController::knock",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/KnockController.php:40",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/managers",
+      "target": "OCA\\VirtualOffice\\Controller\\OfficeController::removeManager",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/OfficeController.php:255",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/managers",
+      "target": "OCA\\VirtualOffice\\Controller\\OfficeController::addManager",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/OfficeController.php:246",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/people",
+      "target": "OCA\\VirtualOffice\\Controller\\OfficeController::people",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/OfficeController.php:229",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/removals",
+      "target": "OCA\\VirtualOffice\\Controller\\OfficeController::liftRemoval",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/OfficeController.php:273",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/removals",
+      "target": "OCA\\VirtualOffice\\Controller\\OfficeController::removePerson",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/OfficeController.php:264",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/resources",
+      "target": "OCA\\VirtualOffice\\Controller\\OfficeController::resources",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/OfficeController.php:215",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room",
+      "target": "OCA\\VirtualOffice\\Controller\\RoomController::poll",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/RoomController.php:47",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/emote",
+      "target": "OCA\\VirtualOffice\\Controller\\RoomController::emote",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/RoomController.php:68",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/enter",
+      "target": "OCA\\VirtualOffice\\Controller\\RoomController::enter",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/RoomController.php:40",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/focus",
+      "target": "OCA\\VirtualOffice\\Controller\\RoomController::focus",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/RoomController.php:97",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/focus/leave",
+      "target": "OCA\\VirtualOffice\\Controller\\RoomController::leaveFocus",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/RoomController.php:104",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/interact",
+      "target": "OCA\\VirtualOffice\\Controller\\RoomController::interact",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/RoomController.php:75",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/leave",
+      "target": "OCA\\VirtualOffice\\Controller\\RoomController::leave",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/RoomController.php:141",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/mode",
+      "target": "OCA\\VirtualOffice\\Controller\\RoomController::mode",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/RoomController.php:82",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/move",
+      "target": "OCA\\VirtualOffice\\Controller\\RoomController::move",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/RoomController.php:54",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/music",
+      "target": "OCA\\VirtualOffice\\Controller\\RoomController::music",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/RoomController.php:112",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/music/stop",
+      "target": "OCA\\VirtualOffice\\Controller\\RoomController::stopMusic",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/RoomController.php:119",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/profile",
+      "target": "OCA\\VirtualOffice\\Controller\\RoomController::profile",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/RoomController.php:89",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/signal",
+      "target": "OCA\\VirtualOffice\\Controller\\RoomController::signal",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/RoomController.php:135",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/stop",
+      "target": "OCA\\VirtualOffice\\Controller\\RoomController::stop",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/RoomController.php:61",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/room/voice",
+      "target": "OCA\\VirtualOffice\\Controller\\RoomController::voice",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/RoomController.php:127",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/roulette",
+      "target": "OCA\\VirtualOffice\\Controller\\RouletteController::leave",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/RouletteController.php:54",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/roulette",
+      "target": "OCA\\VirtualOffice\\Controller\\RouletteController::show",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/RouletteController.php:40",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/roulette",
+      "target": "OCA\\VirtualOffice\\Controller\\RouletteController::join",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/RouletteController.php:47",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/talk-conversations",
+      "target": "OCA\\VirtualOffice\\Controller\\OfficeController::talkConversations",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/OfficeController.php:131",
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/watch",
+      "target": "OCA\\VirtualOffice\\Controller\\WatchController::destroy",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/WatchController.php:54",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/watch",
+      "target": "OCA\\VirtualOffice\\Controller\\WatchController::show",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/WatchController.php:40",
+      "kind": "OCS"
+    },
+    {
+      "verb": "PUT",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/{token}/watch",
+      "target": "OCA\\VirtualOffice\\Controller\\WatchController::update",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/WatchController.php:48",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/offices/directory",
+      "target": "OCA\\VirtualOffice\\Controller\\OfficeController::directory",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/OfficeController.php:57",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/virtualoffice/api/v1/summaries",
+      "target": "OCA\\VirtualOffice\\Controller\\OfficeController::summaries",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/OfficeController.php:170",
+      "kind": "OCS"
+    }
+  ]
+}

@@ -1,0 +1,143 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+    <id>eva_ai</id>
+    <name>Eva</name>
+    <summary>AI assistant for Nextcloud with cited file search and local or hosted models</summary>
+    <!-- IMPORTANT: keep the description flush-left. CommonMark (which the App
+          Store uses to render this field) turns any line indented by four or
+          more spaces into a code block, so indenting the copy makes the whole
+          store listing render as source code. See docs/VERSIONING.md. -->
+    <description>
+EVA adds a capable AI assistant to your Nextcloud. It is deeply integrated into Nextcloud itself: it powers the official Nextcloud Assistant, works inside Files, Talk, Mail, Calendar, Contacts and Tasks, and answers with cited sources from your own documents.
+
+## Deep Nextcloud integration
+
+EVA is not an external chatbot — it is a native Nextcloud app. It registers TaskProcessing providers, so it powers the official Nextcloud Assistant app across the whole instance: chat with your indexed files in the Assistant sidebar, use text, audio and image tools, and run scheduled tasks ("Geplante Aufgaben") that trigger EVA. In Files you can open any document with EVA for a focused file conversation. EVA can also join Nextcloud Talk as a bot and read or post messages in rooms (off by default).
+
+## More than 80 actions
+
+EVA works through the real Nextcloud APIs, and every write action asks for your confirmation first:
+
+- **Files &amp; knowledge**: search, read, create, rename, move, copy and delete files, write Markdown notes, keep a personal knowledge memory, manage shares, comments, system tags and file versions.
+- **Calendar &amp; tasks**: list, create, update and delete events, find free slots, and create, complete and delete your to-dos.
+- **Mail &amp; contacts**: search, list and read mails, summarize your inbox, and manage contacts and your profile.
+- **Talk**: list rooms, read conversations and post messages into Nextcloud Talk.
+
+## Web search and images from the internet
+
+EVA can search the current web for up-to-date answers and show images from the internet directly in the chat. Answers list the pages that were actually retrieved, and image results always link back to their source page.
+
+## Your models, your choice
+
+Use native Ollama or Groq, or add compatible profiles for OpenAI, Google Gemini, Mistral, DeepSeek, OpenRouter and other Chat Completions servers. The search index stays on your Nextcloud server; you decide where inference happens.
+
+## Cited answers from your files
+
+EVA extracts text, PDF, Office, OpenDocument and many other formats, then combines semantic and keyword retrieval. Every file answer links back to its sources so you can verify it.
+
+## Requirements
+
+- Nextcloud 30–35
+- PHP 8.2+
+- Ollama reachable from the Nextcloud server (default: http://127.0.0.1:11434), or a hosted provider key
+
+## Privacy
+
+The search index is stored on your Nextcloud server. Chat prompts, retrieved excerpts and tool results are sent to the model provider you configured; the default chat model uses Ollama Cloud, so select a local model to keep everything on your infrastructure. Web search, image search, Mail, Talk and external connectors each have their own data flow and stay disabled until you enable them. EVA adds no third-party analytics.
+
+## Support
+
+- GitHub: https://github.com/SchBenedikt/nextcloud-ai
+- Issues: https://github.com/SchBenedikt/nextcloud-ai/issues
+
+Licensed under AGPL-3.0-or-later.
+    </description>
+    <version>1.20.42</version>
+    <licence>agpl</licence>
+    <author>Benedikt Schächner</author>
+    <namespace>EvaAi</namespace>
+    <category>ai</category>
+    <category>tools</category>
+    <bugs>https://github.com/SchBenedikt/nextcloud-ai/issues</bugs>
+    <dependencies>
+        <nextcloud min-version="30" max-version="35"/>
+        <php min-version="8.2"/>
+    </dependencies>
+    <optional-apps>
+        <app>spreed</app>
+    </optional-apps>
+    <openmetrics>
+        <exporter>OCA\EvaAi\OpenMetrics\IndexedItems</exporter>
+        <exporter>OCA\EvaAi\OpenMetrics\LexicalIndexState</exporter>
+        <exporter>OCA\EvaAi\OpenMetrics\VectorGenerations</exporter>
+        <exporter>OCA\EvaAi\OpenMetrics\VectorOutbox</exporter>
+        <exporter>OCA\EvaAi\OpenMetrics\VectorOutboxAge</exporter>
+        <exporter>OCA\EvaAi\OpenMetrics\VectorOutboxAgeDistribution</exporter>
+        <exporter>OCA\EvaAi\OpenMetrics\IndexQueueAge</exporter>
+        <exporter>OCA\EvaAi\OpenMetrics\AccountCleanupPending</exporter>
+        <exporter>OCA\EvaAi\OpenMetrics\AccountCleanupOldestAge</exporter>
+        <exporter>OCA\EvaAi\OpenMetrics\OperationDuration</exporter>
+        <exporter>OCA\EvaAi\OpenMetrics\ProviderCompletionDuration</exporter>
+        <exporter>OCA\EvaAi\OpenMetrics\RetrievalStageDuration</exporter>
+        <exporter>OCA\EvaAi\OpenMetrics\RagRequestDuration</exporter>
+        <exporter>OCA\EvaAi\OpenMetrics\IndexRunDuration</exporter>
+        <exporter>OCA\EvaAi\OpenMetrics\IndexRunThroughput</exporter>
+        <exporter>OCA\EvaAi\OpenMetrics\ChatStoreLockWait</exporter>
+        <exporter>OCA\EvaAi\OpenMetrics\EmbeddingBatchDuration</exporter>
+        <exporter>OCA\EvaAi\OpenMetrics\EmbeddingCacheHitRatio</exporter>
+        <exporter>OCA\EvaAi\OpenMetrics\EmbeddingBatchSamples</exporter>
+        <exporter>OCA\EvaAi\OpenMetrics\EmbeddingQueryDuration</exporter>
+        <exporter>OCA\EvaAi\OpenMetrics\SqlDenseScanRows</exporter>
+    </openmetrics>
+    <background-jobs>
+        <job>OCA\EvaAi\BackgroundJob\IndexJob</job>
+        <job>OCA\EvaAi\BackgroundJob\AccountCleanupJob</job>
+        <job>OCA\EvaAi\BackgroundJob\VectorNormBackfillJob</job>
+        <job>OCA\EvaAi\BackgroundJob\LexicalIndexBackfillJob</job>
+        <job>OCA\EvaAi\BackgroundJob\ChatCleanupJob</job>
+        <job>OCA\EvaAi\BackgroundJob\ProactiveBriefingJob</job>
+        <job>OCA\EvaAi\BackgroundJob\BackgroundChatJob</job>
+        <job>OCA\EvaAi\BackgroundJob\VectorErasureJob</job>
+        <job>OCA\EvaAi\BackgroundJob\VectorPointJob</job>
+        <job>OCA\EvaAi\BackgroundJob\GenerationBuildJob</job>
+        <job>OCA\EvaAi\BackgroundJob\GenerationVerificationJob</job>
+        <job>OCA\EvaAi\BackgroundJob\RateLimitCleanupJob</job>
+    </background-jobs>
+    <repair-steps>
+        <step>OCA\EvaAi\Migration\MigrateLegacyAppIdRepairStep</step>
+        <step>OCA\EvaAi\Migration\RefreshIndexJobIntervalRepairStep</step>
+        <step>OCA\EvaAi\Migration\ResetEvaJobsOnUpgradeRepairStep</step>
+    </repair-steps>
+    <commands>
+        <command>OCA\EvaAi\Command\MigrateChatStorage</command>
+        <command>OCA\EvaAi\Command\VectorOutbox</command>
+        <command>OCA\EvaAi\Command\Qdrant</command>
+        <command>OCA\EvaAi\Command\VectorGeneration</command>
+        <command>OCA\EvaAi\Command\VectorEmbedding</command>
+        <command>OCA\EvaAi\Command\VectorBuild</command>
+        <command>OCA\EvaAi\Command\VectorVerify</command>
+        <command>OCA\EvaAi\Command\RetrievalBenchmark</command>
+        <command>OCA\EvaAi\Command\Index</command>
+        <command>OCA\EvaAi\Command\Reset</command>
+        <command>OCA\EvaAi\Command\Mounts</command>
+        <command>OCA\EvaAi\Command\Tool</command>
+        <command>OCA\EvaAi\Command\TalkSetup</command>
+        <command>OCA\EvaAi\Command\RepairChats</command>
+        <command>OCA\EvaAi\Command\ClearChatLock</command>
+        <command>OCA\EvaAi\Command\Browser</command>
+        <command>OCA\EvaAi\Command\Talk</command>
+    </commands>
+    <navigations>
+        <navigation>
+            <name>Eva</name>
+            <route>eva_ai.page.index</route>
+            <icon>app.svg</icon>
+            <order>20</order>
+        </navigation>
+    </navigations>
+    <settings>
+        <admin>OCA\EvaAi\Settings\Admin</admin>
+        <admin-section>OCA\EvaAi\Settings\AdminSection</admin-section>
+    </settings>
+</info>

@@ -1,0 +1,405 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Findling\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/GatewayController.php:108 OC\\User\\NoUserException"
+      ],
+      "lines": [
+        "1 use of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/GatewayController.php:108 OC\\User\\NoUserException"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/findling/admin/overview  findling.settings.overview  lib/Controller/SettingsController.php:138",
+        "GET /index.php/apps/findling/admin/diagnose  findling.settings.diagnose  lib/Controller/SettingsController.php:176",
+        "GET /index.php/apps/findling/admin/rules/preview  findling.settings.previewrules  lib/Controller/SettingsController.php:233",
+        "POST /index.php/apps/findling/admin/rules  findling.settings.saverules  lib/Controller/SettingsController.php:311"
+      ],
+      "lines": [
+        "Nothing in the app calls 4 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 2 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/findling/admin/overview  findling.settings.overview  lib/Controller/SettingsController.php:138",
+        "  GET /index.php/apps/findling/admin/diagnose  findling.settings.diagnose  lib/Controller/SettingsController.php:176",
+        "  GET /index.php/apps/findling/admin/rules/preview  findling.settings.previewrules  lib/Controller/SettingsController.php:233",
+        "  POST /index.php/apps/findling/admin/rules  findling.settings.saverules  lib/Controller/SettingsController.php:311"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Command/IndexCommand.php:106 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Command/PurgeCommand.php:77 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Db/QueueMapper.php:300 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Db/QueueMapper.php:392 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Db/QueueMapper.php:538 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Db/QueueMapper.php:632 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Db/QueueMapper.php:647 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Db/QueueMapper.php:812 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Db/QueueMapper.php:863 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Db/QueueMapper.php:883 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Migration/Version001000Date20260901000000.php:106 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Migration/Version001100Date20260911000000.php:93 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Migration/Version001200Date20260921000000.php:96 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Migration/Version001300Date20260924000000.php:108 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "lib/Service/FileStateService.php:260 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Service/PurgeService.php:116 OCP\\IAppConfig::getKeys(): deprecated since Nextcloud 13; use method getAppKeys of \\OCP\\IConfig  This function gets all keys of an app. Please note that the values are not returned.",
+        "lib/Service/PurgeService.php:161 OCP\\IAppConfig::getKeys(): deprecated since Nextcloud 13; use method getAppKeys of \\OCP\\IConfig  This function gets all keys of an app. Please note that the values are not returned.",
+        "lib/Service/PurgeService.php:162 OCP\\IAppConfig::deleteApp(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig  Removes all keys in appconfig belonging to the app.",
+        "lib/Service/ScanStatsService.php:102 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Service/ScanStatsService.php:191 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Service/ScanStatsService.php:230 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "lib/Service/ScanStatsService.php:231 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead"
+      ],
+      "lines": [
+        "22 uses in 10 files of the public API that is deprecated in Nextcloud 33 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Command/IndexCommand.php:106 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Command/PurgeCommand.php:77 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Db/QueueMapper.php:300 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Db/QueueMapper.php:392 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Db/QueueMapper.php:538 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Db/QueueMapper.php:632 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Db/QueueMapper.php:647 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Db/QueueMapper.php:812 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Db/QueueMapper.php:863 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Db/QueueMapper.php:883 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Migration/Version001000Date20260901000000.php:106 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Migration/Version001100Date20260911000000.php:93 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Migration/Version001200Date20260921000000.php:96 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Migration/Version001300Date20260924000000.php:108 OCP\\IAppConfig::deleteKey(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig",
+        "  lib/Service/FileStateService.php:260 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Service/PurgeService.php:116 OCP\\IAppConfig::getKeys(): deprecated since Nextcloud 13; use method getAppKeys of \\OCP\\IConfig  This function gets all keys of an app. Please note that the values are not returned.",
+        "  lib/Service/PurgeService.php:161 OCP\\IAppConfig::getKeys(): deprecated since Nextcloud 13; use method getAppKeys of \\OCP\\IConfig  This function gets all keys of an app. Please note that the values are not returned.",
+        "  lib/Service/PurgeService.php:162 OCP\\IAppConfig::deleteApp(): deprecated since Nextcloud 13; use method deleteAppValue of \\OCP\\IConfig  Removes all keys in appconfig belonging to the app.",
+        "  lib/Service/ScanStatsService.php:102 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Service/ScanStatsService.php:191 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Service/ScanStatsService.php:230 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead",
+        "  lib/Service/ScanStatsService.php:231 OCP\\DB\\QueryBuilder\\IQueryBuilder::PARAM_DATE: deprecated since Nextcloud 31; use PARAM_DATETIME_MUTABLE instead"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 19
+        }
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJobs/StorageCrawlJob.php:246",
+        "lib/BackgroundJobs/StorageCrawlJob.php:334",
+        "lib/BackgroundJobs/SubtreeExpandJob.php:147",
+        "lib/BackgroundJobs/SubtreeExpandJob.php:201",
+        "lib/Migration/Version001300Date20260927000000.php:90",
+        "lib/Migration/Version001301Date20260929000000.php:100",
+        "lib/Service/QueueService.php:413"
+      ],
+      "lines": [
+        "7 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/BackgroundJobs/StorageCrawlJob.php:246",
+        "  lib/BackgroundJobs/StorageCrawlJob.php:334",
+        "  lib/BackgroundJobs/SubtreeExpandJob.php:147",
+        "  lib/BackgroundJobs/SubtreeExpandJob.php:201",
+        "  lib/Migration/Version001300Date20260927000000.php:90",
+        "  lib/Migration/Version001301Date20260929000000.php:100",
+        "  lib/Service/QueueService.php:413"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/PageController.php:502 new DateTimeImmutable()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 1 place. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/PageController.php:502 new DateTimeImmutable()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJobs/SchedulerJob.php:63 setValueInt()",
+        "lib/BackgroundJobs/StorageCrawlJob.php:355 setValueInt()",
+        "lib/BackgroundJobs/SubtreeExpandJob.php:211 setValueInt()",
+        "lib/Command/IndexCommand.php:112 setValueBool()",
+        "lib/Command/IndexCommand.php:149 getValueInt()",
+        "lib/Command/PurgeCommand.php:91 setValueBool()",
+        "lib/Command/PurgeCommand.php:111 setValueBool()",
+        "lib/Command/PurgeCommand.php:127 getValueBool()",
+        "lib/Migration/Version001100Date20260911000000.php:86 getValueString()",
+        "lib/Migration/Version001200Date20260921000000.php:89 getValueString()",
+        "lib/Migration/Version001300Date20260924000000.php:101 getValueString()",
+        "lib/Repair/AppInstallStep.php:53 getValueBool()",
+        "lib/Repair/AppInstallStep.php:59 setValueBool()",
+        "lib/Repair/AppUninstallStep.php:86 getValueBool()",
+        "lib/Repair/AppUninstallStep.php:105 getValueInt()",
+        "lib/Repair/AppUninstallStep.php:107 setValueInt()",
+        "lib/Service/AdminViewService.php:496 getValueInt()",
+        "lib/Service/AdminViewService.php:1741 getValueInt()",
+        "lib/Service/AdminViewService.php:1744 setValueInt()",
+        "lib/Service/ExAppService.php:340 getValueString()",
+        "lib/Service/ExAppService.php:399 getValueString()",
+        "lib/Service/ExAppService.php:403 setValueString()",
+        "lib/Service/ExclusionService.php:173 getValueArray()",
+        "lib/Service/ExclusionService.php:377 setValueArray()",
+        "lib/Service/PurgeService.php:116 getKeys()",
+        "lib/Service/PurgeService.php:161 getKeys()",
+        "lib/Service/SettingsService.php:133 getValueInt()",
+        "lib/Service/SettingsService.php:151 getValueInt()",
+        "lib/Service/SettingsService.php:175 getValueInt()",
+        "lib/Service/SettingsService.php:179 setValueInt()",
+        "lib/Service/SettingsService.php:189 getValueInt()",
+        "lib/Service/SettingsService.php:202 getValueInt()",
+        "lib/Service/SettingsService.php:206 setValueInt()",
+        "lib/Service/SettingsService.php:218 getValueBool()",
+        "lib/Service/SettingsService.php:231 getValueBool()",
+        "lib/Service/SettingsService.php:276 setValueInt()",
+        "lib/Service/SettingsService.php:281 setValueBool()",
+        "lib/Service/SettingsService.php:286 setValueBool()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 38 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/BackgroundJobs/SchedulerJob.php:63 setValueInt()",
+        "  lib/BackgroundJobs/StorageCrawlJob.php:355 setValueInt()",
+        "  lib/BackgroundJobs/SubtreeExpandJob.php:211 setValueInt()",
+        "  lib/Command/IndexCommand.php:112 setValueBool()",
+        "  lib/Command/IndexCommand.php:149 getValueInt()",
+        "  lib/Command/PurgeCommand.php:91 setValueBool()",
+        "  lib/Command/PurgeCommand.php:111 setValueBool()",
+        "  lib/Command/PurgeCommand.php:127 getValueBool()",
+        "  lib/Migration/Version001100Date20260911000000.php:86 getValueString()",
+        "  lib/Migration/Version001200Date20260921000000.php:89 getValueString()",
+        "  lib/Migration/Version001300Date20260924000000.php:101 getValueString()",
+        "  lib/Repair/AppInstallStep.php:53 getValueBool()",
+        "  lib/Repair/AppInstallStep.php:59 setValueBool()",
+        "  lib/Repair/AppUninstallStep.php:86 getValueBool()",
+        "  lib/Repair/AppUninstallStep.php:105 getValueInt()",
+        "  lib/Repair/AppUninstallStep.php:107 setValueInt()",
+        "  lib/Service/AdminViewService.php:496 getValueInt()",
+        "  lib/Service/AdminViewService.php:1741 getValueInt()",
+        "  lib/Service/AdminViewService.php:1744 setValueInt()",
+        "  lib/Service/ExAppService.php:340 getValueString()",
+        "  lib/Service/ExAppService.php:399 getValueString()",
+        "  lib/Service/ExAppService.php:403 setValueString()",
+        "  lib/Service/ExclusionService.php:173 getValueArray()",
+        "  lib/Service/ExclusionService.php:377 setValueArray()",
+        "  lib/Service/PurgeService.php:116 getKeys()",
+        "  lib/Service/PurgeService.php:161 getKeys()",
+        "  lib/Service/SettingsService.php:133 getValueInt()",
+        "  lib/Service/SettingsService.php:151 getValueInt()",
+        "  lib/Service/SettingsService.php:175 getValueInt()",
+        "  lib/Service/SettingsService.php:179 setValueInt()",
+        "  lib/Service/SettingsService.php:189 getValueInt()",
+        "  lib/Service/SettingsService.php:202 getValueInt()",
+        "  lib/Service/SettingsService.php:206 setValueInt()",
+        "  lib/Service/SettingsService.php:218 getValueBool()",
+        "  lib/Service/SettingsService.php:231 getValueBool()",
+        "  lib/Service/SettingsService.php:276 setValueInt()",
+        "  lib/Service/SettingsService.php:281 setValueBool()",
+        "  lib/Service/SettingsService.php:286 setValueBool()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 35
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/findling/files/{fileId}  ocs.findling.gateway.getfilecontents  lib/Controller/GatewayController.php:63",
+        "GET /ocs/v2.php/apps/findling/queues/documents  ocs.findling.queue.getdocuments  lib/Controller/QueueController.php:106",
+        "DELETE /ocs/v2.php/apps/findling/queues/documents  ocs.findling.queue.acknowledgedocuments  lib/Controller/QueueController.php:193",
+        "POST /ocs/v2.php/apps/findling/queues/documents/unlock  ocs.findling.queue.unlockdocuments  lib/Controller/QueueController.php:239",
+        "POST /ocs/v2.php/apps/findling/queues/documents/requeue  ocs.findling.queue.requeue  lib/Controller/QueueController.php:284",
+        "GET /ocs/v2.php/apps/findling/queues/documents/stats  ocs.findling.queue.documentstats  lib/Controller/QueueController.php:325",
+        "POST /ocs/v2.php/apps/findling/queues/documents/topup  ocs.findling.queue.topupdocuments  lib/Controller/QueueController.php:363",
+        "GET /ocs/v2.php/apps/findling/mounts  ocs.findling.reconcile.mounts  lib/Controller/ReconcileController.php:89",
+        "GET /ocs/v2.php/apps/findling/files/slice  ocs.findling.reconcile.filesslice  lib/Controller/ReconcileController.php:148"
+      ],
+      "lines": [
+        "Nothing in the app calls 9 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/findling/files/{fileId}  ocs.findling.gateway.getfilecontents  lib/Controller/GatewayController.php:63",
+        "  GET /ocs/v2.php/apps/findling/queues/documents  ocs.findling.queue.getdocuments  lib/Controller/QueueController.php:106",
+        "  DELETE /ocs/v2.php/apps/findling/queues/documents  ocs.findling.queue.acknowledgedocuments  lib/Controller/QueueController.php:193",
+        "  POST /ocs/v2.php/apps/findling/queues/documents/unlock  ocs.findling.queue.unlockdocuments  lib/Controller/QueueController.php:239",
+        "  POST /ocs/v2.php/apps/findling/queues/documents/requeue  ocs.findling.queue.requeue  lib/Controller/QueueController.php:284",
+        "  GET /ocs/v2.php/apps/findling/queues/documents/stats  ocs.findling.queue.documentstats  lib/Controller/QueueController.php:325",
+        "  POST /ocs/v2.php/apps/findling/queues/documents/topup  ocs.findling.queue.topupdocuments  lib/Controller/QueueController.php:363",
+        "  GET /ocs/v2.php/apps/findling/mounts  ocs.findling.reconcile.mounts  lib/Controller/ReconcileController.php:89",
+        "  GET /ocs/v2.php/apps/findling/files/slice  ocs.findling.reconcile.filesslice  lib/Controller/ReconcileController.php:148"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 6
+        }
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 9 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 14,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/findling/",
+      "target": "OCA\\Findling\\Controller\\PageController::index",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/findling/admin/diagnose",
+      "target": "OCA\\Findling\\Controller\\SettingsController::diagnose",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/findling/admin/overview",
+      "target": "OCA\\Findling\\Controller\\SettingsController::overview",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/findling/admin/rules",
+      "target": "OCA\\Findling\\Controller\\SettingsController::saveRules",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/findling/admin/rules/preview",
+      "target": "OCA\\Findling\\Controller\\SettingsController::previewRules",
+      "openapi": [],
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/findling/files/{fileId}",
+      "target": "OCA\\Findling\\Controller\\GatewayController::getFileContents",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/findling/files/slice",
+      "target": "OCA\\Findling\\Controller\\ReconcileController::filesSlice",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/findling/mounts",
+      "target": "OCA\\Findling\\Controller\\ReconcileController::mounts",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/ocs/v2.php/apps/findling/queues/documents",
+      "target": "OCA\\Findling\\Controller\\QueueController::acknowledgeDocuments",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/findling/queues/documents",
+      "target": "OCA\\Findling\\Controller\\QueueController::getDocuments",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/findling/queues/documents/requeue",
+      "target": "OCA\\Findling\\Controller\\QueueController::requeue",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/findling/queues/documents/stats",
+      "target": "OCA\\Findling\\Controller\\QueueController::documentStats",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/findling/queues/documents/topup",
+      "target": "OCA\\Findling\\Controller\\QueueController::topUpDocuments",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/findling/queues/documents/unlock",
+      "target": "OCA\\Findling\\Controller\\QueueController::unlockDocuments",
+      "openapi": [
+        "default"
+      ],
+      "kind": "OCS"
+    }
+  ]
+}

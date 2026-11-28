@@ -1,0 +1,440 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative",
+        "composer/composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative",
+        "  composer/composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Cron/Cleanup.php:42 OC\\Files\\SetupManager",
+        "lib/DAV/WorkspacePlugin.php:106 OC\\Files\\Node\\File",
+        "lib/Notification/Notifier.php:69 OC\\User\\NoUserException",
+        "lib/Service/DocumentService.php:524 OC\\User\\NoUserException"
+      ],
+      "lines": [
+        "4 uses of the private API of the server in 4 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Cron/Cleanup.php:42 OC\\Files\\SetupManager",
+        "  lib/DAV/WorkspacePlugin.php:106 OC\\Files\\Node\\File",
+        "  lib/Notification/Notifier.php:69 OC\\User\\NoUserException",
+        "  lib/Service/DocumentService.php:524 OC\\User\\NoUserException"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/Controller/WorkspaceController.php:178 OCP\\DirectEditing\\IManager::open(): there since Nextcloud 35, the app declares from 33",
+        "lib/DirectEditing/TextDirectEditor.php:153 OCP\\DirectEditing\\IToken::getToken(): there since Nextcloud 35, the app declares from 33"
+      ],
+      "lines": [
+        "2 uses in 2 files of the public API that the oldest majors of Nextcloud 33 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/Controller/WorkspaceController.php:178 OCP\\DirectEditing\\IManager::open(): there since Nextcloud 35, the app declares from 33",
+        "  lib/DirectEditing/TextDirectEditor.php:153 OCP\\DirectEditing\\IToken::getToken(): there since Nextcloud 35, the app declares from 33"
+      ]
+    },
+    {
+      "id": "dav-without-preload",
+      "level": "warn",
+      "places": [
+        "lib/DAV/WorkspacePlugin.php:58 OCA\\Text\\DAV\\WorkspacePlugin"
+      ],
+      "lines": [
+        "1 DAV plugin listens to propFind and not to preloadCollection, which the server emits from Nextcloud 32 on before it reads the children of a collection. Without that listener a PROPFIND with Depth above 0 runs the queries of the plugin once per child.",
+        "  lib/DAV/WorkspacePlugin.php:58 OCA\\Text\\DAV\\WorkspacePlugin"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "POST /index.php/apps/text/public/session/{documentId}/save  text.publicsession.save  appinfo/routes.php:48 routes",
+        "POST /index.php/apps/text/public/session/{documentId}/sync  text.publicsession.sync  appinfo/routes.php:50 routes",
+        "POST /index.php/apps/text/public/session/{documentId}/push  text.publicsession.push  appinfo/routes.php:52 routes",
+        "POST /index.php/apps/text/public/session/{documentId}/close  text.publicsession.close  appinfo/routes.php:54 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 4 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 285 files of the frontend source and in the navigation of info.xml. The frontend puts the path of the app and the rest of a URL together at run time, so every text there that reads like a path below the app counted as a call. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  POST /index.php/apps/text/public/session/{documentId}/save  text.publicsession.save  appinfo/routes.php:48 routes",
+        "  POST /index.php/apps/text/public/session/{documentId}/sync  text.publicsession.sync  appinfo/routes.php:50 routes",
+        "  POST /index.php/apps/text/public/session/{documentId}/push  text.publicsession.push  appinfo/routes.php:52 routes",
+        "  POST /index.php/apps/text/public/session/{documentId}/close  text.publicsession.close  appinfo/routes.php:54 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "psalm/phar, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/WorkspaceController.php:114 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Middleware/SessionMiddleware.php:173 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Service/ApiService.php:58 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Service/AttachmentService.php:445 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Service/AttachmentService.php:446 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Service/DocumentService.php:532 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Service/DocumentService.php:545 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Service/DocumentService.php:554 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Service/DocumentService.php:585 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Service/DocumentService.php:621 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead"
+      ],
+      "lines": [
+        "10 uses in 5 files of the public API that is deprecated in Nextcloud 33. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/WorkspaceController.php:114 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Middleware/SessionMiddleware.php:173 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Service/ApiService.php:58 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Service/AttachmentService.php:445 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Service/AttachmentService.php:446 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Service/DocumentService.php:532 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Service/DocumentService.php:545 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Service/DocumentService.php:554 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Service/DocumentService.php:585 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Service/DocumentService.php:621 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/Cron/Cleanup.php OCA\\Text\\Cron\\Cleanup"
+      ],
+      "lines": [
+        "1 timed job does not say whether it is time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/Cron/Cleanup.php OCA\\Text\\Cron\\Cleanup"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Db/SessionMapper.php:93 time()",
+        "lib/Db/SessionMapper.php:107 time()",
+        "lib/Db/SessionMapper.php:113 time()",
+        "lib/Db/SessionMapper.php:150 time()",
+        "lib/Db/SessionMapper.php:186 time()",
+        "lib/Service/DocumentService.php:280 time()",
+        "lib/Service/DocumentService.php:382 time()",
+        "lib/Service/DocumentService.php:706 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 8 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Db/SessionMapper.php:93 time()",
+        "  lib/Db/SessionMapper.php:107 time()",
+        "  lib/Db/SessionMapper.php:113 time()",
+        "  lib/Db/SessionMapper.php:150 time()",
+        "  lib/Db/SessionMapper.php:186 time()",
+        "  lib/Service/DocumentService.php:280 time()",
+        "  lib/Service/DocumentService.php:382 time()",
+        "  lib/Service/DocumentService.php:706 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 5
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/DirectEditing/TextDocumentCreator.php:41 getValueString()",
+        "lib/Migration/ResetSessionsBeforeYjs.php:30 getValueString()",
+        "lib/Service/ConfigService.php:24 getValueString()",
+        "lib/Service/ConfigService.php:28 getValueString()",
+        "lib/Service/ConfigService.php:32 getValueString()",
+        "lib/Service/ConfigService.php:39 getValueString()",
+        "lib/Service/ConfigService.php:50 getValueBool()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 7 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/DirectEditing/TextDocumentCreator.php:41 getValueString()",
+        "  lib/Migration/ResetSessionsBeforeYjs.php:30 getValueString()",
+        "  lib/Service/ConfigService.php:24 getValueString()",
+        "  lib/Service/ConfigService.php:28 getValueString()",
+        "  lib/Service/ConfigService.php:32 getValueString()",
+        "  lib/Service/ConfigService.php:39 getValueString()",
+        "  lib/Service/ConfigService.php:50 getValueBool()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "POST /ocs/v2.php/apps/text/workspace/direct  ocs.text.workspace.direct  appinfo/routes.php:68 ocs"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 OCS route. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  POST /ocs/v2.php/apps/text/workspace/direct  ocs.text.workspace.direct  appinfo/routes.php:68 ocs"
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/NavigationController.php:24 OCA\\Text\\Controller\\NavigationController::navigate()"
+      ],
+      "lines": [
+        "1 public method of a controller is reached by no route.",
+        "  lib/Controller/NavigationController.php:24 OCA\\Text\\Controller\\NavigationController::navigate()"
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 3 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 25,
+  "endpointList": [
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/text/api/v1/users",
+      "target": "OCA\\Text\\Controller\\UserApiController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:60 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/text/attachment/create",
+      "target": "OCA\\Text\\Controller\\AttachmentController::createAttachment",
+      "openapi": [],
+      "source": "appinfo/routes.php:22 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/text/attachment/filepath",
+      "target": "OCA\\Text\\Controller\\AttachmentController::insertAttachmentFile",
+      "openapi": [],
+      "source": "appinfo/routes.php:18 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/text/attachment/upload",
+      "target": "OCA\\Text\\Controller\\AttachmentController::uploadAttachment",
+      "openapi": [],
+      "source": "appinfo/routes.php:20 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/text/attachments",
+      "target": "OCA\\Text\\Controller\\AttachmentController::getAttachmentList",
+      "openapi": [],
+      "source": "appinfo/routes.php:16 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/text/image",
+      "target": "OCA\\Text\\Controller\\AttachmentController::getImageFile",
+      "openapi": [],
+      "source": "appinfo/routes.php:24 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/text/media",
+      "target": "OCA\\Text\\Controller\\AttachmentController::getMediaFile",
+      "openapi": [],
+      "source": "appinfo/routes.php:26 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/text/mediaPreview",
+      "target": "OCA\\Text\\Controller\\AttachmentController::getMediaFilePreview",
+      "openapi": [],
+      "source": "appinfo/routes.php:28 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/text/public/session/{documentId}/close",
+      "target": "OCA\\Text\\Controller\\PublicSessionController::close",
+      "openapi": [],
+      "source": "appinfo/routes.php:54 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/text/public/session/{documentId}/create",
+      "target": "OCA\\Text\\Controller\\PublicSessionController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:44 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/text/public/session/{documentId}/push",
+      "target": "OCA\\Text\\Controller\\PublicSessionController::push",
+      "openapi": [],
+      "source": "appinfo/routes.php:52 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/text/public/session/{documentId}/save",
+      "target": "OCA\\Text\\Controller\\PublicSessionController::save",
+      "openapi": [],
+      "source": "appinfo/routes.php:48 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/text/public/session/{documentId}/session",
+      "target": "OCA\\Text\\Controller\\PublicSessionController::updateSession",
+      "openapi": [],
+      "source": "appinfo/routes.php:46 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/text/public/session/{documentId}/sync",
+      "target": "OCA\\Text\\Controller\\PublicSessionController::sync",
+      "openapi": [],
+      "source": "appinfo/routes.php:50 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/text/session/{documentId}/close",
+      "target": "OCA\\Text\\Controller\\SessionController::close",
+      "openapi": [],
+      "source": "appinfo/routes.php:39 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/text/session/{documentId}/create",
+      "target": "OCA\\Text\\Controller\\SessionController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:31 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/text/session/{documentId}/mention",
+      "target": "OCA\\Text\\Controller\\SessionController::mention",
+      "openapi": [],
+      "source": "appinfo/routes.php:41 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/text/session/{documentId}/push",
+      "target": "OCA\\Text\\Controller\\SessionController::push",
+      "openapi": [],
+      "source": "appinfo/routes.php:37 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/text/session/{documentId}/save",
+      "target": "OCA\\Text\\Controller\\SessionController::save",
+      "openapi": [],
+      "source": "appinfo/routes.php:33 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/text/session/{documentId}/sync",
+      "target": "OCA\\Text\\Controller\\SessionController::sync",
+      "openapi": [],
+      "source": "appinfo/routes.php:35 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/text/settings",
+      "target": "OCA\\Text\\Controller\\SettingsController::updateConfig",
+      "openapi": [],
+      "source": "appinfo/routes.php:57 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/text/public/workspace",
+      "target": "OCA\\Text\\Controller\\WorkspaceController::publicFolder",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:66 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/text/workspace",
+      "target": "OCA\\Text\\Controller\\WorkspaceController::folder",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:64 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/text/workspace/direct",
+      "target": "OCA\\Text\\Controller\\WorkspaceController::direct",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:68 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": null,
+      "path": "/remote.php/dav",
+      "target": "OCA\\Text\\DAV\\WorkspacePlugin",
+      "openapi": [],
+      "source": "appinfo/info.xml",
+      "kind": "DAV"
+    }
+  ]
+}

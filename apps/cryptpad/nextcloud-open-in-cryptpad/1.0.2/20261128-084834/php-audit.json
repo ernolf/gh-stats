@@ -1,0 +1,116 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\OpenInCryptPad\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "psalm/phar, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/EditorController.php:54 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "lib/Service/FilePermissionService.php:48 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "lib/Service/SettingsService.php:35 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Service/SettingsService.php:39 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "lines": [
+        "4 uses in 3 files of the public API that is deprecated in Nextcloud 33 to 34. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/EditorController.php:54 OCP\\AppFramework\\Http\\ContentSecurityPolicy: deprecated since Nextcloud 14; Use one of our stricter CSP policies",
+        "  lib/Service/FilePermissionService.php:48 OCP\\Constants::PERMISSION_UPDATE: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_UPDATE instead",
+        "  lib/Service/SettingsService.php:35 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Service/SettingsService.php:39 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Service/CryptPadSessionService.php:49 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 1 place. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Service/CryptPadSessionService.php:49 new DateTime()"
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Service/SettingsService.php:35 setAppValue()",
+        "lib/Service/SettingsService.php:39 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 2 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Service/SettingsService.php:35 setAppValue()",
+        "  lib/Service/SettingsService.php:39 getAppValue()"
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/EditorController.php:63 OCA\\OpenInCryptPad\\Controller\\EditorController::getInfoScript()",
+        "lib/Controller/EditorController.php:77 OCA\\OpenInCryptPad\\Controller\\EditorController::getCSPHash()"
+      ],
+      "lines": [
+        "2 public methods of controllers are reached by no route.",
+        "  lib/Controller/EditorController.php:63 OCA\\OpenInCryptPad\\Controller\\EditorController::getInfoScript()",
+        "  lib/Controller/EditorController.php:77 OCA\\OpenInCryptPad\\Controller\\EditorController::getCSPHash()"
+      ]
+    }
+  ],
+  "endpoints": 4,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/openincryptpad/editor",
+      "target": "OCA\\OpenInCryptPad\\Controller\\EditorController::page",
+      "openapi": [],
+      "source": "appinfo/routes.php:20 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/openincryptpad/session/{fileId}",
+      "target": "OCA\\OpenInCryptPad\\Controller\\CryptPadSessionController::get",
+      "openapi": [],
+      "source": "appinfo/routes.php:17 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/openincryptpad/settings/cryptPadUrl/{app}",
+      "target": "OCA\\OpenInCryptPad\\Controller\\SettingsController::getCryptPadUrl",
+      "openapi": [],
+      "source": "appinfo/routes.php:18 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/openincryptpad/settings/cryptPadUrl/{app}",
+      "target": "OCA\\OpenInCryptPad\\Controller\\SettingsController::setCryptPadUrl",
+      "openapi": [],
+      "source": "appinfo/routes.php:19 routes",
+      "kind": "route"
+    }
+  ]
+}

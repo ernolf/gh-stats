@@ -1,0 +1,351 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Elisa\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Hooks/ElisaFilesHooksStatic.php:18 OC::$server"
+      ],
+      "lines": [
+        "1 use of the private API of the server in 1 file. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Hooks/ElisaFilesHooksStatic.php:18 OC::$server"
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/Controller/ApiController.php:28 OCP\\AppFramework\\Http\\Attribute\\ApiRoute: there since Nextcloud 29, the app declares from 28",
+        "lib/Controller/DatabaseController.php:29 OCP\\AppFramework\\Http\\Attribute\\ApiRoute: there since Nextcloud 29, the app declares from 28",
+        "lib/Controller/PageController.php:23 OCP\\AppFramework\\Http\\Attribute\\FrontpageRoute: there since Nextcloud 29, the app declares from 28"
+      ],
+      "lines": [
+        "3 uses in 3 files of the public API that the oldest majors of Nextcloud 28 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/Controller/ApiController.php:28 OCP\\AppFramework\\Http\\Attribute\\ApiRoute: there since Nextcloud 29, the app declares from 28",
+        "  lib/Controller/DatabaseController.php:29 OCP\\AppFramework\\Http\\Attribute\\ApiRoute: there since Nextcloud 29, the app declares from 28",
+        "  lib/Controller/PageController.php:23 OCP\\AppFramework\\Http\\Attribute\\FrontpageRoute: there since Nextcloud 29, the app declares from 28"
+      ]
+    },
+    {
+      "id": "ocp-removed-soon",
+      "level": "warn",
+      "places": [
+        "lib/ElisaDatabase.php:130 OCP\\ILogger::warning(): deprecated since Nextcloud 20, Nextcloud 30 is the last major to have it; use \\Psr\\Log\\LoggerInterface::warning",
+        "lib/ElisaDatabase.php:135 OCP\\ILogger::warning(): deprecated since Nextcloud 20, Nextcloud 30 is the last major to have it; use \\Psr\\Log\\LoggerInterface::warning",
+        "lib/ElisaDatabase.php:148 OCP\\ILogger::info(): deprecated since Nextcloud 20, Nextcloud 30 is the last major to have it; use \\Psr\\Log\\LoggerInterface::info",
+        "lib/ElisaDatabase.php:152 OCP\\ILogger::info(): deprecated since Nextcloud 20, Nextcloud 30 is the last major to have it; use \\Psr\\Log\\LoggerInterface::info"
+      ],
+      "lines": [
+        "4 uses in 1 file of the public API that is deprecated and that Nextcloud 36 no longer has: the app fails on the first major without it, once it declares that one.",
+        "  lib/ElisaDatabase.php:130 OCP\\ILogger::warning(): deprecated since Nextcloud 20, Nextcloud 30 is the last major to have it; use \\Psr\\Log\\LoggerInterface::warning",
+        "  lib/ElisaDatabase.php:135 OCP\\ILogger::warning(): deprecated since Nextcloud 20, Nextcloud 30 is the last major to have it; use \\Psr\\Log\\LoggerInterface::warning",
+        "  lib/ElisaDatabase.php:148 OCP\\ILogger::info(): deprecated since Nextcloud 20, Nextcloud 30 is the last major to have it; use \\Psr\\Log\\LoggerInterface::info",
+        "  lib/ElisaDatabase.php:152 OCP\\ILogger::info(): deprecated since Nextcloud 20, Nextcloud 30 is the last major to have it; use \\Psr\\Log\\LoggerInterface::info"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "legacy-hook",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:26 OC_Filesystem::post_create: the manual names no replacement event",
+        "lib/AppInfo/Application.php:27 OC_Filesystem::post_update: removed after the range, in Nextcloud 36, replaced by OCP\\Files\\Events\\Node\\NodeWrittenEvent",
+        "lib/AppInfo/Application.php:28 OC_Filesystem::delete: the manual names no replacement event",
+        "lib/AppInfo/Application.php:29 OC_Filesystem::rename: the manual names no replacement event",
+        "lib/AppInfo/Application.php:30 OC_Filesystem::post_rename: the manual names no replacement event"
+      ],
+      "lines": [
+        "5 connections to a legacy hook of the server. A hook the server removed is never emitted, and the listener never runs; the typed events of OCP\\EventDispatcher replace the hooks.",
+        "OCP\\Util::connectHook() is deprecated since Nextcloud 21: use \\OCP\\EventDispatcher\\IEventDispatcher::addListener. ocp-deprecated leaves these calls to this finding.",
+        "  lib/AppInfo/Application.php:26 OC_Filesystem::post_create: the manual names no replacement event",
+        "  lib/AppInfo/Application.php:27 OC_Filesystem::post_update: removed after the range, in Nextcloud 36, replaced by OCP\\Files\\Events\\Node\\NodeWrittenEvent",
+        "  lib/AppInfo/Application.php:28 OC_Filesystem::delete: the manual names no replacement event",
+        "  lib/AppInfo/Application.php:29 OC_Filesystem::rename: the manual names no replacement event",
+        "  lib/AppInfo/Application.php:30 OC_Filesystem::post_rename: the manual names no replacement event"
+      ],
+      "folds": [
+        {
+          "at": 5,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "route-duplicate",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/elisa/: elisa.page.index at appinfo/routes.php:20 routes, elisa.page.index at lib/Controller/PageController.php:23",
+        "elisa.page.index: elisa.page.index at appinfo/routes.php:20 routes, elisa.page.index at lib/Controller/PageController.php:23"
+      ],
+      "lines": [
+        "2 verbs and paths or route names are declared more than once. The server keeps one route per name and takes the first that matches a request, so the other one is never reached.",
+        "  GET /index.php/apps/elisa/: elisa.page.index at appinfo/routes.php:20 routes, elisa.page.index at lib/Controller/PageController.php:23",
+        "  elisa.page.index: elisa.page.index at appinfo/routes.php:20 routes, elisa.page.index at lib/Controller/PageController.php:23"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/elisa/notes  elisa.note.index  appinfo/routes.php:16 resources",
+        "GET /index.php/apps/elisa/notes/{id}  elisa.note.show  appinfo/routes.php:16 resources",
+        "POST /index.php/apps/elisa/notes  elisa.note.create  appinfo/routes.php:16 resources",
+        "PUT /index.php/apps/elisa/notes/{id}  elisa.note.update  appinfo/routes.php:16 resources",
+        "DELETE /index.php/apps/elisa/notes/{id}  elisa.note.destroy  appinfo/routes.php:16 resources"
+      ],
+      "lines": [
+        "Nothing in the app calls 5 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 3 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  GET /index.php/apps/elisa/notes  elisa.note.index  appinfo/routes.php:16 resources",
+        "  GET /index.php/apps/elisa/notes/{id}  elisa.note.show  appinfo/routes.php:16 resources",
+        "  POST /index.php/apps/elisa/notes  elisa.note.create  appinfo/routes.php:16 resources",
+        "  PUT /index.php/apps/elisa/notes/{id}  elisa.note.update  appinfo/routes.php:16 resources",
+        "  DELETE /index.php/apps/elisa/notes/{id}  elisa.note.destroy  appinfo/routes.php:16 resources"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "openapi-drift",
+      "level": "warn",
+      "places": [
+        "GET /ocs/v2.php/apps/elisa/api  OCA\\Elisa\\Controller\\ApiController::index(): not in openapi.json"
+      ],
+      "lines": [
+        "The OpenAPI specification and the routes differ in 1 operation. A client generated from the specification then calls what is not there, or lacks what is. This holds the routes against the specification and does not generate it again.",
+        "  GET /ocs/v2.php/apps/elisa/api  OCA\\Elisa\\Controller\\ApiController::index(): not in openapi.json"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "psalm/phar, phpunit/phpunit are in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/ElisaDatabase.php:16 OCP\\ILogger: deprecated since Nextcloud 20; use the PSR-3 logger \\Psr\\Log\\LoggerInterface",
+        "lib/ElisaDatabaseManager.php:30 OCP\\ILogger: deprecated since Nextcloud 20; use the PSR-3 logger \\Psr\\Log\\LoggerInterface"
+      ],
+      "lines": [
+        "2 uses in 2 files of the public API that is deprecated in Nextcloud 28. The text of the tag names the replacement where it has one.",
+        "  lib/ElisaDatabase.php:16 OCP\\ILogger: deprecated since Nextcloud 20; use the PSR-3 logger \\Psr\\Log\\LoggerInterface",
+        "  lib/ElisaDatabaseManager.php:30 OCP\\ILogger: deprecated since Nextcloud 20; use the PSR-3 logger \\Psr\\Log\\LoggerInterface"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/ElisaDatabase.php:141 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 1 place. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/ElisaDatabase.php:141 time()"
+      ]
+    },
+    {
+      "id": "cors-unreferenced",
+      "level": "info",
+      "places": [
+        "OPTIONS /index.php/apps/elisa/api/0.1/{path}  elisa.note_api.preflighted_cors  appinfo/routes.php:21 routes",
+        "GET /index.php/apps/elisa/api/0.1/notes  elisa.note_api.index  appinfo/routes.php:17 resources",
+        "GET /index.php/apps/elisa/api/0.1/notes/{id}  elisa.note_api.show  appinfo/routes.php:17 resources",
+        "POST /index.php/apps/elisa/api/0.1/notes  elisa.note_api.create  appinfo/routes.php:17 resources",
+        "PUT /index.php/apps/elisa/api/0.1/notes/{id}  elisa.note_api.update  appinfo/routes.php:17 resources",
+        "DELETE /index.php/apps/elisa/api/0.1/notes/{id}  elisa.note_api.destroy  appinfo/routes.php:17 resources"
+      ],
+      "lines": [
+        "Nothing in the app calls 6 routes outside OCS whose method allows requests from other origins (CORS), or that answer the preflight of such a request (OPTIONS). They are there for clients outside the app, so this is no defect in itself.",
+        "  OPTIONS /index.php/apps/elisa/api/0.1/{path}  elisa.note_api.preflighted_cors  appinfo/routes.php:21 routes",
+        "  GET /index.php/apps/elisa/api/0.1/notes  elisa.note_api.index  appinfo/routes.php:17 resources",
+        "  GET /index.php/apps/elisa/api/0.1/notes/{id}  elisa.note_api.show  appinfo/routes.php:17 resources",
+        "  POST /index.php/apps/elisa/api/0.1/notes  elisa.note_api.create  appinfo/routes.php:17 resources",
+        "  PUT /index.php/apps/elisa/api/0.1/notes/{id}  elisa.note_api.update  appinfo/routes.php:17 resources",
+        "  DELETE /index.php/apps/elisa/api/0.1/notes/{id}  elisa.note_api.destroy  appinfo/routes.php:17 resources"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "GET /ocs/v2.php/apps/elisa/api  ocs.elisa.api.index  lib/Controller/ApiController.php:28",
+        "GET /ocs/v2.php/apps/elisa/database  ocs.elisa.database.getdatabase  lib/Controller/DatabaseController.php:29"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  GET /ocs/v2.php/apps/elisa/api  ocs.elisa.api.index  lib/Controller/ApiController.php:28",
+        "  GET /ocs/v2.php/apps/elisa/database  ocs.elisa.database.getdatabase  lib/Controller/DatabaseController.php:29"
+      ]
+    }
+  ],
+  "endpoints": 15,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/elisa/",
+      "target": "OCA\\Elisa\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "appinfo/routes.php:20 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/elisa/",
+      "target": "OCA\\Elisa\\Controller\\PageController::index",
+      "openapi": [
+        "ignore"
+      ],
+      "source": "lib/Controller/PageController.php:23",
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/elisa/api/0.1/{path}",
+      "target": "OCA\\Elisa\\Controller\\NoteApiController::preflightedCors",
+      "openapi": [],
+      "source": "appinfo/routes.php:21 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/elisa/api/0.1/notes",
+      "target": "OCA\\Elisa\\Controller\\NoteApiController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:17 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/elisa/api/0.1/notes",
+      "target": "OCA\\Elisa\\Controller\\NoteApiController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:17 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/elisa/api/0.1/notes/{id}",
+      "target": "OCA\\Elisa\\Controller\\NoteApiController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:17 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/elisa/api/0.1/notes/{id}",
+      "target": "OCA\\Elisa\\Controller\\NoteApiController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:17 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/elisa/api/0.1/notes/{id}",
+      "target": "OCA\\Elisa\\Controller\\NoteApiController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:17 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/elisa/notes",
+      "target": "OCA\\Elisa\\Controller\\NoteController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:16 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/elisa/notes",
+      "target": "OCA\\Elisa\\Controller\\NoteController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:16 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/elisa/notes/{id}",
+      "target": "OCA\\Elisa\\Controller\\NoteController::destroy",
+      "openapi": [],
+      "source": "appinfo/routes.php:16 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/elisa/notes/{id}",
+      "target": "OCA\\Elisa\\Controller\\NoteController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:16 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/elisa/notes/{id}",
+      "target": "OCA\\Elisa\\Controller\\NoteController::update",
+      "openapi": [],
+      "source": "appinfo/routes.php:16 resources",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/elisa/api",
+      "target": "OCA\\Elisa\\Controller\\ApiController::index",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/ApiController.php:28",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/elisa/database",
+      "target": "OCA\\Elisa\\Controller\\DatabaseController::getDatabase",
+      "openapi": [
+        "default"
+      ],
+      "source": "lib/Controller/DatabaseController.php:29",
+      "kind": "OCS"
+    }
+  ]
+}

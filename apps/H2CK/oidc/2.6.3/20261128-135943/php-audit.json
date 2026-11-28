@@ -1,0 +1,1165 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\OIDCIdentityProvider\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "firebase/php-jwt v7.2.1, in 3rdparty/ of Nextcloud 35"
+      ],
+      "lines": [
+        "vendor/ ships 1 package that the server ships itself in a major of Nextcloud 32 to 35. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  firebase/php-jwt v7.2.1, in 3rdparty/ of Nextcloud 35"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/CorsController.php:30 OC\\Security\\Bruteforce\\Throttler",
+        "lib/Controller/DiscoveryController.php:42 OC\\Security\\Bruteforce\\Throttler",
+        "lib/Controller/DynamicRegistrationController.php:79 OC\\Security\\Bruteforce\\Throttler",
+        "lib/Controller/JwksController.php:42 OC\\Security\\Bruteforce\\Throttler",
+        "lib/Controller/OIDCApiController.php:159 OC\\Authentication\\Token\\IProvider",
+        "lib/Controller/OIDCApiController.php:162 OC\\Security\\Bruteforce\\Throttler",
+        "lib/Controller/UserInfoController.php:98 OC\\Security\\Bruteforce\\Throttler",
+        "lib/Http/BasicAuthRequestSanitizer.php:88 OC\\AppFramework\\Http\\Request",
+        "lib/Util/JwtGenerator.php:98 OC\\Authentication\\Token\\IProvider"
+      ],
+      "lines": [
+        "9 uses of the private API of the server in 8 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/CorsController.php:30 OC\\Security\\Bruteforce\\Throttler",
+        "  lib/Controller/DiscoveryController.php:42 OC\\Security\\Bruteforce\\Throttler",
+        "  lib/Controller/DynamicRegistrationController.php:79 OC\\Security\\Bruteforce\\Throttler",
+        "  lib/Controller/JwksController.php:42 OC\\Security\\Bruteforce\\Throttler",
+        "  lib/Controller/OIDCApiController.php:159 OC\\Authentication\\Token\\IProvider",
+        "  lib/Controller/OIDCApiController.php:162 OC\\Security\\Bruteforce\\Throttler",
+        "  lib/Controller/UserInfoController.php:98 OC\\Security\\Bruteforce\\Throttler",
+        "  lib/Http/BasicAuthRequestSanitizer.php:88 OC\\AppFramework\\Http\\Request",
+        "  lib/Util/JwtGenerator.php:98 OC\\Authentication\\Token\\IProvider"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 6
+        }
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/Controller/SessionController.php:32 OCP\\AppFramework\\Http\\Attribute\\NoSameSiteCookieRequired: there since Nextcloud 34, the app declares from 32"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that the oldest majors of Nextcloud 32 to 35 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/Controller/SessionController.php:32 OCP\\AppFramework\\Http\\Attribute\\NoSameSiteCookieRequired: there since Nextcloud 34, the app declares from 32"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "POST /index.php/apps/oidc/clients/redirect  oidc.settings.addredirecturiv1  appinfo/routes.php:31 routes",
+        "POST /index.php/apps/oidc/logoutRedirect  oidc.settings.addlogoutredirecturiv1  appinfo/routes.php:49 routes",
+        "POST /index.php/apps/oidc/clients  oidc.settings.addclientv1  appinfo/routes.php:73 routes",
+        "POST /index.php/apps/oidc/authorize  oidc.loginredirector.authorizepost  appinfo/routes.php:211 routes",
+        "POST /index.php/apps/oidc/userinfo  oidc.userinfo.getinfopost  appinfo/routes.php:303 routes",
+        "GET /index.php/apps/oidc/customClaim  oidc.customclaim.getcustomclaimv1  appinfo/routes.php:338 routes",
+        "POST /index.php/apps/oidc/customClaim  oidc.customclaim.addcustomclaimv1  appinfo/routes.php:350 routes",
+        "PATCH /index.php/apps/oidc/customClaim  oidc.customclaim.updatecustomclaimv1  appinfo/routes.php:362 routes",
+        "DELETE /index.php/apps/oidc/customClaim  oidc.customclaim.deletecustomclaimv1  appinfo/routes.php:374 routes",
+        "GET /index.php/apps/oidc/session/check  oidc.session.check  appinfo/routes.php:437 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 10 routes outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 11 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  POST /index.php/apps/oidc/clients/redirect  oidc.settings.addredirecturiv1  appinfo/routes.php:31 routes",
+        "  POST /index.php/apps/oidc/logoutRedirect  oidc.settings.addlogoutredirecturiv1  appinfo/routes.php:49 routes",
+        "  POST /index.php/apps/oidc/clients  oidc.settings.addclientv1  appinfo/routes.php:73 routes",
+        "  POST /index.php/apps/oidc/authorize  oidc.loginredirector.authorizepost  appinfo/routes.php:211 routes",
+        "  POST /index.php/apps/oidc/userinfo  oidc.userinfo.getinfopost  appinfo/routes.php:303 routes",
+        "  GET /index.php/apps/oidc/customClaim  oidc.customclaim.getcustomclaimv1  appinfo/routes.php:338 routes",
+        "  POST /index.php/apps/oidc/customClaim  oidc.customclaim.addcustomclaimv1  appinfo/routes.php:350 routes",
+        "  PATCH /index.php/apps/oidc/customClaim  oidc.customclaim.updatecustomclaimv1  appinfo/routes.php:362 routes",
+        "  DELETE /index.php/apps/oidc/customClaim  oidc.customclaim.deletecustomclaimv1  appinfo/routes.php:374 routes",
+        "  GET /index.php/apps/oidc/session/check  oidc.session.check  appinfo/routes.php:437 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Service/CustomClaimService.php:367 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ],
+      "lines": [
+        "1 use in 1 file of the public API that is deprecated in Nextcloud 32 to 35. The text of the tag names the replacement where it has one.",
+        "  lib/Service/CustomClaimService.php:367 OCP\\IConfig::getUserValue(): deprecated since Nextcloud 33; use IUserConfig directly"
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Db/AccessTokenMapper.php:128",
+        "lib/Db/ClientMapper.php:195",
+        "lib/Db/UserConsentMapper.php:23",
+        "lib/Service/AuthorizationTransactionService.php:38"
+      ],
+      "lines": [
+        "4 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Db/AccessTokenMapper.php:128",
+        "  lib/Db/ClientMapper.php:195",
+        "  lib/Db/UserConsentMapper.php:23",
+        "  lib/Service/AuthorizationTransactionService.php:38"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Command/Clients/OIDCCreate.php:344 time()",
+        "lib/Controller/SettingsController.php:479 time()",
+        "lib/Db/Client.php:158 time()",
+        "lib/Db/UserConsentMapper.php:153 time()",
+        "lib/Service/RegistrationTokenService.php:46 time()",
+        "lib/Service/RegistrationTokenService.php:67 time()",
+        "lib/Service/RegistrationTokenService.php:94 time()",
+        "lib/Service/SessionManagementService.php:230 time()",
+        "lib/Service/SessionManagementService.php:275 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 9 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Command/Clients/OIDCCreate.php:344 time()",
+        "  lib/Controller/SettingsController.php:479 time()",
+        "  lib/Db/Client.php:158 time()",
+        "  lib/Db/UserConsentMapper.php:153 time()",
+        "  lib/Service/RegistrationTokenService.php:46 time()",
+        "  lib/Service/RegistrationTokenService.php:67 time()",
+        "  lib/Service/RegistrationTokenService.php:94 time()",
+        "  lib/Service/SessionManagementService.php:230 time()",
+        "  lib/Service/SessionManagementService.php:275 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 6
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/CleanupExpiredTokens.php:85 getAppValueString()",
+        "lib/BackgroundJob/CleanupExpiredTokens.php:86 getAppValueString()",
+        "lib/Command/Clients/OIDCCreate.php:203 getAppValueString()",
+        "lib/Command/Clients/OIDCCreate.php:211 getAppValueString()",
+        "lib/Command/LogoutRedirectUris/OIDCCreate.php:43 getAppValueString()",
+        "lib/Controller/DeviceAuthorizationController.php:109 getAppValueBool()",
+        "lib/Controller/DeviceAuthorizationController.php:162 getAppValueString()",
+        "lib/Controller/DeviceAuthorizationController.php:235 getAppValueString()",
+        "lib/Controller/DeviceAuthorizationController.php:282 getAppValueString()",
+        "lib/Controller/DynamicRegistrationController.php:131 getAppValueString()",
+        "lib/Controller/DynamicRegistrationController.php:169 getAppValueBool()",
+        "lib/Controller/DynamicRegistrationController.php:233 getAppValueString()",
+        "lib/Controller/DynamicRegistrationController.php:394 getAppValueString()",
+        "lib/Controller/DynamicRegistrationController.php:718 getAppValueString()",
+        "lib/Controller/DynamicRegistrationController.php:808 getAppValueBool()",
+        "lib/Controller/DynamicRegistrationController.php:1029 getAppValueString()",
+        "lib/Controller/DynamicRegistrationController.php:1054 getAppValueBool()",
+        "lib/Controller/IntrospectionController.php:111 getAppValueBool()",
+        "lib/Controller/IntrospectionController.php:242 getAppValueString()",
+        "lib/Controller/JwksController.php:88 getAppValueString()",
+        "lib/Controller/JwksController.php:89 getAppValueString()",
+        "lib/Controller/JwksController.php:90 getAppValueString()",
+        "lib/Controller/LogoutController.php:381 getAppValueString()",
+        "lib/Controller/LogoutController.php:392 getAppValueString()",
+        "lib/Controller/LogoutController.php:393 getAppValueString()",
+        "lib/Controller/OIDCApiController.php:445 getAppValueString()",
+        "lib/Controller/OIDCApiController.php:446 getAppValueString()",
+        "lib/Controller/OIDCApiController.php:494 getAppValueBool()",
+        "lib/Controller/OIDCApiController.php:663 getAppValueString()",
+        "lib/Controller/OIDCApiController.php:819 getAppValueString()",
+        "lib/Controller/OIDCApiController.php:936 getAppValueBool()",
+        "lib/Controller/OIDCApiController.php:1024 getAppValueString()",
+        "lib/Controller/OIDCApiController.php:1104 getAppValueBool()",
+        "lib/Controller/OIDCApiController.php:1147 getAppValueString()",
+        "lib/Controller/OIDCApiController.php:1214 getAppValueString()",
+        "lib/Controller/OIDCApiController.php:1215 getAppValueString()",
+        "lib/Controller/OIDCApiController.php:1264 getAppValueString()",
+        "lib/Controller/OIDCApiController.php:1455 getAppValueBool()",
+        "lib/Controller/OIDCApiController.php:1565 getAppValueString()",
+        "lib/Controller/SettingsController.php:142 getAppValueString()",
+        "lib/Controller/SettingsController.php:151 getAppValueString()",
+        "lib/Controller/SettingsController.php:348 getAppValueString()",
+        "lib/Controller/SettingsController.php:674 getAppValueString()",
+        "lib/Controller/SettingsController.php:853 getAppValueString()",
+        "lib/Controller/SettingsController.php:912 setAppValuestring()",
+        "lib/Controller/SettingsController.php:921 setAppValueString()",
+        "lib/Controller/SettingsController.php:937 setAppValueString()",
+        "lib/Controller/SettingsController.php:949 setAppValueString()",
+        "lib/Controller/SettingsController.php:952 getAppValueString()",
+        "lib/Controller/SettingsController.php:962 setAppValueString()",
+        "lib/Controller/SettingsController.php:965 getAppValueString()",
+        "lib/Controller/SettingsController.php:973 setAppValueString()",
+        "lib/Controller/SettingsController.php:976 getAppValueString()",
+        "lib/Controller/SettingsController.php:989 setAppValueString()",
+        "lib/Controller/SettingsController.php:991 getAppValueString()",
+        "lib/Controller/SettingsController.php:1001 setAppValueString()",
+        "lib/Controller/SettingsController.php:1004 getAppValueString()",
+        "lib/Controller/SettingsController.php:1015 setAppValueString()",
+        "lib/Controller/SettingsController.php:1017 getAppValueString()",
+        "lib/Controller/SettingsController.php:1028 setAppValueBool()",
+        "lib/Controller/SettingsController.php:1029 getAppValueBool()",
+        "lib/Controller/SettingsController.php:1052 setAppValueString()",
+        "lib/Controller/SettingsController.php:1054 getAppValueString()",
+        "lib/Controller/SettingsController.php:1090 getAppValueString()",
+        "lib/Controller/UserInfoController.php:270 getAppValueString()",
+        "lib/Controller/UserInfoController.php:276 getAppValueString()",
+        "lib/Controller/UserInfoController.php:365 getAppValueString()",
+        "lib/Controller/UserInfoController.php:366 getAppValueString()",
+        "lib/Controller/UserInfoController.php:398 getAppValueString()",
+        "lib/Controller/UserInfoController.php:400 getAppValueString()",
+        "lib/Controller/UserInfoController.php:472 getAppValueString()",
+        "lib/Db/AccessTokenMapper.php:294 getAppValueString()",
+        "lib/Db/AccessTokenMapper.php:297 getAppValueString()",
+        "lib/Db/AccessTokenMapper.php:332 getAppValueString()",
+        "lib/Db/ClientMapper.php:255 getAppValueString()",
+        "lib/Http/WellKnown/WebFingerHandler.php:79 getAppValueString()",
+        "lib/Listener/TokenGenerationRequestListener.php:82 getAppValueString()",
+        "lib/Listener/TokenGenerationRequestListener.php:115 getAppValueString()",
+        "lib/Listener/TokenGenerationRequestListener.php:166 getAppValueString()",
+        "lib/Listener/TokenValidationRequestListener.php:56 getAppValueString()",
+        "lib/Listener/TokenValidationRequestListener.php:116 getAppValueString()",
+        "lib/Listener/TokenValidationRequestListener.php:117 getAppValueString()",
+        "lib/Listener/TokenValidationRequestListener.php:118 getAppValueString()",
+        "lib/Migration/CreateKeys.php:33 getAppValueString()",
+        "lib/Migration/CreateKeys.php:37 getAppValueString()",
+        "lib/Migration/CreateKeys.php:38 setAppValueString()",
+        "lib/Migration/Version0037Date20261002080000.php:101 setAppValueString()",
+        "lib/Service/AuthorizationService.php:608 getAppValueString()",
+        "lib/Service/AuthorizationService.php:756 getAppValueString()",
+        "lib/Service/AuthorizationService.php:919 getAppValueString()",
+        "lib/Service/CredentialService.php:76 getAppValueString()",
+        "lib/Service/CredentialService.php:100 setAppValueString()",
+        "lib/Service/CredentialService.php:102 setAppValueString()",
+        "lib/Service/CredentialService.php:105 setAppValueString()",
+        "lib/Service/CredentialService.php:106 setAppValueString()",
+        "lib/Service/ResourcePolicyService.php:43 getAppValueString()",
+        "lib/Service/ResourcePolicyService.php:57 setAppValueString()",
+        "lib/Service/SessionManagementService.php:97 getAppValueString()",
+        "lib/Service/SessionManagementService.php:98 getAppValueString()",
+        "lib/Service/SessionManagementService.php:415 getAppValueString()",
+        "lib/Settings/Admin.php:171 getAppValueString()",
+        "lib/Settings/Admin.php:173 getAppValueString()",
+        "lib/Settings/Admin.php:175 getAppValueString()",
+        "lib/Settings/Admin.php:180 getAppValueString()",
+        "lib/Settings/Admin.php:182 getAppValueString()",
+        "lib/Settings/Admin.php:184 getAppValueString()",
+        "lib/Settings/Admin.php:189 getAppValueString()",
+        "lib/Settings/Admin.php:191 getAppValueString()",
+        "lib/Settings/Admin.php:193 getAppValueString()",
+        "lib/Settings/Admin.php:195 getAppValueString()",
+        "lib/Settings/Admin.php:197 getAppValueBool()",
+        "lib/Settings/Personal.php:65 getAppValueString()",
+        "lib/Util/DiscoveryGenerator.php:118 getAppValueBool()",
+        "lib/Util/DiscoveryGenerator.php:215 getAppValueString()",
+        "lib/Util/DiscoveryGenerator.php:225 getAppValueBool()",
+        "lib/Util/JwtGenerator.php:241 getAppValueString()",
+        "lib/Util/JwtGenerator.php:242 getAppValueBool()",
+        "lib/Util/JwtGenerator.php:326 getAppValueString()",
+        "lib/Util/JwtGenerator.php:327 getAppValueString()",
+        "lib/Util/JwtGenerator.php:365 getAppValueString()",
+        "lib/Util/JwtGenerator.php:367 getAppValueString()",
+        "lib/Util/JwtGenerator.php:442 getAppValueString()",
+        "lib/Util/JwtGenerator.php:468 getAppValueString()",
+        "lib/Util/JwtGenerator.php:530 getAppValueString()",
+        "lib/Util/JwtGenerator.php:623 getAppValueString()",
+        "lib/Util/JwtGenerator.php:700 getAppValueString()",
+        "lib/Util/JwtGenerator.php:701 getAppValueString()",
+        "lib/Util/JwtGenerator.php:733 getAppValueString()",
+        "lib/Util/JwtGenerator.php:735 getAppValueString()",
+        "lib/Util/JwtGenerator.php:796 getAppValueString()",
+        "lib/Util/JwtGenerator.php:822 getAppValueString()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 131 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/BackgroundJob/CleanupExpiredTokens.php:85 getAppValueString()",
+        "  lib/BackgroundJob/CleanupExpiredTokens.php:86 getAppValueString()",
+        "  lib/Command/Clients/OIDCCreate.php:203 getAppValueString()",
+        "  lib/Command/Clients/OIDCCreate.php:211 getAppValueString()",
+        "  lib/Command/LogoutRedirectUris/OIDCCreate.php:43 getAppValueString()",
+        "  lib/Controller/DeviceAuthorizationController.php:109 getAppValueBool()",
+        "  lib/Controller/DeviceAuthorizationController.php:162 getAppValueString()",
+        "  lib/Controller/DeviceAuthorizationController.php:235 getAppValueString()",
+        "  lib/Controller/DeviceAuthorizationController.php:282 getAppValueString()",
+        "  lib/Controller/DynamicRegistrationController.php:131 getAppValueString()",
+        "  lib/Controller/DynamicRegistrationController.php:169 getAppValueBool()",
+        "  lib/Controller/DynamicRegistrationController.php:233 getAppValueString()",
+        "  lib/Controller/DynamicRegistrationController.php:394 getAppValueString()",
+        "  lib/Controller/DynamicRegistrationController.php:718 getAppValueString()",
+        "  lib/Controller/DynamicRegistrationController.php:808 getAppValueBool()",
+        "  lib/Controller/DynamicRegistrationController.php:1029 getAppValueString()",
+        "  lib/Controller/DynamicRegistrationController.php:1054 getAppValueBool()",
+        "  lib/Controller/IntrospectionController.php:111 getAppValueBool()",
+        "  lib/Controller/IntrospectionController.php:242 getAppValueString()",
+        "  lib/Controller/JwksController.php:88 getAppValueString()",
+        "  lib/Controller/JwksController.php:89 getAppValueString()",
+        "  lib/Controller/JwksController.php:90 getAppValueString()",
+        "  lib/Controller/LogoutController.php:381 getAppValueString()",
+        "  lib/Controller/LogoutController.php:392 getAppValueString()",
+        "  lib/Controller/LogoutController.php:393 getAppValueString()",
+        "  lib/Controller/OIDCApiController.php:445 getAppValueString()",
+        "  lib/Controller/OIDCApiController.php:446 getAppValueString()",
+        "  lib/Controller/OIDCApiController.php:494 getAppValueBool()",
+        "  lib/Controller/OIDCApiController.php:663 getAppValueString()",
+        "  lib/Controller/OIDCApiController.php:819 getAppValueString()",
+        "  lib/Controller/OIDCApiController.php:936 getAppValueBool()",
+        "  lib/Controller/OIDCApiController.php:1024 getAppValueString()",
+        "  lib/Controller/OIDCApiController.php:1104 getAppValueBool()",
+        "  lib/Controller/OIDCApiController.php:1147 getAppValueString()",
+        "  lib/Controller/OIDCApiController.php:1214 getAppValueString()",
+        "  lib/Controller/OIDCApiController.php:1215 getAppValueString()",
+        "  lib/Controller/OIDCApiController.php:1264 getAppValueString()",
+        "  lib/Controller/OIDCApiController.php:1455 getAppValueBool()",
+        "  lib/Controller/OIDCApiController.php:1565 getAppValueString()",
+        "  lib/Controller/SettingsController.php:142 getAppValueString()",
+        "  lib/Controller/SettingsController.php:151 getAppValueString()",
+        "  lib/Controller/SettingsController.php:348 getAppValueString()",
+        "  lib/Controller/SettingsController.php:674 getAppValueString()",
+        "  lib/Controller/SettingsController.php:853 getAppValueString()",
+        "  lib/Controller/SettingsController.php:912 setAppValuestring()",
+        "  lib/Controller/SettingsController.php:921 setAppValueString()",
+        "  lib/Controller/SettingsController.php:937 setAppValueString()",
+        "  lib/Controller/SettingsController.php:949 setAppValueString()",
+        "  lib/Controller/SettingsController.php:952 getAppValueString()",
+        "  lib/Controller/SettingsController.php:962 setAppValueString()",
+        "  lib/Controller/SettingsController.php:965 getAppValueString()",
+        "  lib/Controller/SettingsController.php:973 setAppValueString()",
+        "  lib/Controller/SettingsController.php:976 getAppValueString()",
+        "  lib/Controller/SettingsController.php:989 setAppValueString()",
+        "  lib/Controller/SettingsController.php:991 getAppValueString()",
+        "  lib/Controller/SettingsController.php:1001 setAppValueString()",
+        "  lib/Controller/SettingsController.php:1004 getAppValueString()",
+        "  lib/Controller/SettingsController.php:1015 setAppValueString()",
+        "  lib/Controller/SettingsController.php:1017 getAppValueString()",
+        "  lib/Controller/SettingsController.php:1028 setAppValueBool()",
+        "  lib/Controller/SettingsController.php:1029 getAppValueBool()",
+        "  lib/Controller/SettingsController.php:1052 setAppValueString()",
+        "  lib/Controller/SettingsController.php:1054 getAppValueString()",
+        "  lib/Controller/SettingsController.php:1090 getAppValueString()",
+        "  lib/Controller/UserInfoController.php:270 getAppValueString()",
+        "  lib/Controller/UserInfoController.php:276 getAppValueString()",
+        "  lib/Controller/UserInfoController.php:365 getAppValueString()",
+        "  lib/Controller/UserInfoController.php:366 getAppValueString()",
+        "  lib/Controller/UserInfoController.php:398 getAppValueString()",
+        "  lib/Controller/UserInfoController.php:400 getAppValueString()",
+        "  lib/Controller/UserInfoController.php:472 getAppValueString()",
+        "  lib/Db/AccessTokenMapper.php:294 getAppValueString()",
+        "  lib/Db/AccessTokenMapper.php:297 getAppValueString()",
+        "  lib/Db/AccessTokenMapper.php:332 getAppValueString()",
+        "  lib/Db/ClientMapper.php:255 getAppValueString()",
+        "  lib/Http/WellKnown/WebFingerHandler.php:79 getAppValueString()",
+        "  lib/Listener/TokenGenerationRequestListener.php:82 getAppValueString()",
+        "  lib/Listener/TokenGenerationRequestListener.php:115 getAppValueString()",
+        "  lib/Listener/TokenGenerationRequestListener.php:166 getAppValueString()",
+        "  lib/Listener/TokenValidationRequestListener.php:56 getAppValueString()",
+        "  lib/Listener/TokenValidationRequestListener.php:116 getAppValueString()",
+        "  lib/Listener/TokenValidationRequestListener.php:117 getAppValueString()",
+        "  lib/Listener/TokenValidationRequestListener.php:118 getAppValueString()",
+        "  lib/Migration/CreateKeys.php:33 getAppValueString()",
+        "  lib/Migration/CreateKeys.php:37 getAppValueString()",
+        "  lib/Migration/CreateKeys.php:38 setAppValueString()",
+        "  lib/Migration/Version0037Date20261002080000.php:101 setAppValueString()",
+        "  lib/Service/AuthorizationService.php:608 getAppValueString()",
+        "  lib/Service/AuthorizationService.php:756 getAppValueString()",
+        "  lib/Service/AuthorizationService.php:919 getAppValueString()",
+        "  lib/Service/CredentialService.php:76 getAppValueString()",
+        "  lib/Service/CredentialService.php:100 setAppValueString()",
+        "  lib/Service/CredentialService.php:102 setAppValueString()",
+        "  lib/Service/CredentialService.php:105 setAppValueString()",
+        "  lib/Service/CredentialService.php:106 setAppValueString()",
+        "  lib/Service/ResourcePolicyService.php:43 getAppValueString()",
+        "  lib/Service/ResourcePolicyService.php:57 setAppValueString()",
+        "  lib/Service/SessionManagementService.php:97 getAppValueString()",
+        "  lib/Service/SessionManagementService.php:98 getAppValueString()",
+        "  lib/Service/SessionManagementService.php:415 getAppValueString()",
+        "  lib/Settings/Admin.php:171 getAppValueString()",
+        "  lib/Settings/Admin.php:173 getAppValueString()",
+        "  lib/Settings/Admin.php:175 getAppValueString()",
+        "  lib/Settings/Admin.php:180 getAppValueString()",
+        "  lib/Settings/Admin.php:182 getAppValueString()",
+        "  lib/Settings/Admin.php:184 getAppValueString()",
+        "  lib/Settings/Admin.php:189 getAppValueString()",
+        "  lib/Settings/Admin.php:191 getAppValueString()",
+        "  lib/Settings/Admin.php:193 getAppValueString()",
+        "  lib/Settings/Admin.php:195 getAppValueString()",
+        "  lib/Settings/Admin.php:197 getAppValueBool()",
+        "  lib/Settings/Personal.php:65 getAppValueString()",
+        "  lib/Util/DiscoveryGenerator.php:118 getAppValueBool()",
+        "  lib/Util/DiscoveryGenerator.php:215 getAppValueString()",
+        "  lib/Util/DiscoveryGenerator.php:225 getAppValueBool()",
+        "  lib/Util/JwtGenerator.php:241 getAppValueString()",
+        "  lib/Util/JwtGenerator.php:242 getAppValueBool()",
+        "  lib/Util/JwtGenerator.php:326 getAppValueString()",
+        "  lib/Util/JwtGenerator.php:327 getAppValueString()",
+        "  lib/Util/JwtGenerator.php:365 getAppValueString()",
+        "  lib/Util/JwtGenerator.php:367 getAppValueString()",
+        "  lib/Util/JwtGenerator.php:442 getAppValueString()",
+        "  lib/Util/JwtGenerator.php:468 getAppValueString()",
+        "  lib/Util/JwtGenerator.php:530 getAppValueString()",
+        "  lib/Util/JwtGenerator.php:623 getAppValueString()",
+        "  lib/Util/JwtGenerator.php:700 getAppValueString()",
+        "  lib/Util/JwtGenerator.php:701 getAppValueString()",
+        "  lib/Util/JwtGenerator.php:733 getAppValueString()",
+        "  lib/Util/JwtGenerator.php:735 getAppValueString()",
+        "  lib/Util/JwtGenerator.php:796 getAppValueString()",
+        "  lib/Util/JwtGenerator.php:822 getAppValueString()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 128
+        }
+      ]
+    },
+    {
+      "id": "cors-unreferenced",
+      "level": "info",
+      "places": [
+        "OPTIONS /index.php/apps/oidc/authorize  oidc.cors.authorizecorsresponse  appinfo/routes.php:216 routes",
+        "OPTIONS /index.php/apps/oidc/revoke  oidc.cors.revocationcorsresponse  appinfo/routes.php:272 routes",
+        "OPTIONS /index.php/apps/oidc/token  oidc.cors.tokencorsresponse  appinfo/routes.php:293 routes",
+        "OPTIONS /index.php/apps/oidc/userinfo  oidc.cors.userinfocorsresponse  appinfo/routes.php:308 routes",
+        "OPTIONS /index.php/apps/oidc/register  oidc.cors.registercorsresponse  appinfo/routes.php:318 routes",
+        "GET /index.php/apps/oidc/openid-configuration  oidc.discovery.getinfo  appinfo/routes.php:391 routes",
+        "OPTIONS /index.php/apps/oidc/openid-configuration  oidc.cors.discoverycorsresponse  appinfo/routes.php:396 routes",
+        "OPTIONS /index.php/apps/oidc/jwks  oidc.cors.jwkscorsresponse  appinfo/routes.php:406 routes",
+        "OPTIONS /index.php/apps/oidc/logout  oidc.cors.logoutcorsresponse  appinfo/routes.php:421 routes",
+        "OPTIONS /index.php/apps/oidc/introspect  oidc.cors.introspectioncorsresponse  appinfo/routes.php:431 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 10 routes outside OCS whose method allows requests from other origins (CORS), or that answer the preflight of such a request (OPTIONS). They are there for clients outside the app, so this is no defect in itself.",
+        "  OPTIONS /index.php/apps/oidc/authorize  oidc.cors.authorizecorsresponse  appinfo/routes.php:216 routes",
+        "  OPTIONS /index.php/apps/oidc/revoke  oidc.cors.revocationcorsresponse  appinfo/routes.php:272 routes",
+        "  OPTIONS /index.php/apps/oidc/token  oidc.cors.tokencorsresponse  appinfo/routes.php:293 routes",
+        "  OPTIONS /index.php/apps/oidc/userinfo  oidc.cors.userinfocorsresponse  appinfo/routes.php:308 routes",
+        "  OPTIONS /index.php/apps/oidc/register  oidc.cors.registercorsresponse  appinfo/routes.php:318 routes",
+        "  GET /index.php/apps/oidc/openid-configuration  oidc.discovery.getinfo  appinfo/routes.php:391 routes",
+        "  OPTIONS /index.php/apps/oidc/openid-configuration  oidc.cors.discoverycorsresponse  appinfo/routes.php:396 routes",
+        "  OPTIONS /index.php/apps/oidc/jwks  oidc.cors.jwkscorsresponse  appinfo/routes.php:406 routes",
+        "  OPTIONS /index.php/apps/oidc/logout  oidc.cors.logoutcorsresponse  appinfo/routes.php:421 routes",
+        "  OPTIONS /index.php/apps/oidc/introspect  oidc.cors.introspectioncorsresponse  appinfo/routes.php:431 routes"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version0038Date20261005090000.php:35 hasColumn() on a table whose name is no constant",
+        "lib/Migration/Version0038Date20261005090000.php:36 addColumn() on a table whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version0038Date20261005090000.php:35 hasColumn() on a table whose name is no constant",
+        "  lib/Migration/Version0038Date20261005090000.php:36 addColumn() on a table whose name is no constant"
+      ]
+    }
+  ],
+  "endpoints": 81,
+  "endpointList": [
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/allowUserSettings",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::setAllowUserSettings",
+      "openapi": [],
+      "source": "appinfo/routes.php:115 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/oidc/api/consents",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\ConsentController::listUserConsents",
+      "openapi": [],
+      "source": "appinfo/routes.php:251 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/oidc/api/consents/{clientId}",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\ConsentController::revokeConsent",
+      "openapi": [],
+      "source": "appinfo/routes.php:256 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/index.php/apps/oidc/api/consents/{clientId}/scopes",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\ConsentController::updateScopes",
+      "openapi": [],
+      "source": "appinfo/routes.php:261 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/api/v2/alwaysIncludeScopeClaims",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::setAlwaysIncludeScopeClaims",
+      "openapi": [],
+      "source": "appinfo/routes.php:137 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/index.php/apps/oidc/api/v2/client/{client_id}",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::updateClientConfiguration",
+      "openapi": [],
+      "source": "appinfo/routes.php:163 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/api/v2/clients",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::addClient",
+      "openapi": [],
+      "source": "appinfo/routes.php:79 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/oidc/api/v2/clients/{id}",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::deleteClient",
+      "openapi": [],
+      "source": "appinfo/routes.php:200 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/api/v2/clients/redirect",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::addRedirectUri",
+      "openapi": [],
+      "source": "appinfo/routes.php:25 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/oidc/api/v2/clients/redirect/{id}",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::deleteRedirectUri",
+      "openapi": [],
+      "source": "appinfo/routes.php:43 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/oidc/api/v2/customClaim",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\CustomClaimController::deleteCustomClaim",
+      "openapi": [],
+      "source": "appinfo/routes.php:380 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/oidc/api/v2/customClaim",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\CustomClaimController::getCustomClaim",
+      "openapi": [],
+      "source": "appinfo/routes.php:344 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/index.php/apps/oidc/api/v2/customClaim",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\CustomClaimController::updateCustomClaim",
+      "openapi": [],
+      "source": "appinfo/routes.php:368 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/api/v2/customClaim",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\CustomClaimController::addCustomClaim",
+      "openapi": [],
+      "source": "appinfo/routes.php:356 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/api/v2/genKeys",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::regenerateKeys",
+      "openapi": [],
+      "source": "appinfo/routes.php:153 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/api/v2/groupScopes",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::setGroupScopes",
+      "openapi": [],
+      "source": "appinfo/routes.php:125 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/oidc/api/v2/groupScopes/{groupId}",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::deleteGroupScopes",
+      "openapi": [],
+      "source": "appinfo/routes.php:131 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/api/v2/logoutRedirect",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::addLogoutRedirectUri",
+      "openapi": [],
+      "source": "appinfo/routes.php:55 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/oidc/api/v2/logoutRedirect/{id}",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::deleteLogoutRedirectUri",
+      "openapi": [],
+      "source": "appinfo/routes.php:67 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/oidc/authorize",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\LoginRedirectorController::authorize",
+      "openapi": [],
+      "source": "appinfo/routes.php:206 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/oidc/authorize",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\CorsController::authorizeCorsResponse",
+      "openapi": [],
+      "source": "appinfo/routes.php:216 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/authorize",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\LoginRedirectorController::authorizePost",
+      "openapi": [],
+      "source": "appinfo/routes.php:211 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/oidc/authorize/post/complete",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\AuthorizationResumeController::completePost",
+      "openapi": [],
+      "source": "appinfo/routes.php:231 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/clients",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::addClient",
+      "openapi": [],
+      "source": "appinfo/routes.php:73 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/oidc/clients/{id}",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::deleteClient",
+      "openapi": [],
+      "source": "appinfo/routes.php:194 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/index.php/apps/oidc/clients/allowed_scopes/{id}",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::updateAllowedScopes",
+      "openapi": [],
+      "source": "appinfo/routes.php:179 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/index.php/apps/oidc/clients/email_regex/{id}",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::updateEmailRegex",
+      "openapi": [],
+      "source": "appinfo/routes.php:184 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/index.php/apps/oidc/clients/flows/{id}",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::updateClientFlow",
+      "openapi": [],
+      "source": "appinfo/routes.php:169 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/index.php/apps/oidc/clients/groups/{id}",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::updateClient",
+      "openapi": [],
+      "source": "appinfo/routes.php:158 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/clients/redirect",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::addRedirectUri",
+      "openapi": [],
+      "source": "appinfo/routes.php:31 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/oidc/clients/redirect/{id}",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::deleteRedirectUri",
+      "openapi": [],
+      "source": "appinfo/routes.php:37 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/index.php/apps/oidc/clients/resource_url/{id}",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::updateResourceUrl",
+      "openapi": [],
+      "source": "appinfo/routes.php:189 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/index.php/apps/oidc/clients/token_type/{id}",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::updateTokenType",
+      "openapi": [],
+      "source": "appinfo/routes.php:174 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/oidc/consent",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\ConsentController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:236 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/consent/deny",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\ConsentController::deny",
+      "openapi": [],
+      "source": "appinfo/routes.php:246 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/consent/grant",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\ConsentController::grant",
+      "openapi": [],
+      "source": "appinfo/routes.php:241 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/oidc/customClaim",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\CustomClaimController::deleteCustomClaim",
+      "openapi": [],
+      "source": "appinfo/routes.php:374 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/oidc/customClaim",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\CustomClaimController::getCustomClaim",
+      "openapi": [],
+      "source": "appinfo/routes.php:338 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PATCH",
+      "path": "/index.php/apps/oidc/customClaim",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\CustomClaimController::updateCustomClaim",
+      "openapi": [],
+      "source": "appinfo/routes.php:362 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/customClaim",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\CustomClaimController::addCustomClaim",
+      "openapi": [],
+      "source": "appinfo/routes.php:350 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/defaultTokenType",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::setDefaultTokenType",
+      "openapi": [],
+      "source": "appinfo/routes.php:110 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/oidc/device",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\DeviceAuthorizationController::verify",
+      "openapi": [],
+      "source": "appinfo/routes.php:278 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/device_authorization",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\DeviceAuthorizationController::authorize",
+      "openapi": [],
+      "source": "appinfo/routes.php:273 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/device/approve",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\DeviceAuthorizationController::approve",
+      "openapi": [],
+      "source": "appinfo/routes.php:283 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/device/deny",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\DeviceAuthorizationController::deny",
+      "openapi": [],
+      "source": "appinfo/routes.php:288 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/dynamicClientRegistration",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::setDynamicClientRegistration",
+      "openapi": [],
+      "source": "appinfo/routes.php:100 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/expire",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::setTokenExpireTime",
+      "openapi": [],
+      "source": "appinfo/routes.php:85 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/oidc/introspect",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\CorsController::introspectionCorsResponse",
+      "openapi": [],
+      "source": "appinfo/routes.php:431 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/introspect",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\IntrospectionController::introspectToken",
+      "openapi": [],
+      "source": "appinfo/routes.php:426 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/oidc/jwks",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\JwksController::getKeyInfo",
+      "openapi": [],
+      "source": "appinfo/routes.php:401 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/oidc/jwks",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\CorsController::jwksCorsResponse",
+      "openapi": [],
+      "source": "appinfo/routes.php:406 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/oidc/logout",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\LogoutController::logout",
+      "openapi": [],
+      "source": "appinfo/routes.php:411 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/oidc/logout",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\CorsController::logoutCorsResponse",
+      "openapi": [],
+      "source": "appinfo/routes.php:421 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/logout",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\LogoutController::logoutPost",
+      "openapi": [],
+      "source": "appinfo/routes.php:416 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/logoutRedirect",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::addLogoutRedirectUri",
+      "openapi": [],
+      "source": "appinfo/routes.php:49 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/oidc/logoutRedirect/{id}",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::deleteLogoutRedirectUri",
+      "openapi": [],
+      "source": "appinfo/routes.php:61 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/oidc/openid-configuration",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\DiscoveryController::getInfo",
+      "openapi": [],
+      "source": "appinfo/routes.php:391 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/oidc/openid-configuration",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\CorsController::discoveryCorsResponse",
+      "openapi": [],
+      "source": "appinfo/routes.php:396 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/overwriteEmailVerified",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::setOverwriteEmailVerified",
+      "openapi": [],
+      "source": "appinfo/routes.php:95 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/provideRefreshTokenAlways",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::setProvideRefreshTokenAlways",
+      "openapi": [],
+      "source": "appinfo/routes.php:120 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/refreshExpire",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::setRefreshTokenExpireTime",
+      "openapi": [],
+      "source": "appinfo/routes.php:90 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/oidc/register",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\CorsController::registerCorsResponse",
+      "openapi": [],
+      "source": "appinfo/routes.php:318 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/register",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\DynamicRegistrationController::registerClient",
+      "openapi": [],
+      "source": "appinfo/routes.php:313 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/oidc/register/{clientId}",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\DynamicRegistrationController::deleteClientConfiguration",
+      "openapi": [],
+      "source": "appinfo/routes.php:333 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/oidc/register/{clientId}",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\DynamicRegistrationController::getClientConfiguration",
+      "openapi": [],
+      "source": "appinfo/routes.php:323 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/oidc/register/{clientId}",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\CorsController::clientManagementCorsResponse",
+      "openapi": [],
+      "source": "appinfo/routes.php:386 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/oidc/register/{clientId}",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\DynamicRegistrationController::updateClientConfiguration",
+      "openapi": [],
+      "source": "appinfo/routes.php:328 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/restrictUserInformation",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::restrictUserInformation",
+      "openapi": [],
+      "source": "appinfo/routes.php:143 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/oidc/resume",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\AuthorizationResumeController::resume",
+      "openapi": [],
+      "source": "appinfo/routes.php:221 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/oidc/resume/complete",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\AuthorizationResumeController::complete",
+      "openapi": [],
+      "source": "appinfo/routes.php:226 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/oidc/revoke",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\CorsController::revocationCorsResponse",
+      "openapi": [],
+      "source": "appinfo/routes.php:272 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/revoke",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\OIDCApiController::revokeToken",
+      "openapi": [],
+      "source": "appinfo/routes.php:271 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/oidc/session/check",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SessionController::check",
+      "openapi": [],
+      "source": "appinfo/routes.php:437 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/oidc/session/check-session-iframe",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SessionController::checkSessionIframe",
+      "openapi": [],
+      "source": "appinfo/routes.php:436 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/oidc/token",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\CorsController::tokenCorsResponse",
+      "openapi": [],
+      "source": "appinfo/routes.php:293 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/token",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\OIDCApiController::getToken",
+      "openapi": [],
+      "source": "appinfo/routes.php:266 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/user/restrictUserInformation",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::restrictUserInformationPersonal",
+      "openapi": [],
+      "source": "appinfo/routes.php:148 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/oidc/userinfo",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\UserInfoController::getInfo",
+      "openapi": [],
+      "source": "appinfo/routes.php:298 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "OPTIONS",
+      "path": "/index.php/apps/oidc/userinfo",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\CorsController::userInfoCorsResponse",
+      "openapi": [],
+      "source": "appinfo/routes.php:308 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/userinfo",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\UserInfoController::getInfoPost",
+      "openapi": [],
+      "source": "appinfo/routes.php:303 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/oidc/webfingerAcctDisclosure",
+      "target": "OCA\\OIDCIdentityProvider\\Controller\\SettingsController::setWebfingerAcctDisclosure",
+      "openapi": [],
+      "source": "appinfo/routes.php:105 routes",
+      "kind": "route"
+    }
+  ]
+}

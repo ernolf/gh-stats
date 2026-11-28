@@ -1,0 +1,88 @@
+<?xml version="1.0"?>
+<!--
+  - SPDX-FileCopyrightText: 2026 Kelly Ferrone
+  - SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+  <id>n8n_sync</id>
+  <name>n8n Sync</name>
+  <summary>Your n8n workflows as native, editable, backed-up Nextcloud files</summary>
+  <description><![CDATA[
+n8n Sync surfaces your n8n workflows as native Nextcloud files. Map one or more n8n
+tags to folders and every tagged workflow shows up as a `.n8n.json` file — with a
+real file icon, deep links back to n8n, and a per-folder sync mode.
+
+- **Sync** — full two-way ownership. Edit a workflow in the Files app, over WebDAV,
+  or from your desktop client and the change pushes back to n8n; a sync folder
+  doubles as a complete, restorable backup of every workflow in it.
+- **Link** — a lightweight pointer (id, name, URL) that opens the workflow in n8n.
+
+Sync is reconcile-based: re-running a pull never duplicates files, because the link
+between a file and its workflow is a stable id stored in the file's metadata — not
+the filename — so renaming, moving, and restoring never break the connection.
+
+This is a community integration and is not affiliated with, endorsed by, or sponsored
+by n8n GmbH. "n8n" and the n8n logo are trademarks of n8n GmbH, used here only to
+identify the service this app integrates with.
+  ]]></description>
+  <version>0.1.5</version>
+  <licence>agpl</licence>
+  <author>Kelly Ferrone</author>
+  <namespace>N8nSync</namespace>
+  <category>integration</category>
+  <category>files</category>
+  <website>https://github.com/kubed-io/nextcloud-n8n</website>
+  <bugs>https://github.com/kubed-io/nextcloud-n8n/issues</bugs>
+  <repository type="git">https://github.com/kubed-io/nextcloud-n8n.git</repository>
+  <screenshot>https://raw.githubusercontent.com/kubed-io/nextcloud-n8n/main/screenshots/mapped-folder.png</screenshot>
+  <screenshot>https://raw.githubusercontent.com/kubed-io/nextcloud-n8n/main/screenshots/context-menu.png</screenshot>
+  <screenshot>https://raw.githubusercontent.com/kubed-io/nextcloud-n8n/main/screenshots/create-workflow.png</screenshot>
+  <screenshot>https://raw.githubusercontent.com/kubed-io/nextcloud-n8n/main/screenshots/edit-workflow.png</screenshot>
+  <screenshot>https://raw.githubusercontent.com/kubed-io/nextcloud-n8n/main/screenshots/admin-folder-mappings.png</screenshot>
+  <screenshot>https://raw.githubusercontent.com/kubed-io/nextcloud-n8n/main/screenshots/admin-actions.png</screenshot>
+  <dependencies>
+    <nextcloud min-version="30" max-version="33"/>
+  </dependencies>
+  <settings>
+    <!-- Test Connection buttons are folded into the Sync Actions panel
+         (SyncSettings); AdminTest stays as the auth target for the test
+         endpoints but is no longer rendered as its own panel. -->
+    <admin>OCA\N8nSync\Settings\MappingSettings</admin>
+    <admin>OCA\N8nSync\Settings\SyncSettings</admin>
+    <admin-section>OCA\N8nSync\Settings\AdminSection</admin-section>
+  </settings>
+  <commands>
+    <command>OCA\N8nSync\Command\ListWorkflows</command>
+    <command>OCA\N8nSync\Command\GetWorkflow</command>
+    <command>OCA\N8nSync\Command\SetApiKey</command>
+    <command>OCA\N8nSync\Command\TestConnection</command>
+    <command>OCA\N8nSync\Command\AddMapping</command>
+    <command>OCA\N8nSync\Command\ListMappings</command>
+    <command>OCA\N8nSync\Command\RemoveMapping</command>
+    <command>OCA\N8nSync\Command\Reconcile</command>
+    <command>OCA\N8nSync\Command\Purge</command>
+  </commands>
+  <repair-steps>
+    <!--
+      Installs the application/n8n+json mimetype + icon mapping on every
+      install/upgrade. Idempotent; see lib/Migration/RegisterMimetype.php.
+    -->
+    <install>
+      <step>OCA\N8nSync\Migration\RegisterMimetype</step>
+    </install>
+    <post-migration>
+      <step>OCA\N8nSync\Migration\RegisterMimetype</step>
+      <!-- Rewrites any legacy-shaped folder mappings once on upgrade. Idempotent;
+           see lib/Migration/MigrateMappings.php + MappingService::migrate(). -->
+      <step>OCA\N8nSync\Migration\MigrateMappings</step>
+    </post-migration>
+    <uninstall>
+      <!-- Mirror image of RegisterMimetype: reverts the core-tree mimetype/icon
+           registration so removing the app leaves Nextcloud clean (store rule).
+           Touches only the system registration — never user files/metadata/n8n.
+           See lib/Migration/UnregisterMimetype.php + uninstall.feature. -->
+      <step>OCA\N8nSync\Migration\UnregisterMimetype</step>
+    </uninstall>
+  </repair-steps>
+</info>

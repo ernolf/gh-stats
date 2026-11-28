@@ -1,0 +1,448 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\PeppolNext\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "namespace-mismatch",
+      "level": "warn",
+      "places": [
+        "lib/Service/PeppolService.php:11 OCA\\NotesTutorial\\Service\\InvoiceService, by its path OCA\\PeppolNext\\Service\\PeppolService"
+      ],
+      "lines": [
+        "1 class in lib/ whose name does not follow PSR-4 below OCA\\PeppolNext, the namespace the server derives from <namespace> of info.xml. The loader of the server does not find such a class.",
+        "  lib/Service/PeppolService.php:11 OCA\\NotesTutorial\\Service\\InvoiceService, by its path OCA\\PeppolNext\\Service\\PeppolService"
+      ]
+    },
+    {
+      "id": "vendor-shadows-server",
+      "level": "warn",
+      "places": [
+        "doctrine/annotations 1.13.3, in 3rdparty/ of Nextcloud 19 to 20",
+        "doctrine/lexer 1.2.3, in 3rdparty/ of Nextcloud 19 to 25",
+        "paragonie/random_compat v9.99.100, in 3rdparty/ of Nextcloud 19 to 20",
+        "phpseclib/phpseclib 3.0.16, in 3rdparty/ of Nextcloud 19 to 25"
+      ],
+      "lines": [
+        "vendor/ ships 4 packages that the server ships itself in a major of Nextcloud 19 to 25. Both copies define the same classes, and the autoloader that is asked first decides which version runs.",
+        "  doctrine/annotations 1.13.3, in 3rdparty/ of Nextcloud 19 to 20",
+        "  doctrine/lexer 1.2.3, in 3rdparty/ of Nextcloud 19 to 25",
+        "  paragonie/random_compat v9.99.100, in 3rdparty/ of Nextcloud 19 to 20",
+        "  phpseclib/phpseclib 3.0.16, in 3rdparty/ of Nextcloud 19 to 25"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/Controller/MessageApiController.php:207 OC\\AppFramework\\Http",
+        "lib/Controller/SettingApiController.php:68 OC\\AppFramework\\Http",
+        "lib/Controller/UploadApiController.php:50 OC\\AppFramework\\Http",
+        "lib/Service/MessageService.php:406 OC\\Files\\Node\\File",
+        "lib/Service/UploadService.php:36 OC\\AppFramework\\Http"
+      ],
+      "lines": [
+        "5 uses of the private API of the server in 5 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/Controller/MessageApiController.php:207 OC\\AppFramework\\Http",
+        "  lib/Controller/SettingApiController.php:68 OC\\AppFramework\\Http",
+        "  lib/Controller/UploadApiController.php:50 OC\\AppFramework\\Http",
+        "  lib/Service/MessageService.php:406 OC\\Files\\Node\\File",
+        "  lib/Service/UploadService.php:36 OC\\AppFramework\\Http"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "id": "ocp-since-above-min",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:10 OCP\\AppFramework\\Bootstrap\\IBootstrap: there since Nextcloud 20, the app declares from 19",
+        "lib/AppInfo/Application.php:17 OCP\\AppFramework\\Bootstrap\\IRegistrationContext: there since Nextcloud 20, the app declares from 19",
+        "lib/AppInfo/Application.php:23 OCP\\AppFramework\\Bootstrap\\IBootContext: there since Nextcloud 20, the app declares from 19"
+      ],
+      "lines": [
+        "3 uses in 1 file of the public API that the oldest majors of Nextcloud 19 to 25 do not have yet. Either min-version in appinfo/info.xml goes up, or the app does without it there.",
+        "  lib/AppInfo/Application.php:10 OCP\\AppFramework\\Bootstrap\\IBootstrap: there since Nextcloud 20, the app declares from 19",
+        "  lib/AppInfo/Application.php:17 OCP\\AppFramework\\Bootstrap\\IRegistrationContext: there since Nextcloud 20, the app declares from 19",
+        "  lib/AppInfo/Application.php:23 OCP\\AppFramework\\Bootstrap\\IBootContext: there since Nextcloud 20, the app declares from 19"
+      ]
+    },
+    {
+      "id": "route-target-missing",
+      "level": "warn",
+      "places": [
+        "GET /index.php/apps/peppolnext/cert  peppolnext.setting_api.cert  appinfo/routes.php:34 routes: OCA\\PeppolNext\\Controller\\SettingApiController has no method cert()"
+      ],
+      "lines": [
+        "1 route names a controller class or a method that does not exist, or a method that is not public. A request to such a route ends in an error.",
+        "  GET /index.php/apps/peppolnext/cert  peppolnext.setting_api.cert  appinfo/routes.php:34 routes: OCA\\PeppolNext\\Controller\\SettingApiController has no method cert()"
+      ]
+    },
+    {
+      "id": "route-unreferenced",
+      "level": "warn",
+      "places": [
+        "POST /index.php/apps/peppolnext/api/v1/upload  peppolnext.upload_api.receive_new  appinfo/routes.php:22 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 1 route outside OCS. Looked for: a route name or a path in the PHP source and the templates, in 15 files of the frontend source and in the navigation of info.xml. A route stays behind when the frontend stops calling it. A route that only a client outside the app calls shows here as well, unless its method allows requests from other origins (CORS).",
+        "  POST /index.php/apps/peppolnext/api/v1/upload  peppolnext.upload_api.receive_new  appinfo/routes.php:22 routes"
+      ]
+    },
+    {
+      "id": "dev-tools-in-root",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "phpunit/phpunit is in require-dev of composer.json. The manual recommends a vendor-bin/ of bamarni/composer-bin-plugin per tool, so that the dependencies of a tool cannot conflict with those of the app."
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Service/MessageService.php:153"
+      ],
+      "lines": [
+        "1 transaction is opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Service/MessageService.php:153"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/Controller/MessageApiController.php:394 new DateTime()",
+        "lib/Controller/MessageApiController.php:743 new DateTime()",
+        "lib/Controller/MessageApiController.php:754 new DateTime()",
+        "lib/Controller/MessageApiController.php:882 new DateTime()",
+        "lib/Controller/MessageApiController.php:930 new DateTime()",
+        "lib/Controller/MessageApiController.php:1119 new DateTime()",
+        "lib/Controller/MessageApiController.php:1154 new DateTime()",
+        "lib/Controller/MessageApiController.php:1161 new DateTime()",
+        "lib/Service/MessageService.php:186 new DateTime()",
+        "lib/Service/MessageService.php:296 new DateTime()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 10 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/Controller/MessageApiController.php:394 new DateTime()",
+        "  lib/Controller/MessageApiController.php:743 new DateTime()",
+        "  lib/Controller/MessageApiController.php:754 new DateTime()",
+        "  lib/Controller/MessageApiController.php:882 new DateTime()",
+        "  lib/Controller/MessageApiController.php:930 new DateTime()",
+        "  lib/Controller/MessageApiController.php:1119 new DateTime()",
+        "  lib/Controller/MessageApiController.php:1154 new DateTime()",
+        "  lib/Controller/MessageApiController.php:1161 new DateTime()",
+        "  lib/Service/MessageService.php:186 new DateTime()",
+        "  lib/Service/MessageService.php:296 new DateTime()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "cors-unreferenced",
+      "level": "info",
+      "places": [
+        "POST /index.php/apps/peppolnext/api/v1/testbed  peppolnext.message_api.handletestbedmessage  appinfo/routes.php:19 routes",
+        "GET /index.php/apps/peppolnext/api/v1/as4send  peppolnext.message_api.as4send  appinfo/routes.php:20 routes"
+      ],
+      "lines": [
+        "Nothing in the app calls 2 routes outside OCS whose method allows requests from other origins (CORS), or that answer the preflight of such a request (OPTIONS). They are there for clients outside the app, so this is no defect in itself.",
+        "  POST /index.php/apps/peppolnext/api/v1/testbed  peppolnext.message_api.handletestbedmessage  appinfo/routes.php:19 routes",
+        "  GET /index.php/apps/peppolnext/api/v1/as4send  peppolnext.message_api.as4send  appinfo/routes.php:20 routes"
+      ]
+    },
+    {
+      "id": "controller-method-unrouted",
+      "level": "info",
+      "places": [
+        "lib/Controller/MessageApiController.php:600 OCA\\PeppolNext\\Controller\\MessageApiController::legacyAs4Endpoint()",
+        "lib/Controller/MessageApiController.php:1016 OCA\\PeppolNext\\Controller\\MessageApiController::as4SendWithIdentifier()"
+      ],
+      "lines": [
+        "2 public methods of controllers are reached by no route.",
+        "  lib/Controller/MessageApiController.php:600 OCA\\PeppolNext\\Controller\\MessageApiController::legacyAs4Endpoint()",
+        "  lib/Controller/MessageApiController.php:1016 OCA\\PeppolNext\\Controller\\MessageApiController::as4SendWithIdentifier()"
+      ]
+    },
+    {
+      "id": "migration-not-checked",
+      "level": "info",
+      "places": [
+        "lib/Migration/Version010000Date20221224000000.php:27 createTable() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:28 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:32 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:36 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:41 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:42 addIndex() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:46 createTable() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:47 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:51 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:55 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:59 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:63 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:67 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:71 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:76 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:77 addIndex() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:78 addIndex() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:82 createTable() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:83 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:87 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:91 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:95 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:99 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:103 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:106 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:110 addColumn() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:115 setPrimaryKey() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:116 addIndex() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:117 addIndex() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:118 addIndex() on a table whose name is no constant",
+        "lib/Migration/Version010000Date20221224000000.php:119 addIndex() on a table whose name is no constant"
+      ],
+      "lines": [
+        "Part of the migrations could not be held against the checks of the server, since a name or a type there is no constant.",
+        "  lib/Migration/Version010000Date20221224000000.php:27 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:28 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:32 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:36 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:41 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:42 addIndex() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:46 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:47 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:51 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:55 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:59 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:63 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:67 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:71 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:76 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:77 addIndex() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:78 addIndex() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:82 createTable() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:83 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:87 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:91 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:95 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:99 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:103 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:106 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:110 addColumn() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:115 setPrimaryKey() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:116 addIndex() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:117 addIndex() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:118 addIndex() on a table whose name is no constant",
+        "  lib/Migration/Version010000Date20221224000000.php:119 addIndex() on a table whose name is no constant"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 28
+        }
+      ]
+    }
+  ],
+  "endpoints": 21,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/peppolnext/",
+      "target": "OCA\\PeppolNext\\Controller\\PageController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:6 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/peppolnext/api/v1/address",
+      "target": "OCA\\PeppolNext\\Controller\\SettingApiController::updateAddress",
+      "openapi": [],
+      "source": "appinfo/routes.php:32 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/peppolnext/api/v1/as4",
+      "target": "OCA\\PeppolNext\\Controller\\MessageApiController::as4Endpoint",
+      "openapi": [],
+      "source": "appinfo/routes.php:18 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/peppolnext/api/v1/as4direct",
+      "target": "OCA\\PeppolNext\\Controller\\SettingApiController::createas4direct",
+      "openapi": [],
+      "source": "appinfo/routes.php:31 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/peppolnext/api/v1/as4send",
+      "target": "OCA\\PeppolNext\\Controller\\MessageApiController::as4Send",
+      "openapi": [],
+      "source": "appinfo/routes.php:20 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/peppolnext/api/v1/contact",
+      "target": "OCA\\PeppolNext\\Controller\\ContactApiController::search",
+      "openapi": [],
+      "source": "appinfo/routes.php:24 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/peppolnext/api/v1/contact",
+      "target": "OCA\\PeppolNext\\Controller\\ContactApiController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:25 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/peppolnext/api/v1/contact/{uid}",
+      "target": "OCA\\PeppolNext\\Controller\\ContactApiController::removeContact",
+      "openapi": [],
+      "source": "appinfo/routes.php:26 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/peppolnext/api/v1/contacts",
+      "target": "OCA\\PeppolNext\\Controller\\ContactApiController::all",
+      "openapi": [],
+      "source": "appinfo/routes.php:27 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/peppolnext/api/v1/letspeppol",
+      "target": "OCA\\PeppolNext\\Controller\\SettingApiController::createletspeppol",
+      "openapi": [],
+      "source": "appinfo/routes.php:30 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "DELETE",
+      "path": "/index.php/apps/peppolnext/api/v1/message",
+      "target": "OCA\\PeppolNext\\Controller\\MessageApiController::delete",
+      "openapi": [],
+      "source": "appinfo/routes.php:15 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/peppolnext/api/v1/message",
+      "target": "OCA\\PeppolNext\\Controller\\MessageApiController::create",
+      "openapi": [],
+      "source": "appinfo/routes.php:16 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "PUT",
+      "path": "/index.php/apps/peppolnext/api/v1/message",
+      "target": "OCA\\PeppolNext\\Controller\\MessageApiController::markAsRead",
+      "openapi": [],
+      "source": "appinfo/routes.php:14 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/peppolnext/api/v1/message/{page}",
+      "target": "OCA\\PeppolNext\\Controller\\MessageApiController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:7 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/peppolnext/api/v1/message/{path}",
+      "target": "OCA\\PeppolNext\\Controller\\MessageApiController::getNotification",
+      "openapi": [],
+      "source": "appinfo/routes.php:8 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/peppolnext/api/v1/message/{path}/{page}",
+      "target": "OCA\\PeppolNext\\Controller\\MessageApiController::getNewReceivedMessages",
+      "openapi": [],
+      "source": "appinfo/routes.php:9 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/peppolnext/api/v1/setting",
+      "target": "OCA\\PeppolNext\\Controller\\SettingApiController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:29 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/peppolnext/api/v1/setting/asSupplier",
+      "target": "OCA\\PeppolNext\\Controller\\SettingApiController::asSupplier",
+      "openapi": [],
+      "source": "appinfo/routes.php:33 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/peppolnext/api/v1/testbed",
+      "target": "OCA\\PeppolNext\\Controller\\MessageApiController::handleTestbedMessage",
+      "openapi": [],
+      "source": "appinfo/routes.php:19 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/peppolnext/api/v1/upload",
+      "target": "OCA\\PeppolNext\\Controller\\UploadApiController::receiveNew",
+      "openapi": [],
+      "source": "appinfo/routes.php:22 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/peppolnext/cert",
+      "target": "OCA\\PeppolNext\\Controller\\SettingApiController::cert",
+      "openapi": [],
+      "source": "appinfo/routes.php:34 routes",
+      "kind": "route"
+    }
+  ]
+}

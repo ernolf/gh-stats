@@ -1,0 +1,382 @@
+{
+  "findings": [
+    {
+      "id": "autoloader-generic",
+      "level": "warn",
+      "places": [],
+      "lines": [
+        "The app ships no composer/autoload.php, so the server registers its generic loader for lib/ and looks every class up in the file system.",
+        "  A composer/composer.json with config.vendor-dir \".\", config.optimize-autoloader true, a config.autoloader-suffix and autoload.psr-4 {\"OCA\\\\Activity\\\\\": \"../lib/\"} makes composer dump-autoload write composer/autoload.php with a class map; the code of the app does not change."
+      ]
+    },
+    {
+      "id": "autoloader-authoritative",
+      "level": "warn",
+      "places": [
+        "composer.json: config.classmap-authoritative"
+      ],
+      "lines": [
+        "The Composer autoloader is optimized beyond level 1. The manual allows only config.optimize-autoloader: an authoritative class map breaks the upgrade of the app, and APCu is no required extension.",
+        "  composer.json: config.classmap-authoritative"
+      ]
+    },
+    {
+      "id": "private-api",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:66 OC\\SystemConfig",
+        "lib/AppInfo/Application.php:67 OC\\DB\\ConnectionFactory",
+        "lib/AppInfo/Application.php:71 OC\\DatabaseException",
+        "lib/AppInfo/Application.php:96 OC\\DB\\ConnectionAdapter",
+        "lib/AppInfo/Application.php:130 OC\\Files\\View",
+        "lib/Command/SendEmails.php:21 OC\\Core\\Command\\Base",
+        "lib/Controller/RemoteActivityController.php:164 OC\\Files\\Storage\\Wrapper\\Wrapper",
+        "lib/FilesHooks.php:60 OC\\Files\\View",
+        "lib/FilesHooks.php:631 OC\\Files\\Filesystem",
+        "lib/FilesHooksStatic.php:19 OC::$server"
+      ],
+      "lines": [
+        "10 uses of the private API of the server in 5 files. Only OCP and NCU are public: what is below OC changes without notice between majors.",
+        "  lib/AppInfo/Application.php:66 OC\\SystemConfig",
+        "  lib/AppInfo/Application.php:67 OC\\DB\\ConnectionFactory",
+        "  lib/AppInfo/Application.php:71 OC\\DatabaseException",
+        "  lib/AppInfo/Application.php:96 OC\\DB\\ConnectionAdapter",
+        "  lib/AppInfo/Application.php:130 OC\\Files\\View",
+        "  lib/Command/SendEmails.php:21 OC\\Core\\Command\\Base",
+        "  lib/Controller/RemoteActivityController.php:164 OC\\Files\\Storage\\Wrapper\\Wrapper",
+        "  lib/FilesHooks.php:60 OC\\Files\\View",
+        "  lib/FilesHooks.php:631 OC\\Files\\Filesystem",
+        "  lib/FilesHooksStatic.php:19 OC::$server"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "id": "legacy-hook",
+      "level": "warn",
+      "places": [
+        "lib/AppInfo/Application.php:173 OC_Filesystem::post_create: the manual names no replacement event",
+        "lib/AppInfo/Application.php:174 OC_Filesystem::post_update: removed after the range, in Nextcloud 36, replaced by OCP\\Files\\Events\\Node\\NodeWrittenEvent",
+        "lib/AppInfo/Application.php:175 OC_Filesystem::delete: the manual names no replacement event",
+        "lib/AppInfo/Application.php:176 OC_Filesystem::rename: the manual names no replacement event",
+        "lib/AppInfo/Application.php:177 OC_Filesystem::post_rename: the manual names no replacement event",
+        "lib/AppInfo/Application.php:178 OCA\\Files_Trashbin\\Trashbin::post_restore: the manual names no replacement event"
+      ],
+      "lines": [
+        "6 connections to a legacy hook of the server. A hook the server removed is never emitted, and the listener never runs; the typed events of OCP\\EventDispatcher replace the hooks.",
+        "OCP\\Util::connectHook() is deprecated since Nextcloud 21: use \\OCP\\EventDispatcher\\IEventDispatcher::addListener. ocp-deprecated leaves these calls to this finding.",
+        "  lib/AppInfo/Application.php:173 OC_Filesystem::post_create: the manual names no replacement event",
+        "  lib/AppInfo/Application.php:174 OC_Filesystem::post_update: removed after the range, in Nextcloud 36, replaced by OCP\\Files\\Events\\Node\\NodeWrittenEvent",
+        "  lib/AppInfo/Application.php:175 OC_Filesystem::delete: the manual names no replacement event",
+        "  lib/AppInfo/Application.php:176 OC_Filesystem::rename: the manual names no replacement event",
+        "  lib/AppInfo/Application.php:177 OC_Filesystem::post_rename: the manual names no replacement event",
+        "  lib/AppInfo/Application.php:178 OCA\\Files_Trashbin\\Trashbin::post_restore: the manual names no replacement event"
+      ],
+      "folds": [
+        {
+          "at": 5,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "id": "ocp-deprecated",
+      "level": "info",
+      "places": [
+        "lib/Controller/ActivitiesController.php:65 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "lib/Controller/SettingsController.php:122 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:129 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:146 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:151 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Controller/SettingsController.php:156 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Data.php:432 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "lib/FilesHooks.php:1357 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/FilesHooks.php:1358 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "lib/Listener/SetUserDefaults.php:44 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Listener/SetUserDefaults.php:58 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/MailQueueHandler.php:278 OCP\\Mail\\IMailer::validateMailAddress(): deprecated since Nextcloud 32; use IEmailValidator::isValid() instead",
+        "lib/Settings/Admin.php:99 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Personal.php:109 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/Settings/Personal.php:118 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/UserSettings.php:55 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/UserSettings.php:92 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/UserSettings.php:99 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "lib/UserSettings.php:206 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "lines": [
+        "19 uses in 9 files of the public API that is deprecated in Nextcloud 32. The text of the tag names the replacement where it has one.",
+        "  lib/Controller/ActivitiesController.php:65 OCP\\EventDispatcher\\IEventDispatcher::dispatch(): deprecated since Nextcloud 21; use \\OCP\\EventDispatcher\\IEventDispatcher::dispatchTyped",
+        "  lib/Controller/SettingsController.php:122 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:129 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:146 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:151 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Controller/SettingsController.php:156 OCP\\IConfig::setAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Data.php:432 OCP\\IDBConnection::getDatabasePlatform(): deprecated since Nextcloud 30; Please use self::getDatabaseProvider() and compare to self::PLATFORM_* constants",
+        "  lib/FilesHooks.php:1357 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/FilesHooks.php:1358 OCP\\Constants::PERMISSION_READ: deprecated since Nextcloud 13; Use \\OCP\\Constants::PERMISSION_READ instead",
+        "  lib/Listener/SetUserDefaults.php:44 OCP\\IConfig::getAppKeys(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Listener/SetUserDefaults.php:58 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/MailQueueHandler.php:278 OCP\\Mail\\IMailer::validateMailAddress(): deprecated since Nextcloud 32; use IEmailValidator::isValid() instead",
+        "  lib/Settings/Admin.php:99 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Personal.php:109 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/Settings/Personal.php:118 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/UserSettings.php:55 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/UserSettings.php:92 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/UserSettings.php:99 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly",
+        "  lib/UserSettings.php:206 OCP\\IConfig::getAppValue(): deprecated since Nextcloud 29; Use IAppConfig directly"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 16
+        }
+      ]
+    },
+    {
+      "id": "transaction-manual",
+      "level": "info",
+      "places": [
+        "lib/Data.php:107",
+        "lib/FilesHooks.php:1225"
+      ],
+      "lines": [
+        "2 transactions are opened and closed by hand. The trait TTransactional has atomic() since Nextcloud 24 and atomicRetry() since Nextcloud 27, which repeats a transaction that ran into a deadlock, as the manual recommends.",
+        "  lib/Data.php:107",
+        "  lib/FilesHooks.php:1225"
+      ]
+    },
+    {
+      "id": "job-time-sensitivity",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/DigestMail.php OCA\\Activity\\BackgroundJob\\DigestMail",
+        "lib/BackgroundJob/EmailNotification.php OCA\\Activity\\BackgroundJob\\EmailNotification",
+        "lib/BackgroundJob/RemoveFormerActivitySettings.php OCA\\Activity\\BackgroundJob\\RemoveFormerActivitySettings"
+      ],
+      "lines": [
+        "3 timed jobs do not say whether they are time sensitive. A job that sets TIME_INSENSITIVE with setTimeSensitivity() is moved to the maintenance window of the server; whether a job is heavy enough for that only its maintainer knows.",
+        "  lib/BackgroundJob/DigestMail.php OCA\\Activity\\BackgroundJob\\DigestMail",
+        "  lib/BackgroundJob/EmailNotification.php OCA\\Activity\\BackgroundJob\\EmailNotification",
+        "  lib/BackgroundJob/RemoveFormerActivitySettings.php OCA\\Activity\\BackgroundJob\\RemoveFormerActivitySettings"
+      ]
+    },
+    {
+      "id": "time-direct",
+      "level": "info",
+      "places": [
+        "lib/BackgroundJob/EmailNotification.php:38 time()",
+        "lib/Command/SendEmails.php:68 time()",
+        "lib/Controller/FeedController.php:69 time()",
+        "lib/Data.php:407 time()",
+        "lib/DigestSender.php:59 new DateTime()",
+        "lib/FilesHooks.php:159 time()",
+        "lib/FilesHooks.php:357 time()",
+        "lib/FilesHooks.php:462 time()",
+        "lib/FilesHooks.php:463 time()",
+        "lib/FilesHooks.php:464 time()",
+        "lib/FilesHooks.php:1191 time()",
+        "lib/FilesHooks.php:1219 time()"
+      ],
+      "lines": [
+        "lib/ reads the clock directly in 12 places. OCP\\AppFramework\\Utility\\ITimeFactory, a PSR-20 ClockInterface, gives the same time and can be replaced in a test.",
+        "  lib/BackgroundJob/EmailNotification.php:38 time()",
+        "  lib/Command/SendEmails.php:68 time()",
+        "  lib/Controller/FeedController.php:69 time()",
+        "  lib/Data.php:407 time()",
+        "  lib/DigestSender.php:59 new DateTime()",
+        "  lib/FilesHooks.php:159 time()",
+        "  lib/FilesHooks.php:357 time()",
+        "  lib/FilesHooks.php:462 time()",
+        "  lib/FilesHooks.php:463 time()",
+        "  lib/FilesHooks.php:464 time()",
+        "  lib/FilesHooks.php:1191 time()",
+        "  lib/FilesHooks.php:1219 time()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 9
+        }
+      ]
+    },
+    {
+      "id": "config-without-lexicon",
+      "level": "info",
+      "places": [
+        "lib/Controller/SettingsController.php:122 setAppValue()",
+        "lib/Controller/SettingsController.php:129 setAppValue()",
+        "lib/Controller/SettingsController.php:146 setAppValue()",
+        "lib/Controller/SettingsController.php:151 setAppValue()",
+        "lib/Controller/SettingsController.php:156 setAppValue()",
+        "lib/Listener/SetUserDefaults.php:58 getAppValue()",
+        "lib/MailQueueHandler.php:73 getValueBool()",
+        "lib/Settings/Admin.php:99 getAppValue()",
+        "lib/Settings/Personal.php:109 getAppValue()",
+        "lib/Settings/Personal.php:118 getAppValue()",
+        "lib/UserSettings.php:55 getAppValue()",
+        "lib/UserSettings.php:92 getAppValue()",
+        "lib/UserSettings.php:99 getAppValue()",
+        "lib/UserSettings.php:206 getAppValue()"
+      ],
+      "lines": [
+        "The app reads and writes its app config in 14 places and registers no config lexicon, which IRegistrationContext::registerConfigLexicon() takes since Nextcloud 31. A lexicon states the type, the default and the sensitivity of each key in one place.",
+        "  lib/Controller/SettingsController.php:122 setAppValue()",
+        "  lib/Controller/SettingsController.php:129 setAppValue()",
+        "  lib/Controller/SettingsController.php:146 setAppValue()",
+        "  lib/Controller/SettingsController.php:151 setAppValue()",
+        "  lib/Controller/SettingsController.php:156 setAppValue()",
+        "  lib/Listener/SetUserDefaults.php:58 getAppValue()",
+        "  lib/MailQueueHandler.php:73 getValueBool()",
+        "  lib/Settings/Admin.php:99 getAppValue()",
+        "  lib/Settings/Personal.php:109 getAppValue()",
+        "  lib/Settings/Personal.php:118 getAppValue()",
+        "  lib/UserSettings.php:55 getAppValue()",
+        "  lib/UserSettings.php:92 getAppValue()",
+        "  lib/UserSettings.php:99 getAppValue()",
+        "  lib/UserSettings.php:206 getAppValue()"
+      ],
+      "folds": [
+        {
+          "at": 4,
+          "count": 11
+        }
+      ]
+    },
+    {
+      "id": "ocs-unreferenced",
+      "level": "info",
+      "places": [
+        "POST /ocs/v2.php/apps/activity/api/v2/remote/{token}  ocs.activity.remoteactivity.receiveactivity  appinfo/routes.php:10 ocs",
+        "GET /ocs/v2.php/cloud/activity  ocs.activity.apiv1.get  appinfo/routes.php:11 ocs",
+        "GET /ocs/v2.php/apps/activity/api/v2/activity  ocs.activity.apiv2.getdefault  appinfo/routes.php:12 ocs"
+      ],
+      "lines": [
+        "Nothing in the app calls 3 OCS routes. OCS is there for clients outside the app, so this is no defect in itself.",
+        "  POST /ocs/v2.php/apps/activity/api/v2/remote/{token}  ocs.activity.remoteactivity.receiveactivity  appinfo/routes.php:10 ocs",
+        "  GET /ocs/v2.php/cloud/activity  ocs.activity.apiv1.get  appinfo/routes.php:11 ocs",
+        "  GET /ocs/v2.php/apps/activity/api/v2/activity  ocs.activity.apiv2.getdefault  appinfo/routes.php:12 ocs"
+      ]
+    },
+    {
+      "id": "openapi-missing",
+      "level": "info",
+      "places": [],
+      "lines": [
+        "The app has 5 OCS routes and no openapi.json. Clients of OCS are generated from such a specification, and nothing else tells them what these routes take and return."
+      ]
+    }
+  ],
+  "endpoints": 12,
+  "endpointList": [
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/activity/",
+      "target": "OCA\\Activity\\Controller\\ActivitiesController::index",
+      "openapi": [],
+      "source": "appinfo/routes.php:21 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/activity/{filter}",
+      "target": "OCA\\Activity\\Controller\\ActivitiesController::showList",
+      "openapi": [],
+      "source": "appinfo/routes.php:22 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/index.php/apps/activity/rss.php",
+      "target": "OCA\\Activity\\Controller\\FeedController::show",
+      "openapi": [],
+      "source": "appinfo/routes.php:20 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/activity/settings",
+      "target": "OCA\\Activity\\Controller\\SettingsController::personal",
+      "openapi": [],
+      "source": "appinfo/routes.php:17 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/activity/settings/admin",
+      "target": "OCA\\Activity\\Controller\\SettingsController::admin",
+      "openapi": [],
+      "source": "appinfo/routes.php:18 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "POST",
+      "path": "/index.php/apps/activity/settings/feed",
+      "target": "OCA\\Activity\\Controller\\SettingsController::feed",
+      "openapi": [],
+      "source": "appinfo/routes.php:19 routes",
+      "kind": "route"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/activity/api/v2/activity",
+      "target": "OCA\\Activity\\Controller\\APIv2Controller::getDefault",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:12 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/activity/api/v2/activity/{filter}",
+      "target": "OCA\\Activity\\Controller\\APIv2Controller::getFilter",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:14 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/apps/activity/api/v2/activity/filters",
+      "target": "OCA\\Activity\\Controller\\APIv2Controller::listFilters",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:13 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "POST",
+      "path": "/ocs/v2.php/apps/activity/api/v2/remote/{token}",
+      "target": "OCA\\Activity\\Controller\\RemoteActivityController::receiveActivity",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:10 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/activity",
+      "target": "OCA\\Activity\\Controller\\APIv1Controller::get",
+      "openapi": [
+        "default"
+      ],
+      "source": "appinfo/routes.php:11 ocs",
+      "kind": "OCS"
+    },
+    {
+      "verb": "GET",
+      "path": "/ocs/v2.php/cloud/capabilities",
+      "target": "OCA\\Activity\\Capabilities",
+      "openapi": [],
+      "source": "lib/AppInfo/Application.php:134",
+      "kind": "capability"
+    }
+  ]
+}
